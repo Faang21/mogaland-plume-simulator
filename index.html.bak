@@ -449,7 +449,7 @@
           </div>
 
           <div class="profile-slide-asset-row">
-            <img src="https://via.placeholder.com/44/FFCC00/000000?text=MOGA" alt="MOGA" class="profile-slide-asset-icon">
+            <img src="https://via.placeholder.com/44/FFCC00/https://via.placeholder.com/44/FFCC00/000000?text=MOGA" alt="MOGA" class="profile-slide-asset-icon">
             <div class="profile-slide-asset-details">
               <div class="profile-slide-asset-name">MOGA</div>
               <div class="profile-slide-asset-subtitle">Mogaland Token</div>
