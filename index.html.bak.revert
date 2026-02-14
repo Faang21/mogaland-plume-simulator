@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Mogaland-Plume Simulator</title>
+
+  <!-- Ethers v5 UMD (primary) -->
+  <script src="https://cdn.ethers.io/lib/ethers-5.7.umd.min.js"></script>
+  <!-- Fallback ke jsDelivr jika cdn.ethers.io gagal -->
+  <script>
+    (function ensureEthers() {
+      if (!window.ethers) {
+        var s = document.createElement('script');
+        s.src = "https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js";
+        s.onload = function(){ if(!window.ethers){ console.error("[Ethers] Fallback loaded tapi ethers masih undefined"); } };
+        s.onerror = function(){ console.error("[Ethers] Gagal memuat fallback jsDelivr"); };
+        document.head.appendChild(s);
+      }
+    })();
+  </script>
+
+  <!-- WalletConnect v2 Ethereum Provider (UMD) -->
+  <script src="https://unpkg.com/@walletconnect/ethereum-provider@2/dist/index.umd.min.js"></script>
+
+  <!-- Chart libs (opsional) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@0.2.0/dist/chartjs-chart-financial.min.js"></script>
+
+  <style>
+    :root{
+      --primary:#0d6efd; --dark:#0a2540; --darker:#071a2e; --light:#f8f9fa;
+      --bell:#ffcc00; --success:#28a745; --danger:#dc3545; --card-bg:#1e293b;
+      --border:#334155; --progress:#3b82f6; --progress-end:#60a5fa;
+    }
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Segoe UI',Arial,sans-serif;background:var(--darker);color:var(--light);min-height:100vh;display:flex;flex-direction:column}
+    .hidden{display:none !important;} /* pastikan overlay tidak intercept klik */
+
+    .login-container{background:rgba(0,0,0,.5);border-radius:20px;padding:80px 40px;width:100%;max-width:500px;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.1);margin:120px auto}
+    h1{font-size:3.2rem;margin-bottom:12px}.subtitle{font-size:1.3rem;opacity:.8;margin-bottom:50px}
+    .login-option{background:var(--primary);color:#fff;border:none;padding:18px;font-size:1.3rem;border-radius:12px;cursor:pointer;margin:20px 0;width:100%;transition:.3s}
+    .login-option:hover{background:#0b5ed7;transform:scale(1.02)}
+    .input-field{width:100%;padding:14px;margin:10px 0;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.05);color:#fff;font-size:1.1rem}
+
+    .main-app{flex:1;display:flex;flex-direction:column;position:relative}
+    header{padding:20px;display:flex;justify-content:flex-end;align-items:center;gap:12px;position:relative;z-index:2}
+    .top-btn{background:rgba(13,110,253,.3);color:#fff;border:1px solid var(--primary);padding:10px 18px;font-size:1rem;border-radius:30px;cursor:pointer;transition:.3s}
+    .top-btn:hover{background:var(--primary);transform:scale(1.05)} .top-btn.connected{background:var(--success);border-color:var(--success)}
+
+    .nav-bar{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.6);backdrop-filter:blur(10px);
+      border-radius:60px;padding:12px 20px;display:flex;gap:12px;box-shadow:0 8px 30px rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.1);z-index:3}
+    .nav-btn{background:rgba(13,110,253,.2);color:#fff;border:none;padding:12px 20px;font-size:1rem;border-radius:40px;cursor:pointer;transition:.3s;white-space:nowrap}
+    .nav-btn:hover,.nav-btn.active{background:var(--primary);transform:scale(1.08)}
+    .content{flex:1;padding:40px 20px;margin-top:60px;text-align:center;position:relative;z-index:1}
+
+    .notification{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:rgba(255,204,0,.2);border:1px solid var(--bell);
+      color:#fff;padding:14px 24px;border-radius:12px;display:flex;align-items:center;gap:12px;z-index:999;max-width:90%}
+
+    /* Panels (hidden = display:none agar tidak menutup klik) */
+    .profile-slide-panel,.back-profile-panel{position:fixed;top:0;right:0;bottom:0;width:380px;background:#0f121a;border-left:1px solid #1e2535;box-shadow:-10px 0 35px rgba(0,0,0,.7);overflow-y:auto;z-index:98}
+    .profile-slide-panel.hidden,.back-profile-panel.hidden{display:none !important;}
+    .profile-slide-header{padding:18px 24px;background:#0a0d14;border-bottom:1px solid #1e2535;display:flex;justify-content:space-between;align-items:center}
+    .gear-icon,.close-slide{background:none;border:none;color:#94a3b8;font-size:1.6rem;cursor:pointer}
+    .profile-slide-balance{padding:32px 24px 20px;text-align:center}
+    .profile-slide-total{font-size:3.4rem;font-weight:800;color:#34d399}
+    .profile-slide-actions{display:flex;gap:12px;padding:20px 24px}
+    .profile-slide-action-btn{flex:1;padding:14px;border-radius:12px;border:none;color:#fff;font-weight:600;cursor:pointer;transition:.2s;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+    .profile-slide-action-btn.deposit{background:linear-gradient(90deg,#10b981,#34d399)}
+    .profile-slide-action-btn.swap{background:linear-gradient(90deg,#0d6efd,#60a5fa)}
+    .profile-slide-action-btn.send{background:linear-gradient(90deg,#8b5cf6,#c084fc)}
+    .profile-slide-tabs{display:flex;margin:0 24px;border-bottom:1px solid #1e2535}
+    .profile-slide-tab{flex:1;padding:14px 0;background:none;border:none;color:#94a3b8;font-weight:600;cursor:pointer;font-size:1rem;transition:.2s}
+    .profile-slide-tab.active{color:#fff;border-bottom:3px solid #60a5fa}
+    .tab-content{padding:20px}
+    .profile-slide-asset-row{display:flex;align-items:center;gap:16px;padding:16px 0;border-bottom:1px solid #1e2535}
+    .profile-slide-asset-icon{width:44px;height:44px;border-radius:50%;object-fit:contain;background:#111;border:1px solid #334155;flex-shrink:0}
+
+    .wallet-choice{background:rgba(13,110,253,.3);color:#fff;border:1px solid var(--primary);padding:12px 16px;border-radius:10px;cursor:pointer;margin:6px 0;width:100%;transition:.2s}
+    .wallet-choice:hover{background:var(--primary);transform:scale(1.02)}
+  </style>
+</head>
+<body>
+
+  <!-- Login Page -->
+  <div class="login-container" id="loginPage">
+    <h1>Mogaland-Plume Simulator</h1>
+    <p class="subtitle">Connect wallet or use mock login (demo only)</p>
+
+    <button class="login-option" id="btnShowWallets">Connect Wallet</button>
+    <button class="login-option" id="btnShowEmail">Login with Email</button>
+    <button class="login-option" id="btnShowX">Login with X (@username)</button>
+
+    <div id="walletOptions" class="hidden">
+      <h3 style="margin:20px 0;">Select Wallet</h3>
+      <button class="wallet-choice" id="btnMetaMask">MetaMask</button>
+      <button class="wallet-choice" id="btnOKX">OKX Wallet</button>
+      <button class="wallet-choice" id="btnTrust">Trust Wallet</button>
+      <button class="wallet-choice" id="btnWC">WalletConnect</button>
+    </div>
+
+    <div id="emailLogin" class="hidden">
+      <input type="email" id="emailInput" class="input-field" placeholder="Gmail or Yahoo email" />
+      <button class="login-option" id="btnSendOtp">Send Mock OTP</button>
+      <input type="text" id="otpInput" class="input-field hidden" placeholder="OTP (123456)" />
+      <button class="login-option hidden" id="verifyOtpBtn">Verify</button>
+    </div>
+
+    <div id="xLogin" class="hidden">
+      <input type="text" id="xInput" class="input-field" placeholder="@yourusername" />
+      <button class="login-option" id="btnConfirmX">Confirm</button>
+    </div>
+
+    <div id="notification-area"></div>
+  </div>
+
+  <!-- Main App -->
+  <div class="main-app hidden" id="mainApp">
+    <header>
+      <button class="top-btn" id="walletBtn">Connect Wallet</button>
+      <button class="top-btn" id="btnProfile">Profile</button>
+    </header>
+
+    <h1 style="text-align:center;margin-top:10px;">Mogaland-Plume</h1>
+    <div class="subtitle" style="text-align:center;">Welcome!</div>
+
+    <div class="content" id="content">
+      <p>Select an option below to explore the simulator.</p>
+    </div>
+
+    <div class="nav-bar">
+      <button class="nav-btn" data-section="learning">Learning</button>
+      <button class="nav-btn" data-section="market">Market Prediction</button>
+      <button class="nav-btn active" data-section="swap">Swap</button>
+      <button class="nav-btn" data-section="bridge">Bridge</button>
+      <button class="nav-btn" data-section="nft">NFT Staking</button>
+    </div>
+
+    <!-- Profile Slide-in Panel -->
+    <div id="profileSlidePanel" class="profile-slide-panel hidden">
+      <div class="profile-slide-header">
+        <button class="gear-icon" id="btnOpenBack">⚙️</button>
+        <div class="account-title">Main Account ▼</div>
+        <button class="close-slide" id="btnCloseSlide">×</button>
+      </div>
+
+      <div class="profile-slide-balance">
+        <div class="profile-slide-total">$3.87</div>
+        <div class="profile-slide-addresses">Addresses ></div>
+      </div>
+
+      <div class="profile-slide-actions">
+        <button class="profile-slide-action-btn deposit" id="btnDeposit">+ Deposit</button>
+        <button class="profile-slide-action-btn swap" id="btnSwapOpen">↻ Swap</button>
+        <button class="profile-slide-action-btn send" id="btnSend">↑ Send</button>
+      </div>
+
+      <div class="profile-slide-tabs">
+        <button class="profile-slide-tab active" data-tab="assets">Assets</button>
+        <button class="profile-slide-tab" data-tab="activity">Activity</button>
+      </div>
+
+      <div class="tab-content" id="assetsContent">
+        <div class="profile-slide-asset-row">
+          <img src="https://plume.org/media-kit/plume-logomark-red.png" alt="PLUME" class="profile-slide-asset-icon">
+          <div style="flex:1">
+            <div style="font-weight:600">PLUME</div>
+            <div style="font-size:.9em;color:#94a3b8">Plume Native</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-weight:bold">0.452</div>
+            <div style="font-size:.95em;color:#94a3b8">$0.92</div>
+          </div>
+        </div>
+        <div class="profile-slide-asset-row">
+          <img src="https://via.placeholder.com/44/FFCC00/000000?text=MOGA" alt="MOGA" class="profile-slide-asset-icon">
+          <div style="flex:1">
+            <div style="font-weight:600">MOGA</div>
+            <div style="font-size:.9em;color:#94a3b8">Mogaland Token</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-weight:bold">1,245.67</div>
+            <div style="font-size:.95em;color:#94a3b8">$1.87</div>
+          </div>
+        </div>
+        <div class="profile-slide-asset-row">
+          <img src="https://cryptologos.cc/logos/usd-coin-usdc-logo.png?v=035" alt="USDC" class="profile-slide-asset-icon">
+          <div style="flex:1">
+            <div style="font-weight:600">USDC</div>
+            <div style="font-size:.9em;color:#94a3b8">USD Coin</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-weight:bold">0.004</div>
+            <div style="font-size:.95em;color:#94a3b8">$0.004</div>
+          </div>
+        </div>
+        <div class="profile-slide-asset-row">
+          <img src="https://cryptologos.cc/logos/tether-usdt-logo.png?v=035" alt="USDT" class="profile-slide-asset-icon">
+          <div style="flex:1">
+            <div style="font-weight:600">USDT</div>
+            <div style="font-size:.9em;color:#94a3b8">Tether</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-weight:bold">0.500</div>
+            <div style="font-size:.95em;color:#94a3b8">$0.500</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-content hidden" id="activityContent">
+        <div style="height: 300px; display:flex; align-items:center; justify-content:center; text-align:center; color:#94a3b8; font-size:1.1em; padding:20px;">
+          <div>
+            <div style="font-size:2.8em; margin-bottom:12px;">📭</div>
+            No recent on-chain activity yet.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Back Profile Panel -->
+    <div id="backProfilePanel" class="back-profile-panel hidden">
+      <div style="padding:24px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
+          <button class="gear-icon">⚙️</button>
+          <div class="account-title">Main Account ▼</div>
+          <button class="close-panel" id="btnCloseBack">×</button>
+        </div>
+        <button class="login-option" id="btnLogout">Log Out</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ===== Global error logger
+    window.addEventListener('error', e => console.error('[GlobalError]', e.message));
+
+    // ===== Constants & State
+    const PLUME_CHAIN_ID  = 98866;
+    const PLUME_CHAIN_HEX = '0x18232';
+    const PLUME_RPC       = 'https://rpc.plume.org';
+    const PLUME_EXPLORER  = 'https://explorer.plume.org';
+
+    let provider = null;
+    let userAddress = null;
+    const mockOtp = '123456';
+
+    // ===== Helpers
+    function showNotification(msg, error=false){
+      const div = document.createElement('div');
+      div.className = 'notification';
+      div.style.border = '1px solid ' + (error ? 'var(--danger)' : 'var(--bell)');
+      const icon = document.createElement('span'); icon.textContent = error ? '⚠️' : '🔔';
+      const text = document.createElement('span'); text.textContent = String(msg);
+      div.append(icon,text); document.body.appendChild(div);
+      setTimeout(()=>div.remove(), 4500);
+    }
+
+    function ensureEthersLoaded(){
+      if(!window.ethers){
+        console.error('[Ethers] belum termuat');
+        alert('Ethers belum termuat. Hard refresh (Ctrl+F5).');
+        return false;
+      }
+      return true;
+    }
+
+    // ===== Plume network ensure
+    async function ensurePlumeNetwork(){
+      if(!window.ethereum) return;
+      const params = {
+        chainId: PLUME_CHAIN_HEX,
+        chainName: 'Plume',
+        nativeCurrency: { name:'PLUME', symbol:'PLUME', decimals:18 },
+        rpcUrls: [PLUME_RPC],
+        blockExplorerUrls: [PLUME_EXPLORER]
+      };
+      try{
+        await window.ethereum.request({ method:'wallet_switchEthereumChain', params:[{ chainId: params.chainId }]});
+      }catch(err){
+        if(err.code === 4902){
+          await window.ethereum.request({ method:'wallet_addEthereumChain', params:[params]});
+        } else { throw err; }
+      }
+    }
+
+    // ===== Login views
+    function toggleSections(showId){
+      ['walletOptions','emailLogin','xLogin'].forEach(id=>{
+        const el = document.getElementById(id);
+        if(!el) return;
+        if(id===showId) el.classList.remove('hidden'); else el.classList.add('hidden');
+      });
+    }
+    function enterDashboard(method){
+      showNotification(`Entered via ${method} (simulator)`);
+      document.getElementById('loginPage').classList.add('hidden');
+      document.getElementById('mainApp').classList.remove('hidden');
+      showSection('swap');
+    }
+
+    // ===== Profile & panels
+    function showProfile(){ document.getElementById('profileSlidePanel').classList.remove('hidden'); }
+    function closeProfileSlide(){ document.getElementById('profileSlidePanel').classList.add('hidden'); }
+    function openBackProfile(){ document.getElementById('backProfilePanel').classList.remove('hidden'); closeProfileSlide(); }
+    function closeBackProfile(){ document.getElementById('backProfilePanel').classList.add('hidden'); }
+    function logoutUser(){
+      showNotification("Logged out (simulator)");
+      document.getElementById('mainApp').classList.add('hidden');
+      document.getElementById('loginPage').classList.remove('hidden');
+      closeBackProfile(); closeProfileSlide();
+    }
+
+    // ===== Wallet connect core
+    async function connectWallet(walletType, getProvider){
+      try{
+        if(!ensureEthersLoaded()) return;
+        provider = getProvider();
+        await provider.send('eth_requestAccounts', []);
+        const net = await provider.getNetwork();
+        if(net.chainId !== PLUME_CHAIN_ID && window.ethereum) await ensurePlumeNetwork();
+
+        const signer = provider.getSigner();
+        userAddress = (await signer.getAddress()).toLowerCase();
+
+        const btn = document.getElementById('walletBtn');
+        if(btn){
+          btn.textContent = `Connected: ${userAddress.slice(0,6)}...${userAddress.slice(-4)}`;
+          btn.classList.add('connected');
+        }
+        showNotification(`Connected via ${walletType}`);
+        enterDashboard(walletType);
+      }catch(e){
+        console.error('[Connect] Error:', e);
+        showNotification('Connection failed: ' + (e.message || 'Error'), true);
+      }
+    }
+
+    function connectMetaMask(){
+      if(!ensureEthersLoaded()) return;
+      if(!window.ethereum) return showNotification('MetaMask not found', true);
+      connectWallet('MetaMask', ()=> new ethers.providers.Web3Provider(window.ethereum));
+    }
+    function connectOKX(){
+      if(!ensureEthersLoaded()) return;
+      if(!window.okxwallet) return showNotification('OKX not found', true);
+      connectWallet('OKX', ()=> new ethers.providers.Web3Provider(window.okxwallet));
+    }
+    function connectTrustWallet(){
+      if(!ensureEthersLoaded()) return;
+      if(!window.ethereum) return showNotification('Trust not detected', true);
+      connectWallet('Trust', ()=> new ethers.providers.Web3Provider(window.ethereum));
+    }
+    async function connectWalletConnectV2(){
+      try{
+        if(!window.EthereumProvider) return showNotification('WalletConnect v2 belum termuat', true);
+        const wc = await window.EthereumProvider.init({
+          projectId: '51e44cec955a70475db9cc1900283704',
+          chains: [PLUME_CHAIN_ID],
+          rpcMap: { [PLUME_CHAIN_ID]: PLUME_RPC },
+          showQrModal: true,
+          methods: ['eth_sendTransaction','personal_sign','eth_signTypedData_v4'],
+          events: ['chainChanged','accountsChanged']
+        });
+        await wc.connect();
+        if(!ensureEthersLoaded()) return;
+        connectWallet('WalletConnect', ()=> new ethers.providers.Web3Provider(wc));
+      }catch(e){
+        console.error('[WCv2] Error:', e);
+        showNotification('WalletConnect v2 error: ' + (e.message || 'Error'), true);
+      }
+    }
+
+    // ===== Sections
+    function showSection(id){
+      // toggle active nav
+      document.querySelectorAll('.nav-btn').forEach(b=>{
+        b.classList.toggle('active', b.dataset.section === id);
+      });
+
+      const content = document.getElementById('content');
+      content.innerHTML = '';
+
+      if(id === 'swap'){
+        content.innerHTML = `
+          <div style="max-width: 480px; margin: 40px auto; padding: 0 12px;">
+            <h2 style="text-align:center; color:#60a5fa; margin-bottom:24px;">Swap on Plume</h2>
+            ${!userAddress ? `
+              <div style="background: rgba(220,53,69,.12); border:1px solid #dc3545; color:#ffcccc; padding:12px; border-radius:10px; margin-bottom:20px; text-align:center;">
+                Connect wallet untuk lihat saldo PLUME real
+              </div>` : ''}
+            <div style="padding:20px; border-radius:16px; background:var(--card-bg); border:1px solid var(--border); box-shadow: 0 4px 16px rgba(0,0,0,.3); margin-bottom:20px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                <select id="fromTokenSelect" style="padding:8px; background:var(--darker); border:1px solid var(--border); border-radius:8px; color:white;">
+                  <option value="PLUME">PLUME (Native)</option>
+                  <option value="MOGA">MOGA (Mogaland)</option>
+                  <option value="USDT">USDT</option>
+                  <option value="USDC">USDC</option>
+                </select>
+                <button id="toggleSwapBtn" style="background:#0d6efd; width:48px; height:48px; border-radius:50%; border:none; font-size:1.5em; color:white; cursor:pointer;">↔</button>
+                <select id="toTokenSelect" style="padding:8px; background:var(--darker); border:1px solid var(--border); border-radius:8px; color:white;">
+                  <option value="MOGA">MOGA (Mogaland)</option>
+                  <option value="PLUME">PLUME (Native)</option>
+                  <option value="USDT">USDT</option>
+                  <option value="USDC">USDC</option>
+                </select>
+              </div>
+              <input id="fromInput" type="number" placeholder="0.0" min="0" step="any"
+                     style="width:100%; font-size:2.4em; font-weight:500; background:transparent; border:none; color:white; text-align:right; outline:none;"/>
+              <div style="display:flex; justify-content:space-between; margin-top:10px; font-size:.9em; color:#94a3b8;">
+                <span>Balance: <strong id="plumeBalance" style="color:white;">Loading...</strong></span>
+                <span>~$<span id="fromUSD">0.00</span></span>
+              </div>
+            </div>
+            <div id="swapEstimate" style="margin:16px 0; padding:10px; background:rgba(16,185,129,.08); border-radius:10px; font-size:1em; color:#10b981; text-align:center;">
+              Estimasi: 0.00 (1 PLUME ≈ 100 MOGA)
+            </div>
+            <button class="login-option" style="padding:16px; border-radius:14px;" id="btnConfirmSwap">Swap Now</button>
+            <p style="text-align:center; margin-top:20px; color:#94a3b8; font-size:.9em;">PLUME real • MOGA/USDT/USDC simulasi • Demo</p>
+          </div>
+        `;
+        // bindings
+        setTimeout(()=>{
+          const fromSel = document.getElementById('fromTokenSelect');
+          const toSel   = document.getElementById('toTokenSelect');
+          const inp     = document.getElementById('fromInput');
+          const btnTgl  = document.getElementById('toggleSwapBtn');
+          const btnGo   = document.getElementById('btnConfirmSwap');
+
+          function updateSwapEstimate(){
+            const fromAmt  = parseFloat(inp?.value)||0;
+            const fromTok  = fromSel?.value || 'PLUME';
+            const toTok    = toSel?.value || 'MOGA';
+            let rate = 1;
+            if(fromTok==='PLUME' && toTok==='MOGA') rate=100;
+            if(fromTok==='MOGA' && toTok==='PLUME') rate=0.01;
+            if(fromTok==='PLUME' && (toTok==='USDT'||toTok==='USDC')) rate=0.01;
+            if((fromTok==='USDT'||fromTok==='USDC') && toTok==='PLUME') rate=100;
+            const estOut = (fromAmt*rate).toFixed(4);
+            const estEl = document.getElementById('swapEstimate');
+            if(estEl){ estEl.innerHTML = `Estimasi: <strong>${estOut} ${toTok}</strong> (1 ${fromTok} ≈ ${rate} ${toTok})`; }
+          }
+
+          function toggleSwap(){
+            const a = fromSel, b = toSel; if(!a||!b) return;
+            const t = a.value; a.value = b.value; b.value = t; updateSwapEstimate();
+          }
+          function confirmSwap(){
+            const amt = parseFloat(inp?.value)||0;
+            if(amt<=0) return showNotification("Masukkan jumlah > 0", true);
+            if(!userAddress) return showNotification("Hubungkan wallet dulu", true);
+            showNotification(`Simulasi swap: ${amt} ${fromSel.value} → ${toSel.value}`);
+          }
+
+          fromSel?.addEventListener('change', updateSwapEstimate);
+          toSel?.addEventListener('change', updateSwapEstimate);
+          inp?.addEventListener('input', updateSwapEstimate);
+          btnTgl?.addEventListener('click', toggleSwap);
+          btnGo?.addEventListener('click', confirmSwap);
+
+          updateSwapEstimate();
+          if(userAddress){ // update balance real PLUME
+            try{
+              if(ensureEthersLoaded() && provider){
+                provider.getBalance(userAddress).then(wei=>{
+                  const bal = ethers.utils.formatEther(wei);
+                  document.getElementById('plumeBalance').textContent = (parseFloat(bal)||0).toFixed(4);
+                });
+              }
+            }catch{}
+          }
+        }, 0);
+        return;
+      }
+
+      // Seksi lain (ringkas)
+      content.innerHTML = `
+        <div style="max-width: 800px; margin: 40px auto; padding: 16px;">
+          <h2 style="text-align:center; color:#60a5fa; margin-bottom:16px;">${id.toUpperCase()}</h2>
+          <p style="text-align:center; color:#94a3b8;">Section <strong>${id}</strong> simulator — coming soon.</p>
+        </div>
+      `;
+    }
+
+    // ===== DOM Ready: bind semua tombol (CSP-safe)
+    document.addEventListener('DOMContentLoaded', () => {
+      // Login toggles
+      document.getElementById('btnShowWallets')?.addEventListener('click', ()=>toggleSections('walletOptions'));
+      document.getElementById('btnShowEmail')?.addEventListener('click', ()=>toggleSections('emailLogin'));
+      document.getElementById('btnShowX')?.addEventListener('click', ()=>toggleSections('xLogin'));
+
+      // Email/X mock
+      document.getElementById('btnSendOtp')?.addEventListener('click', ()=>{
+        const email = document.getElementById('emailInput').value.trim();
+        if(!email.includes('@gmail.com') && !email.includes('@yahoo.com')) return showNotification("Use Gmail or Yahoo email.", true);
+        showNotification(`Mock OTP sent: ${mockOtp}`);
+        document.getElementById('otpInput').classList.remove('hidden');
+        document.getElementById('verifyOtpBtn').classList.remove('hidden');
+      });
+      document.getElementById('verifyOtpBtn')?.addEventListener('click', ()=>{
+        if(document.getElementById('otpInput').value.trim() === mockOtp) enterDashboard('Email');
+        else showNotification('Wrong OTP', true);
+      });
+      document.getElementById('btnConfirmX')?.addEventListener('click', ()=>{
+        const handle = document.getElementById('xInput').value.trim();
+        if(!handle.startsWith('@')) return showNotification('Invalid @username', true);
+        enterDashboard('X');
+      });
+
+      // Wallet choices
+      document.getElementById('btnMetaMask')?.addEventListener('click', connectMetaMask);
+      document.getElementById('btnOKX')?.addEventListener('click', connectOKX);
+      document.getElementById('btnTrust')?.addEventListener('click', connectTrustWallet);
+      document.getElementById('btnWC')?.addEventListener('click', connectWalletConnectV2);
+
+      // Profile buttons
+      document.getElementById('btnProfile')?.addEventListener('click', showProfile);
+      document.getElementById('btnOpenBack')?.addEventListener('click', openBackProfile);
+      document.getElementById('btnCloseSlide')?.addEventListener('click', closeProfileSlide);
+      document.getElementById('btnCloseBack')?.addEventListener('click', closeBackProfile);
+      document.getElementById('btnLogout')?.addEventListener('click', logoutUser);
+      document.getElementById('btnDeposit')?.addEventListener('click', ()=>showNotification('Deposit feature opening... (coming soon)'));
+      document.getElementById('btnSwapOpen')?.addEventListener('click', ()=>{ closeProfileSlide(); showSection('swap'); });
+      document.getElementById('btnSend')?.addEventListener('click', ()=>showNotification('Send feature (simulation mode)'));
+
+      // Tabs dalam profile
+      document.querySelectorAll('.profile-slide-tab').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          const isAssets = btn.dataset.tab === 'assets';
+          document.querySelectorAll('.profile-slide-tab').forEach(b=>b.classList.toggle('active', b===btn));
+          document.getElementById('assetsContent').classList.toggle('hidden', !isAssets);
+          document.getElementById('activityContent').classList.toggle('hidden', isAssets);
+        });
+      });
+
+      // Nav bar
+      document.querySelectorAll('.nav-btn').forEach(btn=>{
+        btn.addEventListener('click', ()=> showSection(btn.dataset.section));
+      });
+
+      // Default section
+      showSection('swap');
+    });
+  </script>
+</body>
+</html>
