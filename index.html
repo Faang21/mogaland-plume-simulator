@@ -743,82 +743,70 @@
         </div>
 
         <div class="section login">
-          <div class="section-title">Login</div>
+          <div class="section-title">Login & Connections</div>
 
-          <div class="item">
+          <div class="item" id="walletConnection">
             <div class="item-header">
               <span class="icon">🔗</span>
-              <div class="item-text">Linked Wallets ...7D66</div>
+              <div class="item-text" id="walletConnectionText">
+                <span id="walletStatusText">Not Connected</span>
+              </div>
             </div>
             <div class="button-group">
-              <button class="action-btn connect-btn">Connect</button>
-              <button class="action-btn disconnect-btn">Disconnect</button>
+              <button class="action-btn connect-btn" onclick="handleWalletConnect()" id="walletConnectBtn">Connect</button>
+              <button class="action-btn disconnect-btn" onclick="handleWalletDisconnect()" id="walletDisconnectBtn" style="display:none;">Disconnect</button>
             </div>
           </div>
 
-          <div class="item">
+          <div class="item" id="xConnection">
             <div class="item-header">
-              <span class="icon">✉️</span>
-              <div class="item-text">Email aangcrypto21@gmail.com</div>
+              <span class="icon">𝕏</span>
+              <div class="item-text">
+                <span id="xStatusText">Twitter/X - Not Connected</span>
+              </div>
             </div>
             <div class="button-group">
-              <button class="action-btn connect-btn">Connect</button>
-              <button class="action-btn disconnect-btn">Disconnect</button>
+              <button class="action-btn connect-btn" onclick="connectSocial('x')" id="xConnectBtn">Connect</button>
+              <button class="action-btn disconnect-btn" onclick="disconnectSocial('x')" id="xDisconnectBtn" style="display:none;">Disconnect</button>
             </div>
           </div>
 
-          <div class="item">
-            <div class="item-header">
-              <span class="icon">G</span>
-              <div class="item-text">Google aangcrypto2@gmail.com</div>
-            </div>
-            <div class="button-group">
-              <button class="action-btn connect-btn">Connect</button>
-              <button class="action-btn disconnect-btn">Disconnect</button>
-            </div>
-          </div>
-
-          <div class="item">
-            <div class="item-header">
-              <span class="icon">X</span>
-              <div class="item-text">Twitter @aangcrypto21</div>
-            </div>
-            <div class="button-group">
-              <button class="action-btn connect-btn">Connect</button>
-              <button class="action-btn disconnect-btn">Disconnect</button>
-            </div>
-          </div>
-
-          <div class="item">
+          <div class="item" id="telegramConnection">
             <div class="item-header">
               <span class="icon">✈️</span>
-              <div class="item-text">Telegram Aang2121</div>
+              <div class="item-text">
+                <span id="telegramStatusText">Telegram - Not Connected</span>
+              </div>
             </div>
             <div class="button-group">
-              <button class="action-btn connect-btn">Connect</button>
-              <button class="action-btn disconnect-btn">Disconnect</button>
+              <button class="action-btn connect-btn" onclick="connectSocial('telegram')" id="telegramConnectBtn">Connect</button>
+              <button class="action-btn disconnect-btn" onclick="disconnectSocial('telegram')" id="telegramDisconnectBtn" style="display:none;">Disconnect</button>
             </div>
           </div>
 
-          <div class="item">
+          <div class="item" id="discordConnection">
             <div class="item-header">
-              <span class="icon">Discord</span>
-              <div class="item-text">aang123.#0</div>
+              <span class="icon">💬</span>
+              <div class="item-text">
+                <span id="discordStatusText">Discord - Not Connected</span>
+              </div>
             </div>
             <div class="button-group">
-              <button class="action-btn connect-btn">Connect</button>
-              <button class="action-btn disconnect-btn">Disconnect</button>
+              <button class="action-btn connect-btn" onclick="connectSocial('discord')" id="discordConnectBtn">Connect</button>
+              <button class="action-btn disconnect-btn" onclick="disconnectSocial('discord')" id="discordDisconnectBtn" style="display:none;">Disconnect</button>
             </div>
           </div>
 
-          <div class="item passport">
+          <div class="item" id="farcasterConnection">
             <div class="item-header">
-              <span class="icon passport">🛡️</span>
-              <div class="item-text">Plume Passport Connected</div>
+              <span class="icon">🎭</span>
+              <div class="item-text">
+                <span id="farcasterStatusText">Farcaster - Not Connected</span>
+              </div>
             </div>
             <div class="button-group">
-              <button class="action-btn connect-btn">Connect</button>
-              <button class="action-btn disconnect-btn">Disconnect</button>
+              <button class="action-btn connect-btn" onclick="connectSocial('farcaster')" id="farcasterConnectBtn">Connect</button>
+              <button class="action-btn disconnect-btn" onclick="disconnectSocial('farcaster')" id="farcasterDisconnectBtn" style="display:none;">Disconnect</button>
             </div>
           </div>
         </div>
@@ -882,9 +870,29 @@
     }
 
     function enterDashboard(method) {
-      showNotification(`Entered via ${method} (simulator mode)`, false);
+      showNotification(`Entered via ${method}`, false);
       document.getElementById('loginPage').classList.add('hidden');
       document.getElementById('mainApp').classList.remove('hidden');
+      
+      // Initialize profile tabs
+      initProfileTabs();
+      
+      // Load social connections status
+      loadSocialConnections();
+      
+      // Restore last visited section
+      const lastSection = localStorage.getItem('lastSection');
+      if (lastSection) {
+        setTimeout(() => {
+          showSection(lastSection);
+          localStorage.removeItem('lastSection'); // Clear after restoring
+        }, 500);
+      } else {
+        showSection('swap'); // Default to swap
+      }
+      
+      // Start sports auto-update (every 5 minutes)
+      startSportsAutoUpdate();
     }
 
     async function connectWallet(walletType, getProvider) {
@@ -995,9 +1003,126 @@
       setTimeout(() => div.remove(), 6000);
     }
 
+    // Fetch real token balances from Sepolia
+    async function fetchRealBalances() {
+      if (!userAddress || !provider) return;
+      
+      try {
+        // Fetch ETH balance
+        const ethBalanceWei = await provider.getBalance(userAddress);
+        const ethBalance = parseFloat(ethers.utils.formatEther(ethBalanceWei));
+        
+        // Fetch USDC balance
+        const usdcContract = new ethers.Contract(USDC_SEPOLIA_ADDRESS, ERC20_ABI, provider);
+        const usdcBalanceRaw = await usdcContract.balanceOf(userAddress);
+        const usdcBalance = parseFloat(ethers.utils.formatUnits(usdcBalanceRaw, 6)); // USDC has 6 decimals
+        
+        // Fetch USDT balance
+        const usdtContract = new ethers.Contract(USDT_SEPOLIA_ADDRESS, ERC20_ABI, provider);
+        const usdtBalanceRaw = await usdtContract.balanceOf(userAddress);
+        const usdtBalance = parseFloat(ethers.utils.formatUnits(usdtBalanceRaw, 6)); // USDT has 6 decimals
+        
+        // Update UI
+        document.getElementById('ethBalance').textContent = ethBalance.toFixed(4);
+        document.querySelector('.profile-slide-total').textContent = `${ethBalance.toFixed(4)} ETH`;
+        
+        // Update USDC display
+        const usdcElements = document.querySelectorAll('.profile-slide-asset-row');
+        if (usdcElements[2]) {
+          usdcElements[2].querySelector('.profile-slide-token-amount').textContent = usdcBalance.toFixed(4);
+          usdcElements[2].querySelector('.profile-slide-usd-amount').textContent = `$${usdcBalance.toFixed(2)}`;
+        }
+        
+        // Update USDT display
+        if (usdcElements[3]) {
+          usdcElements[3].querySelector('.profile-slide-token-amount').textContent = usdtBalance.toFixed(4);
+          usdcElements[3].querySelector('.profile-slide-usd-amount').textContent = `$${usdtBalance.toFixed(2)}`;
+        }
+        
+        console.log(`Balances updated: ETH=${ethBalance}, USDC=${usdcBalance}, USDT=${usdtBalance}`);
+      } catch (error) {
+        console.error('Error fetching balances:', error);
+      }
+    }
+
+    // Fetch transaction history from Sepolia Etherscan API
+    async function fetchTransactionHistory() {
+      if (!userAddress) return;
+      
+      try {
+        const apiKey = 'YourEtherscanAPIKey'; // Users should add their own key
+        const url = `https://api-sepolia.etherscan.io/api?module=account&action=txlist&address=${userAddress}&startblock=0&endblock=99999999&page=1&offset=10&sort=desc&apikey=${apiKey}`;
+        
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        if (data.status === '1' && data.result && data.result.length > 0) {
+          const activityContainer = document.getElementById('activityContent');
+          activityContainer.innerHTML = '';
+          
+          data.result.slice(0, 10).forEach(tx => {
+            const isReceive = tx.to.toLowerCase() === userAddress.toLowerCase();
+            const value = ethers.utils.formatEther(tx.value);
+            const date = new Date(parseInt(tx.timeStamp) * 1000).toLocaleDateString();
+            
+            const txDiv = document.createElement('div');
+            txDiv.className = 'activity-item';
+            txDiv.style.padding = '12px';
+            txDiv.style.borderBottom = '1px solid rgba(255,255,255,0.1)';
+            txDiv.innerHTML = `
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <div style="font-weight: 600; color: ${isReceive ? '#10b981' : '#ef4444'};">
+                    ${isReceive ? '↓ Received' : '↑ Sent'}
+                  </div>
+                  <div style="font-size: 0.85em; opacity: 0.7;">${date}</div>
+                </div>
+                <div style="text-align: right;">
+                  <div style="font-weight: 600;">${parseFloat(value).toFixed(4)} ETH</div>
+                  <a href="${SEPOLIA_EXPLORER}/tx/${tx.hash}" target="_blank" style="font-size: 0.85em; color: #60a5fa;">View</a>
+                </div>
+              </div>
+            `;
+            activityContainer.appendChild(txDiv);
+          });
+        } else {
+          // If no transactions or API error, try to show at least connected status
+          const activityContainer = document.getElementById('activityContent');
+          activityContainer.innerHTML = `
+            <div style="height: 300px; display: flex; align-items: center; justify-content: center; text-align: center; color: #94a3b8; font-size: 1.1em; padding: 20px;">
+              <div>
+                <div style="font-size: 2.8em; margin-bottom: 12px;">📭</div>
+                <div>No recent transactions found</div>
+                <div style="font-size: 0.9em; margin-top: 8px; opacity: 0.7;">Wallet: ${userAddress.slice(0,6)}...${userAddress.slice(-4)}</div>
+              </div>
+            </div>
+          `;
+        }
+      } catch (error) {
+        console.error('Error fetching transaction history:', error);
+        // Show fallback with wallet info
+        const activityContainer = document.getElementById('activityContent');
+        activityContainer.innerHTML = `
+          <div style="height: 300px; display: flex; align-items: center; justify-content: center; text-align: center; color: #94a3b8; font-size: 1.1em; padding: 20px;">
+            <div>
+              <div style="font-size: 2.8em; margin-bottom: 12px;">🔗</div>
+              <div>Connected Wallet</div>
+              <div style="font-size: 0.9em; margin-top: 8px; opacity: 0.7;">${userAddress.slice(0,6)}...${userAddress.slice(-4)}</div>
+              <div style="font-size: 0.85em; margin-top: 8px; opacity: 0.6;">Add Etherscan API key to view history</div>
+            </div>
+          </div>
+        `;
+      }
+    }
+
     // Profile panel functions
     function showProfile() {
       document.getElementById('profileSlidePanel').classList.remove('hidden');
+      // Refresh data when profile is opened
+      if (userAddress) {
+        fetchRealBalances();
+        fetchTransactionHistory();
+      }
     }
 
     function closeProfileSlide() {
@@ -1014,15 +1139,73 @@
     }
 
     function logoutUser() {
-      showNotification("Logged out (simulator)");
+      // Store current section for restoration on re-login
+      const currentSection = document.querySelector('.main-section:not([style*="display: none"])');
+      if (currentSection) {
+        localStorage.setItem('lastSection', currentSection.id || 'swap');
+      }
+      
+      // Clear wallet connection
+      userAddress = null;
+      provider = null;
+      
+      // Clear social connections status
+      localStorage.removeItem('socialConnections');
+      
+      showNotification("Logged out successfully");
       document.getElementById('mainApp').classList.add('hidden');
       document.getElementById('loginPage').classList.remove('hidden');
       closeBackProfile();
       closeProfileSlide();
+      
+      // Reset wallet button
+      const walletBtn = document.getElementById('walletBtn');
+      if (walletBtn) {
+        walletBtn.textContent = 'Connect Wallet';
+        walletBtn.classList.remove('connected');
+      }
     }
 
     function openDepositModal() {
-      showNotification("Deposit feature opening... Connect wallet & select chain (coming soon)", false);
+      if (!userAddress) {
+        showNotification("Please connect wallet first", true);
+        return;
+      }
+      
+      // Create deposit modal with QR code
+      const modal = document.createElement('div');
+      modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 10000;';
+      modal.innerHTML = `
+        <div style="background: var(--card-bg); padding: 32px; border-radius: 16px; max-width: 400px; text-align: center; border: 1px solid var(--border);">
+          <h3 style="color: #60a5fa; margin-bottom: 16px;">Deposit to Your Wallet</h3>
+          <p style="color: #94a3b8; margin-bottom: 16px;">Send ETH, USDC, or USDT to your address:</p>
+          <div style="background: white; padding: 16px; border-radius: 12px; margin: 16px 0;">
+            <div id="depositQR"></div>
+          </div>
+          <div style="background: rgba(13,110,253,0.1); padding: 12px; border-radius: 8px; word-break: break-all; font-family: monospace; font-size: 0.9em; color: #60a5fa; margin-bottom: 16px;">
+            ${userAddress}
+          </div>
+          <button onclick="copyToClipboard('${userAddress}')" style="background: var(--primary); color: white; padding: 12px 24px; border: none; border-radius: 8px; cursor: pointer; margin-right: 8px;">
+            📋 Copy Address
+          </button>
+          <button onclick="this.parentElement.parentElement.remove()" style="background: var(--danger); color: white; padding: 12px 24px; border: none; border-radius: 8px; cursor: pointer;">
+            Close
+          </button>
+        </div>
+      `;
+      document.body.appendChild(modal);
+      
+      // Generate QR code (using a simple text representation for now)
+      const qrDiv = document.getElementById('depositQR');
+      qrDiv.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${userAddress}" alt="QR Code" style="width: 200px; height: 200px;">`;
+    }
+
+    function copyToClipboard(text) {
+      navigator.clipboard.writeText(text).then(() => {
+        showNotification('Address copied to clipboard!', false);
+      }).catch(() => {
+        showNotification('Failed to copy address', true);
+      });
     }
 
     function openSwapModal() {
@@ -1032,7 +1215,93 @@
     }
 
     function openSendModal() {
-      showNotification("Send feature: Enter recipient address & amount (simulation mode)", false);
+      if (!userAddress) {
+        showNotification("Please connect wallet first", true);
+        return;
+      }
+      
+      // Create send modal
+      const modal = document.createElement('div');
+      modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 10000;';
+      modal.innerHTML = `
+        <div style="background: var(--card-bg); padding: 32px; border-radius: 16px; max-width: 500px; width: 90%; border: 1px solid var(--border);">
+          <h3 style="color: #60a5fa; margin-bottom: 20px;">Send Crypto</h3>
+          
+          <div style="margin-bottom: 16px;">
+            <label style="display: block; color: #94a3b8; margin-bottom: 8px;">Token</label>
+            <select id="sendToken" style="width: 100%; padding: 12px; background: var(--darker); border: 1px solid var(--border); border-radius: 8px; color: white; font-size: 1em;">
+              <option value="ETH">ETH (Sepolia)</option>
+              <option value="USDC">USDC (Sepolia)</option>
+              <option value="USDT">USDT (Sepolia)</option>
+            </select>
+          </div>
+          
+          <div style="margin-bottom: 16px;">
+            <label style="display: block; color: #94a3b8; margin-bottom: 8px;">Recipient Address</label>
+            <input type="text" id="sendAddress" placeholder="0x..." style="width: 100%; padding: 12px; background: var(--darker); border: 1px solid var(--border); border-radius: 8px; color: white; font-size: 1em;">
+          </div>
+          
+          <div style="margin-bottom: 20px;">
+            <label style="display: block; color: #94a3b8; margin-bottom: 8px;">Amount</label>
+            <input type="number" id="sendAmount" placeholder="0.0" step="0.001" min="0" style="width: 100%; padding: 12px; background: var(--darker); border: 1px solid var(--border); border-radius: 8px; color: white; font-size: 1em;">
+          </div>
+          
+          <div style="display: flex; gap: 12px;">
+            <button onclick="executeSend()" style="flex: 1; background: var(--primary); color: white; padding: 14px; border: none; border-radius: 8px; cursor: pointer; font-size: 1.1em;">
+              Send
+            </button>
+            <button onclick="this.parentElement.parentElement.parentElement.remove()" style="flex: 1; background: var(--danger); color: white; padding: 14px; border: none; border-radius: 8px; cursor: pointer; font-size: 1.1em;">
+              Cancel
+            </button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+    }
+
+    async function executeSend() {
+      const token = document.getElementById('sendToken').value;
+      const toAddress = document.getElementById('sendAddress').value;
+      const amount = document.getElementById('sendAmount').value;
+      
+      if (!toAddress || !amount || parseFloat(amount) <= 0) {
+        showNotification('Please enter valid address and amount', true);
+        return;
+      }
+      
+      if (!ethers.utils.isAddress(toAddress)) {
+        showNotification('Invalid Ethereum address', true);
+        return;
+      }
+      
+      try {
+        showNotification('Preparing transaction...', false);
+        const signer = provider.getSigner();
+        
+        if (token === 'ETH') {
+          const tx = await signer.sendTransaction({
+            to: toAddress,
+            value: ethers.utils.parseEther(amount)
+          });
+          showNotification('Transaction sent! Waiting for confirmation...', false);
+          await tx.wait();
+          showNotification(`✅ Sent ${amount} ETH to ${toAddress.slice(0,6)}...${toAddress.slice(-4)}`, false);
+        } else {
+          const contractAddress = token === 'USDC' ? USDC_SEPOLIA_ADDRESS : USDT_SEPOLIA_ADDRESS;
+          const contract = new ethers.Contract(contractAddress, ERC20_ABI, signer);
+          const decimals = 6; // USDC and USDT use 6 decimals
+          const tx = await contract.transfer(toAddress, ethers.utils.parseUnits(amount, decimals));
+          showNotification('Transaction sent! Waiting for confirmation...', false);
+          await tx.wait();
+          showNotification(`✅ Sent ${amount} ${token} to ${toAddress.slice(0,6)}...${toAddress.slice(-4)}`, false);
+        }
+        
+        // Close modal and refresh balances
+        document.querySelector('[style*="position: fixed"]').remove();
+        fetchRealBalances();
+      } catch (error) {
+        showNotification('Transaction failed: ' + error.message, true);
+      }
     }
 
     // === FIXED PROFILE TABS ===
@@ -1053,6 +1322,113 @@
       });
     }
 
+    // Social Media Connection Management
+    const SOCIAL_OAUTH_URLS = {
+      x: 'https://twitter.com/i/oauth2/authorize', // Twitter OAuth 2.0
+      telegram: 'https://t.me/botfather', // Telegram bot linking
+      discord: 'https://discord.com/api/oauth2/authorize', // Discord OAuth
+      farcaster: 'https://warpcast.com/~/signin' // Farcaster auth
+    };
+
+    function loadSocialConnections() {
+      const connections = JSON.parse(localStorage.getItem('socialConnections') || '{}');
+      
+      // Update wallet status
+      if (userAddress) {
+        document.getElementById('walletStatusText').textContent = `Wallet: ${userAddress.slice(0,6)}...${userAddress.slice(-4)}`;
+        document.getElementById('walletConnectBtn').style.display = 'none';
+        document.getElementById('walletDisconnectBtn').style.display = 'inline-block';
+      }
+      
+      // Update social connection states
+      ['x', 'telegram', 'discord', 'farcaster'].forEach(platform => {
+        if (connections[platform]) {
+          const statusEl = document.getElementById(`${platform}StatusText`);
+          const connectBtn = document.getElementById(`${platform}ConnectBtn`);
+          const disconnectBtn = document.getElementById(`${platform}DisconnectBtn`);
+          
+          if (statusEl && connectBtn && disconnectBtn) {
+            statusEl.textContent = connections[platform].displayText;
+            connectBtn.style.display = 'none';
+            disconnectBtn.style.display = 'inline-block';
+          }
+        }
+      });
+    }
+
+    function connectSocial(platform) {
+      const platformNames = {
+        x: 'Twitter/X',
+        telegram: 'Telegram',
+        discord: 'Discord',
+        farcaster: 'Farcaster'
+      };
+      
+      const platformName = platformNames[platform];
+      
+      // In a real implementation, this would initiate OAuth flow
+      showNotification(`Opening ${platformName} authentication...`, false);
+      
+      // Simulate OAuth flow with a prompt
+      setTimeout(() => {
+        const username = prompt(`Enter your ${platformName} username to connect (demo):`);
+        if (username) {
+          const connections = JSON.parse(localStorage.getItem('socialConnections') || '{}');
+          connections[platform] = {
+            username: username,
+            displayText: `${platformName}: @${username}`,
+            connectedAt: new Date().toISOString()
+          };
+          localStorage.setItem('socialConnections', JSON.stringify(connections));
+          
+          showNotification(`✅ Connected to ${platformName} as @${username}`, false);
+          loadSocialConnections();
+        }
+      }, 500);
+    }
+
+    function disconnectSocial(platform) {
+      const platformNames = {
+        x: 'Twitter/X',
+        telegram: 'Telegram',
+        discord: 'Discord',
+        farcaster: 'Farcaster'
+      };
+      
+      if (confirm(`Disconnect from ${platformNames[platform]}?`)) {
+        const connections = JSON.parse(localStorage.getItem('socialConnections') || '{}');
+        delete connections[platform];
+        localStorage.setItem('socialConnections', JSON.stringify(connections));
+        
+        // Reset UI
+        const statusEl = document.getElementById(`${platform}StatusText`);
+        const connectBtn = document.getElementById(`${platform}ConnectBtn`);
+        const disconnectBtn = document.getElementById(`${platform}DisconnectBtn`);
+        
+        if (statusEl && connectBtn && disconnectBtn) {
+          statusEl.textContent = `${platformNames[platform]} - Not Connected`;
+          connectBtn.style.display = 'inline-block';
+          disconnectBtn.style.display = 'none';
+        }
+        
+        showNotification(`Disconnected from ${platformNames[platform]}`, false);
+      }
+    }
+
+    function handleWalletConnect() {
+      // Close back profile and show login page to connect wallet
+      closeBackProfile();
+      if (!userAddress) {
+        showNotification('Please connect your wallet from the main page', false);
+      }
+    }
+
+    function handleWalletDisconnect() {
+      if (confirm('Disconnect your wallet?')) {
+        logoutUser();
+      }
+    }
+
     // === MAIN SECTION SWITCHER ===
     let stakedUSDC = 0;
     let mogalandPoints = 0;
@@ -1062,12 +1438,17 @@
     let usdcBalance = "0.00";
     let nftMinted = false;
 
-    // Sepolia USDC Contract Address
+    // Sepolia Token Contract Addresses
     const USDC_SEPOLIA_ADDRESS = "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238";
-    const USDC_ABI = [
+    const USDT_SEPOLIA_ADDRESS = "0x7169D38820dfd117C3FA1f22a697dBA58d90BA06";
+    const ERC20_ABI = [
       "function balanceOf(address owner) view returns (uint256)",
       "function transfer(address to, uint256 amount) returns (bool)",
       "function approve(address spender, uint256 amount) returns (bool)",
+      "function decimals() view returns (uint8)",
+      "function symbol() view returns (string)"
+    ];
+    const USDC_ABI = ERC20_ABI;
       "function allowance(address owner, address spender) view returns (uint256)",
       "function decimals() view returns (uint8)"
     ];
@@ -1476,6 +1857,47 @@
             }
           } catch (error) {
             console.log('Sports API error:', error);
+          }
+        }
+
+        // Auto-update sports data periodically
+        let sportsUpdateInterval = null;
+        
+        function startSportsAutoUpdate() {
+          // Clear existing interval if any
+          if (sportsUpdateInterval) {
+            clearInterval(sportsUpdateInterval);
+          }
+          
+          // Update sports data every 5 minutes
+          sportsUpdateInterval = setInterval(() => {
+            if (currentTab === 'sports') {
+              console.log('Auto-updating sports data...');
+              assetsData.sports.forEach(team => {
+                fetchSportsData(team);
+              });
+              
+              // Refresh display if on sports tab
+              if (selectedAsset && selectedAsset.type) {
+                setTimeout(() => {
+                  showClubHistory(selectedAsset);
+                }, 2000);
+              }
+            }
+          }, 5 * 60 * 1000); // 5 minutes
+          
+          // Initial update for sports teams
+          if (assetsData.sports) {
+            assetsData.sports.forEach(team => {
+              fetchSportsData(team);
+            });
+          }
+        }
+
+        function stopSportsAutoUpdate() {
+          if (sportsUpdateInterval) {
+            clearInterval(sportsUpdateInterval);
+            sportsUpdateInterval = null;
           }
         }
 
