@@ -3,83 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login Page</title>
-    <style>
-        body { background-color: #121212; color: #ffffff; font-family: Arial, sans-serif; }
-        .container { width: 300px; margin: 100px auto; }
-        button { width: 100%; padding: 10px; margin: 5px 0; border: none; border-radius: 5px; }
-        .dark-btn { background-color: #1e1e1e; color: #ffffff; }
-        .section { margin: 20px 0; padding: 10px; border: 1px solid #ffffff; border-radius: 5px; }
-    </style>
+    <title>Mogaland-Plume Simulator</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/web3/1.5.0/web3.min.js"></script>
 </head>
 <body>
-    <div class="container">
-        <h2>Login</h2>
-        <button class="dark-btn" id="connectWallet">Connect Wallet</button>
-        <button class="dark-btn" id="emailLogin">Email Login</button>
-        <button class="dark-btn" id="xLogin">X Login</button>
-
-        <div id="walletOptions" class="section" style="display: none;">
-            <h3>Wallet Options</h3>
-            <button class="dark-btn" onclick="connect('MetaMask')">MetaMask</button>
-            <button class="dark-btn" onclick="connect('OKX')">OKX</button>
-            <button class="dark-btn" onclick="connect('Trust')">Trust</button>
-            <button class="dark-btn" onclick="connect('WalletConnect')">WalletConnect</button>
+    <header>
+        <h1>Mogaland-Plume Simulator</h1>
+        <div id="login-menu">
+            <h2>Login</h2>
+            <form id="login-form">
+                <input type="email" placeholder="Email" required />
+                <button type="submit">Login with Email & OTP</button>
+                <button id="metamask-btn">Login with MetaMask</button>
+                <button id="trust-wallet-btn">Login with Trust Wallet</button>
+                <button id="x-login-btn">Login with X</button>
+            </form>
         </div>
-
-        <div id="otpSection" class="section" style="display: none;">
-            <h3>Email Login</h3>
-            <input type="text" id="otp" placeholder="Enter OTP">
-            <button class="dark-btn" id="verifyOtp">Verify OTP</button>
-        </div>
-
-        <div id="usernameSection" class="section" style="display: none;">
-            <h3>X Login</h3>
-            <input type="text" id="username" placeholder="Enter @username">
-            <button class="dark-btn" id="loginX">Login</button>
-        </div>
-    </div>
-
-    <div id="dashboard" class="container" style="display: none;">
-        <h2>Main Dashboard</h2>
-        <div class="section">Learning with Quiz and Staking</div>
-        <div class="section">Market Prediction</div>
-        <div class="section">Swap Tokens</div>
-        <div class="section">Bridge Assets</div>
-        <div class="section">NFT Staking</div>
-    </div>
-
-    <script>
-        document.getElementById('connectWallet').onclick = function() {
-            document.getElementById('walletOptions').style.display = 'block';
-        };
-        document.getElementById('emailLogin').onclick = function() {
-            document.getElementById('otpSection').style.display = 'block';
-        };
-        document.getElementById('xLogin').onclick = function() {
-            document.getElementById('usernameSection').style.display = 'block';
-        };
-
-        function connect(wallet) {
-            alert('Connecting to ' + wallet);
-            document.getElementById('dashboard').style.display = 'block';
-        }
-
-        document.getElementById('verifyOtp').onclick = function() {
-            const enteredOtp = document.getElementById('otp').value;
-            if (enteredOtp === '123456') {
-                alert('OTP Verified!');
-                document.getElementById('dashboard').style.display = 'block';
-            } else {
-                alert('Incorrect OTP.');
-            }
-        };
-
-        document.getElementById('loginX').onclick = function() {
-            const username = document.getElementById('username').value;
-            alert('Logged in as ' + username);
-            document.getElementById('dashboard').style.display = 'block';
-        };
-    </script>
+    </header>
+    <main>
+        <section id="learning-section">
+            <h2>Learning & Quiz</h2>
+            <button id="stake-button">Stake Tokens</button>
+            <!-- Quiz functionality here -->
+        </section>
+        <section id="market-section">
+            <h2>Market Prediction</h2>
+            <!-- Market prediction functionality here -->
+        </section>
+        <section id="swap-section">
+            <h2>Swap Tokens</h2>
+            <!-- Token swapping functionality here -->
+        </section>
+        <section id="bridge-section">
+            <h2>Bridge Assets</h2>
+            <!-- Asset bridging functionality here -->
+        </section>
+        <section id="nft-section">
+            <h2>NFT Staking</h2>
+            <!-- NFT staking functionality here -->
+        </section>
+    </main>
+    <footer>
+        <p>&copy; 2026 Mogaland-Plume Simulator. All rights reserved.</p>
+    </footer>
+    <script src="scripts.js"></script>
 </body>
 </html>
