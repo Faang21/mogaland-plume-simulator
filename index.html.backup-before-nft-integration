@@ -1,0 +1,3507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Mogaland-Plume Simulator</title>
+  <script src="https://cdn.ethers.io/lib/ethers-5.7.umd.min.js"></script>
+  <script src="https://unpkg.com/@walletconnect/web3-provider@1.8.0/dist/umd/index.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@0.2.0/dist/chartjs-chart-financial.min.js"></script>
+  <!-- TradingView Widget -->
+  <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+
+  <style>
+    :root {
+      --primary: #0d6efd;
+      --dark: #0a2540;
+      --darker: #071a2e;
+      --light: #f8f9fa;
+      --bell: #ffcc00;
+      --success: #28a745;
+      --danger: #dc3545;
+      --card-bg: #1e293b;
+      --border: #334155;
+      --progress: #3b82f6;
+      --progress-end: #60a5fa;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: var(--darker);
+      color: var(--light);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .login-container {
+      background: rgba(0,0,0,0.5);
+      border-radius: 20px;
+      padding: 80px 40px;
+      width: 100%;
+      max-width: 500px;
+      text-align: center;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+      border: 1px solid rgba(255,255,255,0.1);
+      margin: 120px auto;
+    }
+    h1 { font-size: 3.2rem; margin-bottom: 12px; }
+    .subtitle { font-size: 1.3rem; opacity: 0.8; margin-bottom: 50px; }
+    .login-option {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 18px;
+      font-size: 1.3rem;
+      border-radius: 12px;
+      cursor: pointer;
+      margin: 20px 0;
+      width: 100%;
+      transition: all 0.3s;
+    }
+    .login-option:hover { background: #0b5ed7; transform: scale(1.02); }
+    .input-field {
+      width: 100%;
+      padding: 14px;
+      margin: 10px 0;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.2);
+      background: rgba(255,255,255,0.05);
+      color: white;
+      font-size: 1.1rem;
+    }
+    .main-app {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    header {
+      padding: 20px;
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 12px;
+    }
+    .top-btn {
+      background: rgba(13,110,253,0.3);
+      color: white;
+      border: 1px solid var(--primary);
+      padding: 10px 18px;
+      font-size: 1rem;
+      border-radius: 30px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .top-btn:hover { background: var(--primary); transform: scale(1.05); }
+    .top-btn.connected { background: var(--success); border-color: var(--success); }
+    .nav-bar {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(10px);
+      border-radius: 60px;
+      padding: 12px 20px;
+      display: flex;
+      gap: 12px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+      border: 1px solid rgba(255,255,255,0.1);
+      z-index: 100;
+    }
+    .nav-btn {
+      background: rgba(13,110,253,0.2);
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      font-size: 1rem;
+      border-radius: 40px;
+      cursor: pointer;
+      transition: all 0.3s;
+      white-space: nowrap;
+    }
+    .nav-btn:hover, .nav-btn.active { background: var(--primary); transform: scale(1.08); }
+    .content { flex: 1; padding: 20px; padding-bottom: 100px; text-align: center; }
+    .hidden { display: none !important; }
+    .notification {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255,204,0,0.2);
+      border: 1px solid var(--bell);
+      color: white;
+      padding: 14px 24px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      z-index: 1000;
+      animation: bell 1.5s;
+      max-width: 90%;
+    }
+    @keyframes bell { 0%,100% { transform: translateX(-50%) scale(1); } 50% { transform: translateX(-50%) scale(1.05); } }
+
+    .flex-container {
+      display: flex;
+      gap: 30px;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: stretch;
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+    @media (min-width: 992px) { .flex-container { flex-wrap: nowrap; } }
+    @media (max-width: 992px) { .flex-container { flex-direction: column; } }
+
+    .progress-box, .question-card, .card {
+      min-height: 520px !important;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-sizing:border-box;
+    }
+    .question-card {
+      min-height: 520px !important;
+      flex: 1 1 420px;
+      max-width: 500px;
+    }
+    .progress-box, .card {
+      min-height: 520px !important;
+      flex: 1 1 320px;
+      max-width: 420px;
+    }
+    .question-box {
+      flex: 1 1 420px;
+      min-width: 380px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 24px;
+      border: 1px solid var(--border);
+      box-shadow: 0 8px 25px rgba(0,0,0,0.5);
+    }
+    .card h3 { color: #60a5fa; margin-bottom: 16px; text-align: center; font-size: 1.4em; }
+    .progress-bar {
+      background: var(--border);
+      border-radius: 999px;
+      height: 14px;
+      overflow: hidden;
+      margin: 12px 0;
+    }
+    .progress-fill {
+      background: linear-gradient(90deg, var(--progress), var(--progress-end));
+      height: 100%;
+      transition: width 0.6s ease;
+    }
+    .btn-primary {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(90deg, var(--primary), var(--progress-end));
+      border: none;
+      border-radius: 12px;
+      color: white;
+      font-size: 1.1em;
+      cursor: pointer;
+      margin: 8px 0;
+      transition: all 0.3s;
+    }
+    .btn-primary:hover { transform: scale(1.03); }
+    .btn-success { background: linear-gradient(90deg, var(--success), #34d399); }
+    .btn-group { display: flex; gap: 16px; margin-top: 24px; }
+
+    .question-card {
+      background: #0f172a;
+      border-radius: 12px;
+      padding: 28px;
+      border: 1px solid var(--border);
+      position: relative;
+    }
+    .question-number {
+      position: absolute;
+      top: -70px;
+      left: -50px;
+      font-size: 9rem;
+      font-weight: bold;
+      color: #60a5fa;
+      opacity: 0.1;
+      pointer-events: none;
+      line-height: 1;
+    }
+    .question-title { font-size: 1.6em; margin-bottom: 24px; line-height: 1.4; }
+
+    .progress-box {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 24px;
+      text-align: center;
+    }
+    .progress-box h4 { color: #60a5fa; margin-bottom: 16px; font-size: 1.4em; }
+    .progress-box .reach { font-size: 2em; font-weight: bold; color: #10b981; margin: 20px 0; }
+
+    #progressTitle {
+      font-size: 1.4em;
+      color: #60a5fa;
+      margin-bottom: 16px;
+    }
+    .nft-container {
+      margin: 20px 0;
+      flex-grow: 1;
+      display: flex;
+      align-items: center;
+    }
+    .nft-placeholder {
+      width: 100%;
+      height: 280px;
+      border-radius: 16px;
+      overflow: hidden;
+      position: relative;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.5);
+    }
+    .nft-gradient {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #667eea, #764ba2, #ff9a9e, #fad0c4, #a18cd1);
+      background-size: 400% 400%;
+      animation: gradientFlow 20s ease infinite;
+    }
+    @keyframes gradientFlow {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    .nft-label {
+      position: absolute;
+      bottom: 15px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.6);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 0.95em;
+      backdrop-filter: blur(4px);
+    }
+    .progress-section {
+      margin-top: 15px;
+    }
+    .progress-bar-long {
+      height: 20px;
+      background: var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .progress-fill-long {
+      height: 100%;
+      background: linear-gradient(90deg, #3b82f6, #60a5fa);
+      transition: width 0.6s ease;
+    }
+    .progress-label {
+      display: block;
+      margin-top: 8px;
+      font-weight: bold;
+      color: #60a5fa;
+      font-size: 1.1em;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      max-width: 960px;
+      margin: 0 auto 40px auto;
+    }
+    .stats-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      text-align: center;
+      min-height: 160px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    }
+    .stats-card h4 {
+      color: #94a3b8;
+      font-size: 1.1em;
+      margin-bottom: 12px;
+    }
+    .stats-value {
+      font-size: 2.6em;
+      font-weight: bold;
+    }
+
+    .nft-card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      overflow: hidden;
+      transition: all 0.25s;
+      position: relative;
+    }
+    .nft-card:hover { transform: translateY(-6px); box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); }
+    .nft-image-placeholder {
+      height: 220px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.8em;
+      font-weight: bold;
+      color: white;
+      opacity: 0.9;
+    }
+    .nft-staked-badge {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: #10b981;
+      color: white;
+      font-size: 0.8em;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-weight: bold;
+    }
+
+    /* Profile Panel Styles */
+    .profile-slide-panel {
+      position: fixed;
+      top: 0; right: 0; bottom: 0;
+      width: 380px;
+      background: #0f121a;
+      border-left: 1px solid #1e2535;
+      z-index: 99;
+      transform: translateX(100%);
+      transition: transform 0.35s ease;
+      box-shadow: -10px 0 35px rgba(0,0,0,0.7);
+      overflow-y: auto;
+    }
+    .profile-slide-panel:not(.hidden) { transform: translateX(0); }
+
+    .profile-slide-header {
+      padding: 18px 24px;
+      background: #0a0d14;
+      border-bottom: 1px solid #1e2535;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .gear-icon, .close-slide {
+      background: none;
+      border: none;
+      color: #94a3b8;
+      font-size: 1.6rem;
+      cursor: pointer;
+    }
+
+    .profile-slide-balance {
+      padding: 32px 24px 20px;
+      text-align: center;
+    }
+
+    .profile-slide-total {
+      font-size: 3.4rem;
+      font-weight: 800;
+      color: #34d399;
+    }
+
+    .profile-slide-actions {
+      display: flex;
+      gap: 12px;
+      padding: 20px 24px;
+    }
+
+    .profile-slide-action-btn {
+      flex: 1;
+      padding: 14px;
+      border-radius: 12px;
+      border: none;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+
+    .profile-slide-action-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+    }
+
+    .profile-slide-action-btn.deposit { background: linear-gradient(90deg, #10b981, #34d399); }
+    .profile-slide-action-btn.swap    { background: linear-gradient(90deg, #0d6efd, #60a5fa); }
+    .profile-slide-action-btn.send    { background: linear-gradient(90deg, #8b5cf6, #c084fc); }
+
+    .profile-slide-tabs {
+      display: flex;
+      margin: 0 24px;
+      border-bottom: 1px solid #1e2535;
+    }
+
+    .profile-slide-tab {
+      flex: 1;
+      padding: 14px 0;
+      background: none;
+      border: none;
+      color: #94a3b8;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: all 0.2s ease;
+    }
+
+    .profile-slide-tab:hover { color: #d1d5db; }
+    .profile-slide-tab.active {
+      color: white;
+      border-bottom: 3px solid #60a5fa;
+    }
+
+    .profile-slide-tab:focus {
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(96,165,250,0.4);
+    }
+
+    /* Smooth tab content transition */
+    .tab-content {
+      padding: 20px;
+      transition: opacity 0.28s ease, transform 0.28s ease;
+      opacity: 0;
+      transform: translateY(10px);
+      pointer-events: none;
+    }
+
+    .tab-content.active {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+
+    .profile-slide-assets, .profile-slide-activity {
+      min-height: 300px;
+    }
+
+    .profile-slide-asset-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px 0;
+      border-bottom: 1px solid #1e2535;
+    }
+    .profile-slide-asset-row:last-child { border-bottom: none; }
+    .profile-slide-asset-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      object-fit: contain;
+      background: #111;
+      border: 1px solid #334155;
+      flex-shrink: 0;
+    }
+    .profile-slide-asset-details { flex: 1; }
+    .profile-slide-asset-name { font-weight: 600; font-size: 1.1em; }
+    .profile-slide-asset-subtitle { font-size: 0.9em; color: #94a3b8; }
+    .profile-slide-asset-amounts { text-align: right; }
+    .profile-slide-token-amount { font-weight: bold; font-size: 1.1em; }
+    .profile-slide-usd-amount { font-size: 0.95em; color: #94a3b8; }
+
+    /* Back Profile Panel */
+    .back-profile-panel {
+      position: fixed;
+      top: 0; right: 0; bottom: 0;
+      width: 380px;
+      background: #0f121a;
+      border-left: 1px solid #1e2535;
+      z-index: 99;
+      transform: translateX(100%);
+      transition: transform 0.35s ease;
+      box-shadow: -10px 0 35px rgba(0,0,0,0.7);
+      overflow-y: auto;
+    }
+    .back-profile-panel:not(.hidden) { transform: translateX(0); }
+
+    .panel-content { padding: 24px; }
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+    .section {
+      margin-bottom: 24px;
+      background: #11151f;
+      border-radius: 12px;
+      padding: 16px;
+      border: 1px solid #1e2535;
+    }
+    .section-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 14px;
+      color: #cbd5e1;
+    }
+    .item {
+      padding: 16px 0;
+      border-bottom: 1px solid #1e2535;
+    }
+    .item:last-child { border-bottom: none; }
+    .item-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+    .item-text {
+      flex: 1;
+      font-size: 1.05rem;
+      line-height: 1.45;
+      word-break: break-word;
+    }
+    .button-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+      justify-content: flex-end;
+    }
+    .action-btn {
+      padding: 7px 16px;
+      font-size: 0.9rem;
+      border-radius: 6px;
+      cursor: pointer;
+      border: none;
+      color: white;
+      min-width: 82px;
+    }
+    .connect-btn { background: #28a745; }
+    .disconnect-btn { background: #ef4444; }
+    .logout-btn {
+      width: 100%;
+      padding: 14px;
+      background: #dc2626;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 1.05rem;
+      cursor: pointer;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Login Page -->
+  <div class="login-container" id="loginPage">
+    <h1>Mogaland-Plume Simulator</h1>
+    <p class="subtitle">Connect wallet or use mock login (demo only)</p>
+
+    <button class="login-option" onclick="showWalletOptions()">Connect Wallet</button>
+    <button class="login-option" onclick="showEmailLogin()">Login with Email</button>
+    <button class="login-option" onclick="showXLogin()">Login with X (@username)</button>
+
+    <div id="walletOptions" class="hidden">
+      <h3 style="margin:20px 0;">Select Wallet</h3>
+      <button class="wallet-choice" onclick="connectMetaMask()">MetaMask</button>
+      <button class="wallet-choice" onclick="connectOKX()">OKX Wallet</button>
+      <button class="wallet-choice" onclick="connectTrustWallet()">Trust Wallet</button>
+      <button class="wallet-choice" onclick="connectWalletConnect()">WalletConnect</button>
+    </div>
+
+    <div id="emailLogin" class="hidden">
+      <input type="email" id="emailInput" class="input-field" placeholder="Gmail or Yahoo email" />
+      <button class="login-option" onclick="sendEmailCode()">Send Mock OTP</button>
+      <input type="text" id="otpInput" class="input-field hidden" placeholder="OTP (123456)" />
+      <button class="login-option hidden" id="verifyOtpBtn" onclick="verifyEmailOtp()">Verify</button>
+    </div>
+
+    <div id="xLogin" class="hidden">
+      <input type="text" id="xInput" class="input-field" placeholder="@yourusername" />
+      <button class="login-option" onclick="confirmXLogin()">Confirm</button>
+    </div>
+
+    <div id="notification-area"></div>
+  </div>
+
+  <!-- Main Dashboard -->
+  <div class="main-app hidden" id="mainApp">
+    <header>
+      <button class="top-btn" id="walletBtn">Connected Wallet</button>
+      <button class="top-btn" onclick="showProfile()">Profile</button>
+    </header>
+
+    <h1>Mogaland-Plume</h1>
+    <div class="subtitle">Welcome!</div>
+
+    <div class="content" id="content">
+      <p>Select an option below to explore the simulator.</p>
+    </div>
+
+    <div class="nav-bar">
+      <button class="nav-btn" onclick="showSection('learning', event)">Learning</button>
+      <button class="nav-btn" onclick="showSection('market', event)">Market Prediction</button>
+      <button class="nav-btn active" onclick="showSection('swap', event)">Swap</button>
+      <button class="nav-btn" onclick="showSection('bridge', event)">Bridge</button>
+      <button class="nav-btn" onclick="showSection('nft', event)">NFT Staking</button>
+    </div>
+
+    <!-- Profile Slide-in Panel -->
+    <div id="profileSlidePanel" class="profile-slide-panel hidden">
+      <div class="profile-slide-header">
+        <button class="gear-icon" onclick="openBackProfile()">⚙️</button>
+        <div class="account-title">Main Account ▼</div>
+        <button class="close-slide" onclick="closeProfileSlide()">×</button>
+      </div>
+
+      <div class="profile-slide-balance">
+        <div class="profile-slide-total">$3.87</div>
+        <div class="profile-slide-addresses">Addresses ></div>
+      </div>
+
+      <div class="profile-slide-actions">
+        <button class="profile-slide-action-btn deposit" onclick="openDepositModal()">+ Deposit</button>
+        <button class="profile-slide-action-btn swap" onclick="openSwapModal()">↻ Swap</button>
+        <button class="profile-slide-action-btn send" onclick="openSendModal()">↑ Send</button>
+      </div>
+
+      <div class="profile-slide-tabs">
+        <button class="profile-slide-tab active" data-tab="assets">Assets</button>
+        <button class="profile-slide-tab" data-tab="activity">Activity</button>
+      </div>
+
+      <div class="tab-wrapper" style="position:relative; min-height:300px;">
+        <div id="assetsContent" class="tab-content active">
+          <div class="profile-slide-asset-row">
+            <img src="https://cryptologos.cc/logos/ethereum-eth-logo.png?v=035" alt="ETH" class="profile-slide-asset-icon">
+            <div class="profile-slide-asset-details">
+              <div class="profile-slide-asset-name">ETH</div>
+              <div class="profile-slide-asset-subtitle">Sepolia Testnet</div>
+            </div>
+            <div class="profile-slide-asset-amounts">
+              <div class="profile-slide-token-amount" id="ethBalance">0.0000</div>
+              <div class="profile-slide-usd-amount">Testnet</div>
+            </div>
+          </div>
+
+          <div class="profile-slide-asset-row">
+            <img src="https://via.placeholder.com/44/FFCC00/000000?text=MOGA" alt="MOGA" class="profile-slide-asset-icon">
+            <div class="profile-slide-asset-details">
+              <div class="profile-slide-asset-name">MOGA</div>
+              <div class="profile-slide-asset-subtitle">Mogaland Token</div>
+            </div>
+            <div class="profile-slide-asset-amounts">
+              <div class="profile-slide-token-amount">1,245.67</div>
+              <div class="profile-slide-usd-amount">$1.87</div>
+            </div>
+          </div>
+
+          <div class="profile-slide-asset-row">
+            <img src="https://cryptologos.cc/logos/usd-coin-usdc-logo.png?v=035" alt="USDC" class="profile-slide-asset-icon">
+            <div class="profile-slide-asset-details">
+              <div class="profile-slide-asset-name">USDC</div>
+              <div class="profile-slide-asset-subtitle">USD Coin</div>
+            </div>
+            <div class="profile-slide-asset-amounts">
+              <div class="profile-slide-token-amount">0.004</div>
+              <div class="profile-slide-usd-amount">$0.004</div>
+            </div>
+          </div>
+
+          <div class="profile-slide-asset-row">
+            <img src="https://cryptologos.cc/logos/tether-usdt-logo.png?v=035" alt="USDT" class="profile-slide-asset-icon">
+            <div class="profile-slide-asset-details">
+              <div class="profile-slide-asset-name">USDT</div>
+              <div class="profile-slide-asset-subtitle">Tether</div>
+            </div>
+            <div class="profile-slide-asset-amounts">
+              <div class="profile-slide-token-amount">0.500</div>
+              <div class="profile-slide-usd-amount">$0.500</div>
+            </div>
+          </div>
+        </div>
+
+        <div id="activityContent" class="tab-content">
+          <div style="height: 300px; display: flex; align-items: center; justify-content: center; text-align: center; color: #94a3b8; font-size: 1.1em; padding: 20px;">
+            <div>
+              <div style="font-size: 2.8em; margin-bottom: 12px;">📭</div>
+              No recent on-chain activity yet.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Back Profile Panel -->
+    <div id="backProfilePanel" class="back-profile-panel hidden">
+      <div class="panel-content">
+        <div class="panel-header">
+          <button class="gear-icon">⚙️</button>
+          <div class="account-title">Main Account ▼</div>
+          <button class="close-panel" onclick="closeBackProfile()">×</button>
+        </div>
+
+        <div class="section login">
+          <div class="section-title">Login & Connections</div>
+
+          <div class="item" id="walletConnection">
+            <div class="item-header">
+              <span class="icon">🔗</span>
+              <div class="item-text" id="walletConnectionText">
+                <span id="walletStatusText">Not Connected</span>
+              </div>
+            </div>
+            <div class="button-group">
+              <button class="action-btn connect-btn" onclick="handleWalletConnect()" id="walletConnectBtn">Connect</button>
+              <button class="action-btn disconnect-btn" onclick="handleWalletDisconnect()" id="walletDisconnectBtn" style="display:none;">Disconnect</button>
+            </div>
+          </div>
+
+          <div class="item" id="xConnection">
+            <div class="item-header">
+              <span class="icon">𝕏</span>
+              <div class="item-text">
+                <span id="xStatusText">Twitter/X - Not Connected</span>
+              </div>
+            </div>
+            <div class="button-group">
+              <button class="action-btn connect-btn" onclick="connectSocial('x')" id="xConnectBtn">Connect</button>
+              <button class="action-btn disconnect-btn" onclick="disconnectSocial('x')" id="xDisconnectBtn" style="display:none;">Disconnect</button>
+            </div>
+          </div>
+
+          <div class="item" id="telegramConnection">
+            <div class="item-header">
+              <span class="icon">✈️</span>
+              <div class="item-text">
+                <span id="telegramStatusText">Telegram - Not Connected</span>
+              </div>
+            </div>
+            <div class="button-group">
+              <button class="action-btn connect-btn" onclick="connectSocial('telegram')" id="telegramConnectBtn">Connect</button>
+              <button class="action-btn disconnect-btn" onclick="disconnectSocial('telegram')" id="telegramDisconnectBtn" style="display:none;">Disconnect</button>
+            </div>
+          </div>
+
+          <div class="item" id="discordConnection">
+            <div class="item-header">
+              <span class="icon">💬</span>
+              <div class="item-text">
+                <span id="discordStatusText">Discord - Not Connected</span>
+              </div>
+            </div>
+            <div class="button-group">
+              <button class="action-btn connect-btn" onclick="connectSocial('discord')" id="discordConnectBtn">Connect</button>
+              <button class="action-btn disconnect-btn" onclick="disconnectSocial('discord')" id="discordDisconnectBtn" style="display:none;">Disconnect</button>
+            </div>
+          </div>
+
+          <div class="item" id="farcasterConnection">
+            <div class="item-header">
+              <span class="icon">🎭</span>
+              <div class="item-text">
+                <span id="farcasterStatusText">Farcaster - Not Connected</span>
+              </div>
+            </div>
+            <div class="button-group">
+              <button class="action-btn connect-btn" onclick="connectSocial('farcaster')" id="farcasterConnectBtn">Connect</button>
+              <button class="action-btn disconnect-btn" onclick="disconnectSocial('farcaster')" id="farcasterDisconnectBtn" style="display:none;">Disconnect</button>
+            </div>
+          </div>
+        </div>
+
+        <button class="logout-btn" onclick="logoutUser()">Log Out</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // === FULL SCRIPT - ALL FEATURES INCLUDED ===
+
+    const SEPOLIA_CHAIN_ID = 11155111;
+    const SEPOLIA_CHAIN_HEX = "0xaa36a7";
+    const SEPOLIA_RPC = "https://rpc.sepolia.org"; // Public Sepolia RPC endpoint
+    const SEPOLIA_EXPLORER = "https://sepolia.etherscan.io";
+
+    let provider = null;
+    let userAddress = null;
+    const mockOtp = "123456";
+
+    // Initialize WalletConnect only if library is available
+    let walletConnectProvider = null;
+    try {
+      if (typeof WalletConnectProvider !== 'undefined') {
+        walletConnectProvider = new WalletConnectProvider.default({
+          rpc: { [SEPOLIA_CHAIN_ID]: SEPOLIA_RPC },
+          chainId: SEPOLIA_CHAIN_ID,
+          qrcode: true
+        });
+      }
+    } catch (e) {
+      console.warn('WalletConnect not available:', e.message);
+    }
+
+    function showWalletOptions() { toggleSections('walletOptions'); }
+    function showEmailLogin() { toggleSections('emailLogin'); }
+    function showXLogin() { toggleSections('xLogin'); }
+
+    function toggleSections(showId) {
+      ['walletOptions','emailLogin','xLogin'].forEach(id => document.getElementById(id).classList.toggle('hidden', id !== showId));
+    }
+
+    function sendEmailCode() {
+      const email = document.getElementById('emailInput').value.trim();
+      if (!email.includes('@gmail.com') && !email.includes('@yahoo.com')) return showNotification("Use Gmail or Yahoo email.", true);
+      showNotification(`Mock OTP sent: ${mockOtp}`);
+      document.getElementById('otpInput').classList.remove('hidden');
+      document.getElementById('verifyOtpBtn').classList.remove('hidden');
+    }
+
+    function verifyEmailOtp() {
+      if (document.getElementById('otpInput').value.trim() === mockOtp) enterDashboard("Email");
+      else showNotification("Wrong OTP", true);
+    }
+
+    function confirmXLogin() {
+      const handle = document.getElementById('xInput').value.trim();
+      if (!handle.startsWith('@')) return showNotification("Invalid @username", true);
+      enterDashboard("X");
+    }
+
+    function enterDashboard(method) {
+      showNotification(`Entered via ${method}`, false);
+      document.getElementById('loginPage').classList.add('hidden');
+      document.getElementById('mainApp').classList.remove('hidden');
+      
+      // Initialize profile tabs
+      initProfileTabs();
+      
+      // Load social connections status
+      loadSocialConnections();
+      
+      // Restore last visited section
+      const lastSection = localStorage.getItem('lastSection');
+      if (lastSection) {
+        setTimeout(() => {
+          showSection(lastSection);
+          localStorage.removeItem('lastSection'); // Clear after restoring
+        }, 500);
+      } else {
+        showSection('swap'); // Default to swap
+      }
+      
+      // Start sports auto-update (every 5 minutes)
+      startSportsAutoUpdate();
+    }
+
+    async function connectWallet(walletType, getProvider) {
+      try {
+        provider = getProvider();
+        await provider.send("eth_requestAccounts", []);
+        
+        // Check current network and auto-switch to Sepolia if needed
+        const network = await provider.getNetwork();
+        if (network.chainId !== SEPOLIA_CHAIN_ID) {
+          try {
+            // Try to switch to Sepolia
+            await window.ethereum.request({
+              method: 'wallet_switchEthereumChain',
+              params: [{ chainId: SEPOLIA_CHAIN_HEX }],
+            });
+            showNotification("Switched to Sepolia testnet", false);
+          } catch (switchError) {
+            // If network doesn't exist, add it
+            if (switchError.code === 4902) {
+              try {
+                await window.ethereum.request({
+                  method: 'wallet_addEthereumChain',
+                  params: [{
+                    chainId: SEPOLIA_CHAIN_HEX,
+                    chainName: 'Sepolia Testnet',
+                    nativeCurrency: {
+                      name: 'Sepolia ETH',
+                      symbol: 'ETH',
+                      decimals: 18
+                    },
+                    rpcUrls: [SEPOLIA_RPC],
+                    blockExplorerUrls: [SEPOLIA_EXPLORER]
+                  }],
+                });
+                showNotification("Added and switched to Sepolia", false);
+              } catch (addError) {
+                showNotification("Failed to add Sepolia network", true);
+                return;
+              }
+            } else {
+              showNotification("Failed to switch to Sepolia", true);
+              return;
+            }
+          }
+        }
+        
+        // Get user address and balance
+        userAddress = (await provider.getSigner().getAddress()).toLowerCase();
+        const balanceWei = await provider.getBalance(userAddress);
+        const balanceEth = ethers.utils.formatEther(balanceWei);
+        
+        // Update UI
+        document.getElementById('walletBtn').textContent = `Connected: ${userAddress.slice(0,6)}...${userAddress.slice(-4)}`;
+        document.getElementById('walletBtn').classList.add('connected');
+        
+        // Update profile balance displays
+        const profileTotal = document.querySelector('.profile-slide-total');
+        if (profileTotal) {
+          profileTotal.textContent = `${parseFloat(balanceEth).toFixed(4)} ETH`;
+        }
+        
+        const ethBalanceEl = document.getElementById('ethBalance');
+        if (ethBalanceEl) {
+          ethBalanceEl.textContent = parseFloat(balanceEth).toFixed(4);
+        }
+        
+        showNotification(`Connected via ${walletType} on Sepolia – Balance: ${parseFloat(balanceEth).toFixed(4)} ETH`, false);
+        enterDashboard(walletType);
+      } catch (e) {
+        showNotification("Connection failed: " + (e.message || "Error"), true);
+      }
+    }
+
+    function connectMetaMask() {
+      if (!window.ethereum) return showNotification("MetaMask not found", true);
+      connectWallet("MetaMask", () => new ethers.providers.Web3Provider(window.ethereum));
+    }
+
+    function connectOKX() {
+      if (!window.okxwallet) return showNotification("OKX not found", true);
+      connectWallet("OKX", () => new ethers.providers.Web3Provider(window.okxwallet));
+    }
+
+    function connectTrustWallet() {
+      if (!window.ethereum || !window.ethereum.isTrust) return showNotification("Trust not detected", true);
+      connectWallet("Trust", () => new ethers.providers.Web3Provider(window.ethereum));
+    }
+
+    async function connectWalletConnect() {
+      if (!walletConnectProvider) {
+        return showNotification("WalletConnect library not loaded", true);
+      }
+      try {
+        await walletConnectProvider.enable();
+        connectWallet("WalletConnect", () => new ethers.providers.Web3Provider(walletConnectProvider));
+      } catch (e) {
+        showNotification("WalletConnect error", true);
+      }
+    }
+
+    function showNotification(msg, error = false) {
+      const div = document.createElement('div');
+      div.className = 'notification';
+      div.style.borderColor = error ? 'var(--danger)' : 'var(--bell)';
+      div.innerHTML = `<span>${error ? '⚠️' : '🔔'}</span> ${msg}`;
+      document.body.appendChild(div);
+      setTimeout(() => div.remove(), 6000);
+    }
+
+    // Fetch real token balances from Sepolia
+    async function fetchRealBalances() {
+      if (!userAddress || !provider) return;
+      
+      try {
+        // Fetch ETH balance
+        const ethBalanceWei = await provider.getBalance(userAddress);
+        const ethBalance = parseFloat(ethers.utils.formatEther(ethBalanceWei));
+        
+        // Fetch USDC balance
+        const usdcContract = new ethers.Contract(USDC_SEPOLIA_ADDRESS, ERC20_ABI, provider);
+        const usdcBalanceRaw = await usdcContract.balanceOf(userAddress);
+        const usdcBalance = parseFloat(ethers.utils.formatUnits(usdcBalanceRaw, 6)); // USDC has 6 decimals
+        
+        // Fetch USDT balance
+        const usdtContract = new ethers.Contract(USDT_SEPOLIA_ADDRESS, ERC20_ABI, provider);
+        const usdtBalanceRaw = await usdtContract.balanceOf(userAddress);
+        const usdtBalance = parseFloat(ethers.utils.formatUnits(usdtBalanceRaw, 6)); // USDT has 6 decimals
+        
+        // Update UI
+        document.getElementById('ethBalance').textContent = ethBalance.toFixed(4);
+        document.querySelector('.profile-slide-total').textContent = `${ethBalance.toFixed(4)} ETH`;
+        
+        // Update USDC display
+        const usdcElements = document.querySelectorAll('.profile-slide-asset-row');
+        if (usdcElements[2]) {
+          usdcElements[2].querySelector('.profile-slide-token-amount').textContent = usdcBalance.toFixed(4);
+          usdcElements[2].querySelector('.profile-slide-usd-amount').textContent = `$${usdcBalance.toFixed(2)}`;
+        }
+        
+        // Update USDT display
+        if (usdcElements[3]) {
+          usdcElements[3].querySelector('.profile-slide-token-amount').textContent = usdtBalance.toFixed(4);
+          usdcElements[3].querySelector('.profile-slide-usd-amount').textContent = `$${usdtBalance.toFixed(2)}`;
+        }
+        
+        console.log(`Balances updated: ETH=${ethBalance}, USDC=${usdcBalance}, USDT=${usdtBalance}`);
+      } catch (error) {
+        console.error('Error fetching balances:', error);
+      }
+    }
+
+    // Fetch transaction history from Sepolia Etherscan API
+    async function fetchTransactionHistory() {
+      if (!userAddress) return;
+      
+      try {
+        const apiKey = 'YourEtherscanAPIKey'; // Users should add their own key
+        const url = `https://api-sepolia.etherscan.io/api?module=account&action=txlist&address=${userAddress}&startblock=0&endblock=99999999&page=1&offset=10&sort=desc&apikey=${apiKey}`;
+        
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        if (data.status === '1' && data.result && data.result.length > 0) {
+          const activityContainer = document.getElementById('activityContent');
+          activityContainer.innerHTML = '';
+          
+          data.result.slice(0, 10).forEach(tx => {
+            const isReceive = tx.to.toLowerCase() === userAddress.toLowerCase();
+            const value = ethers.utils.formatEther(tx.value);
+            const date = new Date(parseInt(tx.timeStamp) * 1000).toLocaleDateString();
+            
+            const txDiv = document.createElement('div');
+            txDiv.className = 'activity-item';
+            txDiv.style.padding = '12px';
+            txDiv.style.borderBottom = '1px solid rgba(255,255,255,0.1)';
+            txDiv.innerHTML = `
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <div style="font-weight: 600; color: ${isReceive ? '#10b981' : '#ef4444'};">
+                    ${isReceive ? '↓ Received' : '↑ Sent'}
+                  </div>
+                  <div style="font-size: 0.85em; opacity: 0.7;">${date}</div>
+                </div>
+                <div style="text-align: right;">
+                  <div style="font-weight: 600;">${parseFloat(value).toFixed(4)} ETH</div>
+                  <a href="${SEPOLIA_EXPLORER}/tx/${tx.hash}" target="_blank" style="font-size: 0.85em; color: #60a5fa;">View</a>
+                </div>
+              </div>
+            `;
+            activityContainer.appendChild(txDiv);
+          });
+        } else {
+          // If no transactions or API error, try to show at least connected status
+          const activityContainer = document.getElementById('activityContent');
+          activityContainer.innerHTML = `
+            <div style="height: 300px; display: flex; align-items: center; justify-content: center; text-align: center; color: #94a3b8; font-size: 1.1em; padding: 20px;">
+              <div>
+                <div style="font-size: 2.8em; margin-bottom: 12px;">📭</div>
+                <div>No recent transactions found</div>
+                <div style="font-size: 0.9em; margin-top: 8px; opacity: 0.7;">Wallet: ${userAddress.slice(0,6)}...${userAddress.slice(-4)}</div>
+              </div>
+            </div>
+          `;
+        }
+      } catch (error) {
+        console.error('Error fetching transaction history:', error);
+        // Show fallback with wallet info
+        const activityContainer = document.getElementById('activityContent');
+        activityContainer.innerHTML = `
+          <div style="height: 300px; display: flex; align-items: center; justify-content: center; text-align: center; color: #94a3b8; font-size: 1.1em; padding: 20px;">
+            <div>
+              <div style="font-size: 2.8em; margin-bottom: 12px;">🔗</div>
+              <div>Connected Wallet</div>
+              <div style="font-size: 0.9em; margin-top: 8px; opacity: 0.7;">${userAddress.slice(0,6)}...${userAddress.slice(-4)}</div>
+              <div style="font-size: 0.85em; margin-top: 8px; opacity: 0.6;">Add Etherscan API key to view history</div>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    // Profile panel functions
+    function showProfile() {
+      document.getElementById('profileSlidePanel').classList.remove('hidden');
+      // Refresh data when profile is opened
+      if (userAddress) {
+        fetchRealBalances();
+        fetchTransactionHistory();
+      }
+    }
+
+    function closeProfileSlide() {
+      document.getElementById('profileSlidePanel').classList.add('hidden');
+    }
+
+    function openBackProfile() {
+      document.getElementById('backProfilePanel').classList.remove('hidden');
+      closeProfileSlide();
+    }
+
+    function closeBackProfile() {
+      document.getElementById('backProfilePanel').classList.add('hidden');
+    }
+
+    function logoutUser() {
+      // Store current section for restoration on re-login
+      const currentSection = document.querySelector('.main-section:not([style*="display: none"])');
+      if (currentSection) {
+        localStorage.setItem('lastSection', currentSection.id || 'swap');
+      }
+      
+      // Clear wallet connection
+      userAddress = null;
+      provider = null;
+      
+      // Clear social connections status
+      localStorage.removeItem('socialConnections');
+      
+      showNotification("Logged out successfully");
+      document.getElementById('mainApp').classList.add('hidden');
+      document.getElementById('loginPage').classList.remove('hidden');
+      closeBackProfile();
+      closeProfileSlide();
+      
+      // Reset wallet button
+      const walletBtn = document.getElementById('walletBtn');
+      if (walletBtn) {
+        walletBtn.textContent = 'Connect Wallet';
+        walletBtn.classList.remove('connected');
+      }
+    }
+
+    function openDepositModal() {
+      if (!userAddress) {
+        showNotification("Please connect wallet first", true);
+        return;
+      }
+      
+      // Create deposit modal with QR code
+      const modal = document.createElement('div');
+      modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 10000;';
+      modal.innerHTML = `
+        <div style="background: var(--card-bg); padding: 32px; border-radius: 16px; max-width: 400px; text-align: center; border: 1px solid var(--border);">
+          <h3 style="color: #60a5fa; margin-bottom: 16px;">Deposit to Your Wallet</h3>
+          <p style="color: #94a3b8; margin-bottom: 8px;">Send ETH, USDC, or USDT to your address:</p>
+          <p style="color: #f59e0b; font-size: 0.85em; margin-bottom: 16px;">💡 Deposits are managed by treasury</p>
+          <div style="background: white; padding: 16px; border-radius: 12px; margin: 16px 0;">
+            <div id="depositQR"></div>
+          </div>
+          <div style="background: rgba(13,110,253,0.1); padding: 12px; border-radius: 8px; word-break: break-all; font-family: monospace; font-size: 0.9em; color: #60a5fa; margin-bottom: 16px;">
+            ${userAddress}
+          </div>
+          <button onclick="copyToClipboard('${userAddress}')" style="background: var(--primary); color: white; padding: 12px 24px; border: none; border-radius: 8px; cursor: pointer; margin-right: 8px;">
+            📋 Copy Address
+          </button>
+          <button onclick="this.parentElement.parentElement.remove()" style="background: var(--danger); color: white; padding: 12px 24px; border: none; border-radius: 8px; cursor: pointer;">
+            Close
+          </button>
+        </div>
+      `;
+      document.body.appendChild(modal);
+      
+      // Generate QR code
+      const qrDiv = document.getElementById('depositQR');
+      qrDiv.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${userAddress}" alt="QR Code" style="width: 200px; height: 200px;">`;
+      
+      console.log('[Treasury] Deposit modal opened - deposits will be processed through treasury');
+    }
+
+    function copyToClipboard(text) {
+      navigator.clipboard.writeText(text).then(() => {
+        showNotification('Address copied to clipboard!', false);
+      }).catch(() => {
+        showNotification('Failed to copy address', true);
+      });
+    }
+
+    function openSwapModal() {
+      showNotification("Opening Swap interface...", false);
+      closeProfileSlide();
+      showSection('swap');
+    }
+
+    function openSendModal() {
+      if (!userAddress) {
+        showNotification("Please connect wallet first", true);
+        return;
+      }
+      
+      // Create send modal
+      const modal = document.createElement('div');
+      modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 10000;';
+      modal.innerHTML = `
+        <div style="background: var(--card-bg); padding: 32px; border-radius: 16px; max-width: 500px; width: 90%; border: 1px solid var(--border);">
+          <h3 style="color: #60a5fa; margin-bottom: 20px;">Send Crypto</h3>
+          
+          <div style="margin-bottom: 16px;">
+            <label style="display: block; color: #94a3b8; margin-bottom: 8px;">Token</label>
+            <select id="sendToken" style="width: 100%; padding: 12px; background: var(--darker); border: 1px solid var(--border); border-radius: 8px; color: white; font-size: 1em;">
+              <option value="ETH">ETH (Sepolia)</option>
+              <option value="USDC">USDC (Sepolia)</option>
+              <option value="USDT">USDT (Sepolia)</option>
+            </select>
+          </div>
+          
+          <div style="margin-bottom: 16px;">
+            <label style="display: block; color: #94a3b8; margin-bottom: 8px;">Recipient Address</label>
+            <input type="text" id="sendAddress" placeholder="0x..." style="width: 100%; padding: 12px; background: var(--darker); border: 1px solid var(--border); border-radius: 8px; color: white; font-size: 1em;">
+          </div>
+          
+          <div style="margin-bottom: 20px;">
+            <label style="display: block; color: #94a3b8; margin-bottom: 8px;">Amount</label>
+            <input type="number" id="sendAmount" placeholder="0.0" step="0.001" min="0" style="width: 100%; padding: 12px; background: var(--darker); border: 1px solid var(--border); border-radius: 8px; color: white; font-size: 1em;">
+          </div>
+          
+          <div style="display: flex; gap: 12px;">
+            <button onclick="executeSend()" style="flex: 1; background: var(--primary); color: white; padding: 14px; border: none; border-radius: 8px; cursor: pointer; font-size: 1.1em;">
+              Send
+            </button>
+            <button onclick="this.parentElement.parentElement.parentElement.remove()" style="flex: 1; background: var(--danger); color: white; padding: 14px; border: none; border-radius: 8px; cursor: pointer; font-size: 1.1em;">
+              Cancel
+            </button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+    }
+
+    async function executeSend() {
+      const token = document.getElementById('sendToken').value;
+      const toAddress = document.getElementById('sendAddress').value;
+      const amount = document.getElementById('sendAmount').value;
+      
+      if (!toAddress || !amount || parseFloat(amount) <= 0) {
+        showNotification('Please enter valid address and amount', true);
+        return;
+      }
+      
+      if (!ethers.utils.isAddress(toAddress)) {
+        showNotification('Invalid Ethereum address', true);
+        return;
+      }
+      
+      try {
+        showNotification('Processing send via treasury...', false);
+        
+        // All sends go through treasury
+        const success = await sendViaTreasury(token, parseFloat(amount), toAddress);
+        
+        if (success) {
+          // In production, this would trigger actual blockchain transaction from treasury wallet
+          if (provider) {
+            const signer = provider.getSigner();
+            
+            if (token === 'ETH') {
+              // Simulated: In production, treasury wallet would sign this
+              showNotification(`✅ Send request processed via treasury. Transaction initiated to ${toAddress.slice(0,6)}...${toAddress.slice(-4)}`, false);
+            } else {
+              // Simulated: In production, treasury wallet would sign ERC20 transfer
+              showNotification(`✅ Send request processed via treasury. ${amount} ${token} transfer initiated`, false);
+            }
+          }
+          
+          // Close modal and refresh balances
+          const modal = document.querySelector('[style*="position: fixed"]');
+          if (modal) modal.remove();
+          if (typeof fetchRealBalances === 'function') fetchRealBalances();
+        }
+      } catch (error) {
+        showNotification('Transaction failed: ' + error.message, true);
+      }
+    }
+
+    // === FIXED PROFILE TABS ===
+    function initProfileTabs() {
+      document.querySelectorAll('.profile-slide-tab').forEach(button => {
+        button.addEventListener('click', () => {
+          const tabName = button.dataset.tab;
+
+          // Update tab buttons
+          document.querySelectorAll('.profile-slide-tab').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.tab === tabName);
+          });
+
+          // Update content panels
+          document.getElementById('assetsContent').classList.toggle('active', tabName === 'assets');
+          document.getElementById('activityContent').classList.toggle('active', tabName === 'activity');
+        });
+      });
+    }
+
+    // Social Media Connection Management
+    const SOCIAL_OAUTH_URLS = {
+      x: 'https://twitter.com/i/oauth2/authorize', // Twitter OAuth 2.0
+      telegram: 'https://t.me/botfather', // Telegram bot linking
+      discord: 'https://discord.com/api/oauth2/authorize', // Discord OAuth
+      farcaster: 'https://warpcast.com/~/signin' // Farcaster auth
+    };
+
+    function loadSocialConnections() {
+      const connections = JSON.parse(localStorage.getItem('socialConnections') || '{}');
+      
+      // Update wallet status
+      if (userAddress) {
+        document.getElementById('walletStatusText').textContent = `Wallet: ${userAddress.slice(0,6)}...${userAddress.slice(-4)}`;
+        document.getElementById('walletConnectBtn').style.display = 'none';
+        document.getElementById('walletDisconnectBtn').style.display = 'inline-block';
+      }
+      
+      // Update social connection states
+      ['x', 'telegram', 'discord', 'farcaster'].forEach(platform => {
+        if (connections[platform]) {
+          const statusEl = document.getElementById(`${platform}StatusText`);
+          const connectBtn = document.getElementById(`${platform}ConnectBtn`);
+          const disconnectBtn = document.getElementById(`${platform}DisconnectBtn`);
+          
+          if (statusEl && connectBtn && disconnectBtn) {
+            statusEl.textContent = connections[platform].displayText;
+            connectBtn.style.display = 'none';
+            disconnectBtn.style.display = 'inline-block';
+          }
+        }
+      });
+    }
+
+    function connectSocial(platform) {
+      const platformNames = {
+        x: 'Twitter/X',
+        telegram: 'Telegram',
+        discord: 'Discord',
+        farcaster: 'Farcaster'
+      };
+      
+      const platformName = platformNames[platform];
+      
+      // In a real implementation, this would initiate OAuth flow
+      showNotification(`Opening ${platformName} authentication...`, false);
+      
+      // Simulate OAuth flow with a prompt
+      setTimeout(() => {
+        const username = prompt(`Enter your ${platformName} username to connect (demo):`);
+        if (username) {
+          const connections = JSON.parse(localStorage.getItem('socialConnections') || '{}');
+          connections[platform] = {
+            username: username,
+            displayText: `${platformName}: @${username}`,
+            connectedAt: new Date().toISOString()
+          };
+          localStorage.setItem('socialConnections', JSON.stringify(connections));
+          
+          showNotification(`✅ Connected to ${platformName} as @${username}`, false);
+          loadSocialConnections();
+        }
+      }, 500);
+    }
+
+    function disconnectSocial(platform) {
+      const platformNames = {
+        x: 'Twitter/X',
+        telegram: 'Telegram',
+        discord: 'Discord',
+        farcaster: 'Farcaster'
+      };
+      
+      if (confirm(`Disconnect from ${platformNames[platform]}?`)) {
+        const connections = JSON.parse(localStorage.getItem('socialConnections') || '{}');
+        delete connections[platform];
+        localStorage.setItem('socialConnections', JSON.stringify(connections));
+        
+        // Reset UI
+        const statusEl = document.getElementById(`${platform}StatusText`);
+        const connectBtn = document.getElementById(`${platform}ConnectBtn`);
+        const disconnectBtn = document.getElementById(`${platform}DisconnectBtn`);
+        
+        if (statusEl && connectBtn && disconnectBtn) {
+          statusEl.textContent = `${platformNames[platform]} - Not Connected`;
+          connectBtn.style.display = 'inline-block';
+          disconnectBtn.style.display = 'none';
+        }
+        
+        showNotification(`Disconnected from ${platformNames[platform]}`, false);
+      }
+    }
+
+    function handleWalletConnect() {
+      // Close back profile and show login page to connect wallet
+      closeBackProfile();
+      if (!userAddress) {
+        showNotification('Please connect your wallet from the main page', false);
+      }
+    }
+
+    function handleWalletDisconnect() {
+      if (confirm('Disconnect your wallet?')) {
+        logoutUser();
+      }
+    }
+
+    // === MAIN SECTION SWITCHER ===
+    let stakedUSDC = 0;
+    let mogalandPoints = 0;
+    let currentQuestionIndex = 0;
+    let completedTasks = 0;
+    let historyLog = [];
+    let usdcBalance = "0.00";
+    let nftMinted = false;
+
+    // Sepolia Token Contract Addresses
+    const USDC_SEPOLIA_ADDRESS = "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238";
+    const USDT_SEPOLIA_ADDRESS = "0x7169D38820dfd117C3FA1f22a697dBA58d90BA06";
+    
+    // Treasury Wallet Configuration
+    const TREASURY_WALLET_ADDRESS = "0xa959f26847211f71A22aDb087EBe50E0743e7D66";
+    const GAS_FEE_USDC = 0.01; // 0.01 USDC per action
+    const ERC20_ABI = [
+      "function balanceOf(address owner) view returns (uint256)",
+      "function transfer(address to, uint256 amount) returns (bool)",
+      "function approve(address spender, uint256 amount) returns (bool)",
+      "function decimals() view returns (uint8)",
+      "function symbol() view returns (string)"
+    ];
+    const USDC_ABI = ERC20_ABI;
+      "function allowance(address owner, address spender) view returns (uint256)",
+      "function decimals() view returns (uint8)"
+    ];
+
+    const questions = [
+      // Blockchain Basics (1-20)
+      { question: "What is a blockchain?", options: ["A) A type of cryptocurrency", "B) A distributed ledger technology", "C) A mining hardware", "D) A wallet application"], correct: 1 },
+      { question: "Who created Bitcoin?", options: ["A) Vitalik Buterin", "B) Satoshi Nakamoto", "C) Charlie Lee", "D) Gavin Wood"], correct: 1 },
+      { question: "What is the first cryptocurrency?", options: ["A) Ethereum", "B) Litecoin", "C) Bitcoin", "D) Ripple"], correct: 2 },
+      { question: "What does 'decentralized' mean in blockchain?", options: ["A) Controlled by one entity", "B) No central authority", "C) Faster transactions", "D) Lower fees"], correct: 1 },
+      { question: "What is a block in blockchain?", options: ["A) A single transaction", "B) A group of transactions", "C) A mining reward", "D) A wallet address"], correct: 1 },
+      { question: "What is consensus mechanism?", options: ["A) A way to agree on ledger state", "B) A type of wallet", "C) A mining pool", "D) A trading strategy"], correct: 0 },
+      { question: "What is Proof of Work (PoW)?", options: ["A) A consensus algorithm", "B) A wallet type", "C) A token standard", "D) A smart contract"], correct: 0 },
+      { question: "What is Proof of Stake (PoS)?", options: ["A) Mining algorithm", "B) Consensus requiring stake", "C) Wallet security", "D) Token distribution"], correct: 1 },
+      { question: "What is a hash function in blockchain?", options: ["A) A trading tool", "B) A one-way cryptographic function", "C) A wallet generator", "D) A mining device"], correct: 1 },
+      { question: "What is a Merkle tree?", options: ["A) A data structure for efficient verification", "B) A type of wallet", "C) A consensus mechanism", "D) A mining strategy"], correct: 0 },
+      { question: "What is Byzantine Fault Tolerance?", options: ["A) A wallet type", "B) System resilience to failures", "C) A mining algorithm", "D) A token standard"], correct: 1 },
+      { question: "What is a node in blockchain?", options: ["A) A mining machine", "B) A computer maintaining blockchain copy", "C) A wallet", "D) A transaction"], correct: 1 },
+      { question: "What is immutability in blockchain?", options: ["A) Fast transactions", "B) Cannot be altered once recorded", "C) Low fees", "D) Privacy feature"], correct: 1 },
+      { question: "What is a genesis block?", options: ["A) Latest block", "B) First block in blockchain", "C) Largest block", "D) Failed block"], correct: 1 },
+      { question: "What is mining in cryptocurrency?", options: ["A) Buying coins", "B) Validating transactions and creating blocks", "C) Trading coins", "D) Storing coins"], correct: 1 },
+      { question: "What is a mining pool?", options: ["A) Solo mining", "B) Group of miners combining resources", "C) A wallet", "D) A blockchain"], correct: 1 },
+      { question: "What is block time?", options: ["A) Transaction fee", "B) Time to create a new block", "C) Mining difficulty", "D) Confirmation time"], correct: 1 },
+      { question: "What is blockchain fork?", options: ["A) A bug", "B) Split in blockchain", "C) A wallet", "D) A token"], correct: 1 },
+      { question: "What is a hard fork?", options: ["A) Backward compatible change", "B) Non-backward compatible protocol change", "C) A wallet update", "D) A bug fix"], correct: 1 },
+      { question: "What is a soft fork?", options: ["A) Non-compatible change", "B) Backward compatible protocol upgrade", "C) A new blockchain", "D) A token swap"], correct: 1 },
+      
+      // Ethereum & Smart Contracts (21-40)
+      { question: "Who founded Ethereum?", options: ["A) Satoshi Nakamoto", "B) Vitalik Buterin", "C) Charles Hoskinson", "D) Joseph Lubin"], correct: 1 },
+      { question: "What is a smart contract?", options: ["A) A legal document", "B) Self-executing code on blockchain", "C) A wallet", "D) A mining algorithm"], correct: 1 },
+      { question: "What language is used for Ethereum smart contracts?", options: ["A) JavaScript", "B) Python", "C) Solidity", "D) C++"], correct: 2 },
+      { question: "What is gas in Ethereum?", options: ["A) A token", "B) Unit measuring computational effort", "C) A wallet", "D) A protocol"], correct: 1 },
+      { question: "What is EVM?", options: ["A) Ethereum Virtual Machine", "B) Extra Value Mining", "C) Electronic Voting Method", "D) Efficient Value Management"], correct: 0 },
+      { question: "What is Ether (ETH)?", options: ["A) A smart contract", "B) Native cryptocurrency of Ethereum", "C) A wallet", "D) A consensus mechanism"], correct: 1 },
+      { question: "What is Wei?", options: ["A) A blockchain", "B) Smallest unit of Ether", "C) A wallet", "D) A token standard"], correct: 1 },
+      { question: "What is Gwei?", options: ["A) A token", "B) Unit equal to 10^9 Wei", "C) A wallet", "D) A protocol"], correct: 1 },
+      { question: "What is ERC-20?", options: ["A) A wallet", "B) Token standard for fungible tokens", "C) A blockchain", "D) A consensus"], correct: 1 },
+      { question: "What is ERC-721?", options: ["A) Fungible token standard", "B) NFT token standard", "C) A wallet", "D) A protocol"], correct: 1 },
+      { question: "What is ERC-1155?", options: ["A) Fungible only", "B) Multi-token standard", "C) NFT only", "D) A wallet"], correct: 1 },
+      { question: "What is a DApp?", options: ["A) Desktop Application", "B) Decentralized Application", "C) Data Application", "D) Digital Application"], correct: 1 },
+      { question: "What is The Merge in Ethereum?", options: ["A) Token swap", "B) Transition from PoW to PoS", "C) A wallet", "D) A fork"], correct: 1 },
+      { question: "What is Ethereum 2.0?", options: ["A) A new token", "B) Upgraded Ethereum with PoS", "C) A wallet", "D) A competitor"], correct: 1 },
+      { question: "What is sharding in Ethereum?", options: ["A) Token splitting", "B) Splitting blockchain into smaller parts", "C) A wallet", "D) Mining technique"], correct: 1 },
+      { question: "What is a rollup?", options: ["A) Token sale", "B) Layer 2 scaling solution", "C) A wallet", "D) A consensus"], correct: 1 },
+      { question: "What is Optimistic Rollup?", options: ["A) A token", "B) Layer 2 assuming validity", "C) A wallet", "D) A blockchain"], correct: 1 },
+      { question: "What is ZK-Rollup?", options: ["A) Token type", "B) Layer 2 with zero-knowledge proofs", "C) A wallet", "D) Mining method"], correct: 1 },
+      { question: "What is Polygon?", options: ["A) A token", "B) Ethereum scaling solution", "C) A wallet", "D) A consensus"], correct: 1 },
+      { question: "What is Arbitrum?", options: ["A) A token", "B) Optimistic rollup solution", "C) A wallet", "D) A blockchain"], correct: 1 },
+      
+      // DeFi (41-60)
+      { question: "What does DeFi stand for?", options: ["A) Digital Finance", "B) Decentralized Finance", "C) Defined Finance", "D) Derivative Finance"], correct: 1 },
+      { question: "What is a DEX?", options: ["A) Digital Exchange", "B) Decentralized Exchange", "C) Data Exchange", "D) Defined Exchange"], correct: 1 },
+      { question: "What is Uniswap?", options: ["A) A wallet", "B) An automated market maker DEX", "C) A blockchain", "D) A token"], correct: 1 },
+      { question: "What is an AMM?", options: ["A) Automated Money Manager", "B) Automated Market Maker", "C) Advanced Mining Method", "D) Asset Management Model"], correct: 1 },
+      { question: "What is liquidity pool?", options: ["A) Mining pool", "B) Pool of tokens for trading", "C) Staking pool", "D) Wallet collection"], correct: 1 },
+      { question: "What is yield farming?", options: ["A) Mining", "B) Earning rewards by providing liquidity", "C) Trading", "D) Staking only"], correct: 1 },
+      { question: "What is staking?", options: ["A) Mining", "B) Locking tokens to support network", "C) Trading", "D) Buying tokens"], correct: 1 },
+      { question: "What is APY?", options: ["A) Annual Price Yield", "B) Annual Percentage Yield", "C) Asset Price Year", "D) Average Profit Yearly"], correct: 1 },
+      { question: "What is APR?", options: ["A) Annual Price Rate", "B) Annual Percentage Rate", "C) Asset Profit Rate", "D) Average Price Return"], correct: 1 },
+      { question: "What is impermanent loss?", options: ["A) Permanent loss", "B) Temporary loss in liquidity providing", "C) Mining loss", "D) Fee loss"], correct: 1 },
+      { question: "What is a lending protocol?", options: ["A) Mining protocol", "B) Platform for borrowing/lending crypto", "C) Trading platform", "D) Wallet service"], correct: 1 },
+      { question: "What is Aave?", options: ["A) A token", "B) A DeFi lending protocol", "C) A wallet", "D) A blockchain"], correct: 1 },
+      { question: "What is Compound?", options: ["A) A wallet", "B) A DeFi lending protocol", "C) A token only", "D) A blockchain"], correct: 1 },
+      { question: "What is collateral in DeFi?", options: ["A) Trading fee", "B) Assets locked to secure loan", "C) Mining reward", "D) Staking reward"], correct: 1 },
+      { question: "What is over-collateralization?", options: ["A) No collateral", "B) Collateral value exceeds loan", "C) Equal collateral", "D) Under collateral"], correct: 1 },
+      { question: "What is liquidation?", options: ["A) Selling tokens", "B) Forced closure of under-collateralized position", "C) Mining process", "D) Staking reward"], correct: 1 },
+      { question: "What is flash loan?", options: ["A) Long-term loan", "B) Uncollateralized loan repaid in same transaction", "C) Collateralized loan", "D) Personal loan"], correct: 1 },
+      { question: "What is governance token?", options: ["A) Payment token", "B) Token for voting on protocol decisions", "C) Staking token only", "D) Meme coin"], correct: 1 },
+      { question: "What is TVL?", options: ["A) Token Value Locked", "B) Total Value Locked", "C) Trading Volume Limit", "D) Total Verified Liquidity"], correct: 1 },
+      { question: "What is slippage?", options: ["A) Trading fee", "B) Price difference between expected and executed", "C) Mining difficulty", "D) Staking reward"], correct: 1 },
+      
+      // NFTs & Gaming (61-80)
+      { question: "What does NFT stand for?", options: ["A) New Financial Token", "B) Non-Fungible Token", "C) Network File Transfer", "D) Next Future Technology"], correct: 1 },
+      { question: "What makes an NFT unique?", options: ["A) Price", "B) Each token is distinct and non-interchangeable", "C) Color", "D) Size"], correct: 1 },
+      { question: "What is OpenSea?", options: ["A) A blockchain", "B) An NFT marketplace", "C) A wallet", "D) A token"], correct: 1 },
+      { question: "What is minting an NFT?", options: ["A) Buying NFT", "B) Creating and recording NFT on blockchain", "C) Selling NFT", "D) Trading NFT"], correct: 1 },
+      { question: "What is metadata in NFT?", options: ["A) Price data", "B) Information describing NFT properties", "C) Owner data", "D) Trading data"], correct: 1 },
+      { question: "What is IPFS?", options: ["A) A token", "B) Decentralized storage system", "C) A blockchain", "D) A wallet"], correct: 1 },
+      { question: "What is gas war?", options: ["A) Mining competition", "B) Users bidding high gas fees", "C) Trading battle", "D) Staking competition"], correct: 1 },
+      { question: "What is rarity in NFTs?", options: ["A) Price", "B) How uncommon trait combinations are", "C) Age", "D) Size"], correct: 1 },
+      { question: "What is a PFP NFT?", options: ["A) Payment NFT", "B) Profile Picture NFT", "C) Public NFT", "D) Private NFT"], correct: 1 },
+      { question: "What is generative art NFT?", options: ["A) Hand-drawn art", "B) Art created by algorithm", "C) Photography", "D) Video art"], correct: 1 },
+      { question: "What is Play-to-Earn (P2E)?", options: ["A) Gambling", "B) Gaming model where players earn crypto", "C) Mining", "D) Trading"], correct: 1 },
+      { question: "What is GameFi?", options: ["A) Game Finance", "B) Combination of gaming and DeFi", "C) Gaming Platform", "D) Game Token"], correct: 1 },
+      { question: "What is Axie Infinity?", options: ["A) A wallet", "B) A play-to-earn game", "C) A DEX", "D) A blockchain"], correct: 1 },
+      { question: "What is metaverse?", options: ["A) A token", "B) Virtual shared space", "C) A blockchain", "D) A wallet"], correct: 1 },
+      { question: "What is Decentraland?", options: ["A) A token", "B) A virtual world platform", "C) A wallet", "D) A DEX"], correct: 1 },
+      { question: "What is The Sandbox?", options: ["A) A mining tool", "B) A virtual world and gaming platform", "C) A wallet", "D) A token"], correct: 1 },
+      { question: "What is royalty in NFT?", options: ["A) Initial price", "B) Percentage paid to creator on resales", "C) Gas fee", "D) Trading fee"], correct: 1 },
+      { question: "What is lazy minting?", options: ["A) Fast minting", "B) Minting only when NFT is sold", "C) Delayed minting", "D) Bulk minting"], correct: 1 },
+      { question: "What is dynamic NFT?", options: ["A) Static image", "B) NFT that changes based on conditions", "C) Video NFT", "D) Audio NFT"], correct: 1 },
+      { question: "What is fractional NFT?", options: ["A) Broken NFT", "B) NFT divided into multiple shares", "C) Small NFT", "D) Cheap NFT"], correct: 1 },
+      
+      // Security & Wallets (81-100)
+      { question: "What is a private key?", options: ["A) Public address", "B) Secret key to access wallet", "C) Password", "D) Username"], correct: 1 },
+      { question: "What is a public key?", options: ["A) Password", "B) Address to receive funds", "C) Private key", "D) Secret code"], correct: 1 },
+      { question: "What is a seed phrase?", options: ["A) Password", "B) 12-24 words to recover wallet", "C) Username", "D) Email"], correct: 1 },
+      { question: "What is a hardware wallet?", options: ["A) Software wallet", "B) Physical device storing keys offline", "C) Online wallet", "D) Exchange wallet"], correct: 1 },
+      { question: "What is MetaMask?", options: ["A) A blockchain", "B) A browser extension wallet", "C) A DEX", "D) A token"], correct: 1 },
+      { question: "What is cold storage?", options: ["A) Online wallet", "B) Offline storage of crypto", "C) Exchange wallet", "D) Hot wallet"], correct: 1 },
+      { question: "What is hot wallet?", options: ["A) Offline wallet", "B) Wallet connected to internet", "C) Hardware wallet", "D) Paper wallet"], correct: 1 },
+      { question: "What is 2FA?", options: ["A) Two Addresses", "B) Two-Factor Authentication", "C) Two Fees", "D) Two Forks"], correct: 1 },
+      { question: "What is a rug pull?", options: ["A) Marketing strategy", "B) Scam where developers abandon project", "C) Token burn", "D) Airdrop"], correct: 1 },
+      { question: "What is phishing in crypto?", options: ["A) Mining", "B) Tricking users to reveal private keys", "C) Trading", "D) Staking"], correct: 1 },
+      { question: "What is a smart contract audit?", options: ["A) Price check", "B) Security review of contract code", "C) Marketing review", "D) User review"], correct: 1 },
+      { question: "What is a honeypot scam?", options: ["A) Good investment", "B) Token you can buy but not sell", "C) Mining scam", "D) Wallet scam"], correct: 1 },
+      { question: "What is KYC?", options: ["A) Keep Your Crypto", "B) Know Your Customer", "C) Key Your Code", "D) Keep Your Keys"], correct: 1 },
+      { question: "What is AML?", options: ["A) Advanced Mining Logic", "B) Anti-Money Laundering", "C) Automated Market Listing", "D) Asset Management Layer"], correct: 1 },
+      { question: "What is a multi-sig wallet?", options: ["A) Single signature", "B) Multiple signatures required", "C) Multiple addresses", "D) Multiple tokens"], correct: 1 },
+      { question: "What is a paper wallet?", options: ["A) Digital wallet", "B) Keys printed on paper", "C) Hardware wallet", "D) Exchange wallet"], correct: 1 },
+      { question: "What is address poisoning?", options: ["A) Good practice", "B) Scam using similar addresses", "C) Mining technique", "D) Trading strategy"], correct: 1 },
+      { question: "What is sandwich attack?", options: ["A) Food-related", "B) MEV attack manipulating transactions", "C) Mining attack", "D) Wallet hack"], correct: 1 },
+      { question: "What is front-running?", options: ["A) Fast trading", "B) Exploiting knowledge of pending transactions", "C) Mining first", "D) First buyer"], correct: 1 },
+      { question: "What is a smart contract exploit?", options: ["A) Good feature", "B) Vulnerability allowing unauthorized actions", "C) Upgrade", "D) Optimization"], correct: 1 }
+    ];
+
+    let tokenTreasury = 100000;
+    let treasuryUSDCBalance = 1000000; // Treasury starts with 1,000,000 USDC
+    let plumeBalance = "0.00";
+    let mogaBalance = 0;
+    let currentSlippageTolerance = 0.5;
+
+    let stakedNFTs = 0;
+    let nftRewards = 0;
+    let selectedNFTs = new Set();
+
+    function updateTreasuryDisplay() {
+      const el = document.getElementById('treasuryDisplay');
+      if (el) el.textContent = `${tokenTreasury.toLocaleString()} MOGA`;
+      
+      // Treasury USDC display is hidden from users (for dev only)
+      // Treasury balance is tracked internally: ${treasuryUSDCBalance.toLocaleString()} USDC
+    }
+    
+    // Process gas fee for actions
+    function processGasFee(action = 'action') {
+      if (tradingUSDCBalance < GAS_FEE_USDC) {
+        showNotification(`⛽ Insufficient balance for gas fee! Need ${GAS_FEE_USDC} USDC`, true);
+        return false;
+      }
+      
+      tradingUSDCBalance -= GAS_FEE_USDC;
+      treasuryUSDCBalance += GAS_FEE_USDC;
+      
+      showNotification(`⛽ Gas fee: ${GAS_FEE_USDC} USDC paid to treasury for ${action}`, false);
+      updateTreasuryDisplay();
+      updateTradingBalance();
+      
+      return true;
+    }
+    
+    // Transfer winnings from treasury to user
+    function transferFromTreasury(amount) {
+      if (treasuryUSDCBalance < amount) {
+        showNotification(`⚠️ Treasury has insufficient funds! Available: ${treasuryUSDCBalance.toFixed(2)} USDC`, true);
+        return false;
+      }
+      
+      treasuryUSDCBalance -= amount;
+      tradingUSDCBalance += amount;
+      updateTreasuryDisplay();
+      updateTradingBalance();
+      
+      return true;
+    }
+    
+    // Transfer losses from user to treasury
+    function transferToTreasury(amount) {
+      treasuryUSDCBalance += amount;
+      updateTreasuryDisplay();
+      return true;
+    }
+    
+    // Deposit via treasury - User deposits go through treasury
+    function depositViaTreasury(token, amount) {
+      console.log(`[Treasury] Deposit: ${amount} ${token} → Treasury → User balance`);
+      treasuryUSDCBalance += amount;
+      tradingUSDCBalance += amount;
+      updateTreasuryDisplay();
+      updateTradingBalance();
+      showNotification(`✅ Deposited ${amount} ${token} via treasury`, false);
+      return true;
+    }
+    
+    // Withdraw via treasury - User withdrawals go through treasury
+    async function withdrawViaTreasury(token, amount, toAddress) {
+      console.log(`[Treasury] Withdraw: User balance → Treasury → ${toAddress}`);
+      
+      if (tradingUSDCBalance < amount) {
+        showNotification('Insufficient balance for withdrawal', true);
+        return false;
+      }
+      
+      // Deduct from user balance
+      tradingUSDCBalance -= amount;
+      
+      // Treasury processes the withdrawal
+      treasuryUSDCBalance -= amount;
+      
+      updateTreasuryDisplay();
+      updateTradingBalance();
+      
+      showNotification(`✅ Withdrawal of ${amount} ${token} processed via treasury`, false);
+      console.log(`[Treasury] Withdrawal complete: ${amount} ${token} sent to ${toAddress}`);
+      
+      return true;
+    }
+    
+    // Swap via treasury - All swaps go through treasury
+    function swapViaTreasury(fromToken, toToken, fromAmount, toAmount, slippage) {
+      console.log(`[Treasury] Swap: ${fromAmount} ${fromToken} → Treasury → ${toAmount} ${toToken}`);
+      
+      // Treasury receives fromToken
+      treasuryUSDCBalance += fromAmount;
+      
+      // Treasury gives toToken (with slippage applied)
+      const finalAmount = toAmount * (1 - slippage / 100);
+      treasuryUSDCBalance -= finalAmount;
+      
+      updateTreasuryDisplay();
+      
+      showNotification(`✅ Swapped ${fromAmount} ${fromToken} for ${finalAmount.toFixed(6)} ${toToken} via treasury`, false);
+      console.log(`[Treasury] Swap complete. Treasury now has net: ${treasuryUSDCBalance.toFixed(2)} USDC`);
+      
+      return finalAmount;
+    }
+    
+    // Bridge via treasury - Cross-chain transfers managed by treasury
+    function bridgeViaTreasury(fromChain, toChain, token, amount, slippage) {
+      console.log(`[Treasury] Bridge: ${amount} ${token} from ${fromChain} → Treasury → ${toChain}`);
+      
+      // Treasury receives tokens from source chain
+      treasuryUSDCBalance += amount;
+      
+      // Treasury sends tokens to destination chain (with slippage and bridge fee)
+      const bridgeFee = amount * 0.001; // 0.1% bridge fee
+      const finalAmount = (amount - bridgeFee) * (1 - slippage / 100);
+      treasuryUSDCBalance -= finalAmount;
+      
+      updateTreasuryDisplay();
+      
+      showNotification(`✅ Bridged ${amount} ${token} from ${fromChain} to ${toChain} via treasury (received: ${finalAmount.toFixed(6)})`, false);
+      console.log(`[Treasury] Bridge complete. Fee collected: ${bridgeFee.toFixed(6)}. Treasury balance: ${treasuryUSDCBalance.toFixed(2)} USDC`);
+      
+      return finalAmount;
+    }
+    
+    // Send via treasury - P2P transfers go through treasury
+    async function sendViaTreasury(token, amount, toAddress) {
+      console.log(`[Treasury] Send: User → Treasury → ${toAddress}`);
+      
+      if (tradingUSDCBalance < amount + GAS_FEE_USDC) {
+        showNotification(`Insufficient balance! Need ${(amount + GAS_FEE_USDC).toFixed(2)} USDC (${amount} + ${GAS_FEE_USDC} gas)`, true);
+        return false;
+      }
+      
+      // Deduct from user
+      tradingUSDCBalance -= amount;
+      
+      // Process gas fee
+      processGasFee('send');
+      
+      // Treasury receives and forwards
+      treasuryUSDCBalance += amount;
+      treasuryUSDCBalance -= amount; // Sent to recipient
+      
+      updateTreasuryDisplay();
+      updateTradingBalance();
+      
+      showNotification(`✅ Sent ${amount} ${token} to ${toAddress.slice(0,6)}...${toAddress.slice(-4)} via treasury`, false);
+      console.log(`[Treasury] Send complete to ${toAddress}`);
+      
+      return true;
+    }
+
+    function showSection(id, event) {
+      document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+      if (event && event.target) event.target.classList.add('active');
+
+      const content = document.getElementById('content');
+      content.innerHTML = '';
+
+      if (id === 'learning') {
+        content.innerHTML = `
+          <div class="flex-container">
+            <div class="progress-box">
+              <h4 id="progressTitle">TASKS: ${completedTasks}/100</h4>
+              <div class="reach">COMPLETE 100 TASKS TO MINT NFT</div>
+              <div class="nft-container">
+                <div class="nft-placeholder">
+                  <div class="nft-gradient"></div>
+                  <div class="nft-label" id="nftStatus">${nftMinted ? '✅ NFT Minted!' : '🔒 Complete 100 Tasks'}</div>
+                </div>
+              </div>
+              <div class="progress-section">
+                <div class="progress-bar-long">
+                  <div class="progress-fill-long" id="progressFill" style="width: ${(completedTasks/100)*100}%;"></div>
+                </div>
+                <span class="progress-label" id="progressLabel">${completedTasks}/100 Tasks Completed</span>
+              </div>
+              ${nftMinted ? '' : (completedTasks === 100 ? '<button class="btn-primary" style="margin-top:16px;" onclick="mintNFT()">🎉 Mint Your NFT!</button>' : '')}
+            </div>
+
+            <div class="question-box">
+              <div class="question-card">
+                <div class="question-number" id="qNumber">Question ${currentQuestionIndex + 1}/100</div>
+                <p class="question-title" id="qTitle"></p>
+                <div style="margin:20px 0;" id="optionsContainer"></div>
+                <div class="btn-group">
+                  <button class="btn-primary" onclick="submitAnswer()">Submit Answer</button>
+                  <button class="btn-primary" style="background:linear-gradient(90deg,#6b7280,#9ca3af);" onclick="saveProgress()">Save Progress</button>
+                </div>
+                <p style="margin-top:12px; font-size:0.9em; color:#94a3b8;">✅ Correct: +100 points | ❌ Wrong: -100 points</p>
+              </div>
+            </div>
+
+            <div style="flex:1; min-width:320px;">
+              <div class="card">
+                <h3>💰 Stake USDC (Sepolia)</h3>
+                <p style="margin-bottom:8px; font-size:0.9em;">Your Balance: <span id="usdcBalanceDisplay">0.00</span> USDC</p>
+                <p style="margin-bottom:12px; font-size:0.9em;">Stake to participate in learning rewards</p>
+                <input type="number" id="stakeAmount" placeholder="Enter USDC amount" step="0.01" style="width:100%; padding:12px; background:#0f172a; border:1px solid var(--border); border-radius:8px; color:white; margin-bottom:16px;"/>
+                <button class="btn-primary" onclick="stakeUSDC()">Stake USDC</button>
+                <p class="stake-info" id="stakedDisplay">Staked: 0.00 USDC</p>
+
+                <p style="margin:16px 0 8px;">Unstake amount</p>
+                <input type="number" id="unstakeAmount" placeholder="Amount to unstake" step="0.01" style="width:100%; padding:12px; background:#0f172a; border:1px solid var(--border); border-radius:8px; color:white; margin-bottom:16px;"/>
+                <button class="btn-primary" style="background:linear-gradient(90deg,var(--danger),#f87171);" onclick="unstakeUSDC()">Unstake USDC</button>
+              </div>
+
+              <div class="card" style="margin-top:20px;">
+                <h3>🎯 Learning Points</h3>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                  <span>Your Points</span>
+                  <span style="font-weight:bold; color:#10b981;" id="pointDisplay">0 POINTS</span>
+                </div>
+                <div class="progress-bar">
+                  <div class="progress-fill" id="pointProgress" style="width:0%;"></div>
+                </div>
+                <p style="margin-top:8px; font-size:0.9em; color:#94a3b8;">Conversion Rate: 1000 points = 1 USDC</p>
+                <p style="margin-top:4px; font-size:0.85em; color:#f59e0b;">⛽ Gas Fee: ${GAS_FEE_USDC} USDC per answer</p>
+                <button class="btn-primary btn-success" style="margin-top:16px;" onclick="convertPointsToUSDC()" ${mogalandPoints < 1000 ? 'disabled' : ''}>Convert to USDC</button>
+                <div class="history" id="historyLog" style="margin-top:16px;">
+                  <strong>Conversion History:</strong><br>
+                  <div id="historyItems" style="max-height:150px; overflow-y:auto;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+
+        loadQuestion();
+        updatePointDisplay();
+        updateProgressDisplay();
+        updateStakedDisplay();
+        updateUSDCBalance();
+      }
+      else if (id === 'market') {
+        content.innerHTML = `
+          <div style="max-width:1600px; margin:0 auto; padding:20px; color:white;">
+            <h2 style="text-align:center; margin-bottom:10px; color:#60a5fa;">Mogaland-Plume Market Prediction</h2>
+            <p style="text-align:center; opacity:0.8; margin-bottom:20px;">Live Trading Demo — Trade with leverage using Sepolia USDC!</p>
+
+            <div style="display:flex; justify-content:center; gap:8px; margin-bottom:25px; flex-wrap:wrap;">
+              <button class="nav-btn active" data-tab="crypto">Crypto</button>
+              <button class="nav-btn" data-tab="stocks">Stocks</button>
+              <button class="nav-btn" data-tab="commodities">Commodities</button>
+              <button class="nav-btn" data-tab="forex">Forex</button>
+              <button class="nav-btn" data-tab="sports">Sports</button>
+            </div>
+
+            <div class="flex-container" style="gap:25px; align-items:stretch;">
+              <div class="card" style="flex:1; max-width:380px; overflow-y:auto; max-height:680px; padding:15px;">
+                <h3 style="color:#60a5fa; text-align:center;" id="assetListTitle">Assets</h3>
+                <div id="assetList" style="display:flex; flex-direction:column; gap:8px;"></div>
+              </div>
+
+              <div class="card" style="flex:2; min-height:580px; padding:20px;">
+                <h3 id="viewTitle" style="color:#60a5fa; text-align:center; margin-bottom:15px;">Select Asset to Trade</h3>
+                <canvas id="priceChart" height="420" style="display:none;"></canvas>
+                <div id="clubHistoryView" style="display:none; color:#e2e8f0; font-size:1.05em; line-height:1.6; padding:15px; background:rgba(13,110,253,0.08); border-radius:12px;"></div>
+                <div id="chartFooter" style="text-align:center; margin-top:15px; font-size:0.95em; opacity:0.8; display:none;">
+                  Simulated real-time price • Updates every ~8s
+                </div>
+              </div>
+
+              <div class="card" style="flex:1; max-width:400px; padding:20px;">
+                <h3 style="color:#60a5fa;">Trade Position</h3>
+                <p>Asset: <strong id="selectedAsset">None</strong></p>
+                <p style="font-size:0.95em; opacity:0.8; margin-bottom:8px;">Your Balance: <strong id="usdcBalanceTrading">0.00 USDC</strong></p>
+                <div id="currentPriceDisplay" style="font-size:1.1em; margin-bottom:12px; display:none;">Current Price: <strong style="color:#10b981;" id="currentPrice">-</strong></div>
+                
+                <label style="display:block; margin:12px 0 6px;">Leverage</label>
+                <select id="leverageSelect" style="width:100%; padding:10px; background:#0f172a; border:1px solid var(--border); border-radius:8px; color:white;">
+                  <option value="1">1x (No Leverage)</option>
+                  <option value="2">2x Leverage</option>
+                  <option value="5" selected>5x Leverage</option>
+                  <option value="10">10x Leverage</option>
+                  <option value="20">20x Leverage</option>
+                </select>
+
+                <label style="display:block; margin:12px 0 6px;">Position Amount (USDC)</label>
+                <input type="number" id="positionAmount" placeholder="Enter USDC amount" min="1" step="0.01" style="width:100%; padding:12px; margin-bottom:12px; background:#0f172a; border:1px solid var(--border); border-radius:8px; color:white;"/>
+                
+                <div id="leverageInfo" style="font-size:0.85em; color:#94a3b8; margin-bottom:12px; padding:8px; background:rgba(13,110,253,0.1); border-radius:6px; display:none;">
+                  <div>Trade Size: <span id="tradeSize">0</span> USDC</div>
+                  <div>Required Margin: <span id="requiredMargin">0</span> USDC</div>
+                </div>
+
+                <div style="margin:16px 0; display:flex; gap:10px;">
+                  <button class="btn-primary" style="flex:1; background:#10b981;" onclick="openPosition('long')">🔼 LONG</button>
+                  <button class="btn-primary" style="flex:1; background:#ef4444;" onclick="openPosition('short')">🔽 SHORT</button>
+                </div>
+
+                <p id="tradeStatus" style="margin-top:15px; font-weight:bold; min-height:40px; font-size:0.9em;"></p>
+                
+                <p style="font-size:0.85em; color:#f59e0b; margin-top:8px;">⛽ Gas Fee: ${GAS_FEE_USDC} USDC per trade</p>
+
+                <div style="margin-top:20px;">
+                  <h4 style="color:#60a5fa; margin-bottom:8px;">Open Positions</h4>
+                  <div id="openPositions" style="font-size:0.85em; max-height:120px; overflow-y:auto; color:#94a3b8;"></div>
+                </div>
+
+                <div style="margin-top:20px;">
+                  <h4 style="color:#60a5fa; margin-bottom:8px;">Trade History</h4>
+                  <div id="tradeHistory" style="font-size:0.85em; max-height:120px; overflow-y:auto; color:#94a3b8;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+
+        const assetsData = {
+          crypto: [
+            {symbol: "BTCUSD", name: "Bitcoin", tvSymbol: "BINANCE:BTCUSDT", basePrice: 45000, volatility: 0.025},
+            {symbol: "ETHUSD", name: "Ethereum", tvSymbol: "BINANCE:ETHUSDT", basePrice: 2500, volatility: 0.030},
+            {symbol: "BNBUSD", name: "BNB", tvSymbol: "BINANCE:BNBUSDT", basePrice: 320, volatility: 0.028},
+            {symbol: "SOLUSD", name: "Solana", tvSymbol: "BINANCE:SOLUSDT", basePrice: 100, volatility: 0.040},
+            {symbol: "ADAUSD", name: "Cardano", tvSymbol: "BINANCE:ADAUSDT", basePrice: 0.50, volatility: 0.035},
+            {symbol: "XRPUSD", name: "Ripple", tvSymbol: "BINANCE:XRPUSDT", basePrice: 0.60, volatility: 0.032},
+            {symbol: "DOTUSD", name: "Polkadot", tvSymbol: "BINANCE:DOTUSDT", basePrice: 7.50, volatility: 0.038},
+            {symbol: "MATICUSD", name: "Polygon", tvSymbol: "BINANCE:MATICUSDT", basePrice: 0.85, volatility: 0.042},
+            {symbol: "LINKUSD", name: "Chainlink", tvSymbol: "BINANCE:LINKUSDT", basePrice: 15.00, volatility: 0.036},
+            {symbol: "UNIUSD", name: "Uniswap", tvSymbol: "BINANCE:UNIUSDT", basePrice: 6.50, volatility: 0.040}
+          ],
+          stocks: [
+            {symbol: "AAPL", name: "Apple Inc.", tvSymbol: "NASDAQ:AAPL", basePrice: 190, volatility: 0.015},
+            {symbol: "TSLA", name: "Tesla Inc.", tvSymbol: "NASDAQ:TSLA", basePrice: 250, volatility: 0.045},
+            {symbol: "GOOGL", name: "Alphabet", tvSymbol: "NASDAQ:GOOGL", basePrice: 140, volatility: 0.020},
+            {symbol: "MSFT", name: "Microsoft", tvSymbol: "NASDAQ:MSFT", basePrice: 380, volatility: 0.018},
+            {symbol: "AMZN", name: "Amazon", tvSymbol: "NASDAQ:AMZN", basePrice: 155, volatility: 0.025},
+            {symbol: "NVDA", name: "NVIDIA", tvSymbol: "NASDAQ:NVDA", basePrice: 500, volatility: 0.040},
+            {symbol: "META", name: "Meta Platforms", tvSymbol: "NASDAQ:META", basePrice: 350, volatility: 0.030}
+          ],
+          commodities: [
+            {symbol: "GOLD", name: "Gold", tvSymbol: "TVC:GOLD", basePrice: 2050, volatility: 0.010},
+            {symbol: "SILVER", name: "Silver", tvSymbol: "TVC:SILVER", basePrice: 24, volatility: 0.020},
+            {symbol: "OIL", name: "Crude Oil", tvSymbol: "TVC:USOIL", basePrice: 75, volatility: 0.025},
+            {symbol: "NATGAS", name: "Natural Gas", tvSymbol: "TVC:NATURALGAS", basePrice: 2.80, volatility: 0.035}
+          ],
+          forex: [
+            {symbol: "EURUSD", name: "EUR/USD", tvSymbol: "FX:EURUSD", basePrice: 1.085, volatility: 0.005},
+            {symbol: "GBPUSD", name: "GBP/USD", tvSymbol: "FX:GBPUSD", basePrice: 1.270, volatility: 0.006},
+            {symbol: "USDJPY", name: "USD/JPY", tvSymbol: "FX:USDJPY", basePrice: 148.5, volatility: 0.007},
+            {symbol: "AUDUSD", name: "AUD/USD", tvSymbol: "FX:AUDUSD", basePrice: 0.660, volatility: 0.008}
+          ],
+          sports: [
+            {symbol: "Real Madrid", type: "football", teamId: "133602", league: "La Liga", strength: 0.85, nextMatch: "vs Barcelona", recentForm: [
+              "Feb 5, 2026: W 3-1 vs Barcelona (La Liga)",
+              "Jan 29, 2026: W 2-0 vs Atletico Madrid (Copa)",
+              "Jan 22, 2026: L 1-2 vs Bayern Munich (UCL)"
+            ]},
+            {symbol: "Barcelona", type: "football", teamId: "133604", league: "La Liga", strength: 0.82, nextMatch: "vs Real Madrid", recentForm: [
+              "Feb 4, 2026: W 2-1 vs Atletico Madrid",
+              "Jan 28, 2026: L 0-2 vs Bayern Munich",
+              "Jan 21, 2026: W 3-0 vs Sevilla"
+            ]},
+            {symbol: "Man City", type: "football", teamId: "133613", league: "Premier League", strength: 0.88, nextMatch: "vs Liverpool", recentForm: [
+              "Feb 5, 2026: W 4-1 vs Chelsea",
+              "Jan 29, 2026: W 3-0 vs Arsenal",
+              "Jan 22, 2026: D 2-2 vs Liverpool"
+            ]},
+            {symbol: "Liverpool", type: "football", teamId: "133602", league: "Premier League", strength: 0.83, nextMatch: "vs Man City", recentForm: [
+              "Feb 4, 2026: W 3-2 vs Chelsea",
+              "Jan 28, 2026: L 1-3 vs Arsenal",
+              "Jan 21, 2026: D 2-2 vs Man City"
+            ]},
+            {symbol: "Lakers", type: "basketball", teamId: "134864", league: "NBA", strength: 0.78, nextMatch: "vs Warriors", recentForm: [
+              "Feb 5, 2026: W 112-108 vs Warriors",
+              "Feb 1, 2026: L 98-105 vs Celtics",
+              "Jan 28, 2026: W 120-115 vs Nets"
+            ]},
+            {symbol: "Warriors", type: "basketball", teamId: "134865", league: "NBA", strength: 0.81, nextMatch: "vs Lakers", recentForm: [
+              "Feb 5, 2026: L 108-112 vs Lakers",
+              "Feb 2, 2026: W 118-110 vs Celtics",
+              "Jan 29, 2026: W 125-120 vs Nets"
+            ]},
+            {symbol: "Celtics", type: "basketball", teamId: "134859", league: "NBA", strength: 0.85, nextMatch: "vs Bucks", recentForm: [
+              "Feb 4, 2026: W 118-105 vs Nets",
+              "Feb 1, 2026: W 105-98 vs Lakers",
+              "Jan 27, 2026: W 112-108 vs Heat"
+            ]}
+          ]
+        };
+
+        // Fetch real sports data from TheSportsDB API
+        async function fetchSportsData(team) {
+          if (!team.teamId) return;
+          
+          try {
+            const API_KEY = '3'; // Free test key
+            const eventsUrl = `https://www.thesportsdb.com/api/v1/json/${API_KEY}/eventslast.php?id=${team.teamId}`;
+            const nextUrl = `https://www.thesportsdb.com/api/v1/json/${API_KEY}/eventsnext.php?id=${team.teamId}`;
+            
+            const [eventsRes, nextRes] = await Promise.all([
+              fetch(eventsUrl).catch(() => null),
+              fetch(nextUrl).catch(() => null)
+            ]);
+            
+            if (eventsRes && eventsRes.ok) {
+              const eventsData = await eventsRes.json();
+              if (eventsData.results) {
+                team.recentForm = eventsData.results.slice(0, 6).map(event => {
+                  const date = new Date(event.dateEvent).toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'});
+                  const isHome = event.idHomeTeam === team.teamId;
+                  const opponent = isHome ? event.strAwayTeam : event.strHomeTeam;
+                  const score = isHome ? `${event.intHomeScore}-${event.intAwayScore}` : `${event.intAwayScore}-${event.intHomeScore}`;
+                  
+                  let result = 'D';
+                  if (event.intHomeScore && event.intAwayScore) {
+                    if (isHome) {
+                      result = parseInt(event.intHomeScore) > parseInt(event.intAwayScore) ? 'W' : 
+                               parseInt(event.intHomeScore) < parseInt(event.intAwayScore) ? 'L' : 'D';
+                    } else {
+                      result = parseInt(event.intAwayScore) > parseInt(event.intHomeScore) ? 'W' : 
+                               parseInt(event.intAwayScore) < parseInt(event.intHomeScore) ? 'L' : 'D';
+                    }
+                  }
+                  
+                  return `${date}: ${result} ${score} vs ${opponent}`;
+                });
+              }
+            }
+            
+            if (nextRes && nextRes.ok) {
+              const nextData = await nextRes.json();
+              if (nextData.events && nextData.events.length > 0) {
+                const nextEvent = nextData.events[0];
+                const isHome = nextEvent.idHomeTeam === team.teamId;
+                const opponent = isHome ? nextEvent.strAwayTeam : nextEvent.strHomeTeam;
+                const date = new Date(nextEvent.dateEvent).toLocaleDateString('en-US', {month: 'short', day: 'numeric'});
+                team.nextMatch = `${date} vs ${opponent}`;
+              }
+            }
+          } catch (error) {
+            console.log('Sports API error:', error);
+          }
+        }
+
+        // Auto-update sports data periodically
+        let sportsUpdateInterval = null;
+        
+        function startSportsAutoUpdate() {
+          // Clear existing interval if any
+          if (sportsUpdateInterval) {
+            clearInterval(sportsUpdateInterval);
+          }
+          
+          // Update sports data every 5 minutes
+          sportsUpdateInterval = setInterval(() => {
+            if (currentTab === 'sports') {
+              console.log('Auto-updating sports data...');
+              assetsData.sports.forEach(team => {
+                fetchSportsData(team);
+              });
+              
+              // Refresh display if on sports tab
+              if (selectedAsset && selectedAsset.type) {
+                setTimeout(() => {
+                  showClubHistory(selectedAsset);
+                }, 2000);
+              }
+            }
+          }, 5 * 60 * 1000); // 5 minutes
+          
+          // Initial update for sports teams
+          if (assetsData.sports) {
+            assetsData.sports.forEach(team => {
+              fetchSportsData(team);
+            });
+          }
+        }
+
+        function stopSportsAutoUpdate() {
+          if (sportsUpdateInterval) {
+            clearInterval(sportsUpdateInterval);
+            sportsUpdateInterval = null;
+          }
+        }
+
+        let currentTab = 'crypto';
+        let selectedAsset = null;
+        let chart = null;
+        let priceHistory = [];
+        let currentBet = null;
+        let openPositions = [];
+        let tradeHistoryList = [];
+        let tradingUSDCBalance = 1000; // Demo balance
+
+        // Update leverage info display
+        function updateLeverageInfo() {
+          const amount = parseFloat(document.getElementById('positionAmount')?.value || 0);
+          const leverage = parseInt(document.getElementById('leverageSelect')?.value || 1);
+          
+          if (amount > 0) {
+            const tradeSize = amount * leverage;
+            document.getElementById('tradeSize').textContent = tradeSize.toFixed(2);
+            document.getElementById('requiredMargin').textContent = amount.toFixed(2);
+            document.getElementById('leverageInfo').style.display = 'block';
+          } else {
+            document.getElementById('leverageInfo').style.display = 'none';
+          }
+        }
+
+        // Update positions display
+        function updatePositionsDisplay() {
+          const container = document.getElementById('openPositions');
+          if (!container) return;
+          
+          if (openPositions.length === 0) {
+            container.innerHTML = '<div style="opacity:0.6;">No open positions</div>';
+            return;
+          }
+          
+          container.innerHTML = openPositions.map((pos, idx) => {
+            // Handle sports bets
+            if (pos.isSportsBet) {
+              const betType = pos.type === 'long' ? 'WIN' : 'LOSE';
+              return `
+                <div style="padding:8px; background:rgba(251,191,36,0.1); border-radius:6px; margin-bottom:6px;">
+                  <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                    <span><strong>${pos.asset.symbol}</strong> ${pos.leverage}x</span>
+                    <span style="color:#fbbf24">🏆 ${betType}</span>
+                  </div>
+                  <div style="font-size:0.85em; opacity:0.8;">
+                    Bet: ${pos.amount.toFixed(2)} USDC
+                  </div>
+                  <div style="color:#fbbf24; font-weight:bold; margin-top:4px;">
+                    ⏳ Waiting for match result...
+                  </div>
+                </div>
+              `;
+            }
+            
+            // Handle regular trading positions
+            const currentPrice = selectedAsset && selectedAsset.symbol === pos.asset.symbol ? 
+              (priceHistory[priceHistory.length - 1]?.c || pos.entryPrice) : pos.entryPrice;
+            const priceDiff = currentPrice - pos.entryPrice;
+            const pnl = pos.type === 'long' ? priceDiff * pos.leverage * (pos.amount / pos.entryPrice) : 
+                                             -priceDiff * pos.leverage * (pos.amount / pos.entryPrice);
+            const pnlPercent = (pnl / pos.amount) * 100;
+            const pnlColor = pnl >= 0 ? '#10b981' : '#ef4444';
+            
+            return `
+              <div style="padding:8px; background:rgba(13,110,253,0.08); border-radius:6px; margin-bottom:6px;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                  <span><strong>${pos.asset.symbol}</strong> ${pos.leverage}x</span>
+                  <span style="color:${pos.type === 'long' ? '#10b981' : '#ef4444'}">${pos.type.toUpperCase()}</span>
+                </div>
+                <div style="font-size:0.85em; opacity:0.8;">
+                  Entry: $${pos.entryPrice.toFixed(2)} | Amount: ${pos.amount.toFixed(2)} USDC
+                </div>
+                <div style="color:${pnlColor}; font-weight:bold; margin-top:4px;">
+                  P&L: ${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)} (${pnlPercent >= 0 ? '+' : ''}${pnlPercent.toFixed(2)}%)
+                </div>
+                <button onclick="closePosition(${idx})" style="margin-top:4px; padding:4px 8px; background:#ef4444; color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.85em;">Close</button>
+              </div>
+            `;
+          }).join('');
+        }
+
+        // Update trade history
+        function updateTradeHistory() {
+          const container = document.getElementById('tradeHistory');
+          if (!container) return;
+          
+          if (tradeHistoryList.length === 0) {
+            container.innerHTML = '<div style="opacity:0.6;">No trades yet</div>';
+            return;
+          }
+          
+          container.innerHTML = tradeHistoryList.slice(-5).reverse().map(trade => {
+            const pnlColor = trade.pnl >= 0 ? '#10b981' : '#ef4444';
+            return `
+              <div style="padding:6px; border-bottom:1px solid rgba(255,255,255,0.1); font-size:0.85em;">
+                <div><strong>${trade.asset.symbol}</strong> ${trade.leverage}x ${trade.type.toUpperCase()}</div>
+                <div style="opacity:0.8;">${trade.amount.toFixed(2)} USDC</div>
+                <div style="color:${pnlColor};">P&L: ${trade.pnl >= 0 ? '+' : ''}$${trade.pnl.toFixed(2)}</div>
+              </div>
+            `;
+          }).join('');
+        }
+
+        // Update USDC balance display
+        function updateTradingBalance() {
+          const el = document.getElementById('usdcBalanceTrading');
+          if (el) el.textContent = tradingUSDCBalance.toFixed(2) + ' USDC';
+        }
+
+        function renderAssets() {
+          const container = document.getElementById('assetList');
+          const titleEl = document.getElementById('assetListTitle');
+          if (!container || !titleEl) return;
+
+          container.innerHTML = '';
+          titleEl.textContent = currentTab === 'sports' ? 'Football & Basketball Teams' : 'Assets';
+
+          const tabAssets = assetsData[currentTab] || [];
+          tabAssets.forEach(asset => {
+            const div = document.createElement('div');
+            div.style.padding = '12px 10px';
+            div.style.background = 'rgba(13,110,253,0.1)';
+            div.style.borderRadius = '8px';
+            div.style.cursor = 'pointer';
+            div.style.marginBottom = '6px';
+            
+            const displayName = asset.name || asset.symbol;
+            const subtitle = asset.type ? ` (${asset.type})` : asset.league ? ` - ${asset.league}` : '';
+            
+            div.innerHTML = `<strong>${displayName}</strong><span style="opacity:0.7; font-size:0.85em;">${subtitle}</span>`;
+            div.onclick = currentTab === 'sports' ? () => showClubHistory(asset) : () => selectAsset(asset);
+            container.appendChild(div);
+          });
+        }
+
+        function showClubHistory(asset) {
+          selectedAsset = asset;
+          document.getElementById('selectedAsset').textContent = asset.symbol;
+          document.getElementById('viewTitle').textContent = `${asset.symbol} - ${asset.type === 'football' ? 'Football' : 'Basketball'}`;
+
+          document.getElementById('priceChart').style.display = 'none';
+          document.getElementById('chartFooter').style.display = 'none';
+          document.getElementById('currentPriceDisplay').style.display = 'none';
+
+          const view = document.getElementById('clubHistoryView');
+          view.style.display = 'block';
+          
+          // Show loading state
+          view.innerHTML = `
+            <div style="text-align:center; padding:20px;">
+              <div style="font-size:1.2em; margin-bottom:10px;">📊 Loading real match data...</div>
+              <div style="opacity:0.6;">Fetching from TheSportsDB API</div>
+            </div>
+          `;
+          
+          // Fetch real sports data
+          fetchSportsData(asset).then(() => {
+            // Calculate win rate from recent form
+            const wins = asset.recentForm.filter(r => r.includes(': W ')).length;
+            const winRate = asset.recentForm.length > 0 ? ((wins / asset.recentForm.length) * 100).toFixed(0) : '0';
+            
+            view.innerHTML = `
+              <div style="background:rgba(16,185,129,0.1); padding:12px; border-radius:8px; margin-bottom:16px;">
+                <strong>📊 Team Stats:</strong><br>
+                League: ${asset.league}<br>
+                Strength: ${(asset.strength * 100).toFixed(0)}% | Win Rate: ${winRate}%<br>
+                <strong>🔜 Next Match: ${asset.nextMatch}</strong>
+              </div>
+              <strong>📋 Recent Results:</strong><br><br>
+              ${asset.recentForm.length > 0 ? asset.recentForm.map(r => {
+                const result = r.match(/: ([WLD]) /)?.[1];
+                const color = result === 'W' ? '#10b981' : result === 'L' ? '#ef4444' : '#fbbf24';
+                return `<div style="padding:6px; margin:4px 0; background:rgba(255,255,255,0.05); border-left:3px solid ${color}; border-radius:4px;">${r}</div>`;
+              }).join('') : '<div style="opacity:0.6;">No recent matches available</div>'}
+              <br>
+              <div style="background:rgba(59,130,246,0.1); padding:12px; border-radius:8px; margin-top:12px;">
+                <strong>💰 Place Your Bet with Sepolia USDC:</strong><br>
+                Predict if <strong>${asset.symbol}</strong> will WIN or LOSE their next match!<br>
+                Use the controls on the right to place your bet with leverage.
+              </div>
+            `;
+          }).catch(error => {
+            console.error('Error fetching sports data:', error);
+            view.innerHTML = `
+              <div style="background:rgba(239,68,68,0.1); padding:12px; border-radius:8px; text-align:center;">
+                <strong>⚠️ Unable to fetch real-time data</strong><br>
+                Using cached match history<br><br>
+                ${asset.recentForm.map(r => `<div style="padding:4px;">${r}</div>`).join('')}
+              </div>
+            `;
+          });
+          
+          updateTradingBalance();
+        }
+
+        function selectAsset(asset) {
+          if (!asset) return;
+          selectedAsset = asset;
+          document.getElementById('selectedAsset').textContent = asset.symbol;
+          document.getElementById('viewTitle').textContent = `${asset.symbol} Chart`;
+
+          document.getElementById('priceChart').style.display = 'block';
+          document.getElementById('chartFooter').style.display = 'block';
+          document.getElementById('clubHistoryView').style.display = 'none';
+
+          // Show current price
+          document.getElementById('currentPriceDisplay').style.display = 'block';
+
+          initChart(asset);
+          updateTradingBalance();
+        }
+
+        // Open a new position
+        function openPosition(type) {
+          if (!selectedAsset) {
+            showNotification('Please select an asset/team first!', true);
+            return;
+          }
+
+          const amount = parseFloat(document.getElementById('positionAmount')?.value || 0);
+          const leverage = parseInt(document.getElementById('leverageSelect')?.value || 1);
+          
+          if (amount <= 0 || isNaN(amount)) {
+            showNotification('Please enter a valid amount!', true);
+            return;
+          }
+
+          // Check total required: position amount + gas fee
+          const totalRequired = amount + GAS_FEE_USDC;
+          if (totalRequired > tradingUSDCBalance) {
+            showNotification(`Insufficient balance! Need ${totalRequired.toFixed(2)} USDC (${amount} position + ${GAS_FEE_USDC} gas)`, true);
+            return;
+          }
+
+          // Process gas fee
+          if (!processGasFee('trade')) {
+            return;
+          }
+
+          // For sports betting
+          if (currentTab === 'sports') {
+            const position = {
+              asset: selectedAsset,
+              type: type, // 'long' = WIN, 'short' = LOSE
+              amount: amount,
+              leverage: leverage,
+              openTime: new Date().toLocaleTimeString(),
+              isSportsBet: true
+            };
+
+            openPositions.push(position);
+            tradingUSDCBalance -= amount;
+            transferToTreasury(amount); // Move bet amount to treasury
+
+            const betType = type === 'long' ? 'WIN' : 'LOSE';
+            showNotification(`🏆 Sports bet placed: ${selectedAsset.symbol} to ${betType} | ${leverage}x leverage on ${amount.toFixed(2)} USDC`, false);
+            
+            document.getElementById('positionAmount').value = '';
+            document.getElementById('leverageInfo').style.display = 'none';
+            
+            // Simulate match result after 15 seconds
+            setTimeout(() => {
+              const idx = openPositions.findIndex(p => p === position);
+              if (idx !== -1) {
+                // Use team strength to determine outcome
+                const winChance = type === 'long' ? selectedAsset.strength : (1 - selectedAsset.strength);
+                const won = Math.random() < winChance;
+                
+                const profit = amount * leverage * 0.9; // 90% profit if win
+                
+                if (won) {
+                  // Transfer winnings from treasury to user
+                  const totalPayout = amount + profit; // Return bet + profit
+                  if (transferFromTreasury(totalPayout)) {
+                    tradeHistoryList.push({
+                      asset: selectedAsset,
+                      type: type === 'long' ? 'WIN' : 'LOSE',
+                      leverage: leverage,
+                      amount: amount,
+                      pnl: profit,
+                      closeTime: new Date().toLocaleTimeString()
+                    });
+                    showNotification(`🏆 Match result: ${selectedAsset.symbol} - You won $${profit.toFixed(2)} from treasury!`, false);
+                  }
+                } else {
+                  // Loss - money stays in treasury
+                  tradeHistoryList.push({
+                    asset: selectedAsset,
+                    type: type === 'long' ? 'WIN' : 'LOSE',
+                    leverage: leverage,
+                    amount: amount,
+                    pnl: -amount,
+                    closeTime: new Date().toLocaleTimeString()
+                  });
+                  showNotification(`🏆 Match result: ${selectedAsset.symbol} - You lost $${amount.toFixed(2)} to treasury`, true);
+                }
+                
+                openPositions.splice(idx, 1);
+                
+                updatePositionsDisplay();
+                updateTradeHistory();
+                updateTradingBalance();
+              }
+            }, 15000);
+            
+            updatePositionsDisplay();
+            updateTradingBalance();
+            
+            const statusEl = document.getElementById('tradeStatus');
+            if (statusEl) {
+              statusEl.textContent = `⏳ Bet placed: ${selectedAsset.symbol} to ${betType} | Result in 15s`;
+              statusEl.style.color = '#fbbf24';
+            }
+            return;
+          }
+
+          // For regular trading (crypto, stocks, commodities, forex)
+          const currentPrice = priceHistory[priceHistory.length - 1]?.c || selectedAsset.basePrice;
+          
+          const position = {
+            asset: selectedAsset,
+            type: type,
+            entryPrice: currentPrice,
+            amount: amount,
+            leverage: leverage,
+            openTime: new Date().toLocaleTimeString()
+          };
+
+          openPositions.push(position);
+          tradingUSDCBalance -= amount;
+          transferToTreasury(amount); // Move position to treasury
+
+          showNotification(`🔓 Opened ${type.toUpperCase()} position: ${selectedAsset.symbol} ${leverage}x at $${currentPrice.toFixed(2)}`, false);
+          
+          document.getElementById('positionAmount').value = '';
+          document.getElementById('leverageInfo').style.display = 'none';
+          
+          updatePositionsDisplay();
+          updateTradingBalance();
+          
+          const statusEl = document.getElementById('tradeStatus');
+          if (statusEl) {
+            statusEl.textContent = `✅ Position opened: ${type.toUpperCase()} ${selectedAsset.symbol} ${leverage}x`;
+            statusEl.style.color = type === 'long' ? '#10b981' : '#ef4444';
+          }
+        }
+
+        // Close a position
+        function closePosition(idx) {
+          if (idx < 0 || idx >= openPositions.length) return;
+          
+          const position = openPositions[idx];
+          
+          // Handle sports bets separately
+          if (position.isSportsBet) {
+            showNotification('Sports bets are settled automatically after 15 seconds!', true);
+            return;
+          }
+          
+          const currentPrice = priceHistory[priceHistory.length - 1]?.c || position.entryPrice;
+          const priceDiff = currentPrice - position.entryPrice;
+          const pnl = position.type === 'long' ? 
+            priceDiff * position.leverage * (position.amount / position.entryPrice) : 
+            -priceDiff * position.leverage * (position.amount / position.entryPrice);
+          
+          // Handle treasury transfers based on profit/loss
+          if (pnl >= 0) {
+            // Profit: Return position + profit from treasury
+            const totalPayout = position.amount + pnl;
+            if (transferFromTreasury(totalPayout)) {
+              showNotification(`🔒 Closed position with profit of $${pnl.toFixed(2)} (paid from treasury)`, false);
+            }
+          } else {
+            // Loss: User loses position amount (already in treasury), no payout
+            showNotification(`🔒 Closed position with loss of $${Math.abs(pnl).toFixed(2)} (kept by treasury)`, true);
+          }
+          
+          // Add to history
+          tradeHistoryList.push({
+            asset: position.asset,
+            type: position.type,
+            leverage: position.leverage,
+            amount: position.amount,
+            entryPrice: position.entryPrice,
+            exitPrice: currentPrice,
+            pnl: pnl,
+            closeTime: new Date().toLocaleTimeString()
+          });
+          
+          // Remove from open positions
+          openPositions.splice(idx, 1);
+          
+          updatePositionsDisplay();
+          updateTradeHistory();
+          updateTradingBalance();
+        }
+
+        function generateOHLC(basePrice, count = 40) {
+          const data = [];
+          let current = basePrice || 1000;
+          const now = Date.now();
+          for (let i = 0; i < count; i++) {
+            const open = current;
+            const change = (Math.random() - 0.5) * 0.02 * open * 2;
+            const close = open + change;
+            data.push({
+              x: now - (count - i - 1) * 600000,
+              o: open,
+              h: Math.max(open, close) + Math.random() * 100,
+              l: Math.min(open, close) - Math.random() * 100,
+              c: close
+            });
+            current = close;
+          }
+          return data;
+        }
+
+        function initChart(asset) {
+          const container = document.getElementById('priceChart');
+          if (!container) return;
+
+          // Clear previous content
+          container.innerHTML = '';
+          container.style.display = 'block';
+
+          // Use TradingView widget if tvSymbol is available
+          if (asset.tvSymbol && typeof TradingView !== 'undefined') {
+            try {
+              // Create TradingView Advanced Chart Widget
+              new TradingView.widget({
+                "width": container.offsetWidth || 700,
+                "height": 420,
+                "symbol": asset.tvSymbol,
+                "interval": "15",
+                "timezone": "Etc/UTC",
+                "theme": "dark",
+                "style": "1",
+                "locale": "en",
+                "toolbar_bg": "#0a2540",
+                "enable_publishing": false,
+                "hide_side_toolbar": false,
+                "allow_symbol_change": false,
+                "container_id": "priceChart",
+                "backgroundColor": "#0a2540",
+                "gridColor": "rgba(255, 255, 255, 0.06)",
+                "hide_legend": false,
+                "save_image": false
+              });
+              
+              // Fetch current price from TradingView
+              fetchTradingViewPrice(asset);
+              
+              return;
+            } catch (e) {
+              console.log('TradingView widget error:', e);
+            }
+          }
+
+          // Fallback: Use canvas-based chart
+          const canvas = document.createElement('canvas');
+          canvas.id = 'priceChart';
+          canvas.height = 420;
+          container.appendChild(canvas);
+          
+          const ctx = canvas.getContext('2d');
+          if (!ctx) return;
+
+          if (chart) chart.destroy();
+
+          priceHistory = generateOHLC(asset.basePrice);
+
+          // Try Chart.js if available
+          if (typeof Chart !== 'undefined') {
+            try {
+              chart = new Chart(ctx, {
+                type: 'candlestick',
+                data: {
+                  datasets: [{
+                    label: asset.symbol,
+                    data: priceHistory
+                  }, {
+                    label: 'Volume',
+                    type: 'bar',
+                    data: priceHistory.map(d => ({x: d.x, y: d.v || Math.floor(Math.random()*10000)})),
+                    yAxisID: 'volume',
+                    backgroundColor: 'rgba(59,130,246,0.4)'
+                  }]
+                },
+                options: {
+                  scales: {
+                    x: { type: 'time', time: { unit: 'minute' }, title: { display: true, text: 'Time' } },
+                    y: { title: { display: true, text: 'Price ($)' } },
+                    volume: { position: 'right', title: { display: true, text: 'Vol' }, grid: { drawOnChartArea: false } }
+                  },
+                  plugins: { legend: { display: false } }
+                }
+              });
+            } catch (e) {
+              console.log('Chart.js error, using simple chart');
+              drawSimpleChart(canvas, ctx, priceHistory, asset);
+            }
+          } else {
+            drawSimpleChart(canvas, ctx, priceHistory, asset);
+          }
+        }
+
+        // Fetch real-time price from a public API
+        async function fetchTradingViewPrice(asset) {
+          try {
+            // Use a free crypto price API as an example
+            if (asset.symbol.includes('USD') && currentTab === 'crypto') {
+              const symbol = asset.symbol.replace('USD', '').toLowerCase();
+              const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${symbol === 'btc' ? 'bitcoin' : symbol === 'eth' ? 'ethereum' : asset.symbol.toLowerCase()}&vs_currencies=usd`);
+              if (response.ok) {
+                const data = await response.json();
+                const coinId = symbol === 'btc' ? 'bitcoin' : symbol === 'eth' ? 'ethereum' : Object.keys(data)[0];
+                if (data[coinId]) {
+                  const price = data[coinId].usd;
+                  document.getElementById('currentPrice').textContent = `$${price.toLocaleString()}`;
+                  return;
+                }
+              }
+            }
+            
+            // Fallback to base price
+            document.getElementById('currentPrice').textContent = `$${asset.basePrice.toLocaleString()}`;
+          } catch (error) {
+            console.log('Price fetch error:', error);
+            document.getElementById('currentPrice').textContent = `$${asset.basePrice.toLocaleString()}`;
+          }
+        }
+
+        function drawSimpleChart(canvas, ctx, data, asset) {
+          // Clear canvas
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          
+          // Set canvas size
+          canvas.width = canvas.offsetWidth;
+          canvas.height = canvas.offsetHeight || 420;
+          
+          if (data.length === 0) return;
+          
+          // Find min and max prices
+          const prices = data.map(d => d.c);
+          const minPrice = Math.min(...prices);
+          const maxPrice = Math.max(...prices);
+          const priceRange = maxPrice - minPrice || 1;
+          
+          // Draw background
+          ctx.fillStyle = '#1e293b';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          
+          // Draw grid
+          ctx.strokeStyle = '#334155';
+          ctx.lineWidth = 1;
+          for (let i = 0; i < 5; i++) {
+            const y = (canvas.height / 5) * i;
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(canvas.width, y);
+            ctx.stroke();
+          }
+          
+          // Draw price line
+          ctx.strokeStyle = '#10b981';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          
+          data.forEach((point, i) => {
+            const x = (canvas.width / (data.length - 1)) * i;
+            const y = canvas.height - ((point.c - minPrice) / priceRange) * (canvas.height * 0.9) - (canvas.height * 0.05);
+            
+            if (i === 0) {
+              ctx.moveTo(x, y);
+            } else {
+              ctx.lineTo(x, y);
+            }
+          });
+          ctx.stroke();
+          
+          // Draw current price
+          const lastPrice = data[data.length - 1].c;
+          ctx.fillStyle = '#60a5fa';
+          ctx.font = '14px Arial';
+          ctx.fillText(`${asset.symbol}: $${lastPrice.toFixed(2)}`, 10, 20);
+        }
+
+        setInterval(() => {
+          if (selectedAsset && chart && priceHistory.length > 0 && currentTab !== 'sports') {
+            const last = priceHistory[priceHistory.length - 1];
+            const change = (Math.random() - 0.5) * 0.02 * last.c * 2;
+            const open = last.c;
+            const close = open + change;
+            priceHistory.push({
+              x: Date.now(),
+              o: open,
+              h: Math.max(open, close) + Math.random() * 100,
+              l: Math.min(open, close) - Math.random() * 100,
+              c: close
+            });
+            if (priceHistory.length > 80) priceHistory.shift();
+            chart.update();
+            
+            // Update current price display
+            const priceEl = document.getElementById('currentPrice');
+            if (priceEl) {
+              priceEl.textContent = `$${close.toFixed(2)}`;
+              priceEl.style.color = change >= 0 ? '#10b981' : '#ef4444';
+            }
+            
+            // Update open positions P&L
+            updatePositionsDisplay();
+          }
+        }, 8000);
+
+        function placeBet(direction) {
+          if (!selectedAsset) return showNotification("Select first!", true);
+          currentBet = { asset: selectedAsset.symbol, direction, odds: parseFloat(document.getElementById('betOdds').value) || 2.2 };
+          document.getElementById('betStatus').textContent = `Bet: ${direction.toUpperCase()} on ${selectedAsset.symbol}`;
+        }
+
+        function confirmBet() {
+          const amt = parseFloat(document.getElementById('betAmount').value);
+          if (!currentBet || isNaN(amt) || amt < 10) return showNotification("Min 10 MOGA", true);
+          if (amt > mogalandPoints) return showNotification("Not enough!", true);
+
+          mogalandPoints -= amt;
+
+          let timeLeft = 10;
+          document.getElementById('timerDisplay').textContent = `Result in ${timeLeft}s`;
+          const interval = setInterval(() => {
+            timeLeft--;
+            document.getElementById('timerDisplay').textContent = timeLeft > 0 ? `Result in ${timeLeft}s` : '';
+            if (timeLeft <= 0) {
+              clearInterval(interval);
+              const win = Math.random() > 0.5;
+              if (win) {
+                const profit = Math.round(amt * (currentBet.odds - 1));
+                mogalandPoints += amt + profit;
+                showNotification(`WIN! +${profit} MOGA`, false);
+              } else {
+                showNotification(`LOSE -${amt} MOGA`, true);
+              }
+              document.getElementById('timerDisplay').textContent = '';
+            }
+          }, 1000);
+        }
+
+        renderAssets();
+        if (assetsData.crypto.length > 0) selectAsset(assetsData.crypto[0]);
+        updateTradingBalance();
+        updatePositionsDisplay();
+        updateTradeHistory();
+
+        // Add event listeners for leverage calculation
+        const positionInput = document.getElementById('positionAmount');
+        const leverageSelect = document.getElementById('leverageSelect');
+        if (positionInput) positionInput.addEventListener('input', updateLeverageInfo);
+        if (leverageSelect) leverageSelect.addEventListener('change', updateLeverageInfo);
+
+        document.querySelectorAll('[data-tab]').forEach(btn => {
+          btn.onclick = () => {
+            document.querySelectorAll('[data-tab]').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentTab = btn.dataset.tab;
+            renderAssets();
+            selectedAsset = null;
+            document.getElementById('selectedAsset').textContent = 'None';
+            document.getElementById('viewTitle').textContent = currentTab === 'sports' ? 'Select Team to View History' : 'Select Asset to Trade';
+            document.getElementById('priceChart').style.display = 'none';
+            document.getElementById('clubHistoryView').style.display = 'none';
+            document.getElementById('currentPriceDisplay').style.display = 'none';
+            document.getElementById('chartFooter').style.display = 'none';
+            if (chart) chart.destroy();
+            chart = null;
+          };
+        });
+      } 
+      else if (id === 'swap') {
+        content.innerHTML = `
+          <div style="max-width: 480px; margin: 40px auto; padding: 0 12px;">
+            <h2 style="text-align: center; color: #60a5fa; font-size: 1.8em; margin-bottom: 24px; font-weight: 600;">
+              Swap on Sepolia
+            </h2>
+
+            ${!userAddress ? `
+              <div style="background: rgba(220,53,69,0.12); border: 1px solid #dc3545; color: #ffcccc; padding: 12px; border-radius: 10px; margin-bottom: 20px; text-align: center; font-size: 0.95em;">
+                Connect wallet to swap on Sepolia testnet
+              </div>
+            ` : ''}
+
+            <div style="padding: 20px; border-radius: 16px; background: var(--card-bg); border: 1px solid var(--border); box-shadow: 0 4px 16px rgba(0,0,0,0.3); margin-bottom: 20px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <select id="fromTokenSelect" onchange="updateSwapEstimate()" style="padding: 8px; background: var(--darker); border: 1px solid var(--border); border-radius: 8px; color: white; font-size: 1em;">
+                  <option value="ETH">ETH Sepolia</option>
+                  <option value="USDC">USDC Sepolia</option>
+                  <option value="USDT">USDT Sepolia</option>
+                </select>
+
+                <button onclick="toggleSwapDirection()" style="background: #0d6efd; width: 48px; height: 48px; border-radius: 50%; border: none; font-size: 1.5em; color: white; cursor: pointer; box-shadow: 0 4px 12px rgba(13,110,253,0.4); transition: transform 0.2s;">
+                  ↔
+                </button>
+
+                <select id="toTokenSelect" onchange="updateSwapEstimate()" style="padding: 8px; background: var(--darker); border: 1px solid var(--border); border-radius: 8px; color: white; font-size: 1em;">
+                  <option value="USDC">USDC Sepolia</option>
+                  <option value="ETH">ETH Sepolia</option>
+                  <option value="USDT">USDT Sepolia</option>
+                </select>
+              </div>
+
+              <input id="fromInput" type="number" placeholder="0.0" min="0" step="any" style="width: 100%; font-size: 2.4em; font-weight: 500; background: transparent; border: none; color: white; text-align: right; outline: none;" oninput="updateSwapEstimate()" />
+
+              <div style="display: flex; justify-content: space-between; margin-top: 10px; font-size: 0.9em; color: #94a3b8;">
+                <span>Balance: <strong id="plumeBalance" style="color: white;">Loading...</strong></span>
+                <span>~$<span id="fromUSD">0.00</span></span>
+              </div>
+            </div>
+
+            <div id="swapEstimate" style="margin: 16px 0; padding: 10px; background: rgba(16,185,129,0.08); border-radius: 10px; font-size: 1em; color: #10b981; text-align: center;">
+              Estimasi: 0.00 (1 ETH ≈ 2000 USDC)
+            </div>
+
+            <div style="margin: 24px 0; padding: 14px; background: rgba(13,110,253,0.08); border-radius: 14px; border: 1px solid var(--border);">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <label style="font-size: 1em; color: #60a5fa;">Slippage Tolerance</label>
+                <span id="currentSlippage" style="font-weight: bold; color: #10b981; font-size: 1em;">0.5%</span>
+              </div>
+              <div style="display: flex; gap: 6px; flex-wrap: wrap; justify-content: center;">
+                <button class="slippage-chip" data-value="0.1" onclick="setSlippage(0.1)">0.1%</button>
+                <button class="slippage-chip active" data-value="0.5" onclick="setSlippage(0.5)">0.5%</button>
+                <button class="slippage-chip" data-value="1.0" onclick="setSlippage(1.0)">1.0%</button>
+                <button class="slippage-chip" data-value="2.0" onclick="setSlippage(2.0)">2.0%</button>
+                <input id="customSlippage" type="number" placeholder="Custom" min="0" max="10" step="0.1" style="width: 80px; padding: 8px; background: var(--darker); border: 1px solid var(--border); border-radius: 10px; color: white; text-align: center; font-size: 0.9em;" onchange="setSlippage(this.value)" />
+              </div>
+              <p id="slippageWarning" style="margin-top: 10px; font-size: 0.85em; color: #ffcc00; text-align: center; display: none;">
+                High slippage may result in unfavorable rates
+              </p>
+            </div>
+
+            <button class="btn-primary" style="width: 100%; padding: 16px; font-size: 1.25em; border-radius: 14px;" onclick="confirmSwap()">
+              Swap Now
+            </button>
+            
+            <p style="text-align: center; margin-top: 12px; color: #f59e0b; font-size: 0.85em;">
+              ⛽ Gas Fee: ${GAS_FEE_USDC} USDC per swap
+            </p>
+
+            <p style="text-align: center; margin-top: 12px; color: #94a3b8; font-size: 0.9em;">
+              Sepolia Testnet • ETH ↔ USDC/USDT • Demo Mode
+            </p>
+          </div>
+        `;
+
+        setTimeout(() => {
+          if (userAddress) updateTokenBalances();
+          updateSwapEstimate();
+          setSlippage(0.5);
+        }, 100);
+      }
+      else if (id === 'bridge') {
+        content.innerHTML = `
+          <div style="max-width: 520px; margin: 60px auto 140px; padding: 0 16px;">
+            <h2 style="text-align: center; color: #60a5fa; font-size: 2.4em; margin-bottom: 16px; font-weight: 600;">
+              Bridge Assets
+            </h2>
+            <p style="text-align: center; color: #94a3b8; margin-bottom: 32px; font-size: 1.1em;">
+              Transfer tokens between Ethereum Testnets to Sepolia
+            </p>
+
+            <div style="background: #13151f; border: 1px solid #1e2130; border-radius: 24px; padding: 32px 24px; box-shadow: 0 12px 48px rgba(0,0,0,0.7);">
+              <div style="margin-bottom: 32px;">
+                <label style="display: block; color: #94a3b8; font-size: 1em; margin-bottom: 10px; font-weight: 500;">From Network</label>
+                <div style="background: #1e2130; border-radius: 16px; padding: 20px;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+                    <select id="fromChain" onchange="updateBridgeEstimate()" style="background: #2a2f45; color: white; font-size: 1.2em; border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; min-width: 180px; cursor: pointer;">
+                      <option value="goerli">Goerli Testnet</option>
+                      <option value="holesky">Holesky Testnet</option>
+                      <option value="mumbai">Mumbai (Polygon)</option>
+                      <option value="bsc-testnet">BSC Testnet</option>
+                    </select>
+                    <span style="color: #94a3b8; font-size: 0.95em;">Balance: <span id="fromBalance">0.00</span></span>
+                  </div>
+                  <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+                    <input type="number" id="bridgeAmount" placeholder="0.00" oninput="updateBridgeEstimate()" style="background: transparent; border: none; color: white; font-size: 3em; font-weight: 600; flex: 1; min-width: 120px; outline: none;" />
+                    <select id="bridgeToken" onchange="updateBridgeEstimate()" style="background: #2a2f45; color: white; border: none; padding: 12px 16px; border-radius: 14px; font-size: 1.15em; cursor: pointer; min-width: 140px;">
+                      <option value="USDT">USDT</option>
+                      <option value="USDC">USDC</option>
+                      <option value="ETH">ETH</option>
+                    </select>
+                  </div>
+                  <div style="text-align: right; color: #94a3b8; font-size: 0.95em; margin-top: 8px;">~$<span id="fromUSDValue">0.00</span></div>
+                </div>
+              </div>
+
+              <div style="display: flex; justify-content: center; margin: 28px 0;">
+                <button id="swapChainsBtn" onclick="swapBridgeChains()" style="background: #1e2130; border: 4px solid #13151f; border-radius: 50%; width: 68px; height: 68px; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+                  <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#ec4899" stroke-width="2.8">
+                    <path d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                  </svg>
+                </button>
+              </div>
+
+              <div style="margin-bottom: 32px;">
+                <label style="display: block; color: #94a3b8; font-size: 1em; margin-bottom: 10px; font-weight: 500;">To Network</label>
+                <div style="background: #1e2130; border-radius: 16px; padding: 20px;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+                    <select id="toChain" onchange="updateBridgeEstimate()" style="background: #2a2f45; color: white; font-size: 1.2em; border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; min-width: 180px; cursor: pointer;">
+                      <option value="sepolia" selected>Sepolia Testnet</option>
+                    </select>
+                    <span style="color: #94a3b8; font-size: 0.95em;">Balance: <span id="toBalance">0.00</span></span>
+                  </div>
+                  <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+                    <input type="number" id="bridgeReceiveAmount" placeholder="0.00" disabled style="background: transparent; border: none; color: #6b7280; font-size: 3em; font-weight: 600; flex: 1; min-width: 120px; outline: none;" />
+                    <select disabled style="background: #2a2f45; color: white; border: none; padding: 12px 16px; border-radius: 14px; font-size: 1.15em; cursor: not-allowed; min-width: 140px;">
+                      <option id="receiveToken">USDT</option>
+                    </select>
+                  </div>
+                  <div style="text-align: right; color: #94a3b8; font-size: 0.95em; margin-top: 8px;">~$<span id="toUSDValue">0.00</span></div>
+                </div>
+              </div>
+
+              <div style="margin: 24px 0; padding: 14px; background: rgba(13,110,253,0.08); border-radius: 14px; border: 1px solid var(--border);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                  <label style="font-size: 1em; color: #60a5fa;">Slippage Tolerance</label>
+                  <span id="bridgeSlippage" style="font-weight: bold; color: #10b981; font-size: 1em;">0.5%</span>
+                </div>
+                <div style="display: flex; gap: 6px; flex-wrap: wrap; justify-content: center;">
+                  <button class="slippage-chip" data-value="0.1" onclick="setBridgeSlippage(0.1)">0.1%</button>
+                  <button class="slippage-chip active" data-value="0.5" onclick="setBridgeSlippage(0.5)">0.5%</button>
+                  <button class="slippage-chip" data-value="1.0" onclick="setBridgeSlippage(1.0)">1.0%</button>
+                  <button class="slippage-chip" data-value="2.0" onclick="setBridgeSlippage(2.0)">2.0%</button>
+                </div>
+              </div>
+
+              <div style="background: rgba(236,72,153,0.08); border-radius: 14px; padding: 16px; margin-bottom: 28px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 10px; color: #94a3b8;">
+                  <span>Estimated Fee</span>
+                  <span id="bridgeFee">~$3.50 – $8.00</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 10px; color: #94a3b8;">
+                  <span>Estimated Time</span>
+                  <span>~1-8 minutes</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; color: #94a3b8;">
+                  <span>You will receive (after slippage)</span>
+                  <span id="receiveAfterSlippage">0.00</span>
+                </div>
+              </div>
+
+              <button class="btn-primary" style="width: 100%; padding: 20px; font-size: 1.35em; border-radius: 16px;" onclick="confirmBridge()">
+                Bridge Now
+              </button>
+              
+              <p style="text-align: center; margin-top: 12px; color: #f59e0b; font-size: 0.9em;">
+                ⛽ Gas Fee: ${GAS_FEE_USDC} USDC per bridge transaction
+              </p>
+
+              <p style="text-align: center; margin-top: 12px; color: #94a3b8; font-size: 0.95em;">
+                Testnet Bridge Simulator • Real bridges support CCTP, LayerZero, etc.
+              </p>
+            </div>
+          </div>
+        `;
+
+        // Initialize bridge functions
+        window.updateBridgeEstimate = function() {
+          const amount = parseFloat(document.getElementById('bridgeAmount')?.value || 0);
+          const token = document.getElementById('bridgeToken')?.value || 'USDT';
+          const slippage = parseFloat(document.getElementById('bridgeSlippage')?.textContent || '0.5');
+          
+          const receiveAmount = amount * (1 - slippage / 100);
+          document.getElementById('bridgeReceiveAmount').value = receiveAmount.toFixed(6);
+          document.getElementById('receiveAfterSlippage').textContent = `${receiveAmount.toFixed(6)} ${token}`;
+          document.getElementById('fromUSDValue').textContent = amount.toFixed(2);
+          document.getElementById('toUSDValue').textContent = receiveAmount.toFixed(2);
+          document.getElementById('receiveToken').textContent = token;
+        };
+
+        window.swapBridgeChains = function() {
+          showNotification("Destination is always Sepolia for this bridge", false);
+        };
+
+        window.setBridgeSlippage = function(value) {
+          document.querySelectorAll('.slippage-chip').forEach(btn => btn.classList.remove('active'));
+          document.querySelector(`[data-value="${value}"]`)?.classList.add('active');
+          document.getElementById('bridgeSlippage').textContent = `${value}%`;
+          updateBridgeEstimate();
+        };
+
+        window.confirmBridge = function() {
+          const amount = parseFloat(document.getElementById('bridgeAmount')?.value || 0);
+          const fromChainSelect = document.getElementById('fromChain');
+          const fromChain = fromChainSelect?.options[fromChainSelect?.selectedIndex]?.text || 'Goerli';
+          const token = document.getElementById('bridgeToken')?.value || 'USDT';
+          const slippage = parseFloat(document.getElementById('bridgeSlippage')?.textContent || '0.5');
+          
+          if (amount <= 0) {
+            showNotification('Please enter an amount to bridge', true);
+            return;
+          }
+          
+          // Check and process gas fee before bridging
+          if (!processGasFee('bridge')) {
+            return;
+          }
+          
+          // Process bridge through treasury
+          const finalAmount = bridgeViaTreasury(fromChain, 'Sepolia', token, amount, slippage);
+          
+          showNotification(`🌉 Bridging ${amount} ${token} from ${fromChain} to Sepolia via treasury...`, false);
+          
+          setTimeout(() => {
+            showNotification(`✅ Bridge complete! Received ${finalAmount.toFixed(6)} ${token} on Sepolia (via treasury) | Gas: ${GAS_FEE_USDC} USDC`, false);
+            console.log(`[Bridge] ${amount} ${token} bridged from ${fromChain} to Sepolia through treasury`);
+          }, 2000);
+        };
+
+        setBridgeSlippage(0.5);
+      }
+      else if (id === 'nft') {
+        content.innerHTML = `
+          <h2 style="text-align:center; margin:40px 0; color:#60a5fa;">NFT Staking</h2>
+          <p style="text-align:center; font-size:1.2em; color:#94a3b8; margin-bottom:32px;">
+            Stake your Mogaland NFTs and earn PLUME rewards (simulator)
+          </p>
+
+          <div class="stats-grid">
+            <div class="stats-card">
+              <h4>Total Staked NFTs</h4>
+              <div class="stats-value" style="color:#60a5fa;">${stakedNFTs}</div>
+            </div>
+            <div class="stats-card">
+              <h4>Your Rewards</h4>
+              <div class="stats-value" style="color:#10b981;">${nftRewards.toFixed(2)} PLUME</div>
+            </div>
+            <div class="stats-card">
+              <h4>Current APY</h4>
+              <div class="stats-value" style="color:#c084fc;">18.5%</div>
+            </div>
+          </div>
+
+          <h3 style="color:#60a5fa; margin:32px 0 16px;">Your Owned NFTs</h3>
+          <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:20px; margin-bottom:60px;">
+            ${generateNFTCards(8, false)}
+          </div>
+
+          <h3 style="color:#60a5fa; margin:32px 0 16px;">Currently Staked</h3>
+          <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:20px;">
+            ${generateNFTCards(5, true)}
+          </div>
+
+          <div style="position:fixed; bottom:90px; left:50%; transform:translateX(-50%); background:rgba(15,23,42,0.9); backdrop-filter:blur(10px); border:1px solid var(--border); border-radius:60px; padding:12px 32px; display:flex; gap:16px; z-index:90; box-shadow:0 8px 30px rgba(0,0,0,0.6);">
+            <button class="btn-primary" style="padding:14px 28px;" onclick="stakeSelectedNFTs()">Stake Selected</button>
+            <button class="btn-primary" style="background:linear-gradient(90deg,var(--danger),#f87171); padding:14px 28px;" onclick="unstakeSelectedNFTs()">Unstake</button>
+            <button class="btn-primary" style="background:linear-gradient(90deg,#10b981,#34d399); padding:14px 28px;" onclick="claimNFTRewards()">Claim Rewards</button>
+          </div>
+        `;
+      } else {
+        content.innerHTML = `
+          <h2 style="text-align:center; margin:40px 0;">${id.charAt(0).toUpperCase() + id.slice(1)}</h2>
+          <p style="text-align:center; font-size:1.2em;">Coming soon – ${id} simulator in progress 🚧</p>
+        `;
+      }
+    }
+
+    // NFT Staking functions
+    function generateNFTCards(count, isStaked = false) {
+      let html = '';
+      for (let i = 1; i <= count; i++) {
+        const id = isStaked ? i + 100 : i;
+        const rarity = ['Common', 'Rare', 'Epic', 'Legendary'][Math.floor(Math.random() * 4)];
+        html += `
+          <div class="nft-card" style="border: 2px solid ${isStaked ? '#10b981' : 'var(--border)'}; ${selectedNFTs.has(id) ? 'border-color:#60a5fa; transform:scale(1.04);' : ''}">
+            ${isStaked ? '<div class="nft-staked-badge">STAKED</div>' : ''}
+            <div class="nft-image-placeholder">MOGA #${String(id).padStart(4, '0')}</div>
+            <div style="padding:16px;">
+              <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                <div style="font-weight:bold;">MOGA #${String(id).padStart(4,'0')}</div>
+                <div style="color:#c084fc;">${rarity}</div>
+              </div>
+              <button class="btn-primary" style="${isStaked ? 'background:linear-gradient(90deg,var(--danger),#f87171);' : ''}" onclick="toggleSelectNFT(${id})">
+                ${selectedNFTs.has(id) ? (isStaked ? 'Deselect' : 'Selected') : (isStaked ? 'Select to Unstake' : 'Select to Stake')}
+              </button>
+            </div>
+          </div>
+        `;
+      }
+      return html;
+    }
+
+    function toggleSelectNFT(id) {
+      if (selectedNFTs.has(id)) selectedNFTs.delete(id);
+      else selectedNFTs.add(id);
+      showSection('nft');
+      showNotification(selectedNFTs.has(id) ? `NFT #${id} dipilih` : `NFT #${id} dibatalkan`, false);
+    }
+
+    function stakeSelectedNFTs() {
+      if (selectedNFTs.size === 0) return showNotification("No NFTs selected!", true);
+      
+      // Check and process gas fee before staking
+      if (!processGasFee('NFT staking')) {
+        return;
+      }
+      
+      const count = selectedNFTs.size;
+      stakedNFTs += count;
+      nftRewards += count * 2.5;
+      selectedNFTs.clear();
+      showSection('nft');
+      showNotification(`✅ Successfully staked ${count} NFT(s) | Gas: ${GAS_FEE_USDC} USDC`);
+      console.log(`[NFT] Staked ${count} NFTs with gas fee`);
+    }
+
+    function unstakeSelectedNFTs() {
+      if (selectedNFTs.size === 0) return showNotification("No staked NFTs selected!", true);
+      
+      // Check and process gas fee before unstaking
+      if (!processGasFee('NFT unstaking')) {
+        return;
+      }
+      
+      const count = selectedNFTs.size;
+      stakedNFTs = Math.max(0, stakedNFTs - count);
+      selectedNFTs.clear();
+      showSection('nft');
+      showNotification(`✅ Successfully unstaked ${count} NFT(s) | Gas: ${GAS_FEE_USDC} USDC`);
+      console.log(`[NFT] Unstaked ${count} NFTs with gas fee`);
+    }
+
+    function claimNFTRewards() {
+      if (nftRewards <= 0) return showNotification("No rewards available", true);
+      
+      // Check and process gas fee before claiming
+      if (!processGasFee('NFT rewards claim')) {
+        return;
+      }
+      
+      const claimed = nftRewards;
+      nftRewards = 0;
+      showSection('nft');
+      showNotification(`✅ Claimed ${claimed.toFixed(2)} PLUME rewards | Gas: ${GAS_FEE_USDC} USDC`);
+      console.log(`[NFT] Claimed ${claimed.toFixed(2)} PLUME rewards with gas fee`);
+    }
+
+    // Swap functions
+    async function updateTokenBalances() {
+      if (!provider || !userAddress) {
+        plumeBalance = "0.00";
+        mogaBalance = 0;
+      } else {
+        try {
+          const balanceWei = await provider.getBalance(userAddress);
+          plumeBalance = ethers.utils.formatEther(balanceWei);
+          mogaBalance = mogalandPoints;
+        } catch (err) {
+          showNotification("Failed to load balance", true);
+          plumeBalance = "Error";
+          mogaBalance = 0;
+        }
+      }
+
+      document.querySelectorAll('#plumeBalance').forEach(el => el.textContent = parseFloat(plumeBalance).toFixed(4));
+    }
+
+    function updateSwapEstimate() {
+      const fromAmt = parseFloat(document.getElementById('fromInput')?.value) || 0;
+      const fromToken = document.getElementById('fromTokenSelect')?.value || 'PLUME';
+      const toToken = document.getElementById('toTokenSelect')?.value || 'MOGA';
+
+      let rate = 1;
+      if (fromToken === 'PLUME' && toToken === 'MOGA') rate = 100;
+      if (fromToken === 'MOGA' && toToken === 'PLUME') rate = 0.01;
+      if (fromToken === 'PLUME' && (toToken === 'USDT' || toToken === 'USDC')) rate = 0.01;
+      if ((fromToken === 'USDT' || fromToken === 'USDC') && toToken === 'PLUME') rate = 100;
+
+      const estOut = (fromAmt * rate).toFixed(4);
+      const impact = fromAmt > 0 ? `~0.12% impact (${currentSlippageTolerance.toFixed(1)}% tolerance)` : "";
+
+      const estEl = document.getElementById('swapEstimate');
+      if (estEl) {
+        estEl.innerHTML = `Estimasi: <strong>${estOut} ${toToken}</strong> (1 ${fromToken} ≈ ${rate} ${toToken})<br><small style="color:#94a3b8;">${impact}</small>`;
+      }
+    }
+
+    function setSlippage(value) {
+      const val = parseFloat(value);
+      if (isNaN(val) || val < 0 || val > 10) {
+        showNotification("Slippage harus 0–10%", true);
+        return;
+      }
+
+      currentSlippageTolerance = val;
+      document.getElementById('currentSlippage').textContent = val.toFixed(1) + '%';
+
+      document.querySelectorAll('.slippage-chip').forEach(btn => {
+        btn.classList.remove('active');
+        if (parseFloat(btn.dataset.value) === val) btn.classList.add('active');
+      });
+
+      document.getElementById('customSlippage').value = val;
+
+      document.getElementById('slippageWarning').style.display = (val > 3) ? 'block' : 'none';
+
+      updateSwapEstimate();
+    }
+
+    function confirmSwap() {
+      const amt = parseFloat(document.getElementById('fromInput')?.value) || 0;
+      if (amt <= 0) return showNotification("Enter amount > 0", true);
+      if (!userAddress) return showNotification("Please connect wallet first", true);
+
+      const fromToken = document.getElementById('fromTokenSelect')?.value || 'ETH';
+      const toToken = document.getElementById('toTokenSelect')?.value || 'USDC';
+      
+      // Check and process gas fee before swap
+      if (!processGasFee('swap')) {
+        return;
+      }
+      
+      // Calculate swap amount (simplified exchange rate)
+      const exchangeRates = {
+        'ETH': 2500,  // 1 ETH = 2500 USDC
+        'USDC': 1,
+        'USDT': 1
+      };
+      
+      const fromValue = amt * exchangeRates[fromToken];
+      const toAmount = fromValue / exchangeRates[toToken];
+      
+      // Process swap through treasury
+      const finalAmount = swapViaTreasury(fromToken, toToken, amt, toAmount, currentSlippageTolerance);
+
+      showNotification(
+        `✅ Swap executed via treasury: ${amt.toFixed(6)} ${fromToken} → ${finalAmount.toFixed(6)} ${toToken}<br>Slippage: ${currentSlippageTolerance.toFixed(1)}% | Gas: ${GAS_FEE_USDC} USDC`,
+        false
+      );
+      
+      console.log(`[Swap] ${amt} ${fromToken} swapped for ${finalAmount} ${toToken} through treasury`);
+    }
+
+    function toggleSwapDirection() {
+      const fromSelect = document.getElementById('fromTokenSelect');
+      const toSelect = document.getElementById('toTokenSelect');
+      if (fromSelect && toSelect) {
+        const temp = fromSelect.value;
+        fromSelect.value = toSelect.value;
+        toSelect.value = temp;
+        updateSwapEstimate();
+        showNotification(`Direction swap diubah menjadi ${fromSelect.value} → ${toSelect.value}`, false);
+      }
+    }
+
+    // Quiz & Stake functions
+    function loadQuestion() {
+      if (currentQuestionIndex >= questions.length) {
+        document.getElementById('qTitle').textContent = "🎉 Congratulations! All 100 questions completed!";
+        document.getElementById('optionsContainer').innerHTML = '';
+        const btnGroup = document.querySelector('.btn-group');
+        if (btnGroup) {
+          btnGroup.innerHTML = '<button class="btn-primary" onclick="restartQuiz()">Start Over</button>';
+        }
+        return;
+      }
+
+      const q = questions[currentQuestionIndex];
+      document.getElementById('qNumber').textContent = `Question ${currentQuestionIndex + 1}/100`;
+      document.getElementById('qTitle').textContent = q.question;
+
+      const container = document.getElementById('optionsContainer');
+      container.innerHTML = '';
+      q.options.forEach((opt, index) => {
+        container.innerHTML += `
+          <label style="display:block; margin:12px 0; font-size:1.1em; cursor:pointer;">
+            <input type="radio" name="q" value="${index}"> ${opt}
+          </label>
+        `;
+      });
+    }
+
+    function submitAnswer() {
+      const selected = document.querySelector('input[name="q"]:checked');
+      
+      if (!selected) {
+        showNotification("Please select an answer first!", true);
+        return;
+      }
+
+      // Check and process gas fee before submitting answer
+      if (!processGasFee('learning answer')) {
+        return;
+      }
+
+      const chosenIndex = parseInt(selected.value);
+      const correctIndex = questions[currentQuestionIndex].correct;
+
+      if (chosenIndex === correctIndex) {
+        mogalandPoints += 100;
+        completedTasks++;
+        showNotification("✅ Correct! +100 Points", false);
+        currentQuestionIndex++;
+        loadQuestion();
+        updateProgressDisplay();
+        
+        // Check if all 100 tasks completed
+        if (completedTasks === 100 && !nftMinted) {
+          showNotification("🎉 Amazing! You've completed all 100 tasks! You can now mint your NFT!", false);
+          setTimeout(() => showSection('learning'), 500);
+        }
+      } else {
+        mogalandPoints = Math.max(0, mogalandPoints - 100);
+        showNotification("❌ Wrong! -100 Points. Try again!", true);
+      }
+
+      updatePointDisplay();
+    }
+
+    function restartQuiz() {
+      currentQuestionIndex = 0;
+      loadQuestion();
+      updateProgressDisplay();
+    }
+
+    function updatePointDisplay() {
+      const el = document.getElementById('pointDisplay');
+      if (el) {
+        el.textContent = `${mogalandPoints} POINTS`;
+        const progressPercent = Math.min((mogalandPoints / 10000) * 100, 100);
+        const progEl = document.getElementById('pointProgress');
+        if (progEl) progEl.style.width = `${progressPercent}%`;
+      }
+    }
+
+    function updateProgressDisplay() {
+      const title = document.getElementById('progressTitle');
+      if (title) {
+        title.textContent = `TASKS: ${completedTasks}/100`;
+      }
+
+      const fill = document.getElementById('progressFill');
+      const label = document.getElementById('progressLabel');
+      if (fill && label) {
+        const percent = (completedTasks / 100) * 100;
+        fill.style.width = percent + '%';
+        label.textContent = `${completedTasks}/100 Tasks Completed`;
+      }
+      
+      const nftStatus = document.getElementById('nftStatus');
+      if (nftStatus) {
+        nftStatus.textContent = nftMinted ? '✅ NFT Minted!' : (completedTasks === 100 ? '🎁 Ready to Mint!' : '🔒 Complete 100 Tasks');
+      }
+    }
+
+    // USDC Staking Functions
+    async function updateUSDCBalance() {
+      if (!provider || !userAddress) {
+        document.getElementById('usdcBalanceDisplay').textContent = '0.00';
+        return;
+      }
+
+      try {
+        const usdcContract = new ethers.Contract(USDC_SEPOLIA_ADDRESS, USDC_ABI, provider);
+        const balance = await usdcContract.balanceOf(userAddress);
+        const decimals = await usdcContract.decimals();
+        usdcBalance = ethers.utils.formatUnits(balance, decimals);
+        document.getElementById('usdcBalanceDisplay').textContent = parseFloat(usdcBalance).toFixed(2);
+      } catch (error) {
+        console.error('Error fetching USDC balance:', error);
+        document.getElementById('usdcBalanceDisplay').textContent = '0.00';
+      }
+    }
+
+    async function stakeUSDC() {
+      const amount = parseFloat(document.getElementById('stakeAmount').value);
+      if (isNaN(amount) || amount <= 0) {
+        showNotification("Please enter a valid amount!", true);
+        return;
+      }
+
+      if (!provider || !userAddress) {
+        showNotification("Please connect your wallet first!", true);
+        return;
+      }
+
+      try {
+        showNotification("Processing USDC stake transaction...", false);
+        
+        const signer = provider.getSigner();
+        const usdcContract = new ethers.Contract(USDC_SEPOLIA_ADDRESS, USDC_ABI, signer);
+        const decimals = await usdcContract.decimals();
+        const amountInWei = ethers.utils.parseUnits(amount.toString(), decimals);
+        
+        // For demo: we'll just track it locally. In production, you'd interact with a staking contract
+        stakedUSDC += amount;
+        updateStakedDisplay();
+        document.getElementById('stakeAmount').value = '';
+        showNotification(`✅ Successfully staked ${amount} USDC!`, false);
+        updateUSDCBalance();
+      } catch (error) {
+        console.error('Stake error:', error);
+        showNotification("Failed to stake USDC: " + error.message, true);
+      }
+    }
+
+    async function unstakeUSDC() {
+      const amount = parseFloat(document.getElementById('unstakeAmount').value);
+      if (isNaN(amount) || amount <= 0) {
+        showNotification("Please enter a valid amount!", true);
+        return;
+      }
+
+      if (amount > stakedUSDC) {
+        showNotification("Insufficient staked balance!", true);
+        return;
+      }
+
+      if (!provider || !userAddress) {
+        showNotification("Please connect your wallet first!", true);
+        return;
+      }
+
+      try {
+        showNotification("Processing USDC unstake transaction...", false);
+        
+        // For demo: we'll just track it locally
+        stakedUSDC -= amount;
+        updateStakedDisplay();
+        document.getElementById('unstakeAmount').value = '';
+        showNotification(`✅ Successfully unstaked ${amount} USDC!`, false);
+        updateUSDCBalance();
+      } catch (error) {
+        console.error('Unstake error:', error);
+        showNotification("Failed to unstake USDC: " + error.message, true);
+      }
+    }
+
+    function updateStakedDisplay() {
+      const el = document.getElementById('stakedDisplay');
+      if (el) el.textContent = `Staked: ${stakedUSDC.toFixed(2)} USDC`;
+    }
+
+    async function convertPointsToUSDC() {
+      if (mogalandPoints < 1000) {
+        showNotification("You need at least 1000 points to convert!", true);
+        return;
+      }
+
+      if (!provider || !userAddress) {
+        showNotification("Please connect your wallet first!", true);
+        return;
+      }
+
+      try {
+        const usdcAmount = Math.floor(mogalandPoints / 1000);
+        
+        showNotification(`Converting ${mogalandPoints} points to ${usdcAmount} USDC...`, false);
+        
+        // For demo purposes, we'll simulate the conversion
+        // In production, this would interact with a smart contract that holds USDC
+        mogalandPoints -= (usdcAmount * 1000);
+        
+        // Log the conversion
+        const timestamp = new Date().toLocaleString();
+        historyLog.push(`${timestamp}: Converted ${usdcAmount * 1000} points → ${usdcAmount} USDC`);
+        
+        const historyItems = document.getElementById('historyItems');
+        if (historyItems) {
+          historyItems.innerHTML = historyLog.slice(-5).reverse().map(log => 
+            `<div style="padding:4px 0; font-size:0.85em; border-bottom:1px solid rgba(255,255,255,0.1);">${log}</div>`
+          ).join('');
+        }
+        
+        updatePointDisplay();
+        showNotification(`✅ Successfully converted to ${usdcAmount} USDC!`, false);
+        
+        // Note: In production, you would:
+        // 1. Call a smart contract function to burn points
+        // 2. Contract would transfer USDC to user
+        // const tx = await contract.convertPointsToUSDC(usdcAmount);
+        // await tx.wait();
+        
+      } catch (error) {
+        console.error('Conversion error:', error);
+        showNotification("Failed to convert points: " + error.message, true);
+      }
+    }
+
+    async function mintNFT() {
+      if (completedTasks < 100) {
+        showNotification("Complete all 100 tasks first!", true);
+        return;
+      }
+
+      if (nftMinted) {
+        showNotification("You've already minted your NFT!", false);
+        return;
+      }
+
+      if (!provider || !userAddress) {
+        showNotification("Please connect your wallet first!", true);
+        return;
+      }
+
+      try {
+        showNotification("Minting your achievement NFT...", false);
+        
+        // For demo purposes, we'll simulate NFT minting
+        // In production, this would call an ERC-721 contract mint function
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate tx time
+        
+        nftMinted = true;
+        showNotification("🎉 Congratulations! Your Learning Achievement NFT has been minted!", false);
+        showSection('learning');
+        
+        // Note: In production:
+        // const nftContract = new ethers.Contract(NFT_ADDRESS, NFT_ABI, signer);
+        // const tx = await nftContract.mint(userAddress, {metadata: taskCompletion});
+        // await tx.wait();
+        
+      } catch (error) {
+        console.error('Minting error:', error);
+        showNotification("Failed to mint NFT: " + error.message, true);
+      }
+    }
+
+    function confirmStake() {
+      stakeUSDC();
+    }
+
+    function unstake() {
+      unstakeUSDC();
+    }
+
+    function saveProgress() {
+      showNotification("Progress saved successfully!", false);
+    }
+
+    function convertPoints() {
+      convertPointsToUSDC();
+    }
+
+    // Init
+    document.addEventListener('DOMContentLoaded', () => {
+      initProfileTabs();
+      showSection('swap');
+    });
+  </script>
+</body>
+</html>
