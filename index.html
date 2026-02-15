@@ -5,76 +5,89 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mogaland-Plume Simulator</title>
     <link rel="stylesheet" href="styles.css">
-    <script src="https://cdn.jsdelivr.net/npm/web3/dist/web3.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/ethers/dist/ethers.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ethers/dist/ethers.min.js"></script>
 </head>
 <body>
-    <div class="app-container">
+    <div id="app">
         <header>
             <h1>Mogaland-Plume Simulator</h1>
+            <div class="wallet-info">
+                <span id="wallet-address">Wallet: Not connected</span>
+                <span id="wallet-balance">Balance: 0 ETH</span>
+            </div>
         </header>
         <nav>
-            <ul>
+            <ul class="bottom-nav">
                 <li><a href="#learning">Learning</a></li>
                 <li><a href="#market-prediction">Market Prediction</a></li>
-                <li><a href="#swap">Swap Tokens</a></li>
-                <li><a href="#bridge">Bridge Assets</a></li>
+                <li><a href="#swap-tokens">Swap Tokens</a></li>
+                <li><a href="#bridge-assets">Bridge Assets</a></li>
                 <li><a href="#nft-staking">NFT Staking</a></li>
             </ul>
         </nav>
         <main>
-            <section id="learning">
-                <h2>Learning & Quiz</h2>
-                <!-- Quiz and Staking Logic -->
+            <section id="login">
+                <h2>Login</h2>
+                <button id="connect-wallet">Connect Wallet</button>
+                <button id="login-email">Login with Email</button>
             </section>
-            <section id="market-prediction">
+            <section id="dashboard" style="display:none;">
+                <h2>Dashboard</h2>
+                <!-- Dashboard content will go here -->
+            </section>
+            <section id="learning" style="display:none;">
+                <h2>Learning with Quiz and ETH Staking</h2>
+                <!-- Learning content will go here -->
+            </section>
+            <section id="market-prediction" style="display:none;">
                 <h2>Market Prediction</h2>
-                <div id="chart"></div>
-                <!-- Chart Logic -->
+                <!-- Market Prediction content will go here -->
             </section>
-            <section id="swap">
+            <section id="swap-tokens" style="display:none;">
                 <h2>Swap Tokens</h2>
-                <!-- Swap Logic -->
+                <!-- Token selection and swapping logic will go here -->
             </section>
-            <section id="bridge">
+            <section id="bridge-assets" style="display:none;">
                 <h2>Bridge Assets</h2>
-                <!-- Bridge Logic -->
+                <!-- Bridging assets logic will go here -->
             </section>
-            <section id="nft-staking">
+            <section id="nft-staking" style="display:none;">
                 <h2>NFT Staking</h2>
-                <!-- NFT Staking Logic -->
+                <!-- NFT Staking content will go here -->
             </section>
+            <div id="profile-panel" style="display:none;">
+                <h2>Profile</h2>
+                <div id="wallet-details"></div>
+                <button id="close-profile">Close</button>
+            </div>
         </main>
         <footer>
-            <div class="profile-panel">
-                <h3>Profile</h3>
-                <p id="balance-display">Balance: 0 ETH</p>
-                <button id="connect-wallet">Connect Wallet</button>
-            </div>
+            <p>&copy; 2026 Mogaland-Plume Simulator. All rights reserved.</p>
         </footer>
     </div>
     <script>
-        // Wallet Connection Logic
+        let currentAccount = '';
+        let provider;
+
         async function connectWallet() {
             if (window.ethereum) {
-                try {
-                    await window.ethereum.request({ method: 'eth_requestAccounts' });
-                    const web3 = new Web3(window.ethereum);
-                    console.log('Wallet Connected', await web3.eth.getAccounts());
-                    // Update balance display
-                    updateBalance(web3);
-                } catch (error) {
-                    console.error('User denied account access');
-                }
+                provider = new ethers.providers.Web3Provider(window.ethereum);
+                await provider.send("eth_requestAccounts", []);
+                const signer = provider.getSigner();
+                currentAccount = await signer.getAddress();
+                document.getElementById('wallet-address').textContent = `Wallet: ${currentAccount}`;
+                updateBalance();
+                document.getElementById('dashboard').style.display = 'block';
+                document.getElementById('login').style.display = 'none';
             } else {
-                alert('Please install MetaMask or another wallet provider.');
+                alert('Please install MetaMask or another wallet provider');
             }
         }
 
-        async function updateBalance(web3) {
-            const accounts = await web3.eth.getAccounts();
-            const balance = await web3.eth.getBalance(accounts[0]);
-            document.getElementById('balance-display').innerText = `Balance: ${web3.utils.fromWei(balance, 'ether')} ETH`;
+        async function updateBalance() {
+            const balance = await provider.getBalance(currentAccount);
+            const balanceInEth = ethers.utils.formatEther(balance);
+            document.getElementById('wallet-balance').textContent = `Balance: ${balanceInEth} ETH`;
         }
 
         document.getElementById('connect-wallet').addEventListener('click', connectWallet);
