@@ -1,73 +1,45 @@
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mogaland Plume Simulator</title>
-    <link rel="stylesheet" type="text/css" href="styles.css">
-    <script src="https://cdn.jsdelivr.net/npm/ethers/dist/ethers.umd.min.js"></script>
-    <script>
-        const { ethers } = window;
-        let provider;
-        const NETWORK_ID = 11155111; // Ethereum Sepolia
-
-        async function connectWallet() {
-            if (window.ethereum) {
-                provider = new ethers.providers.Web3Provider(window.ethereum);
-                try {
-                    await window.ethereum.request({ method: 'eth_requestAccounts' });
-                    const network = await provider.getNetwork();
-                    if (network.chainId !== NETWORK_ID) {
-                        alert('Please switch to Ethereum Sepolia network.');
-                        await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x10A1D7' }] });
-                    }
-                } catch (error) {
-                    console.error(error);
-                }
-            } else {
-                alert('Please install MetaMask or another wallet provider.');
-            }
-        }
-
-        // Example of using WalletConnect v2
-        async function connectWalletConnect() {
-            const provider = new WalletConnectProvider({
-                rpc: {
-                    11155111: 'https://sepolia.infura.io/v3/YOUR_INFURA_PROJECT_ID',
-                },
-                chainId: 11155111,
-            });
-            await provider.enable();
-        }
-
-        // Fix for ethers.js loading
-        window.addEventListener('load', function() {
-            if (typeof window.ethereum !== 'undefined') {
-                connectWallet();
-            }
-        });
-    </script>
+    <script src="https://cdn.jsdelivr.net/npm/ethers/dist/ethers.min.js"></script>
+    <style>
+        /* Add your custom styles here */
+    </style>
 </head>
 <body>
-    <h1>Mogaland Plume Simulator</h1>
-    <div id="learning">
+    <div id="learning-section">
         <h2>Learning</h2>
-        <p>Your Learning Content.</p>
+        <p>This section provides resources to learn more about Mogaland and how it works.</p>
     </div>
-    <div id="market-prediction">
+    <div id="market-prediction-section">
         <h2>Market Prediction</h2>
-        <p>Your Market Prediction Content.</p>
+        <p>Predict the market trends based on the provided data.</p>
     </div>
-    <div id="swap">
+    <div id="swap-section">
         <h2>Swap</h2>
-        <p>Your Swap Content.</p>
+        <p>Use this section to swap tokens.</p>
     </div>
-    <div id="bridge">
+    <div id="bridge-section">
         <h2>Bridge</h2>
-        <p>Your Bridge Content.</p>
+        <p>Bridge your assets to and from different chains.</p>
     </div>
-    <div id="nft-staking">
+    <div id="nft-staking-section">
         <h2>NFT Staking</h2>
-        <p>Your NFT Staking Content.</p>
+        <p>Stake your NFTs to earn rewards.</p>
     </div>
-    <button onclick="connectWallet()">Connect MetaMask</button>
-    <button onclick="connectWalletConnect()">Connect WalletConnect</button>
+    <script>
+        const provider = new ethers.providers.JsonRpcProvider('https://sepolia.infura.io/v3/');
+        const chainId = 11155111;
+
+        async function main() {
+            const network = await provider.getNetwork();
+            console.log('Connected to network:', network);
+        }
+
+        main();
+    </script>
 </body>
 </html>
