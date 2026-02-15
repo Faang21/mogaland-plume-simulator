@@ -3,76 +3,112 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mogaland Plume Simulator</title>
-    <link rel="stylesheet" href="styles.css">
-    <script src="script.js" defer></script>
+    <title>Mogaland-Plume Simulator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #121212;
+            color: white;
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color: #1E1E1E;
+            padding: 20px;
+            text-align: center;
+        }
+        .login-options {
+            margin: 20px;
+        }
+        .section {
+            padding: 20px;
+            border: 1px solid #333;
+            margin: 10px;
+            border-radius: 5px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #333;
+        }
+    </style>
 </head>
 <body>
     <header>
-        <h1>Mogaland Plume Simulator</h1>
+        <h1>Mogaland-Plume Simulator</h1>
     </header>
-    <main>
-        <section id="wallet-section">
-            <h2>Wallet Detection</h2>
-            <p id="wallet-status">Detecting wallet...</p>
-        </section>
-        <section id="learning-section">
-            <h2>Learning with Quiz</h2>
-            <div id="quiz"></div>
-        </section>
-        <section id="market-section">
-            <h2>Market</h2>
-            <div id="market-data"></div>
-        </section>
-        <section id="swap-section">
-            <h2>Swap</h2>
-            <button id="swap-button">Swap</button>
-        </section>
-        <section id="bridge-section">
-            <h2>Bridge</h2>
-            <button id="bridge-button">Bridge</button>
-        </section>
-        <section id="nft-section">
-            <h2>NFT</h2>
-            <div id="nft-gallery"></div>
-        </section>
-    </main>
-    <footer>
-        <p>© 2026 Mogaland. All rights reserved.</p>
-    </footer>
+    <div class="login-options">
+        <h2>Login Options</h2>
+        <button id="connect-wallet">Connect Wallet</button>
+        <button id="email-login">Email Login</button>
+        <button id="x-login">X Login</button>
+    </div>
+
+    <div id="wallet-options" class="section" style="display:none;">
+        <h2>Choose Wallet</h2>
+        <button id="metamask">MetaMask</button>
+        <button id="okx">OKX</button>
+        <button id="trust">Trust Wallet</button>
+        <button id="walletconnect">WalletConnect</button>
+    </div>
+
+    <div id="email-verification" class="section" style="display:none;">
+        <h2>Email Verification</h2>
+        <input type="text" id="otp-code" placeholder="Enter OTP Code" value="123456"/>
+        <button id="verify-email">Verify Email</button>
+    </div>
+
+    <div id="x-username" class="section" style="display:none;">
+        <h2>X Login</h2>
+        <input type="text" id="x-username-input" placeholder="@username"/>
+        <button id="x-login-submit">Login</button>
+    </div>
+
+    <div class="section">
+        <h2>Main Sections</h2>
+        <div id="learning-section">
+            <h3>Learning with Quiz and Staking</h3>
+        </div>
+        <div id="market-prediction-section">
+            <h3>Market Prediction</h3>
+        </div>
+        <div id="swap-section">
+            <h3>Swap</h3>
+        </div>
+        <div id="bridge-section">
+            <h3>Bridge</h3>
+        </div>
+        <div id="nft-staking-section">
+            <h3>NFT Staking</h3>
+        </div>
+    </div>
+
     <script>
-        function detectWallet() {
-            const walletStatus = document.getElementById('wallet-status');
-            // Implement wallet detection logic
-            if (window.ethereum) {
-                walletStatus.innerText = 'MetaMask detected!';
-            } else {
-                walletStatus.innerText = 'No compatible wallet detected.';
-            }
-        }
-        function handleError(error) {
-            console.error(error);
-            alert('An error occurred: ' + error.message);
-        }
-        document.getElementById('swap-button').addEventListener('click', function() {
-            // Swap functionality
-            try {
-                console.log('Swap button clicked.');
-                // Implement swap logic
-            } catch (error) {
-                handleError(error);
-            }
+        const connectWalletBtn = document.getElementById('connect-wallet');
+        const walletOptions = document.getElementById('wallet-options');
+        const emailLoginBtn = document.getElementById('email-login');
+        const emailVerify = document.getElementById('email-verification');
+        const xLoginBtn = document.getElementById('x-login');
+        const xUserSection = document.getElementById('x-username');
+
+        connectWalletBtn.addEventListener('click', () => {
+            walletOptions.style.display = 'block';
         });
-        document.getElementById('bridge-button').addEventListener('click', function() {
-            // Bridge functionality
-            try {
-                console.log('Bridge button clicked.');
-                // Implement bridge logic
-            } catch (error) {
-                handleError(error);
-            }
+
+        emailLoginBtn.addEventListener('click', () => {
+            emailVerify.style.display = 'block';
         });
-        window.addEventListener('load', detectWallet);
+
+        xLoginBtn.addEventListener('click', () => {
+            xUserSection.style.display = 'block';
+        });
+
+        // Additional functions for main sections would go here.
     </script>
 </body>
 </html>
