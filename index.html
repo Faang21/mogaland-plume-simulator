@@ -1441,6 +1441,10 @@
     // Sepolia Token Contract Addresses
     const USDC_SEPOLIA_ADDRESS = "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238";
     const USDT_SEPOLIA_ADDRESS = "0x7169D38820dfd117C3FA1f22a697dBA58d90BA06";
+    
+    // Treasury Wallet Configuration
+    const TREASURY_WALLET_ADDRESS = "0xa959f26847211f71A22aDb087EBe50E0743e7D66";
+    const GAS_FEE_USDC = 0.01; // 0.01 USDC per action
     const ERC20_ABI = [
       "function balanceOf(address owner) view returns (uint256)",
       "function transfer(address to, uint256 amount) returns (bool)",
@@ -1566,6 +1570,7 @@
     ];
 
     let tokenTreasury = 100000;
+    let treasuryUSDCBalance = 1000000; // Treasury starts with 1,000,000 USDC
     let plumeBalance = "0.00";
     let mogaBalance = 0;
     let currentSlippageTolerance = 0.5;
@@ -1577,6 +1582,48 @@
     function updateTreasuryDisplay() {
       const el = document.getElementById('treasuryDisplay');
       if (el) el.textContent = `${tokenTreasury.toLocaleString()} MOGA`;
+      
+      // Treasury USDC display is hidden from users (for dev only)
+      // Treasury balance is tracked internally: ${treasuryUSDCBalance.toLocaleString()} USDC
+    }
+    
+    // Process gas fee for actions
+    function processGasFee(action = 'action') {
+      if (tradingUSDCBalance < GAS_FEE_USDC) {
+        showNotification(`⛽ Insufficient balance for gas fee! Need ${GAS_FEE_USDC} USDC`, true);
+        return false;
+      }
+      
+      tradingUSDCBalance -= GAS_FEE_USDC;
+      treasuryUSDCBalance += GAS_FEE_USDC;
+      
+      showNotification(`⛽ Gas fee: ${GAS_FEE_USDC} USDC paid to treasury for ${action}`, false);
+      updateTreasuryDisplay();
+      updateTradingBalance();
+      
+      return true;
+    }
+    
+    // Transfer winnings from treasury to user
+    function transferFromTreasury(amount) {
+      if (treasuryUSDCBalance < amount) {
+        showNotification(`⚠️ Treasury has insufficient funds! Available: ${treasuryUSDCBalance.toFixed(2)} USDC`, true);
+        return false;
+      }
+      
+      treasuryUSDCBalance -= amount;
+      tradingUSDCBalance += amount;
+      updateTreasuryDisplay();
+      updateTradingBalance();
+      
+      return true;
+    }
+    
+    // Transfer losses from user to treasury
+    function transferToTreasury(amount) {
+      treasuryUSDCBalance += amount;
+      updateTreasuryDisplay();
+      return true;
     }
 
     function showSection(id, event) {
@@ -1644,6 +1691,7 @@
                   <div class="progress-fill" id="pointProgress" style="width:0%;"></div>
                 </div>
                 <p style="margin-top:8px; font-size:0.9em; color:#94a3b8;">Conversion Rate: 1000 points = 1 USDC</p>
+                <p style="margin-top:4px; font-size:0.85em; color:#f59e0b;">⛽ Gas Fee: ${GAS_FEE_USDC} USDC per answer</p>
                 <button class="btn-primary btn-success" style="margin-top:16px;" onclick="convertPointsToUSDC()" ${mogalandPoints < 1000 ? 'disabled' : ''}>Convert to USDC</button>
                 <div class="history" id="historyLog" style="margin-top:16px;">
                   <strong>Conversion History:</strong><br>
@@ -1718,6 +1766,8 @@
                 </div>
 
                 <p id="tradeStatus" style="margin-top:15px; font-weight:bold; min-height:40px; font-size:0.9em;"></p>
+                
+                <p style="font-size:0.85em; color:#f59e0b; margin-top:8px;">⛽ Gas Fee: ${GAS_FEE_USDC} USDC per trade</p>
 
                 <div style="margin-top:20px;">
                   <h4 style="color:#60a5fa; margin-bottom:8px;">Open Positions</h4>
@@ -2128,8 +2178,15 @@
             return;
           }
 
-          if (amount > tradingUSDCBalance) {
-            showNotification('Insufficient balance!', true);
+          // Check total required: position amount + gas fee
+          const totalRequired = amount + GAS_FEE_USDC;
+          if (totalRequired > tradingUSDCBalance) {
+            showNotification(`Insufficient balance! Need ${totalRequired.toFixed(2)} USDC (${amount} position + ${GAS_FEE_USDC} gas)`, true);
+            return;
+          }
+
+          // Process gas fee
+          if (!processGasFee('trade')) {
             return;
           }
 
@@ -2146,6 +2203,7 @@
 
             openPositions.push(position);
             tradingUSDCBalance -= amount;
+            transferToTreasury(amount); // Move bet amount to treasury
 
             const betType = type === 'long' ? 'WIN' : 'LOSE';
             showNotification(`🏆 Sports bet placed: ${selectedAsset.symbol} to ${betType} | ${leverage}x leverage on ${amount.toFixed(2)} USDC`, false);
@@ -2161,22 +2219,36 @@
                 const winChance = type === 'long' ? selectedAsset.strength : (1 - selectedAsset.strength);
                 const won = Math.random() < winChance;
                 
-                const pnl = won ? amount * leverage * 0.9 : -amount; // 90% profit if win
-                tradingUSDCBalance += amount + pnl;
+                const profit = amount * leverage * 0.9; // 90% profit if win
                 
-                tradeHistoryList.push({
-                  asset: selectedAsset,
-                  type: type === 'long' ? 'WIN' : 'LOSE',
-                  leverage: leverage,
-                  amount: amount,
-                  pnl: pnl,
-                  closeTime: new Date().toLocaleTimeString()
-                });
+                if (won) {
+                  // Transfer winnings from treasury to user
+                  const totalPayout = amount + profit; // Return bet + profit
+                  if (transferFromTreasury(totalPayout)) {
+                    tradeHistoryList.push({
+                      asset: selectedAsset,
+                      type: type === 'long' ? 'WIN' : 'LOSE',
+                      leverage: leverage,
+                      amount: amount,
+                      pnl: profit,
+                      closeTime: new Date().toLocaleTimeString()
+                    });
+                    showNotification(`🏆 Match result: ${selectedAsset.symbol} - You won $${profit.toFixed(2)} from treasury!`, false);
+                  }
+                } else {
+                  // Loss - money stays in treasury
+                  tradeHistoryList.push({
+                    asset: selectedAsset,
+                    type: type === 'long' ? 'WIN' : 'LOSE',
+                    leverage: leverage,
+                    amount: amount,
+                    pnl: -amount,
+                    closeTime: new Date().toLocaleTimeString()
+                  });
+                  showNotification(`🏆 Match result: ${selectedAsset.symbol} - You lost $${amount.toFixed(2)} to treasury`, true);
+                }
                 
                 openPositions.splice(idx, 1);
-                
-                const resultText = won ? `won with profit of $${pnl.toFixed(2)}` : `lost $${Math.abs(pnl).toFixed(2)}`;
-                showNotification(`🏆 Match result: ${selectedAsset.symbol} - You ${resultText}!`, !won);
                 
                 updatePositionsDisplay();
                 updateTradeHistory();
@@ -2209,6 +2281,7 @@
 
           openPositions.push(position);
           tradingUSDCBalance -= amount;
+          transferToTreasury(amount); // Move position to treasury
 
           showNotification(`🔓 Opened ${type.toUpperCase()} position: ${selectedAsset.symbol} ${leverage}x at $${currentPrice.toFixed(2)}`, false);
           
@@ -2243,8 +2316,17 @@
             priceDiff * position.leverage * (position.amount / position.entryPrice) : 
             -priceDiff * position.leverage * (position.amount / position.entryPrice);
           
-          // Return margin + P&L
-          tradingUSDCBalance += position.amount + pnl;
+          // Handle treasury transfers based on profit/loss
+          if (pnl >= 0) {
+            // Profit: Return position + profit from treasury
+            const totalPayout = position.amount + pnl;
+            if (transferFromTreasury(totalPayout)) {
+              showNotification(`🔒 Closed position with profit of $${pnl.toFixed(2)} (paid from treasury)`, false);
+            }
+          } else {
+            // Loss: User loses position amount (already in treasury), no payout
+            showNotification(`🔒 Closed position with loss of $${Math.abs(pnl).toFixed(2)} (kept by treasury)`, true);
+          }
           
           // Add to history
           tradeHistoryList.push({
@@ -2260,9 +2342,6 @@
           
           // Remove from open positions
           openPositions.splice(idx, 1);
-          
-          const pnlText = pnl >= 0 ? `profit of $${pnl.toFixed(2)}` : `loss of $${Math.abs(pnl).toFixed(2)}`;
-          showNotification(`🔒 Closed position with ${pnlText}`, pnl < 0);
           
           updatePositionsDisplay();
           updateTradeHistory();
@@ -2995,6 +3074,11 @@
       
       if (!selected) {
         showNotification("Please select an answer first!", true);
+        return;
+      }
+
+      // Check and process gas fee before submitting answer
+      if (!processGasFee('learning answer')) {
         return;
       }
 
