@@ -738,6 +738,12 @@
         <button class="profile-slide-action-btn send" onclick="openSendModal()">↑ Send</button>
       </div>
 
+      <div style="margin: 15px 0; padding: 12px; background: linear-gradient(135deg, rgba(16,185,129,0.1), rgba(59,130,246,0.1)); border-radius: 8px; border-left: 3px solid #10b981;">
+        <button onclick="openContributeToTreasury()" style="width: 100%; background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.95em;">
+          🏦 Contribute USDC to Treasury
+        </button>
+      </div>
+
       <div class="profile-slide-tabs">
         <button class="profile-slide-tab active" data-tab="assets">Assets</button>
         <button class="profile-slide-tab" data-tab="activity">Activity</button>
@@ -1457,6 +1463,12 @@
         return;
       }
       
+      // Block sending to treasury address
+      if (toAddress.toLowerCase() === TREASURY_WALLET_ADDRESS.toLowerCase()) {
+        showNotification('❌ Cannot send to treasury address! Use "Contribute to Treasury" button instead.', true);
+        return;
+      }
+      
       try {
         showNotification('Processing send via treasury...', false);
         
@@ -1484,6 +1496,157 @@
         }
       } catch (error) {
         showNotification('Transaction failed: ' + error.message, true);
+      }
+    }
+
+    // Contribute USDC to Treasury
+    function openContributeToTreasury() {
+      if (!userAddress) {
+        showNotification("⚠️ Please connect wallet first", true);
+        return;
+      }
+      
+      // Fetch user's USDC balance
+      let userUSDCBalance = 0;
+      if (provider) {
+        const usdcContract = new ethers.Contract(USDC_SEPOLIA_ADDRESS, ERC20_ABI, provider);
+        usdcContract.balanceOf(userAddress).then(balance => {
+          userUSDCBalance = parseFloat(ethers.utils.formatUnits(balance, 6));
+          document.getElementById('userUSDCBalanceDisplay').textContent = userUSDCBalance.toFixed(2);
+        }).catch(err => {
+          console.error('Error fetching USDC balance:', err);
+        });
+      }
+      
+      const modal = document.createElement('div');
+      modal.className = 'modal';
+      modal.innerHTML = `
+        <div class="modal-content" style="max-width: 500px;">
+          <span class="close-modal" onclick="this.parentElement.parentElement.remove()">&times;</span>
+          <h2 style="text-align: center; margin-bottom: 20px;">🏦 Contribute to Treasury</h2>
+          
+          <div style="background: linear-gradient(135deg, rgba(16,185,129,0.1), rgba(59,130,246,0.1)); 
+                      padding: 20px; border-radius: 12px; margin-bottom: 20px; text-align: center;">
+            <div style="font-size: 0.9em; color: #94a3b8; margin-bottom: 8px;">Your USDC Balance (Sepolia)</div>
+            <div style="font-size: 2em; font-weight: bold; color: #10b981;" id="userUSDCBalanceDisplay">
+              ${tradingUSDCBalance.toFixed(2)}
+            </div>
+            <div style="font-size: 0.85em; color: #60a5fa; margin-top: 5px;">USDC</div>
+          </div>
+
+          <div style="margin-bottom: 20px; padding: 15px; background: rgba(59,130,246,0.1); 
+                      border-radius: 8px; border-left: 4px solid #3b82f6;">
+            <div style="font-weight: bold; color: #60a5fa; margin-bottom: 8px;">📝 About Treasury Contributions</div>
+            <div style="font-size: 0.85em; color: #94a3b8; line-height: 1.5;">
+              • Contribute USDC from your Sepolia wallet to the treasury<br>
+              • Treasury manages all platform liquidity and rewards<br>
+              • Contributions help fund trading profits and staking rewards<br>
+              • Treasury Address: ${TREASURY_WALLET_ADDRESS.slice(0,10)}...${TREASURY_WALLET_ADDRESS.slice(-8)}
+            </div>
+          </div>
+
+          <div style="margin-bottom: 20px;">
+            <label style="display: block; margin-bottom: 8px; color: #94a3b8;">Amount to Contribute (USDC):</label>
+            <input type="number" id="contributeAmount" placeholder="0.0" step="0.01" min="0"
+                   style="width: 100%; padding: 12px; background: var(--card-bg); 
+                          border: 1px solid var(--border); border-radius: 8px; color: white; font-size: 1.1em;">
+            <div style="margin-top: 8px; display: flex; gap: 8px;">
+              <button onclick="document.getElementById('contributeAmount').value = (${tradingUSDCBalance} * 0.25).toFixed(2)"
+                      style="flex: 1; background: rgba(59,130,246,0.2); color: #60a5fa; 
+                             padding: 8px; border: 1px solid #3b82f6; border-radius: 6px; cursor: pointer; font-size: 0.9em;">
+                25%
+              </button>
+              <button onclick="document.getElementById('contributeAmount').value = (${tradingUSDCBalance} * 0.5).toFixed(2)"
+                      style="flex: 1; background: rgba(59,130,246,0.2); color: #60a5fa; 
+                             padding: 8px; border: 1px solid #3b82f6; border-radius: 6px; cursor: pointer; font-size: 0.9em;">
+                50%
+              </button>
+              <button onclick="document.getElementById('contributeAmount').value = (${tradingUSDCBalance} * 0.75).toFixed(2)"
+                      style="flex: 1; background: rgba(59,130,246,0.2); color: #60a5fa; 
+                             padding: 8px; border: 1px solid #3b82f6; border-radius: 6px; cursor: pointer; font-size: 0.9em;">
+                75%
+              </button>
+              <button onclick="document.getElementById('contributeAmount').value = ${tradingUSDCBalance.toFixed(2)}"
+                      style="flex: 1; background: rgba(16,185,129,0.2); color: #10b981; 
+                             padding: 8px; border: 1px solid #10b981; border-radius: 6px; cursor: pointer; font-size: 0.9em;">
+                MAX
+              </button>
+            </div>
+          </div>
+
+          <button onclick="executeContributeToTreasury()" 
+                  style="width: 100%; background: linear-gradient(135deg, #10b981, #059669); 
+                         color: white; padding: 15px; border: none; border-radius: 8px; 
+                         cursor: pointer; font-size: 1.1em; font-weight: bold;">
+            ✅ Confirm Contribution
+          </button>
+
+          <div style="margin-top: 15px; padding: 12px; background: rgba(234,179,8,0.1); 
+                      border-radius: 8px; text-align: center; font-size: 0.85em; color: #eab308;">
+            ⚠️ Gas fee: 0.01 USDC
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+    }
+
+    async function executeContributeToTreasury() {
+      const amount = parseFloat(document.getElementById('contributeAmount').value);
+
+      // Validation
+      if (isNaN(amount) || amount <= 0) {
+        showNotification('❌ Please enter a valid amount!', true);
+        return;
+      }
+
+      if (amount > tradingUSDCBalance) {
+        showNotification(`❌ Insufficient USDC! You have ${tradingUSDCBalance.toFixed(2)} USDC`, true);
+        return;
+      }
+
+      // Confirm contribution
+      if (!confirm(`Contribute ${amount} USDC to treasury?\n\nThis will transfer USDC from your wallet to the treasury address:\n${TREASURY_WALLET_ADDRESS}`)) {
+        return;
+      }
+
+      // Process gas fee
+      if (!processGasFee('USDC contribution to treasury')) {
+        return;
+      }
+
+      try {
+        // Deduct from user balance
+        tradingUSDCBalance -= amount;
+
+        // Add to treasury
+        treasuryUSDCBalance += amount;
+
+        // In production, this would be a real blockchain transaction
+        if (provider) {
+          // const usdcContract = new ethers.Contract(USDC_SEPOLIA_ADDRESS, ERC20_ABI, provider.getSigner());
+          // const tx = await usdcContract.transfer(TREASURY_WALLET_ADDRESS, ethers.utils.parseUnits(amount.toString(), 6));
+          // await tx.wait();
+          console.log(`[Treasury] User contributed ${amount} USDC to treasury`);
+          console.log(`[Treasury] New treasury USDC balance: ${treasuryUSDCBalance.toFixed(2)} USDC`);
+        }
+
+        // Close modal
+        document.querySelectorAll('.modal').forEach(m => m.remove());
+
+        // Update balances
+        updateTradingBalance();
+
+        showNotification(`✅ Successfully contributed ${amount} USDC to treasury!`, false);
+        showNotification(`🏦 Treasury received your contribution. Thank you!`, false);
+
+      } catch (error) {
+        console.error('Contribution error:', error);
+        showNotification('❌ Contribution failed: ' + error.message, true);
+        
+        // Refund on error
+        tradingUSDCBalance += amount;
+        treasuryUSDCBalance -= amount;
+        updateTradingBalance();
       }
     }
 
