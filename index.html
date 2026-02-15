@@ -974,7 +974,9 @@
       }
       
       // Start sports auto-update (every 5 minutes)
-      startSportsAutoUpdate();
+      if (typeof startSportsAutoUpdate === 'function') {
+        startSportsAutoUpdate();
+      }
     }
 
     async function connectWallet(walletType, getProvider) {
@@ -3868,6 +3870,30 @@
 
     // Quiz & Stake functions
     function loadQuestion() {
+      // Check if user has staked USDC before allowing learning
+      if (stakedUSDC <= 0) {
+        document.getElementById('qTitle').textContent = "⚠️ Stake USDC Required";
+        document.getElementById('optionsContainer').innerHTML = `
+          <div style="text-align: center; padding: 40px 20px;">
+            <p style="font-size: 1.2em; margin-bottom: 20px;">
+              You must stake USDC before accessing learning questions.
+            </p>
+            <p style="margin-bottom: 30px;">
+              Stake any amount of USDC below to unlock the learning quiz and earn rewards!
+            </p>
+            <button class="btn-primary" onclick="document.getElementById('stakeAmountInput').focus()">
+              Go to Stake Section
+            </button>
+          </div>
+        `;
+        const btnGroup = document.querySelector('.btn-group');
+        if (btnGroup) {
+          btnGroup.innerHTML = '';
+        }
+        showNotification("⚠️ Please stake USDC first to access learning!", true);
+        return;
+      }
+      
       if (currentQuestionIndex >= questions.length) {
         document.getElementById('qTitle').textContent = "🎉 Congratulations! All 100 questions completed!";
         document.getElementById('optionsContainer').innerHTML = '';
