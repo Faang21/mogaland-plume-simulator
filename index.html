@@ -1,73 +1,73 @@
+<!-- This is a mockup of the index.html reflecting the requested changes -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mogaland Plume Simulator</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css"> <!-- Assuming CSS is in another file -->
 </head>
 <body>
     <header>
-        <h1>Mogaland Plume Simulator</h1>
+        <h1>Mogaland Simulator</h1>
+        <div id="profilePanel">
+            <p>Wallet Address: <span id="walletAddress"></span></p>
+            <p>ETH Balance: <span id="ethBalance"></span> ETH</p>
+        </div>
+        <div id="loginOptions">
+            <button id="emailLogin">Login with Email</button>
+            <button id="otpLogin">Send OTP</button>
+        </div>
     </header>
     <main>
-        <section id="learning-quiz">
-            <h2>Learning Quiz</h2>
-            <p>ETH Staking: [Include ETH staking features]</p>
+        <section id="learning">
+            <div class="question-card"> <!-- Learning Quiz Implementation -->
+                <h2>Learning Quiz</h2>
+                <p>Quiz content goes here...</p>
+            </div>
+            <div class="progress-box">
+                <h3>Progress</h3>
+                <p>Your progress shown here.</p>
+            </div>
         </section>
-        <section id="market-prediction">
-            <h2>Market Prediction</h2>
-            <p>Active market predictions and analytics.</p>
+        <section id="marketPrediction">
+            <div class="market-prediction-card">
+                <h2>Market Prediction</h2>
+                <p>Content regarding market predictions.</p>
+            </div>
         </section>
-        <section id="swap-tokens">
-            <h2>Swap Tokens</h2>
-            <p>Easily swap your tokens.</p>
+        <section id="swap">
+            <div class="swap-card">
+                <h2>Swap Tokens</h2>
+                <p>Token swap functionality integrated with ethers.js.</p>
+            </div>
         </section>
-        <section id="bridge-assets">
-            <h2>Bridge Assets</h2>
-            <p>Transfer assets across networks.</p>
+        <section id="bridge">
+            <div class="bridge-card">
+                <h2>Bridge Assets</h2>
+                <p>Functionality to bridge assets.</p>
+            </div>
         </section>
-        <section id="nft-staking">
-            <h2>NFT Staking</h2>
-            <p>Stake your NFTs for rewards.</p>
-        </section>
-        <section id="profile-panel">
-            <h2>Profile Panel</h2>
-            <p>Wallet Info: [Include wallet connection (MetaMask, OKX, Trust Wallet, WalletConnect)]</p>
-            <p>Assets Tab: [Display assets]</p>
-            <p>Activity Tab: [Recent activity]</p>
-            <p>Settings: [User settings]</p>
+        <section id="nft">
+            <div class="nft-card">
+                <h2>NFT Staking</h2>
+                <p>Features regarding NFT staking.</p>
+            </div>
         </section>
     </main>
     <footer>
-        <p>Ethereum Sepolia Testnet connected.</p>
-        <script src="https://cdn.jsdelivr.net/npm/web3/dist/web3.min.js"></script>
-        <script>
-            // Initialize web3
-            const web3 = new Web3("https://sepolia.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161");
-
-            // Connect to wallet
-            async function connectWallet() {
-                if (typeof window.ethereum !== 'undefined') {
-                    await window.ethereum.request({ method: 'eth_requestAccounts' });
-                    const accounts = await web3.eth.getAccounts();
-                    console.log('Connected account:', accounts[0]);
-                } else {
-                    alert('Please install MetaMask!');
-                }
-            }
-
-            connectWallet();
-
-            // Mock OTP for Email/X login
-            function mockLogin(username) {
-                const otp = 123456;
-                console.log('Mock OTP for', username, ':', otp);
-            }
-
-            // Call the mockLogin function with a username
-            mockLogin('@username');
-        </script>
+        <p>&copy; 2026 Mogaland All rights reserved.</p>
     </footer>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.6.9/ethers.umd.min.js"></script> <!-- Ethers.js for wallet connections -->
+    <script>
+        // Connect to Ethereum Sepolia Testnet
+        const provider = new ethers.providers.JsonRpcProvider('https://sepolia.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161');
+        async function connectWallet() {
+            // Implement wallet connection logic
+        }
+        async function loadProfile() {
+            // Load wallet address and ETH balance
+        }
+    </script>
 </body>
 </html>
