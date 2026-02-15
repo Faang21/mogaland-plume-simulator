@@ -838,11 +838,19 @@
     let userAddress = null;
     const mockOtp = "123456";
 
-    const walletConnectProvider = new WalletConnectProvider.default({
-      rpc: { [SEPOLIA_CHAIN_ID]: SEPOLIA_RPC },
-      chainId: SEPOLIA_CHAIN_ID,
-      qrcode: true
-    });
+    // Initialize WalletConnect only if library is available
+    let walletConnectProvider = null;
+    try {
+      if (typeof WalletConnectProvider !== 'undefined') {
+        walletConnectProvider = new WalletConnectProvider.default({
+          rpc: { [SEPOLIA_CHAIN_ID]: SEPOLIA_RPC },
+          chainId: SEPOLIA_CHAIN_ID,
+          qrcode: true
+        });
+      }
+    } catch (e) {
+      console.warn('WalletConnect not available:', e.message);
+    }
 
     function showWalletOptions() { toggleSections('walletOptions'); }
     function showEmailLogin() { toggleSections('emailLogin'); }
@@ -965,6 +973,9 @@
     }
 
     async function connectWalletConnect() {
+      if (!walletConnectProvider) {
+        return showNotification("WalletConnect library not loaded", true);
+      }
       try {
         await walletConnectProvider.enable();
         connectWallet("WalletConnect", () => new ethers.providers.Web3Provider(walletConnectProvider));
