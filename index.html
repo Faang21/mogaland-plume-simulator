@@ -1,21 +1,65 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mogaland Plume Simulator</title>
-    <script src="https://cdn.jsdelivr.net/npm/ethers@6/dist/ethers.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/ethers-io/ethers.js/dist/ethers.umd.js"></script>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1>Mogaland Plume Simulator</h1>
-    <script>
-        // Initialize the provider using BrowserProvider
-        const provider = new ethers.BrowserProvider(window.ethereum);
+    <header>
+        <h1>Mogaland Plume Simulator</h1>
+    </header>
 
-        async function initialize() {
-            // Logic for interacting with the blockchain
+    <main>
+        <section id="learning">
+            <h2>Learning</h2>
+            <!-- Quiz with points and staking goes here -->
+        </section>
+
+        <section id="market-prediction">
+            <h2>Market Prediction</h2>
+            <!-- Asset selection and betting functionality goes here -->
+        </section>
+
+        <section id="swap">
+            <h2>Swap</h2>
+            <!-- Token swaps functionality goes here -->
+        </section>
+
+        <section id="bridge">
+            <h2>Bridge</h2>
+            <!-- Cross-chain transfers functionality goes here -->
+        </section>
+
+        <section id="nft-staking">
+            <h2>NFT Staking</h2>
+            <!-- Rewards and APY display goes here -->
+        </section>
+    </main>
+
+    <script>
+        // Initialize ethers and web3 wallets
+        const { ethers } = window;
+
+        // Error handling and notifications logic
+        function notifyUser(message) {
+            console.log(message); // Replace with UI notification
         }
 
-        // Call the initialize function
-        initialize();
+        async function connectWallet() {
+            // Wallet integration logic here: MetaMask, OKX, Trust, WalletConnect v2
+        }
+
+        async function setupPlumeNetwork() {
+            // Code to set up Plume network (chain ID 98866)
+        }
+
+        document.addEventListener("DOMContentLoaded", async () => {
+            await connectWallet();
+            await setupPlumeNetwork();
+        });
     </script>
 </body>
 </html>
