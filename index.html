@@ -3,79 +3,69 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mogaland Plume Simulator</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/web3/1.6.1/web3.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+    <title>Mogaland-Plume Simulator</title>
 </head>
 <body>
-    <h1>Mogaland Plume Simulator</h1>
-    <div id="wallet-connection">
-        <button id="connect-wallet">Connect Wallet</button>
-        <p id="wallet-address"></p>
-    </div>
-    <div id="learning-quiz">
-        <!-- Learning with quiz and ETH staking goes here -->
-        <h2>Learning with Quiz</h2>
-        <div id="quiz"></div>
-        <button id="stake-eth">Stake ETH</button>
-    </div>
-    <div id="market-prediction">
+
+    <header>
+        <h1>Mogaland-Plume Simulator</h1>
+    </header>
+
+    <nav class="bottom-nav">
+        <a href="#quiz">Learning Quiz</a>
+        <a href="#market">Market Prediction</a>
+        <a href="#swap">Swap Tokens</a>
+        <a href="#bridge">Bridge Assets</a>
+        <a href="#nft">NFT Staking</a>
+    </nav>
+
+    <section id="login" class="card">
+        <h2>Login with Ethereum</h2>
+        <button id="loginButton">Connect Wallet</button>
+    </section>
+
+    <section id="quiz" class="card">
+        <h2>Learning Quiz with ETH Staking</h2>
+        <div class="stats-box">...
+        </div>
+    </section>
+
+    <section id="market" class="card">
         <h2>Market Prediction</h2>
-        <div id="predictions"></div>
-    </div>
-    <div id="swap-tokens">
+        <div class="stats-box">...
+        </div>
+    </section>
+
+    <section id="swap" class="card">
         <h2>Swap Tokens</h2>
-        <input type="text" id="token-amount" placeholder="Amount to swap">
-        <button id="swap">Swap</button>
-    </div>
-    <div id="bridge-assets">
+        <div class="stats-box">...
+        </div>
+    </section>
+
+    <section id="bridge" class="card">
         <h2>Bridge Assets</h2>
-        <input type="text" id="bridge-amount" placeholder="Amount to bridge">
-        <button id="bridge">Bridge</button>
-    </div>
-    <div id="nft-staking">
+        <div class="stats-box">...
+        </div>
+    </section>
+
+    <section id="nft" class="card">
         <h2>NFT Staking</h2>
-        <button id="stake-nft">Stake NFT</button>
-    </div>
-    <div id="real-balance">
-        <h2>Real Balance</h2>
-        <p id="balance"></p>
-    </div>
+        <div class="stats-box">...
+        </div>
+    </section>
+
+    <footer>
+        <p>&copy; 2026 Mogaland-Plume Simulator</p>
+    </footer>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/web3/1.6.1/web3.min.js"></script>
     <script>
-        let web3;
-        let walletAddress;
-
-        const updateBalance = async () => {
-            const balance = await web3.eth.getBalance(walletAddress);
-            document.getElementById('balance').innerText = web3.utils.fromWei(balance, 'ether') + ' ETH';
-        };
-
-        const connectWallet = async () => {
-            if (window.ethereum) {
-                web3 = new Web3(window.ethereum);
-                await window.ethereum.request({ method: 'eth_requestAccounts' });
-                walletAddress = window.ethereum.selectedAddress;
-                document.getElementById('wallet-address').innerText = 'Connected: ' + walletAddress;
-                updateBalance();
-                switchNetwork();
-            } else {
-                alert('Please install MetaMask!');
-            }
-        };
-
-        const switchNetwork = async () => {
-            const sepoliaChainId = '0x3'; // Sepolia's corresponding chain ID
-            try {
-                await window.ethereum.request({
-                    method: 'wallet_switchEthereumChain',
-                    params: [{ chainId: sepoliaChainId }],
-                });
-            } catch (error) {
-                console.error(error);
-                alert('Failed to switch network: ' + error.message);
-            }
-        };
-
-        document.getElementById('connect-wallet').onclick = connectWallet;
+        // Web3.js integration code here
+        const loginButton = document.getElementById('loginButton');
+        loginButton.addEventListener('click', async () => {
+            // Ethereum login logic
+        });
     </script>
 </body>
 </html>
