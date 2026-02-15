@@ -121,7 +121,7 @@
       white-space: nowrap;
     }
     .nav-btn:hover, .nav-btn.active { background: var(--primary); transform: scale(1.08); }
-    .content { flex: 1; padding: 40px 20px; margin-top: 60px; text-align: center; }
+    .content { flex: 1; padding: 20px; padding-bottom: 100px; text-align: center; }
     .hidden { display: none !important; }
     .notification {
       position: fixed;
@@ -1281,7 +1281,7 @@
         content.innerHTML = `
           <div style="max-width:1600px; margin:0 auto; padding:20px; color:white;">
             <h2 style="text-align:center; margin-bottom:10px; color:#60a5fa;">Mogaland-Plume Market Prediction</h2>
-            <p style="text-align:center; opacity:0.8; margin-bottom:20px;">Simulator — Predict mock movements or match results, bet with MOGA! (Demo only)</p>
+            <p style="text-align:center; opacity:0.8; margin-bottom:20px;">Live Trading Demo — Trade with leverage using Sepolia USDC!</p>
 
             <div style="display:flex; justify-content:center; gap:8px; margin-bottom:25px; flex-wrap:wrap;">
               <button class="nav-btn active" data-tab="crypto">Crypto</button>
@@ -1298,40 +1298,52 @@
               </div>
 
               <div class="card" style="flex:2; min-height:580px; padding:20px;">
-                <h3 id="viewTitle" style="color:#60a5fa; text-align:center; margin-bottom:15px;">Select to Predict</h3>
+                <h3 id="viewTitle" style="color:#60a5fa; text-align:center; margin-bottom:15px;">Select Asset to Trade</h3>
                 <canvas id="priceChart" height="420" style="display:none;"></canvas>
                 <div id="clubHistoryView" style="display:none; color:#e2e8f0; font-size:1.05em; line-height:1.6; padding:15px; background:rgba(13,110,253,0.08); border-radius:12px;"></div>
                 <div id="chartFooter" style="text-align:center; margin-top:15px; font-size:0.95em; opacity:0.8; display:none;">
-                  Simulated real-time chart • Updates every ~8s
+                  Simulated real-time price • Updates every ~8s
                 </div>
               </div>
 
-              <div class="card" style="flex:1; max-width:360px; padding:20px;">
-                <h3 style="color:#60a5fa;">Place Bet</h3>
-                <p>Selection: <strong id="selectedAsset">None</strong></p>
-                <p style="font-size:0.95em; opacity:0.8;">Treasury Pool: <strong id="treasuryDisplay">100,000 MOGA</strong></p>
+              <div class="card" style="flex:1; max-width:400px; padding:20px;">
+                <h3 style="color:#60a5fa;">Trade Position</h3>
+                <p>Asset: <strong id="selectedAsset">None</strong></p>
+                <p style="font-size:0.95em; opacity:0.8; margin-bottom:8px;">Your Balance: <strong id="usdcBalanceTrading">0.00 USDC</strong></p>
+                <div id="currentPriceDisplay" style="font-size:1.1em; margin-bottom:12px; display:none;">Current Price: <strong style="color:#10b981;" id="currentPrice">-</strong></div>
                 
-                <label style="display:block; margin:12px 0 6px;">Odds Multiplier</label>
-                <select id="betOdds" style="width:100%; padding:10px; background:#0f172a; border:1px solid var(--border); border-radius:8px; color:white;">
-                  <option value="1.8">Low Risk (1.8x)</option>
-                  <option value="2.2" selected>Medium (2.2x)</option>
-                  <option value="3.0">High Risk (3.0x)</option>
+                <label style="display:block; margin:12px 0 6px;">Leverage</label>
+                <select id="leverageSelect" style="width:100%; padding:10px; background:#0f172a; border:1px solid var(--border); border-radius:8px; color:white;">
+                  <option value="1">1x (No Leverage)</option>
+                  <option value="2">2x Leverage</option>
+                  <option value="5" selected>5x Leverage</option>
+                  <option value="10">10x Leverage</option>
+                  <option value="20">20x Leverage</option>
                 </select>
 
-                <div style="margin:20px 0; display:flex; gap:10px;">
-                  <button class="btn-primary" style="flex:1; background:#10b981;" onclick="placeBet('win')">BET WIN</button>
-                  <button class="btn-primary" style="flex:1; background:#ef4444;" onclick="placeBet('lose')">BET LOSE</button>
+                <label style="display:block; margin:12px 0 6px;">Position Amount (USDC)</label>
+                <input type="number" id="positionAmount" placeholder="Enter USDC amount" min="1" step="0.01" style="width:100%; padding:12px; margin-bottom:12px; background:#0f172a; border:1px solid var(--border); border-radius:8px; color:white;"/>
+                
+                <div id="leverageInfo" style="font-size:0.85em; color:#94a3b8; margin-bottom:12px; padding:8px; background:rgba(13,110,253,0.1); border-radius:6px; display:none;">
+                  <div>Trade Size: <span id="tradeSize">0</span> USDC</div>
+                  <div>Required Margin: <span id="requiredMargin">0</span> USDC</div>
                 </div>
 
-                <input type="number" id="betAmount" placeholder="Amount (MOGA)" min="10" style="width:100%; padding:12px; margin-bottom:12px; background:#0f172a; border:1px solid var(--border); border-radius:8px; color:white;"/>
-                <button class="btn-primary" style="width:100%;" onclick="confirmBet()">Confirm Bet</button>
+                <div style="margin:16px 0; display:flex; gap:10px;">
+                  <button class="btn-primary" style="flex:1; background:#10b981;" onclick="openPosition('long')">🔼 LONG</button>
+                  <button class="btn-primary" style="flex:1; background:#ef4444;" onclick="openPosition('short')">🔽 SHORT</button>
+                </div>
 
-                <p id="betStatus" style="margin-top:15px; font-weight:bold; min-height:40px;"></p>
-                <p id="timerDisplay" style="color:#ffcc00; font-weight:bold; font-size:1.1em;"></p>
+                <p id="tradeStatus" style="margin-top:15px; font-weight:bold; min-height:40px; font-size:0.9em;"></p>
 
-                <div style="margin-top:25px;">
-                  <h4 style="color:#60a5fa; margin-bottom:8px;">Bet History (MOGA)</h4>
-                  <div id="betHistory" style="font-size:0.9em; max-height:180px; overflow-y:auto; color:#94a3b8;"></div>
+                <div style="margin-top:20px;">
+                  <h4 style="color:#60a5fa; margin-bottom:8px;">Open Positions</h4>
+                  <div id="openPositions" style="font-size:0.85em; max-height:120px; overflow-y:auto; color:#94a3b8;"></div>
+                </div>
+
+                <div style="margin-top:20px;">
+                  <h4 style="color:#60a5fa; margin-bottom:8px;">Trade History</h4>
+                  <div id="tradeHistory" style="font-size:0.85em; max-height:120px; overflow-y:auto; color:#94a3b8;"></div>
                 </div>
               </div>
             </div>
@@ -1365,7 +1377,7 @@
             {symbol: "USDJPY", basePrice: 152.3, volatility: 0.007}
           ],
           sports: [
-            {symbol: "Real Madrid", type: "football", strength: 0.85, recentForm: [
+            {symbol: "Real Madrid", type: "football", strength: 0.85, nextMatch: "vs Barcelona", recentForm: [
               "Feb 5, 2026: W 3-1 vs Barcelona (La Liga)",
               "Jan 29, 2026: W 2-0 vs Atletico Madrid (Copa)",
               "Jan 22, 2026: L 1-2 vs Bayern Munich (UCL)",
@@ -1373,7 +1385,48 @@
               "Jan 8, 2026: D 1-1 vs Man City (Club World Cup)",
               "Jan 1, 2026: W 3-2 vs Liverpool (Supercup)"
             ]},
-            // ... other sports teams (shortened for brevity - add your full list if needed) ...
+            {symbol: "Barcelona", type: "football", strength: 0.82, nextMatch: "vs Real Madrid", recentForm: [
+              "Feb 4, 2026: W 2-1 vs Atletico Madrid",
+              "Jan 28, 2026: L 0-2 vs Bayern Munich",
+              "Jan 21, 2026: W 3-0 vs Sevilla",
+              "Jan 14, 2026: D 1-1 vs PSG",
+              "Jan 7, 2026: W 2-0 vs Man United"
+            ]},
+            {symbol: "Man City", type: "football", strength: 0.88, nextMatch: "vs Liverpool", recentForm: [
+              "Feb 5, 2026: W 4-1 vs Chelsea",
+              "Jan 29, 2026: W 3-0 vs Arsenal",
+              "Jan 22, 2026: D 2-2 vs Liverpool",
+              "Jan 15, 2026: W 1-0 vs Real Madrid",
+              "Jan 8, 2026: W 3-1 vs Bayern Munich"
+            ]},
+            {symbol: "Liverpool", type: "football", strength: 0.83, nextMatch: "vs Man City", recentForm: [
+              "Feb 4, 2026: W 3-2 vs Chelsea",
+              "Jan 28, 2026: L 1-3 vs Arsenal",
+              "Jan 21, 2026: D 2-2 vs Man City",
+              "Jan 14, 2026: W 2-1 vs Real Madrid",
+              "Jan 7, 2026: W 4-0 vs PSG"
+            ]},
+            {symbol: "Lakers", type: "basketball", strength: 0.78, nextMatch: "vs Warriors", recentForm: [
+              "Feb 5, 2026: W 112-108 vs Warriors",
+              "Feb 1, 2026: L 98-105 vs Celtics",
+              "Jan 28, 2026: W 120-115 vs Nets",
+              "Jan 24, 2026: W 108-102 vs Heat",
+              "Jan 20, 2026: L 95-110 vs Bucks"
+            ]},
+            {symbol: "Warriors", type: "basketball", strength: 0.81, nextMatch: "vs Lakers", recentForm: [
+              "Feb 5, 2026: L 108-112 vs Lakers",
+              "Feb 2, 2026: W 118-110 vs Celtics",
+              "Jan 29, 2026: W 125-120 vs Nets",
+              "Jan 25, 2026: W 115-108 vs Suns",
+              "Jan 21, 2026: W 122-115 vs Mavs"
+            ]},
+            {symbol: "Celtics", type: "basketball", strength: 0.85, nextMatch: "vs Bucks", recentForm: [
+              "Feb 4, 2026: W 118-105 vs Nets",
+              "Feb 1, 2026: W 105-98 vs Lakers",
+              "Jan 27, 2026: W 112-108 vs Heat",
+              "Jan 23, 2026: L 102-110 vs Bucks",
+              "Jan 19, 2026: W 120-115 vs Sixers"
+            ]}
           ]
         };
 
@@ -1382,6 +1435,109 @@
         let chart = null;
         let priceHistory = [];
         let currentBet = null;
+        let openPositions = [];
+        let tradeHistoryList = [];
+        let tradingUSDCBalance = 1000; // Demo balance
+
+        // Update leverage info display
+        function updateLeverageInfo() {
+          const amount = parseFloat(document.getElementById('positionAmount')?.value || 0);
+          const leverage = parseInt(document.getElementById('leverageSelect')?.value || 1);
+          
+          if (amount > 0) {
+            const tradeSize = amount * leverage;
+            document.getElementById('tradeSize').textContent = tradeSize.toFixed(2);
+            document.getElementById('requiredMargin').textContent = amount.toFixed(2);
+            document.getElementById('leverageInfo').style.display = 'block';
+          } else {
+            document.getElementById('leverageInfo').style.display = 'none';
+          }
+        }
+
+        // Update positions display
+        function updatePositionsDisplay() {
+          const container = document.getElementById('openPositions');
+          if (!container) return;
+          
+          if (openPositions.length === 0) {
+            container.innerHTML = '<div style="opacity:0.6;">No open positions</div>';
+            return;
+          }
+          
+          container.innerHTML = openPositions.map((pos, idx) => {
+            // Handle sports bets
+            if (pos.isSportsBet) {
+              const betType = pos.type === 'long' ? 'WIN' : 'LOSE';
+              return `
+                <div style="padding:8px; background:rgba(251,191,36,0.1); border-radius:6px; margin-bottom:6px;">
+                  <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                    <span><strong>${pos.asset.symbol}</strong> ${pos.leverage}x</span>
+                    <span style="color:#fbbf24">🏆 ${betType}</span>
+                  </div>
+                  <div style="font-size:0.85em; opacity:0.8;">
+                    Bet: ${pos.amount.toFixed(2)} USDC
+                  </div>
+                  <div style="color:#fbbf24; font-weight:bold; margin-top:4px;">
+                    ⏳ Waiting for match result...
+                  </div>
+                </div>
+              `;
+            }
+            
+            // Handle regular trading positions
+            const currentPrice = selectedAsset && selectedAsset.symbol === pos.asset.symbol ? 
+              (priceHistory[priceHistory.length - 1]?.c || pos.entryPrice) : pos.entryPrice;
+            const priceDiff = currentPrice - pos.entryPrice;
+            const pnl = pos.type === 'long' ? priceDiff * pos.leverage * (pos.amount / pos.entryPrice) : 
+                                             -priceDiff * pos.leverage * (pos.amount / pos.entryPrice);
+            const pnlPercent = (pnl / pos.amount) * 100;
+            const pnlColor = pnl >= 0 ? '#10b981' : '#ef4444';
+            
+            return `
+              <div style="padding:8px; background:rgba(13,110,253,0.08); border-radius:6px; margin-bottom:6px;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                  <span><strong>${pos.asset.symbol}</strong> ${pos.leverage}x</span>
+                  <span style="color:${pos.type === 'long' ? '#10b981' : '#ef4444'}">${pos.type.toUpperCase()}</span>
+                </div>
+                <div style="font-size:0.85em; opacity:0.8;">
+                  Entry: $${pos.entryPrice.toFixed(2)} | Amount: ${pos.amount.toFixed(2)} USDC
+                </div>
+                <div style="color:${pnlColor}; font-weight:bold; margin-top:4px;">
+                  P&L: ${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)} (${pnlPercent >= 0 ? '+' : ''}${pnlPercent.toFixed(2)}%)
+                </div>
+                <button onclick="closePosition(${idx})" style="margin-top:4px; padding:4px 8px; background:#ef4444; color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.85em;">Close</button>
+              </div>
+            `;
+          }).join('');
+        }
+
+        // Update trade history
+        function updateTradeHistory() {
+          const container = document.getElementById('tradeHistory');
+          if (!container) return;
+          
+          if (tradeHistoryList.length === 0) {
+            container.innerHTML = '<div style="opacity:0.6;">No trades yet</div>';
+            return;
+          }
+          
+          container.innerHTML = tradeHistoryList.slice(-5).reverse().map(trade => {
+            const pnlColor = trade.pnl >= 0 ? '#10b981' : '#ef4444';
+            return `
+              <div style="padding:6px; border-bottom:1px solid rgba(255,255,255,0.1); font-size:0.85em;">
+                <div><strong>${trade.asset.symbol}</strong> ${trade.leverage}x ${trade.type.toUpperCase()}</div>
+                <div style="opacity:0.8;">${trade.amount.toFixed(2)} USDC</div>
+                <div style="color:${pnlColor};">P&L: ${trade.pnl >= 0 ? '+' : ''}$${trade.pnl.toFixed(2)}</div>
+              </div>
+            `;
+          }).join('');
+        }
+
+        // Update USDC balance display
+        function updateTradingBalance() {
+          const el = document.getElementById('usdcBalanceTrading');
+          if (el) el.textContent = tradingUSDCBalance.toFixed(2) + ' USDC';
+        }
 
         function renderAssets() {
           const container = document.getElementById('assetList');
@@ -1407,31 +1563,213 @@
         function showClubHistory(asset) {
           selectedAsset = asset;
           document.getElementById('selectedAsset').textContent = asset.symbol;
-          document.getElementById('viewTitle').textContent = `${asset.symbol} Last Matches History`;
+          document.getElementById('viewTitle').textContent = `${asset.symbol} - ${asset.type === 'football' ? 'Football' : 'Basketball'}`;
 
           document.getElementById('priceChart').style.display = 'none';
           document.getElementById('chartFooter').style.display = 'none';
+          document.getElementById('currentPriceDisplay').style.display = 'none';
 
           const view = document.getElementById('clubHistoryView');
           view.style.display = 'block';
+          
+          // Calculate win rate from recent form
+          const wins = asset.recentForm.filter(r => r.includes(': W ')).length;
+          const winRate = ((wins / asset.recentForm.length) * 100).toFixed(0);
+          
           view.innerHTML = `
+            <div style="background:rgba(16,185,129,0.1); padding:12px; border-radius:8px; margin-bottom:16px;">
+              <strong>📊 Team Stats:</strong><br>
+              Strength: ${(asset.strength * 100).toFixed(0)}% | Win Rate: ${winRate}%<br>
+              <strong>Next Match: ${asset.nextMatch}</strong>
+            </div>
             <strong>Recent Results:</strong><br><br>
-            ${asset.recentForm.map(r => `<div>${r}</div>`).join('')}
-            <br><em>Bet WIN if you think they win next, LOSE if lose!</em>
+            ${asset.recentForm.map(r => {
+              const result = r.match(/: ([WLD]) /)?.[1];
+              const color = result === 'W' ? '#10b981' : result === 'L' ? '#ef4444' : '#fbbf24';
+              return `<div style="padding:6px; margin:4px 0; background:rgba(255,255,255,0.05); border-left:3px solid ${color}; border-radius:4px;">${r}</div>`;
+            }).join('')}
+            <br>
+            <div style="background:rgba(59,130,246,0.1); padding:12px; border-radius:8px; margin-top:12px;">
+              <strong>💰 Place Your Bet:</strong><br>
+              Predict if <strong>${asset.symbol}</strong> will WIN or LOSE their next match!<br>
+              Use the controls on the right to place your bet with leverage.
+            </div>
           `;
+          
+          updateTradingBalance();
         }
 
         function selectAsset(asset) {
           if (!asset) return;
           selectedAsset = asset;
           document.getElementById('selectedAsset').textContent = asset.symbol;
-          document.getElementById('viewTitle').textContent = `${asset.symbol} Grafik`;
+          document.getElementById('viewTitle').textContent = `${asset.symbol} Chart`;
 
           document.getElementById('priceChart').style.display = 'block';
           document.getElementById('chartFooter').style.display = 'block';
           document.getElementById('clubHistoryView').style.display = 'none';
 
+          // Show current price
+          document.getElementById('currentPriceDisplay').style.display = 'block';
+
           initChart(asset);
+          updateTradingBalance();
+        }
+
+        // Open a new position
+        function openPosition(type) {
+          if (!selectedAsset) {
+            showNotification('Please select an asset/team first!', true);
+            return;
+          }
+
+          const amount = parseFloat(document.getElementById('positionAmount')?.value || 0);
+          const leverage = parseInt(document.getElementById('leverageSelect')?.value || 1);
+          
+          if (amount <= 0 || isNaN(amount)) {
+            showNotification('Please enter a valid amount!', true);
+            return;
+          }
+
+          if (amount > tradingUSDCBalance) {
+            showNotification('Insufficient balance!', true);
+            return;
+          }
+
+          // For sports betting
+          if (currentTab === 'sports') {
+            const position = {
+              asset: selectedAsset,
+              type: type, // 'long' = WIN, 'short' = LOSE
+              amount: amount,
+              leverage: leverage,
+              openTime: new Date().toLocaleTimeString(),
+              isSportsBet: true
+            };
+
+            openPositions.push(position);
+            tradingUSDCBalance -= amount;
+
+            const betType = type === 'long' ? 'WIN' : 'LOSE';
+            showNotification(`🏆 Sports bet placed: ${selectedAsset.symbol} to ${betType} | ${leverage}x leverage on ${amount.toFixed(2)} USDC`, false);
+            
+            document.getElementById('positionAmount').value = '';
+            document.getElementById('leverageInfo').style.display = 'none';
+            
+            // Simulate match result after 15 seconds
+            setTimeout(() => {
+              const idx = openPositions.findIndex(p => p === position);
+              if (idx !== -1) {
+                // Use team strength to determine outcome
+                const winChance = type === 'long' ? selectedAsset.strength : (1 - selectedAsset.strength);
+                const won = Math.random() < winChance;
+                
+                const pnl = won ? amount * leverage * 0.9 : -amount; // 90% profit if win
+                tradingUSDCBalance += amount + pnl;
+                
+                tradeHistoryList.push({
+                  asset: selectedAsset,
+                  type: type === 'long' ? 'WIN' : 'LOSE',
+                  leverage: leverage,
+                  amount: amount,
+                  pnl: pnl,
+                  closeTime: new Date().toLocaleTimeString()
+                });
+                
+                openPositions.splice(idx, 1);
+                
+                const resultText = won ? `won with profit of $${pnl.toFixed(2)}` : `lost $${Math.abs(pnl).toFixed(2)}`;
+                showNotification(`🏆 Match result: ${selectedAsset.symbol} - You ${resultText}!`, !won);
+                
+                updatePositionsDisplay();
+                updateTradeHistory();
+                updateTradingBalance();
+              }
+            }, 15000);
+            
+            updatePositionsDisplay();
+            updateTradingBalance();
+            
+            const statusEl = document.getElementById('tradeStatus');
+            if (statusEl) {
+              statusEl.textContent = `⏳ Bet placed: ${selectedAsset.symbol} to ${betType} | Result in 15s`;
+              statusEl.style.color = '#fbbf24';
+            }
+            return;
+          }
+
+          // For regular trading (crypto, stocks, commodities, forex)
+          const currentPrice = priceHistory[priceHistory.length - 1]?.c || selectedAsset.basePrice;
+          
+          const position = {
+            asset: selectedAsset,
+            type: type,
+            entryPrice: currentPrice,
+            amount: amount,
+            leverage: leverage,
+            openTime: new Date().toLocaleTimeString()
+          };
+
+          openPositions.push(position);
+          tradingUSDCBalance -= amount;
+
+          showNotification(`🔓 Opened ${type.toUpperCase()} position: ${selectedAsset.symbol} ${leverage}x at $${currentPrice.toFixed(2)}`, false);
+          
+          document.getElementById('positionAmount').value = '';
+          document.getElementById('leverageInfo').style.display = 'none';
+          
+          updatePositionsDisplay();
+          updateTradingBalance();
+          
+          const statusEl = document.getElementById('tradeStatus');
+          if (statusEl) {
+            statusEl.textContent = `✅ Position opened: ${type.toUpperCase()} ${selectedAsset.symbol} ${leverage}x`;
+            statusEl.style.color = type === 'long' ? '#10b981' : '#ef4444';
+          }
+        }
+
+        // Close a position
+        function closePosition(idx) {
+          if (idx < 0 || idx >= openPositions.length) return;
+          
+          const position = openPositions[idx];
+          
+          // Handle sports bets separately
+          if (position.isSportsBet) {
+            showNotification('Sports bets are settled automatically after 15 seconds!', true);
+            return;
+          }
+          
+          const currentPrice = priceHistory[priceHistory.length - 1]?.c || position.entryPrice;
+          const priceDiff = currentPrice - position.entryPrice;
+          const pnl = position.type === 'long' ? 
+            priceDiff * position.leverage * (position.amount / position.entryPrice) : 
+            -priceDiff * position.leverage * (position.amount / position.entryPrice);
+          
+          // Return margin + P&L
+          tradingUSDCBalance += position.amount + pnl;
+          
+          // Add to history
+          tradeHistoryList.push({
+            asset: position.asset,
+            type: position.type,
+            leverage: position.leverage,
+            amount: position.amount,
+            entryPrice: position.entryPrice,
+            exitPrice: currentPrice,
+            pnl: pnl,
+            closeTime: new Date().toLocaleTimeString()
+          });
+          
+          // Remove from open positions
+          openPositions.splice(idx, 1);
+          
+          const pnlText = pnl >= 0 ? `profit of $${pnl.toFixed(2)}` : `loss of $${Math.abs(pnl).toFixed(2)}`;
+          showNotification(`🔒 Closed position with ${pnlText}`, pnl < 0);
+          
+          updatePositionsDisplay();
+          updateTradeHistory();
+          updateTradingBalance();
         }
 
         function generateOHLC(basePrice, count = 40) {
@@ -1505,6 +1843,16 @@
             });
             if (priceHistory.length > 80) priceHistory.shift();
             chart.update();
+            
+            // Update current price display
+            const priceEl = document.getElementById('currentPrice');
+            if (priceEl) {
+              priceEl.textContent = `$${close.toFixed(2)}`;
+              priceEl.style.color = change >= 0 ? '#10b981' : '#ef4444';
+            }
+            
+            // Update open positions P&L
+            updatePositionsDisplay();
           }
         }, 8000);
 
@@ -1543,7 +1891,15 @@
 
         renderAssets();
         if (assetsData.crypto.length > 0) selectAsset(assetsData.crypto[0]);
-        updateTreasuryDisplay();
+        updateTradingBalance();
+        updatePositionsDisplay();
+        updateTradeHistory();
+
+        // Add event listeners for leverage calculation
+        const positionInput = document.getElementById('positionAmount');
+        const leverageSelect = document.getElementById('leverageSelect');
+        if (positionInput) positionInput.addEventListener('input', updateLeverageInfo);
+        if (leverageSelect) leverageSelect.addEventListener('change', updateLeverageInfo);
 
         document.querySelectorAll('[data-tab]').forEach(btn => {
           btn.onclick = () => {
@@ -1553,10 +1909,11 @@
             renderAssets();
             selectedAsset = null;
             document.getElementById('selectedAsset').textContent = 'None';
-            document.getElementById('viewTitle').textContent = 'Select to Predict';
+            document.getElementById('viewTitle').textContent = currentTab === 'sports' ? 'Select Team to View History' : 'Select Asset to Trade';
             document.getElementById('priceChart').style.display = 'none';
             document.getElementById('clubHistoryView').style.display = 'none';
-            document.getElementById('chartFooter').style.display = currentTab !== 'sports' ? 'block' : 'none';
+            document.getElementById('currentPriceDisplay').style.display = 'none';
+            document.getElementById('chartFooter').style.display = 'none';
             if (chart) chart.destroy();
             chart = null;
           };
