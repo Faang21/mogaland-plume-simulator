@@ -4,46 +4,70 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mogaland Plume Simulator</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <header>
         <h1>Mogaland Plume Simulator</h1>
-        <nav>
-            <ul>
-                <li><a href="#learning-quiz">Learning Quiz</a></li>
-                <li><a href="#market-prediction">Market Prediction</a></li>
-                <li><a href="#swap-tokens">Swap Tokens</a></li>
-                <li><a href="#bridge-assets">Bridge Assets</a></li>
-                <li><a href="#nft-staking">NFT Staking</a></li>
-            </ul>
-        </nav>
     </header>
     <main>
         <section id="learning-quiz">
-            <h2>Learning Quiz with ETH Staking</h2>
-            <!-- Quiz Content -->
+            <h2>Learning Quiz</h2>
+            <p>ETH Staking: [Include ETH staking features]</p>
         </section>
         <section id="market-prediction">
             <h2>Market Prediction</h2>
-            <!-- Prediction Market Content -->
+            <p>Active market predictions and analytics.</p>
         </section>
         <section id="swap-tokens">
             <h2>Swap Tokens</h2>
-            <!-- Token Swap Content -->
+            <p>Easily swap your tokens.</p>
         </section>
         <section id="bridge-assets">
             <h2>Bridge Assets</h2>
-            <!-- Asset Bridging Content -->
+            <p>Transfer assets across networks.</p>
         </section>
         <section id="nft-staking">
             <h2>NFT Staking</h2>
-            <!-- NFT Staking Content -->
+            <p>Stake your NFTs for rewards.</p>
+        </section>
+        <section id="profile-panel">
+            <h2>Profile Panel</h2>
+            <p>Wallet Info: [Include wallet connection (MetaMask, OKX, Trust Wallet, WalletConnect)]</p>
+            <p>Assets Tab: [Display assets]</p>
+            <p>Activity Tab: [Recent activity]</p>
+            <p>Settings: [User settings]</p>
         </section>
     </main>
     <footer>
-        <p>&copy; 2026 Mogaland Team</p>
+        <p>Ethereum Sepolia Testnet connected.</p>
+        <script src="https://cdn.jsdelivr.net/npm/web3/dist/web3.min.js"></script>
+        <script>
+            // Initialize web3
+            const web3 = new Web3("https://sepolia.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161");
+
+            // Connect to wallet
+            async function connectWallet() {
+                if (typeof window.ethereum !== 'undefined') {
+                    await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    const accounts = await web3.eth.getAccounts();
+                    console.log('Connected account:', accounts[0]);
+                } else {
+                    alert('Please install MetaMask!');
+                }
+            }
+
+            connectWallet();
+
+            // Mock OTP for Email/X login
+            function mockLogin(username) {
+                const otp = 123456;
+                console.log('Mock OTP for', username, ':', otp);
+            }
+
+            // Call the mockLogin function with a username
+            mockLogin('@username');
+        </script>
     </footer>
-    <script src="script.js"></script>
 </body>
 </html>
