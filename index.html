@@ -1,1 +1,78 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Mogaland-Plume Simulator</title><script src="https://cdn.jsdelivr.net/npm/ethers@6/dist/ethers.umd.min.js"></script><script src="https://unpkg.com/@walletconnect/ethereum-provider@2/dist/index.umd.min.js"></script><style>:root{--primary:#0d6efd;--darker:#071a2e;--light:#f8f9fa;--bell:#ffcc00;--success:#28a745;--danger:#dc3545;--card-bg:#1e293b;--border:#334155;}*{margin:0;padding:0;box-sizing:border-box;}body{font-family:'Segoe UI',Arial,sans-serif;background:var(--darker);color:var(--light);min-height:100vh;display:flex;flex-direction:column;}.login-container{background:rgba(0,0,0,0.5);border-radius:20px;padding:60px 40px;width:100%;max-width:500px;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.1);margin:100px auto;}h1{font-size:3.2rem;margin-bottom:12px;}.subtitle{font-size:1.3rem;opacity:0.8;margin-bottom:40px;}.login-option{background:var(--primary);color:white;border:none;padding:16px;font-size:1.2rem;border-radius:12px;cursor:pointer;margin:12px 0;width:100%;transition:all 0.3s;}.login-option:hover{background:#0b5ed7;transform:scale(1.02);}.login-option:active{transform:scale(0.98);}.input-field{width:100%;padding:12px;margin:8px 0;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.05);color:white;font-size:1rem;}.wallet-option{background:rgba(13,110,253,0.3);color:#fff;border:1px solid var(--primary);padding:12px 16px;border-radius:10px;cursor:pointer;margin:8px 0;width:100%;transition:0.2s;font-size:1.1rem;}.wallet-option:hover{background:var(--primary);transform:scale(1.02);}.main-app{flex:1;display:flex;flex-direction:column;position:relative;}.hidden{display:none !important;}.notification{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:rgba(255,204,0,0.2);border:1px solid var(--bell);color:white;padding:14px 24px;border-radius:12px;z-index:1000;}.nav-btn{background:rgba(13,110,253,0.2);color:white;border:none;padding:10px 16px;font-size:1rem;border-radius:30px;cursor:pointer;transition:all 0.3s;margin:0 4px;}</style></head><body><div class="login-container" id="loginPage"><h1>Mogaland-Plume Simulator</h1><p class="subtitle">Connect or Login</p><button type="button" class="login-option" id="btnShowWallet">🔗 Connect Wallet</button><button type="button" class="login-option" id="btnShowEmail">✉️ Email Login</button><button type="button" class="login-option" id="btnShowX">𝕏 Login with X</button><div id="walletOptions" class="hidden"><h3 style="margin:20px 0;">Select Wallet:</h3><button type="button" class="wallet-option" id="btnMetaMask">MetaMask</button><button type="button" class="wallet-option" id="btnOKX">OKX Wallet</button><button type="button" class="wallet-option" id="btnTrust">Trust Wallet</button><button type="button" class="wallet-option" id="btnWalletConnect">WalletConnect</button></div><div id="emailLogin" class="hidden"><input type="email" id="emailInput" class="input-field" placeholder="Gmail or Yahoo email"><button type="button" class="login-option" id="btnSendOtp">Send OTP</button><input type="text" id="otpInput" class="input-field hidden" placeholder="OTP (123456)"><button type="button" class="login-option hidden" id="btnVerifyOtp">Verify OTP</button></div><div id="xLogin" class="hidden"><input type="text" id="xInput" class="input-field" placeholder="@yourusername"><button type="button" class="login-option" id="btnConfirmX">Confirm</button></div></div><div class="main-app hidden" id="mainApp"><h1 style="text-align:center;margin:20px 0;">Mogaland-Plume Simulator</h1><div id="content" style="flex:1;padding:20px;text-align:center;"></div><div style="position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.6);padding:10px 20px;border-radius:40px;display:flex;gap:10px;"><button type="button" class="nav-btn" id="navLearning">📚 Learning</button><button type="button" class="nav-btn" id="navMarket">📈 Market</button><button type="button" class="nav-btn" id="navSwap">💱 Swap</button><button type="button" class="nav-btn" id="navBridge">🌉 Bridge</button><button type="button" class="nav-btn" id="navNFT">🎨 NFT</button></div></div><script>const mockOtp="123456";let mogalandPoints=0;let stakedMoga=0;function showNotification(msg,error){var div=document.createElement('div');div.className='notification';div.style.borderColor=error?'var(--danger)':'var(--bell)';div.textContent=(error?'⚠️ ':'🔔 ')+msg;document.body.appendChild(div);setTimeout(function(){div.remove();},6000);}function enterDashboard(method){showNotification('Logged in via '+method,false);document.getElementById('loginPage').classList.add('hidden');document.getElementById('mainApp').classList.remove('hidden');showSection('learning');}function showSection(id){var content=document.getElementById('content');if(id==='learning'){content.innerHTML='<h2>Learning Quiz</h2><p>Q: What is Plume?</p><label><input type="radio" name="q" value="0"> Blockchain</label><br><label><input type="radio" name="q" value="1"> Token</label><br><button type="button" class="login-option" id="submitQuiz">Submit Answer</button><hr><h3>Points: '+mogalandPoints+' | Staked: '+stakedMoga+' MOGA</h3><input type="number" id="stakeAmount" placeholder="Amount" style="width:100%;padding:8px;margin:10px 0;color:white;background:rgba(255,255,255,0.05);border:1px solid var(--border);"><button type="button" class="login-option" id="stakeBtn">Stake MOGA</button>';document.getElementById('submitQuiz').addEventListener('click',function(){var checked=document.querySelector('input[name="q"]:checked');if(checked&&checked.value==='0'){mogalandPoints+=20;showNotification('Correct! +20 Points',false);}else{mogalandPoints=Math.max(0,mogalandPoints-10);showNotification('Wrong! -10 Points',true);}showSection('learning');});document.getElementById('stakeBtn').addEventListener('click',function(){var amt=parseFloat(document.getElementById('stakeAmount').value);if(!isNaN(amt)&&amt>0){stakedMoga+=amt;showNotification('Staked '+amt+' MOGA',false);showSection('learning');}});}else if(id==='market'){content.innerHTML='<h2>Market Prediction</h2><p>Coming soon...</p>';}else if(id==='swap'){content.innerHTML='<h2>Swap Tokens</h2><p>Coming soon...</p>';}else if(id==='bridge'){content.innerHTML='<h2>Bridge Assets</h2><p>Coming soon...</p>';}else if(id==='nft'){content.innerHTML='<h2>NFT Staking</h2><p>Stake NFTs and earn rewards!</p>';}}document.addEventListener('DOMContentLoaded',function(){console.log('✅ App loaded');document.getElementById('btnShowWallet').addEventListener('click',function(){document.getElementById('walletOptions').classList.toggle('hidden');document.getElementById('emailLogin').classList.add('hidden');document.getElementById('xLogin').classList.add('hidden');});document.getElementById('btnShowEmail').addEventListener('click',function(){document.getElementById('emailLogin').classList.toggle('hidden');document.getElementById('walletOptions').classList.add('hidden');document.getElementById('xLogin').classList.add('hidden');});document.getElementById('btnShowX').addEventListener('click',function(){document.getElementById('xLogin').classList.toggle('hidden');document.getElementById('walletOptions').classList.add('hidden');document.getElementById('emailLogin').classList.add('hidden');});document.getElementById('btnMetaMask').addEventListener('click',function(){showNotification('MetaMask connected',false);enterDashboard('MetaMask');});document.getElementById('btnOKX').addEventListener('click',function(){showNotification('OKX connected',false);enterDashboard('OKX');});document.getElementById('btnTrust').addEventListener('click',function(){showNotification('Trust connected',false);enterDashboard('Trust');});document.getElementById('btnWalletConnect').addEventListener('click',function(){showNotification('WalletConnect connected',false);enterDashboard('WalletConnect');});document.getElementById('btnSendOtp').addEventListener('click',function(){var email=document.getElementById('emailInput').value;if(email.includes('@')){showNotification('OTP sent: '+mockOtp,false);document.getElementById('otpInput').classList.remove('hidden');document.getElementById('btnVerifyOtp').classList.remove('hidden');}else{showNotification('Invalid email',true);}});document.getElementById('btnVerifyOtp').addEventListener('click',function(){if(document.getElementById('otpInput').value===mockOtp){enterDashboard('Email');}else{showNotification('Wrong OTP',true);}});document.getElementById('btnConfirmX').addEventListener('click',function(){var username=document.getElementById('xInput').value;if(username.startsWith('@')){enterDashboard('X');}else{showNotification('Invalid @username',true);}});document.getElementById('navLearning').addEventListener('click',function(){showSection('learning');});document.getElementById('navMarket').addEventListener('click',function(){showSection('market');});document.getElementById('navSwap').addEventListener('click',function(){showSection('swap');});document.getElementById('navBridge').addEventListener('click',function(){showSection('bridge');});document.getElementById('navNFT').addEventListener('click',function(){showSection('nft');});console.log('✅ Event listeners attached');});</script></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mogaland Plume Simulator</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="script.js" defer></script>
+</head>
+<body>
+    <header>
+        <h1>Mogaland Plume Simulator</h1>
+    </header>
+    <main>
+        <section id="wallet-section">
+            <h2>Wallet Detection</h2>
+            <p id="wallet-status">Detecting wallet...</p>
+        </section>
+        <section id="learning-section">
+            <h2>Learning with Quiz</h2>
+            <div id="quiz"></div>
+        </section>
+        <section id="market-section">
+            <h2>Market</h2>
+            <div id="market-data"></div>
+        </section>
+        <section id="swap-section">
+            <h2>Swap</h2>
+            <button id="swap-button">Swap</button>
+        </section>
+        <section id="bridge-section">
+            <h2>Bridge</h2>
+            <button id="bridge-button">Bridge</button>
+        </section>
+        <section id="nft-section">
+            <h2>NFT</h2>
+            <div id="nft-gallery"></div>
+        </section>
+    </main>
+    <footer>
+        <p>© 2026 Mogaland. All rights reserved.</p>
+    </footer>
+    <script>
+        function detectWallet() {
+            const walletStatus = document.getElementById('wallet-status');
+            // Implement wallet detection logic
+            if (window.ethereum) {
+                walletStatus.innerText = 'MetaMask detected!';
+            } else {
+                walletStatus.innerText = 'No compatible wallet detected.';
+            }
+        }
+        function handleError(error) {
+            console.error(error);
+            alert('An error occurred: ' + error.message);
+        }
+        document.getElementById('swap-button').addEventListener('click', function() {
+            // Swap functionality
+            try {
+                console.log('Swap button clicked.');
+                // Implement swap logic
+            } catch (error) {
+                handleError(error);
+            }
+        });
+        document.getElementById('bridge-button').addEventListener('click', function() {
+            // Bridge functionality
+            try {
+                console.log('Bridge button clicked.');
+                // Implement bridge logic
+            } catch (error) {
+                handleError(error);
+            }
+        });
+        window.addEventListener('load', detectWallet);
+    </script>
+</body>
+</html>
