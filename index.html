@@ -3191,9 +3191,45 @@
             NFT Contract (Sepolia): <span style="color:#60a5fa; font-family:monospace;">${NFT_CONTRACT_ADDRESS}</span> | 
             <a href="${SEPOLIA_EXPLORER}/address/${NFT_CONTRACT_ADDRESS}" target="_blank" style="color:#60a5fa;">View on Explorer</a>
           </p>
-          <p style="text-align:center; font-size:0.9em; color:#64748b; margin-bottom:32px;">
-            <a href="https://testnets.opensea.io/assets/sepolia/${NFT_CONTRACT_ADDRESS}" target="_blank" style="color:#60a5fa;">📦 View Collection on OpenSea</a>
+          <p style="text-align:center; font-size:0.9em; color:#64748b; margin-bottom:8px;">
+            Collection Owner: <span style="color:#10b981; font-family:monospace;">${TREASURY_WALLET_ADDRESS.slice(0,8)}...${TREASURY_WALLET_ADDRESS.slice(-6)}</span> | 
+            <a href="${SEPOLIA_EXPLORER}/address/${TREASURY_WALLET_ADDRESS}" target="_blank" style="color:#60a5fa;">View Treasury</a>
           </p>
+
+          <!-- OpenSea Marketplace Integration -->
+          <div style="background:linear-gradient(135deg,rgba(37,99,235,0.1),rgba(139,92,246,0.1)); border:1px solid rgba(59,130,246,0.3); border-radius:16px; padding:24px; margin:20px 0; text-align:center;">
+            <h3 style="color:#60a5fa; margin-bottom:16px;">🌊 OpenSea Marketplace</h3>
+            <p style="color:#94a3b8; margin-bottom:20px; font-size:0.95em;">
+              Trade Mogaland NFTs on OpenSea Testnet • All sales proceeds go to treasury
+            </p>
+            <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
+              <a href="https://testnets.opensea.io/assets/sepolia/${NFT_CONTRACT_ADDRESS}" target="_blank" 
+                 style="background:linear-gradient(90deg,#2563eb,#1e40af); color:white; padding:12px 24px; border-radius:10px; text-decoration:none; font-weight:600; display:inline-flex; align-items:center; gap:8px; transition:all 0.3s;">
+                📦 View Collection
+              </a>
+              <a href="https://testnets.opensea.io/${TREASURY_WALLET_ADDRESS}" target="_blank"
+                 style="background:linear-gradient(90deg,#8b5cf6,#7c3aed); color:white; padding:12px 24px; border-radius:10px; text-decoration:none; font-weight:600; display:inline-flex; align-items:center; gap:8px; transition:all 0.3s;">
+                🏪 Treasury Marketplace
+              </a>
+              <button onclick="openListNFTModal()" 
+                      style="background:linear-gradient(90deg,#10b981,#059669); color:white; padding:12px 24px; border-radius:10px; border:none; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:8px; transition:all 0.3s;">
+                🏷️ List Your NFT
+              </button>
+            </div>
+            <div style="margin-top:16px; padding-top:16px; border-top:1px solid rgba(255,255,255,0.1);">
+              <div style="display:flex; gap:24px; justify-content:center; font-size:0.9em; color:#94a3b8;">
+                <div>
+                  <span style="color:#60a5fa;">Collection:</span> Mogaland NFTs
+                </div>
+                <div>
+                  <span style="color:#60a5fa;">Network:</span> Sepolia Testnet
+                </div>
+                <div>
+                  <span style="color:#60a5fa;">Royalty:</span> 5% to Treasury
+                </div>
+              </div>
+            </div>
+          </div>
 
           <div class="stats-grid">
             <div class="stats-card">
@@ -3635,6 +3671,94 @@
         console.error('Minting error:', error);
         showNotification("Failed to mint NFT: " + error.message, true);
       }
+    }
+
+    // OpenSea Marketplace Integration Functions
+    function openListNFTModal() {
+      if (!userAddress) {
+        showNotification("Please connect wallet to list NFTs", true);
+        return;
+      }
+      
+      const totalNFTs = userNFTs.length + mintedNFTs.length;
+      if (totalNFTs === 0) {
+        showNotification("You don't have any NFTs to list", true);
+        return;
+      }
+      
+      const modal = document.createElement('div');
+      modal.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); display:flex; align-items:center; justify-content:center; z-index:10000;';
+      
+      modal.innerHTML = `
+        <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:20px; padding:32px; max-width:500px; width:90%;">
+          <h3 style="color:#60a5fa; margin-bottom:20px; text-align:center;">🏷️ List NFT on OpenSea</h3>
+          
+          <div style="background:rgba(59,130,246,0.1); border:1px solid rgba(59,130,246,0.3); border-radius:12px; padding:20px; margin-bottom:24px;">
+            <p style="color:#94a3b8; font-size:0.95em; line-height:1.6; margin-bottom:12px;">
+              To list your NFT on OpenSea Sepolia testnet:
+            </p>
+            <ol style="color:#94a3b8; font-size:0.9em; line-height:1.8; padding-left:24px;">
+              <li>Visit OpenSea Testnet</li>
+              <li>Connect your wallet (${userAddress.slice(0,6)}...${userAddress.slice(-4)})</li>
+              <li>Navigate to your profile</li>
+              <li>Select the NFT you want to list</li>
+              <li>Click "Sell" and set your price</li>
+              <li>Confirm the listing transaction</li>
+            </ol>
+          </div>
+          
+          <div style="background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3); border-radius:12px; padding:16px; margin-bottom:24px;">
+            <p style="color:#10b981; font-size:0.9em; margin-bottom:8px;">
+              💰 <strong>Treasury Integration</strong>
+            </p>
+            <p style="color:#94a3b8; font-size:0.85em; line-height:1.5;">
+              All sales proceeds are automatically sent to the treasury wallet:
+              <br/>
+              <span style="color:#60a5fa; font-family:monospace; font-size:0.8em;">${TREASURY_WALLET_ADDRESS}</span>
+            </p>
+            <p style="color:#94a3b8; font-size:0.85em; margin-top:8px;">
+              5% royalty on secondary sales also goes to treasury.
+            </p>
+          </div>
+          
+          <div style="display:flex; gap:12px;">
+            <button onclick="window.open('https://testnets.opensea.io/${userAddress}', '_blank'); this.closest('div[style*=fixed]').remove();" 
+                    style="flex:1; background:linear-gradient(90deg,#2563eb,#1e40af); color:white; padding:14px; border:none; border-radius:10px; font-weight:600; cursor:pointer; font-size:1em;">
+              🌊 Open OpenSea
+            </button>
+            <button onclick="this.closest('div[style*=fixed]').remove();" 
+                    style="flex:1; background:rgba(239,68,68,0.2); color:#ef4444; padding:14px; border:1px solid #ef4444; border-radius:10px; font-weight:600; cursor:pointer; font-size:1em;">
+              Cancel
+            </button>
+          </div>
+          
+          <p style="text-align:center; color:#64748b; font-size:0.85em; margin-top:16px;">
+            <a href="https://testnets.opensea.io/assets/sepolia/${NFT_CONTRACT_ADDRESS}" target="_blank" style="color:#60a5fa;">
+              View Collection on OpenSea →
+            </a>
+          </p>
+        </div>
+      `;
+      
+      document.body.appendChild(modal);
+      
+      // Log to console for tracking
+      console.log(`[OpenSea] Opening listing modal for user: ${userAddress}`);
+      console.log(`[OpenSea] User has ${totalNFTs} NFTs available to list`);
+      console.log(`[OpenSea] Collection contract: ${NFT_CONTRACT_ADDRESS}`);
+      console.log(`[OpenSea] Treasury wallet: ${TREASURY_WALLET_ADDRESS}`);
+    }
+
+    function viewOpenSeaCollection() {
+      const url = `https://testnets.opensea.io/assets/sepolia/${NFT_CONTRACT_ADDRESS}`;
+      window.open(url, '_blank');
+      showNotification('Opening OpenSea collection...', false);
+    }
+
+    function viewTreasuryMarketplace() {
+      const url = `https://testnets.opensea.io/${TREASURY_WALLET_ADDRESS}`;
+      window.open(url, '_blank');
+      showNotification('Opening treasury marketplace...', false);
     }
 
     // Swap functions
