@@ -3,69 +3,81 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="style.css">
     <title>Mogaland-Plume Simulator</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/web3/dist/web3.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ethers/dist/ethers.umd.min.js"></script>
 </head>
 <body>
-
-    <header>
-        <h1>Mogaland-Plume Simulator</h1>
-    </header>
-
-    <nav class="bottom-nav">
-        <a href="#quiz">Learning Quiz</a>
-        <a href="#market">Market Prediction</a>
-        <a href="#swap">Swap Tokens</a>
-        <a href="#bridge">Bridge Assets</a>
-        <a href="#nft">NFT Staking</a>
-    </nav>
-
-    <section id="login" class="card">
-        <h2>Login with Ethereum</h2>
-        <button id="loginButton">Connect Wallet</button>
-    </section>
-
-    <section id="quiz" class="card">
-        <h2>Learning Quiz with ETH Staking</h2>
-        <div class="stats-box">...
-        </div>
-    </section>
-
-    <section id="market" class="card">
-        <h2>Market Prediction</h2>
-        <div class="stats-box">...
-        </div>
-    </section>
-
-    <section id="swap" class="card">
-        <h2>Swap Tokens</h2>
-        <div class="stats-box">...
-        </div>
-    </section>
-
-    <section id="bridge" class="card">
-        <h2>Bridge Assets</h2>
-        <div class="stats-box">...
-        </div>
-    </section>
-
-    <section id="nft" class="card">
-        <h2>NFT Staking</h2>
-        <div class="stats-box">...
-        </div>
-    </section>
-
-    <footer>
-        <p>&copy; 2026 Mogaland-Plume Simulator</p>
-    </footer>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/web3/1.6.1/web3.min.js"></script>
+    <div class="app-container">
+        <header>
+            <h1>Mogaland-Plume Simulator</h1>
+        </header>
+        <nav>
+            <ul>
+                <li><a href="#learning">Learning</a></li>
+                <li><a href="#market-prediction">Market Prediction</a></li>
+                <li><a href="#swap">Swap Tokens</a></li>
+                <li><a href="#bridge">Bridge Assets</a></li>
+                <li><a href="#nft-staking">NFT Staking</a></li>
+            </ul>
+        </nav>
+        <main>
+            <section id="learning">
+                <h2>Learning & Quiz</h2>
+                <!-- Quiz and Staking Logic -->
+            </section>
+            <section id="market-prediction">
+                <h2>Market Prediction</h2>
+                <div id="chart"></div>
+                <!-- Chart Logic -->
+            </section>
+            <section id="swap">
+                <h2>Swap Tokens</h2>
+                <!-- Swap Logic -->
+            </section>
+            <section id="bridge">
+                <h2>Bridge Assets</h2>
+                <!-- Bridge Logic -->
+            </section>
+            <section id="nft-staking">
+                <h2>NFT Staking</h2>
+                <!-- NFT Staking Logic -->
+            </section>
+        </main>
+        <footer>
+            <div class="profile-panel">
+                <h3>Profile</h3>
+                <p id="balance-display">Balance: 0 ETH</p>
+                <button id="connect-wallet">Connect Wallet</button>
+            </div>
+        </footer>
+    </div>
     <script>
-        // Web3.js integration code here
-        const loginButton = document.getElementById('loginButton');
-        loginButton.addEventListener('click', async () => {
-            // Ethereum login logic
-        });
+        // Wallet Connection Logic
+        async function connectWallet() {
+            if (window.ethereum) {
+                try {
+                    await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    const web3 = new Web3(window.ethereum);
+                    console.log('Wallet Connected', await web3.eth.getAccounts());
+                    // Update balance display
+                    updateBalance(web3);
+                } catch (error) {
+                    console.error('User denied account access');
+                }
+            } else {
+                alert('Please install MetaMask or another wallet provider.');
+            }
+        }
+
+        async function updateBalance(web3) {
+            const accounts = await web3.eth.getAccounts();
+            const balance = await web3.eth.getBalance(accounts[0]);
+            document.getElementById('balance-display').innerText = `Balance: ${web3.utils.fromWei(balance, 'ether')} ETH`;
+        }
+
+        document.getElementById('connect-wallet').addEventListener('click', connectWallet);
     </script>
 </body>
 </html>
