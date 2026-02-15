@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Mogaland-Plume Simulator</title>
-  <script src="https://cdn.ethers.io/lib/ethers-5.7.umd.min.js"></script>
+  <script src="https://cdn.ethers.io/lib/ethers-5.7.umd.min.js" onerror="console.error('Failed to load ethers.js from CDN. Check ad blockers.');"></script>
   <script src="https://unpkg.com/@walletconnect/web3-provider@1.8.0/dist/umd/index.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
@@ -898,8 +898,17 @@
     // === FULL SCRIPT - ALL FEATURES INCLUDED ===
     
     // Wait for ethers library to load before initializing
+    let ethersLoadAttempts = 0;
+    const maxEthersLoadAttempts = 50; // 5 seconds total (50 * 100ms)
+    
     function initializeApp() {
       if (typeof ethers === 'undefined') {
+        ethersLoadAttempts++;
+        if (ethersLoadAttempts >= maxEthersLoadAttempts) {
+          console.error('Failed to load ethers library after 5 seconds');
+          alert('Failed to load required libraries. Please check your internet connection and ad blocker settings, then refresh the page.');
+          return;
+        }
         console.log('Waiting for ethers library to load...');
         setTimeout(initializeApp, 100);
         return;
