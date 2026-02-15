@@ -672,14 +672,14 @@
       <div class="tab-wrapper" style="position:relative; min-height:300px;">
         <div id="assetsContent" class="tab-content active">
           <div class="profile-slide-asset-row">
-            <img src="https://plume.org/media-kit/plume-logomark-red.png" alt="PLUME" class="profile-slide-asset-icon">
+            <img src="https://cryptologos.cc/logos/ethereum-eth-logo.png?v=035" alt="ETH" class="profile-slide-asset-icon">
             <div class="profile-slide-asset-details">
-              <div class="profile-slide-asset-name">PLUME</div>
-              <div class="profile-slide-asset-subtitle">Plume Native</div>
+              <div class="profile-slide-asset-name">ETH</div>
+              <div class="profile-slide-asset-subtitle">Sepolia Testnet</div>
             </div>
             <div class="profile-slide-asset-amounts">
-              <div class="profile-slide-token-amount">0.452</div>
-              <div class="profile-slide-usd-amount">$0.92</div>
+              <div class="profile-slide-token-amount" id="ethBalance">0.0000</div>
+              <div class="profile-slide-usd-amount">Testnet</div>
             </div>
           </div>
 
@@ -829,16 +829,18 @@
   <script>
     // === FULL SCRIPT - ALL FEATURES INCLUDED ===
 
-    const PLUME_CHAIN_ID = 98866;
-    const PLUME_RPC = "https://rpc.plume.org";
+    const SEPOLIA_CHAIN_ID = 11155111;
+    const SEPOLIA_CHAIN_HEX = "0xaa36a7";
+    const SEPOLIA_RPC = "https://sepolia.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161"; // Public Infura endpoint
+    const SEPOLIA_EXPLORER = "https://sepolia.etherscan.io";
 
     let provider = null;
     let userAddress = null;
     const mockOtp = "123456";
 
     const walletConnectProvider = new WalletConnectProvider.default({
-      rpc: { [PLUME_CHAIN_ID]: PLUME_RPC },
-      chainId: PLUME_CHAIN_ID,
+      rpc: { [SEPOLIA_CHAIN_ID]: SEPOLIA_RPC },
+      chainId: SEPOLIA_CHAIN_ID,
       qrcode: true
     });
 
@@ -879,12 +881,68 @@
       try {
         provider = getProvider();
         await provider.send("eth_requestAccounts", []);
+        
+        // Check current network and auto-switch to Sepolia if needed
         const network = await provider.getNetwork();
+        if (network.chainId !== SEPOLIA_CHAIN_ID) {
+          try {
+            // Try to switch to Sepolia
+            await window.ethereum.request({
+              method: 'wallet_switchEthereumChain',
+              params: [{ chainId: SEPOLIA_CHAIN_HEX }],
+            });
+            showNotification("Switched to Sepolia testnet", false);
+          } catch (switchError) {
+            // If network doesn't exist, add it
+            if (switchError.code === 4902) {
+              try {
+                await window.ethereum.request({
+                  method: 'wallet_addEthereumChain',
+                  params: [{
+                    chainId: SEPOLIA_CHAIN_HEX,
+                    chainName: 'Sepolia Testnet',
+                    nativeCurrency: {
+                      name: 'Sepolia ETH',
+                      symbol: 'ETH',
+                      decimals: 18
+                    },
+                    rpcUrls: [SEPOLIA_RPC],
+                    blockExplorerUrls: [SEPOLIA_EXPLORER]
+                  }],
+                });
+                showNotification("Added and switched to Sepolia", false);
+              } catch (addError) {
+                showNotification("Failed to add Sepolia network", true);
+                return;
+              }
+            } else {
+              showNotification("Failed to switch to Sepolia", true);
+              return;
+            }
+          }
+        }
+        
+        // Get user address and balance
         userAddress = (await provider.getSigner().getAddress()).toLowerCase();
-        const status = network.chainId === PLUME_CHAIN_ID ? "Plume Mainnet" : `Wrong network (ID: ${network.chainId})`;
+        const balanceWei = await provider.getBalance(userAddress);
+        const balanceEth = ethers.utils.formatEther(balanceWei);
+        
+        // Update UI
         document.getElementById('walletBtn').textContent = `Connected: ${userAddress.slice(0,6)}...${userAddress.slice(-4)}`;
         document.getElementById('walletBtn').classList.add('connected');
-        showNotification(`Connected via ${walletType} – ${status}`, network.chainId !== PLUME_CHAIN_ID);
+        
+        // Update profile balance displays
+        const profileTotal = document.querySelector('.profile-slide-total');
+        if (profileTotal) {
+          profileTotal.textContent = `${parseFloat(balanceEth).toFixed(4)} ETH`;
+        }
+        
+        const ethBalanceEl = document.getElementById('ethBalance');
+        if (ethBalanceEl) {
+          ethBalanceEl.textContent = parseFloat(balanceEth).toFixed(4);
+        }
+        
+        showNotification(`Connected via ${walletType} on Sepolia – Balance: ${parseFloat(balanceEth).toFixed(4)} ETH`, false);
         enterDashboard(walletType);
       } catch (e) {
         showNotification("Connection failed: " + (e.message || "Error"), true);
@@ -1658,17 +1716,17 @@
     }
 
     // Swap functions
-    function updateTokenBalances() {
+    async function updateTokenBalances() {
       if (!provider || !userAddress) {
         plumeBalance = "0.00";
         mogaBalance = 0;
       } else {
         try {
-          const plumeWei = provider.getBalance(userAddress);
-          plumeBalance = ethers.utils.formatEther(plumeWei);
+          const balanceWei = await provider.getBalance(userAddress);
+          plumeBalance = ethers.utils.formatEther(balanceWei);
           mogaBalance = mogalandPoints;
         } catch (err) {
-          showNotification("Gagal memuat saldo", true);
+          showNotification("Failed to load balance", true);
           plumeBalance = "Error";
           mogaBalance = 0;
         }
