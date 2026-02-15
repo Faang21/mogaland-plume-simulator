@@ -3,94 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mogaland-Plume Simulator</title>
-    <link rel="stylesheet" href="styles.css">
-    <script src="https://cdn.jsdelivr.net/npm/ethers/dist/ethers.min.js"></script>
+    <title>Mogaland Plume Simulator</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="app">
-        <header>
-            <h1>Mogaland-Plume Simulator</h1>
-            <div class="wallet-info">
-                <span id="wallet-address">Wallet: Not connected</span>
-                <span id="wallet-balance">Balance: 0 ETH</span>
-            </div>
-        </header>
+    <header>
+        <h1>Mogaland Plume Simulator</h1>
         <nav>
-            <ul class="bottom-nav">
-                <li><a href="#learning">Learning</a></li>
+            <ul>
+                <li><a href="#learning-quiz">Learning Quiz</a></li>
                 <li><a href="#market-prediction">Market Prediction</a></li>
                 <li><a href="#swap-tokens">Swap Tokens</a></li>
                 <li><a href="#bridge-assets">Bridge Assets</a></li>
                 <li><a href="#nft-staking">NFT Staking</a></li>
             </ul>
         </nav>
-        <main>
-            <section id="login">
-                <h2>Login</h2>
-                <button id="connect-wallet">Connect Wallet</button>
-                <button id="login-email">Login with Email</button>
-            </section>
-            <section id="dashboard" style="display:none;">
-                <h2>Dashboard</h2>
-                <!-- Dashboard content will go here -->
-            </section>
-            <section id="learning" style="display:none;">
-                <h2>Learning with Quiz and ETH Staking</h2>
-                <!-- Learning content will go here -->
-            </section>
-            <section id="market-prediction" style="display:none;">
-                <h2>Market Prediction</h2>
-                <!-- Market Prediction content will go here -->
-            </section>
-            <section id="swap-tokens" style="display:none;">
-                <h2>Swap Tokens</h2>
-                <!-- Token selection and swapping logic will go here -->
-            </section>
-            <section id="bridge-assets" style="display:none;">
-                <h2>Bridge Assets</h2>
-                <!-- Bridging assets logic will go here -->
-            </section>
-            <section id="nft-staking" style="display:none;">
-                <h2>NFT Staking</h2>
-                <!-- NFT Staking content will go here -->
-            </section>
-            <div id="profile-panel" style="display:none;">
-                <h2>Profile</h2>
-                <div id="wallet-details"></div>
-                <button id="close-profile">Close</button>
-            </div>
-        </main>
-        <footer>
-            <p>&copy; 2026 Mogaland-Plume Simulator. All rights reserved.</p>
-        </footer>
-    </div>
-    <script>
-        let currentAccount = '';
-        let provider;
-
-        async function connectWallet() {
-            if (window.ethereum) {
-                provider = new ethers.providers.Web3Provider(window.ethereum);
-                await provider.send("eth_requestAccounts", []);
-                const signer = provider.getSigner();
-                currentAccount = await signer.getAddress();
-                document.getElementById('wallet-address').textContent = `Wallet: ${currentAccount}`;
-                updateBalance();
-                document.getElementById('dashboard').style.display = 'block';
-                document.getElementById('login').style.display = 'none';
-            } else {
-                alert('Please install MetaMask or another wallet provider');
-            }
-        }
-
-        async function updateBalance() {
-            const balance = await provider.getBalance(currentAccount);
-            const balanceInEth = ethers.utils.formatEther(balance);
-            document.getElementById('wallet-balance').textContent = `Balance: ${balanceInEth} ETH`;
-        }
-
-        document.getElementById('connect-wallet').addEventListener('click', connectWallet);
-    </script>
+    </header>
+    <main>
+        <section id="learning-quiz">
+            <h2>Learning Quiz with ETH Staking</h2>
+            <!-- Quiz Content -->
+        </section>
+        <section id="market-prediction">
+            <h2>Market Prediction</h2>
+            <!-- Prediction Market Content -->
+        </section>
+        <section id="swap-tokens">
+            <h2>Swap Tokens</h2>
+            <!-- Token Swap Content -->
+        </section>
+        <section id="bridge-assets">
+            <h2>Bridge Assets</h2>
+            <!-- Asset Bridging Content -->
+        </section>
+        <section id="nft-staking">
+            <h2>NFT Staking</h2>
+            <!-- NFT Staking Content -->
+        </section>
+    </main>
+    <footer>
+        <p>&copy; 2026 Mogaland Team</p>
+    </footer>
+    <script src="script.js"></script>
 </body>
 </html>
