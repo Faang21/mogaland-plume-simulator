@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Mogaland-Plume Simulator</title>
-  <script src="https://cdn.ethers.io/lib/ethers-5.7.umd.min.js"></script>
+  <script src="https://cdn.ethers.io/lib/ethers-5.7.umd.min.js" onerror="console.error('Failed to load ethers.js from CDN. Check ad blockers.');"></script>
   <script src="https://unpkg.com/@walletconnect/web3-provider@1.8.0/dist/umd/index.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
@@ -896,7 +896,35 @@
 
   <script>
     // === FULL SCRIPT - ALL FEATURES INCLUDED ===
-
+    
+    // Wait for ethers library to load before initializing
+    const MAX_LOAD_TIMEOUT_MS = 5000; // Maximum time to wait for ethers.js
+    const POLL_INTERVAL_MS = 100; // Check every 100ms
+    const maxEthersLoadAttempts = MAX_LOAD_TIMEOUT_MS / POLL_INTERVAL_MS; // 50 attempts
+    let ethersLoadAttempts = 0;
+    
+    function initializeApp() {
+      if (typeof ethers === 'undefined') {
+        ethersLoadAttempts++;
+        if (ethersLoadAttempts >= maxEthersLoadAttempts) {
+          console.error('Failed to load ethers library after ' + MAX_LOAD_TIMEOUT_MS + 'ms');
+          // Show error in a non-blocking, accessible way
+          const errorDiv = document.createElement('div');
+          errorDiv.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#dc3545;color:white;padding:20px;border-radius:8px;z-index:10000;max-width:500px;text-align:center;';
+          errorDiv.setAttribute('role', 'alert');
+          errorDiv.innerHTML = '<strong>⚠️ Library Loading Failed</strong><br>Failed to load required libraries. Please check your internet connection and ad blocker settings, then refresh the page.';
+          document.body.insertBefore(errorDiv, document.body.firstChild);
+          return;
+        }
+        console.log('Waiting for ethers library to load... (attempt ' + ethersLoadAttempts + '/' + maxEthersLoadAttempts + ')');
+        setTimeout(initializeApp, POLL_INTERVAL_MS);
+        return;
+      }
+      console.log('Ethers library loaded successfully');
+      startApp();
+    }
+    
+    function startApp() {
     const SEPOLIA_CHAIN_ID = 11155111;
     const SEPOLIA_CHAIN_HEX = "0xaa36a7";
     const SEPOLIA_RPC = "https://rpc.sepolia.org"; // Public Sepolia RPC endpoint
@@ -4654,12 +4682,15 @@
     function convertPoints() {
       convertPointsToUSDC();
     }
+    
+    } // End of startApp()
 
-    // Init
-    document.addEventListener('DOMContentLoaded', () => {
-      initProfileTabs();
-      showSection('swap');
-    });
+    // Init - Wait for ethers to load, then start app
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initializeApp);
+    } else {
+      initializeApp();
+    }
   </script>
 </body>
 </html>
