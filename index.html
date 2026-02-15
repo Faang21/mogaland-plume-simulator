@@ -2798,8 +2798,12 @@
             <button class="btn-primary" style="width: 100%; padding: 16px; font-size: 1.25em; border-radius: 14px;" onclick="confirmSwap()">
               Swap Now
             </button>
+            
+            <p style="text-align: center; margin-top: 12px; color: #f59e0b; font-size: 0.85em;">
+              ⛽ Gas Fee: ${GAS_FEE_USDC} USDC per swap
+            </p>
 
-            <p style="text-align: center; margin-top: 20px; color: #94a3b8; font-size: 0.9em;">
+            <p style="text-align: center; margin-top: 12px; color: #94a3b8; font-size: 0.9em;">
               Sepolia Testnet • ETH ↔ USDC/USDT • Demo Mode
             </p>
           </div>
@@ -2904,8 +2908,12 @@
               <button class="btn-primary" style="width: 100%; padding: 20px; font-size: 1.35em; border-radius: 16px;" onclick="confirmBridge()">
                 Bridge Now
               </button>
+              
+              <p style="text-align: center; margin-top: 12px; color: #f59e0b; font-size: 0.9em;">
+                ⛽ Gas Fee: ${GAS_FEE_USDC} USDC per bridge transaction
+              </p>
 
-              <p style="text-align: center; margin-top: 28px; color: #94a3b8; font-size: 0.95em;">
+              <p style="text-align: center; margin-top: 12px; color: #94a3b8; font-size: 0.95em;">
                 Testnet Bridge Simulator • Real bridges support CCTP, LayerZero, etc.
               </p>
             </div>
@@ -2949,13 +2957,18 @@
             return;
           }
           
+          // Check and process gas fee before bridging
+          if (!processGasFee('bridge')) {
+            return;
+          }
+          
           // Process bridge through treasury
           const finalAmount = bridgeViaTreasury(fromChain, 'Sepolia', token, amount, slippage);
           
           showNotification(`🌉 Bridging ${amount} ${token} from ${fromChain} to Sepolia via treasury...`, false);
           
           setTimeout(() => {
-            showNotification(`✅ Bridge complete! Received ${finalAmount.toFixed(6)} ${token} on Sepolia (via treasury)`, false);
+            showNotification(`✅ Bridge complete! Received ${finalAmount.toFixed(6)} ${token} on Sepolia (via treasury) | Gas: ${GAS_FEE_USDC} USDC`, false);
             console.log(`[Bridge] ${amount} ${token} bridged from ${fromChain} to Sepolia through treasury`);
           }, 2000);
         };
@@ -3041,28 +3054,51 @@
     }
 
     function stakeSelectedNFTs() {
-      if (selectedNFTs.size === 0) return showNotification("Tidak ada NFT yang dipilih!", true);
-      stakedNFTs += selectedNFTs.size;
-      nftRewards += selectedNFTs.size * 2.5;
+      if (selectedNFTs.size === 0) return showNotification("No NFTs selected!", true);
+      
+      // Check and process gas fee before staking
+      if (!processGasFee('NFT staking')) {
+        return;
+      }
+      
+      const count = selectedNFTs.size;
+      stakedNFTs += count;
+      nftRewards += count * 2.5;
       selectedNFTs.clear();
       showSection('nft');
-      showNotification(`Berhasil stake ${selectedNFTs.size} NFT!`);
+      showNotification(`✅ Successfully staked ${count} NFT(s) | Gas: ${GAS_FEE_USDC} USDC`);
+      console.log(`[NFT] Staked ${count} NFTs with gas fee`);
     }
 
     function unstakeSelectedNFTs() {
-      if (selectedNFTs.size === 0) return showNotification("Tidak ada NFT staked yang dipilih!", true);
-      stakedNFTs = Math.max(0, stakedNFTs - selectedNFTs.size);
+      if (selectedNFTs.size === 0) return showNotification("No staked NFTs selected!", true);
+      
+      // Check and process gas fee before unstaking
+      if (!processGasFee('NFT unstaking')) {
+        return;
+      }
+      
+      const count = selectedNFTs.size;
+      stakedNFTs = Math.max(0, stakedNFTs - count);
       selectedNFTs.clear();
       showSection('nft');
-      showNotification(`Berhasil unstake ${selectedNFTs.size} NFT`);
+      showNotification(`✅ Successfully unstaked ${count} NFT(s) | Gas: ${GAS_FEE_USDC} USDC`);
+      console.log(`[NFT] Unstaked ${count} NFTs with gas fee`);
     }
 
     function claimNFTRewards() {
-      if (nftRewards <= 0) return showNotification("Belum ada reward", true);
+      if (nftRewards <= 0) return showNotification("No rewards available", true);
+      
+      // Check and process gas fee before claiming
+      if (!processGasFee('NFT rewards claim')) {
+        return;
+      }
+      
       const claimed = nftRewards;
       nftRewards = 0;
       showSection('nft');
-      showNotification(`Claimed ${claimed.toFixed(2)} PLUME!`);
+      showNotification(`✅ Claimed ${claimed.toFixed(2)} PLUME rewards | Gas: ${GAS_FEE_USDC} USDC`);
+      console.log(`[NFT] Claimed ${claimed.toFixed(2)} PLUME rewards with gas fee`);
     }
 
     // Swap functions
@@ -3135,6 +3171,11 @@
       const fromToken = document.getElementById('fromTokenSelect')?.value || 'ETH';
       const toToken = document.getElementById('toTokenSelect')?.value || 'USDC';
       
+      // Check and process gas fee before swap
+      if (!processGasFee('swap')) {
+        return;
+      }
+      
       // Calculate swap amount (simplified exchange rate)
       const exchangeRates = {
         'ETH': 2500,  // 1 ETH = 2500 USDC
@@ -3149,7 +3190,7 @@
       const finalAmount = swapViaTreasury(fromToken, toToken, amt, toAmount, currentSlippageTolerance);
 
       showNotification(
-        `✅ Swap executed via treasury: ${amt.toFixed(6)} ${fromToken} → ${finalAmount.toFixed(6)} ${toToken}<br>Slippage: ${currentSlippageTolerance.toFixed(1)}%`,
+        `✅ Swap executed via treasury: ${amt.toFixed(6)} ${fromToken} → ${finalAmount.toFixed(6)} ${toToken}<br>Slippage: ${currentSlippageTolerance.toFixed(1)}% | Gas: ${GAS_FEE_USDC} USDC`,
         false
       );
       
