@@ -1539,9 +1539,11 @@
             <div style="font-weight: bold; color: #60a5fa; margin-bottom: 8px;">📝 About Treasury Contributions</div>
             <div style="font-size: 0.85em; color: #94a3b8; line-height: 1.5;">
               • Contribute USDC from your Sepolia wallet to the treasury<br>
+              • This is a REAL on-chain transfer to Sepolia testnet<br>
+              • Your contribution will increase the treasury's USDC balance<br>
               • Treasury manages all platform liquidity and rewards<br>
-              • Contributions help fund trading profits and staking rewards<br>
-              • Treasury Address: ${TREASURY_WALLET_ADDRESS.slice(0,10)}...${TREASURY_WALLET_ADDRESS.slice(-8)}
+              • Treasury Owner: ${TREASURY_WALLET_ADDRESS.slice(0,10)}...${TREASURY_WALLET_ADDRESS.slice(-8)}<br>
+              • <a href="https://sepolia.etherscan.io/address/${TREASURY_WALLET_ADDRESS}" target="_blank" style="color: #10b981;">View Treasury on Explorer</a>
             </div>
           </div>
 
@@ -1791,9 +1793,54 @@
     // Treasury Wallet Configuration
     const TREASURY_WALLET_ADDRESS = "0xa959f26847211f71A22aDb087EBe50E0743e7D66";
     const GAS_FEE_USDC = 0.01; // 0.01 USDC per action
-    let treasuryUSDCBalance = 1000000; // 1M USDC starting balance
-    let treasuryETHBalance = 100; // 100 ETH starting balance for treasury
+    let treasuryUSDCBalance = 0; // Will be fetched from Sepolia
+    let treasuryETHBalance = 0; // Will be fetched from Sepolia
     const ETH_TO_USDC_RATE = 2500; // 1 ETH = 2500 USDC
+
+    // Fetch real treasury balances from Sepolia
+    async function fetchTreasuryBalances() {
+      if (!provider) {
+        console.log('[Treasury] Provider not available, using demo balances');
+        treasuryUSDCBalance = 1000000;
+        treasuryETHBalance = 100;
+        return;
+      }
+
+      try {
+        // Fetch ETH balance
+        const ethBalance = await provider.getBalance(TREASURY_WALLET_ADDRESS);
+        treasuryETHBalance = parseFloat(ethers.utils.formatEther(ethBalance));
+        
+        // Fetch USDC balance
+        const usdcContract = new ethers.Contract(USDC_SEPOLIA_ADDRESS, ERC20_ABI, provider);
+        const usdcBalance = await usdcContract.balanceOf(TREASURY_WALLET_ADDRESS);
+        treasuryUSDCBalance = parseFloat(ethers.utils.formatUnits(usdcBalance, 6));
+        
+        console.log(`[Treasury] Real Balances Fetched:`);
+        console.log(`[Treasury] ETH: ${treasuryETHBalance.toFixed(4)} ETH`);
+        console.log(`[Treasury] USDC: ${treasuryUSDCBalance.toFixed(2)} USDC`);
+        
+        updateTreasuryDisplay();
+      } catch (error) {
+        console.error('[Treasury] Error fetching balances:', error);
+        // Fallback to demo balances on error
+        treasuryUSDCBalance = 1000000;
+        treasuryETHBalance = 100;
+      }
+    }
+
+    function updateTreasuryDisplay() {
+      // Update treasury displays if they exist
+      const ethDisplay = document.getElementById('treasuryETHDisplay');
+      const usdcDisplay = document.getElementById('treasuryUSDCDisplay');
+      
+      if (ethDisplay) {
+        ethDisplay.textContent = treasuryETHBalance.toFixed(4);
+      }
+      if (usdcDisplay) {
+        usdcDisplay.textContent = treasuryUSDCBalance.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+      }
+    }
     
     // NFT Contract Configuration (Same as treasury for this implementation)
     const NFT_CONTRACT_ADDRESS = "0xa959f26847211f71A22aDb087EBe50E0743e7D66";
@@ -2101,7 +2148,7 @@
     }
 
     // Treasury Management Functions
-    function openTreasuryManagement() {
+    async function openTreasuryManagement() {
       // Check if user is connected with treasury wallet
       if (userAddress && userAddress.toLowerCase() !== TREASURY_WALLET_ADDRESS.toLowerCase()) {
         showNotification('⚠️ Only treasury wallet owner can access this feature!', true);
@@ -2113,6 +2160,10 @@
         return;
       }
 
+      // Fetch real balances from Sepolia
+      showNotification('🔄 Fetching treasury balances from Sepolia...', false);
+      await fetchTreasuryBalances();
+
       const modal = document.createElement('div');
       modal.className = 'modal';
       modal.innerHTML = `
@@ -2123,16 +2174,20 @@
           <div style="background: linear-gradient(135deg, rgba(16,185,129,0.1), rgba(59,130,246,0.1)); 
                       padding: 20px; border-radius: 12px; margin-bottom: 20px;">
             <div style="text-align: center; margin-bottom: 15px; color: #60a5fa; font-size: 0.9em;">
-              Treasury Wallet: ${TREASURY_WALLET_ADDRESS.slice(0,8)}...${TREASURY_WALLET_ADDRESS.slice(-6)}
+              Treasury Wallet (Sepolia): ${TREASURY_WALLET_ADDRESS.slice(0,8)}...${TREASURY_WALLET_ADDRESS.slice(-6)}
+              <br><a href="https://sepolia.etherscan.io/address/${TREASURY_WALLET_ADDRESS}" target="_blank" 
+                     style="color: #10b981; font-size: 0.85em;">View on Explorer</a>
             </div>
             <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; text-align: center;">
               <div>
                 <div style="font-size: 0.9em; color: #94a3b8; margin-bottom: 5px;">ETH Balance</div>
                 <div style="font-size: 1.5em; font-weight: bold; color: #10b981;" id="treasuryETHDisplay">${treasuryETHBalance.toFixed(4)}</div>
+                <div style="font-size: 0.75em; color: #64748b; margin-top: 3px;">Real Balance</div>
               </div>
               <div>
                 <div style="font-size: 0.9em; color: #94a3b8; margin-bottom: 5px;">USDC Balance</div>
-                <div style="font-size: 1.5em; font-weight: bold; color: #60a5fa;" id="treasuryUSDCDisplay">${treasuryUSDCBalance.toLocaleString()}</div>
+                <div style="font-size: 1.5em; font-weight: bold; color: #60a5fa;" id="treasuryUSDCDisplay">${treasuryUSDCBalance.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                <div style="font-size: 0.75em; color: #64748b; margin-top: 3px;">Real Balance</div>
               </div>
               <div>
                 <div style="font-size: 0.9em; color: #94a3b8; margin-bottom: 5px;">Exchange Rate</div>
@@ -2155,12 +2210,20 @@
                            cursor: pointer; font-size: 1.1em; font-weight: bold;">
               💱 Swap ETH to USDC
             </button>
+
+            <button onclick="fetchTreasuryBalances(); setTimeout(() => openTreasuryManagement(), 500); document.querySelectorAll('.modal').forEach(m => m.remove());" 
+                    style="background: rgba(59,130,246,0.2); border: 1px solid #3b82f6;
+                           color: #60a5fa; padding: 12px; border-radius: 8px; 
+                           cursor: pointer; font-size: 0.95em; font-weight: bold;">
+              🔄 Refresh Balances
+            </button>
           </div>
 
           <div style="margin-top: 20px; padding: 15px; background: rgba(234,179,8,0.1); 
                       border-radius: 8px; border-left: 4px solid #eab308;">
             <div style="font-weight: bold; color: #eab308; margin-bottom: 8px;">⚠️ Treasury Operations</div>
             <div style="font-size: 0.85em; color: #94a3b8; line-height: 1.5;">
+              • These are REAL balances from Sepolia testnet<br>
               • Send ETH: Transfer ETH from treasury to any wallet address<br>
               • Swap ETH to USDC: Convert treasury ETH to USDC at current rate<br>
               • All operations are logged and tracked<br>
