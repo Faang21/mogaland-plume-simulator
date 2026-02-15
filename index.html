@@ -898,19 +898,26 @@
     // === FULL SCRIPT - ALL FEATURES INCLUDED ===
     
     // Wait for ethers library to load before initializing
+    const MAX_LOAD_TIMEOUT_MS = 5000; // Maximum time to wait for ethers.js
+    const POLL_INTERVAL_MS = 100; // Check every 100ms
+    const maxEthersLoadAttempts = MAX_LOAD_TIMEOUT_MS / POLL_INTERVAL_MS; // 50 attempts
     let ethersLoadAttempts = 0;
-    const maxEthersLoadAttempts = 50; // 5 seconds total (50 * 100ms)
     
     function initializeApp() {
       if (typeof ethers === 'undefined') {
         ethersLoadAttempts++;
         if (ethersLoadAttempts >= maxEthersLoadAttempts) {
-          console.error('Failed to load ethers library after 5 seconds');
-          alert('Failed to load required libraries. Please check your internet connection and ad blocker settings, then refresh the page.');
+          console.error('Failed to load ethers library after ' + MAX_LOAD_TIMEOUT_MS + 'ms');
+          // Show error in a non-blocking, accessible way
+          const errorDiv = document.createElement('div');
+          errorDiv.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#dc3545;color:white;padding:20px;border-radius:8px;z-index:10000;max-width:500px;text-align:center;';
+          errorDiv.setAttribute('role', 'alert');
+          errorDiv.innerHTML = '<strong>⚠️ Library Loading Failed</strong><br>Failed to load required libraries. Please check your internet connection and ad blocker settings, then refresh the page.';
+          document.body.insertBefore(errorDiv, document.body.firstChild);
           return;
         }
-        console.log('Waiting for ethers library to load...');
-        setTimeout(initializeApp, 100);
+        console.log('Waiting for ethers library to load... (attempt ' + ethersLoadAttempts + '/' + maxEthersLoadAttempts + ')');
+        setTimeout(initializeApp, POLL_INTERVAL_MS);
         return;
       }
       console.log('Ethers library loaded successfully');
