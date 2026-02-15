@@ -1,73 +1,96 @@
-<!-- This is a mockup of the index.html reflecting the requested changes -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mogaland Plume Simulator</title>
-    <link rel="stylesheet" href="styles.css"> <!-- Assuming CSS is in another file -->
+    <title>Mogaland-Plume Simulator</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.5.0/ethers.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/@walletconnect/web3-provider"></script>
 </head>
 <body>
+    <nav class="navbar">
+        <ul>
+            <li><a href="#learning">Learning</a></li>
+            <li><a href="#market">Market</a></li>
+            <li><a href="#swap">Swap</a></li>
+            <li><a href="#bridge">Bridge</a></li>
+            <li><a href="#nft">NFT</a></li>
+        </ul>
+    </nav>
     <header>
-        <h1>Mogaland Simulator</h1>
-        <div id="profilePanel">
-            <p>Wallet Address: <span id="walletAddress"></span></p>
-            <p>ETH Balance: <span id="ethBalance"></span> ETH</p>
-        </div>
-        <div id="loginOptions">
-            <button id="emailLogin">Login with Email</button>
-            <button id="otpLogin">Send OTP</button>
-        </div>
+        <h1>Mogaland-Plume Simulator</h1>
     </header>
-    <main>
-        <section id="learning">
-            <div class="question-card"> <!-- Learning Quiz Implementation -->
-                <h2>Learning Quiz</h2>
-                <p>Quiz content goes here...</p>
-            </div>
-            <div class="progress-box">
-                <h3>Progress</h3>
-                <p>Your progress shown here.</p>
-            </div>
-        </section>
-        <section id="marketPrediction">
-            <div class="market-prediction-card">
-                <h2>Market Prediction</h2>
-                <p>Content regarding market predictions.</p>
-            </div>
-        </section>
-        <section id="swap">
-            <div class="swap-card">
-                <h2>Swap Tokens</h2>
-                <p>Token swap functionality integrated with ethers.js.</p>
-            </div>
-        </section>
-        <section id="bridge">
-            <div class="bridge-card">
-                <h2>Bridge Assets</h2>
-                <p>Functionality to bridge assets.</p>
-            </div>
-        </section>
-        <section id="nft">
-            <div class="nft-card">
-                <h2>NFT Staking</h2>
-                <p>Features regarding NFT staking.</p>
-            </div>
-        </section>
-    </main>
+    <section id="wallet-connect">
+        <h2>Connect Your Wallet</h2>
+        <button id="metamask">Connect with MetaMask</button>
+        <button id="okx">Connect with OKX</button>
+        <button id="trustwallet">Connect with Trust Wallet</button>
+        <button id="walletconnect">Connect with WalletConnect</button>
+    </section>
+    <section id="email-login">
+        <h2>Email Login</h2>
+        <input type="email" id="email" placeholder="Enter your email">
+        <button id="login">Login with OTP</button>
+        <input type="text" id="otp" placeholder="Enter OTP">
+    </section>
+    <section id="x-login">
+        <h2>X Login</h2>
+        <input type="text" id="username" placeholder="Enter @username">
+        <button id="x-login-btn">Login</button>
+    </section>
+    <section id="learning">
+        <h2>Learning Quiz</h2>
+        <div class="question-card"><!-- Add questions here --></div>
+        <div class="progress-box"><!-- Progress box --></div>
+    </section>
+    <section id="staking">
+        <h2>ETH Staking</h2>
+        <!-- Staking functionality --></section>
+    <section id="market">
+        <h2>Market Prediction</h2>
+        <!-- Market prediction --></section>
+    <section id="swap">
+        <h2>Swap Tokens</h2>
+        <!-- Token Swap functionality --></section>
+    <section id="bridge">
+        <h2>Bridge Assets</h2>
+        <!-- Asset bridging functionality --></section>
+    <section id="nft">
+        <h2>NFT Staking</h2>
+        <div class="nft-card"><!-- Add NFT cards here --></div>
+    </section>
     <footer>
-        <p>&copy; 2026 Mogaland All rights reserved.</p>
+        <p>&copy; 2026 Mogaland-Plume Simulator. All rights reserved.</p>
     </footer>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.6.9/ethers.umd.min.js"></script> <!-- Ethers.js for wallet connections -->
     <script>
-        // Connect to Ethereum Sepolia Testnet
-        const provider = new ethers.providers.JsonRpcProvider('https://sepolia.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161');
         async function connectWallet() {
-            // Implement wallet connection logic
+            if (window.ethereum) {
+                const provider = new ethers.providers.Web3Provider(window.ethereum);
+                await provider.send("eth_requestAccounts", []);
+                const signer = provider.getSigner();
+                // Network validation and other logic
+                // Auto switch to Sepolia network:
+                const chainId = await signer.getChainId();
+                if (chainId !== 11155111) {
+                    try {
+                        await window.ethereum.request({
+                            method: 'wallet_switchEthereumChain',
+                            params: [{ chainId: '0xA4B1' }], // Sepolia chainId
+                        });
+                    } catch (switchError) {
+                        // Handle error
+                    }
+                }
+                // Display balance and other features
+            } else {
+                alert('Please install MetaMask or another wallet provider.');
+            }
         }
-        async function loadProfile() {
-            // Load wallet address and ETH balance
-        }
+
+        document.getElementById('metamask').onclick = connectWallet;
+        // Add event listeners for other wallet buttons
     </script>
 </body>
 </html>
