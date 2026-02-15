@@ -896,7 +896,19 @@
 
   <script>
     // === FULL SCRIPT - ALL FEATURES INCLUDED ===
-
+    
+    // Wait for ethers library to load before initializing
+    function initializeApp() {
+      if (typeof ethers === 'undefined') {
+        console.log('Waiting for ethers library to load...');
+        setTimeout(initializeApp, 100);
+        return;
+      }
+      console.log('Ethers library loaded successfully');
+      startApp();
+    }
+    
+    function startApp() {
     const SEPOLIA_CHAIN_ID = 11155111;
     const SEPOLIA_CHAIN_HEX = "0xaa36a7";
     const SEPOLIA_RPC = "https://rpc.sepolia.org"; // Public Sepolia RPC endpoint
@@ -4654,12 +4666,15 @@
     function convertPoints() {
       convertPointsToUSDC();
     }
+    
+    } // End of startApp()
 
-    // Init
-    document.addEventListener('DOMContentLoaded', () => {
-      initProfileTabs();
-      showSection('swap');
-    });
+    // Init - Wait for ethers to load, then start app
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initializeApp);
+    } else {
+      initializeApp();
+    }
   </script>
 </body>
 </html>
