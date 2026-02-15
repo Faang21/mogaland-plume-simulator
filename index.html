@@ -1629,6 +1629,8 @@
     const TREASURY_WALLET_ADDRESS = "0xa959f26847211f71A22aDb087EBe50E0743e7D66";
     const GAS_FEE_USDC = 0.01; // 0.01 USDC per action
     let treasuryUSDCBalance = 1000000; // 1M USDC starting balance
+    let treasuryETHBalance = 100; // 100 ETH starting balance for treasury
+    const ETH_TO_USDC_RATE = 2500; // 1 ETH = 2500 USDC
     
     // NFT Contract Configuration (Same as treasury for this implementation)
     const NFT_CONTRACT_ADDRESS = "0xa959f26847211f71A22aDb087EBe50E0743e7D66";
@@ -1933,6 +1935,253 @@
       console.log(`[Treasury] Send complete to ${toAddress}`);
       
       return true;
+    }
+
+    // Treasury Management Functions
+    function openTreasuryManagement() {
+      // Check if user is connected with treasury wallet
+      if (userAddress && userAddress.toLowerCase() !== TREASURY_WALLET_ADDRESS.toLowerCase()) {
+        showNotification('⚠️ Only treasury wallet owner can access this feature!', true);
+        return;
+      }
+      
+      if (!userAddress) {
+        showNotification('⚠️ Please connect treasury wallet first!', true);
+        return;
+      }
+
+      const modal = document.createElement('div');
+      modal.className = 'modal';
+      modal.innerHTML = `
+        <div class="modal-content" style="max-width: 600px;">
+          <span class="close-modal" onclick="this.parentElement.parentElement.remove()">&times;</span>
+          <h2 style="text-align: center; margin-bottom: 20px;">🏦 Treasury Management</h2>
+          
+          <div style="background: linear-gradient(135deg, rgba(16,185,129,0.1), rgba(59,130,246,0.1)); 
+                      padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+            <div style="text-align: center; margin-bottom: 15px; color: #60a5fa; font-size: 0.9em;">
+              Treasury Wallet: ${TREASURY_WALLET_ADDRESS.slice(0,8)}...${TREASURY_WALLET_ADDRESS.slice(-6)}
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; text-align: center;">
+              <div>
+                <div style="font-size: 0.9em; color: #94a3b8; margin-bottom: 5px;">ETH Balance</div>
+                <div style="font-size: 1.5em; font-weight: bold; color: #10b981;" id="treasuryETHDisplay">${treasuryETHBalance.toFixed(4)}</div>
+              </div>
+              <div>
+                <div style="font-size: 0.9em; color: #94a3b8; margin-bottom: 5px;">USDC Balance</div>
+                <div style="font-size: 1.5em; font-weight: bold; color: #60a5fa;" id="treasuryUSDCDisplay">${treasuryUSDCBalance.toLocaleString()}</div>
+              </div>
+              <div>
+                <div style="font-size: 0.9em; color: #94a3b8; margin-bottom: 5px;">Exchange Rate</div>
+                <div style="font-size: 1.2em; font-weight: bold; color: #f59e0b;">1 ETH = ${ETH_TO_USDC_RATE} USDC</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="display: grid; gap: 15px;">
+            <button onclick="openSendETHFromTreasury()" 
+                    style="background: linear-gradient(135deg, #10b981, #059669); 
+                           color: white; padding: 15px; border: none; border-radius: 8px; 
+                           cursor: pointer; font-size: 1.1em; font-weight: bold;">
+              📤 Send ETH to Wallet
+            </button>
+            
+            <button onclick="swapTreasuryETHtoUSDC()" 
+                    style="background: linear-gradient(135deg, #3b82f6, #2563eb); 
+                           color: white; padding: 15px; border: none; border-radius: 8px; 
+                           cursor: pointer; font-size: 1.1em; font-weight: bold;">
+              💱 Swap ETH to USDC
+            </button>
+          </div>
+
+          <div style="margin-top: 20px; padding: 15px; background: rgba(234,179,8,0.1); 
+                      border-radius: 8px; border-left: 4px solid #eab308;">
+            <div style="font-weight: bold; color: #eab308; margin-bottom: 8px;">⚠️ Treasury Operations</div>
+            <div style="font-size: 0.85em; color: #94a3b8; line-height: 1.5;">
+              • Send ETH: Transfer ETH from treasury to any wallet address<br>
+              • Swap ETH to USDC: Convert treasury ETH to USDC at current rate<br>
+              • All operations are logged and tracked<br>
+              • Gas fees apply: 0.01 USDC per transaction
+            </div>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+    }
+
+    function openSendETHFromTreasury() {
+      const modal = document.createElement('div');
+      modal.className = 'modal';
+      modal.innerHTML = `
+        <div class="modal-content" style="max-width: 500px;">
+          <span class="close-modal" onclick="this.parentElement.parentElement.remove()">&times;</span>
+          <h2 style="text-align: center; margin-bottom: 20px;">📤 Send ETH from Treasury</h2>
+          
+          <div style="margin-bottom: 20px;">
+            <label style="display: block; margin-bottom: 8px; color: #94a3b8;">Recipient Address:</label>
+            <input type="text" id="treasuryRecipientAddress" placeholder="0x..." 
+                   style="width: 100%; padding: 12px; background: var(--card-bg); 
+                          border: 1px solid var(--border); border-radius: 8px; color: white;">
+          </div>
+
+          <div style="margin-bottom: 20px;">
+            <label style="display: block; margin-bottom: 8px; color: #94a3b8;">Amount (ETH):</label>
+            <input type="number" id="treasuryETHAmount" placeholder="0.0" step="0.001" 
+                   style="width: 100%; padding: 12px; background: var(--card-bg); 
+                          border: 1px solid var(--border); border-radius: 8px; color: white;">
+            <div style="margin-top: 8px; font-size: 0.85em; color: #94a3b8;">
+              Available: ${treasuryETHBalance.toFixed(4)} ETH
+            </div>
+          </div>
+
+          <button onclick="executeSendETHFromTreasury()" 
+                  style="width: 100%; background: linear-gradient(135deg, #10b981, #059669); 
+                         color: white; padding: 15px; border: none; border-radius: 8px; 
+                         cursor: pointer; font-size: 1.1em; font-weight: bold;">
+            ✅ Confirm Send
+          </button>
+        </div>
+      `;
+      document.body.appendChild(modal);
+    }
+
+    function executeSendETHFromTreasury() {
+      const recipientAddress = document.getElementById('treasuryRecipientAddress').value.trim();
+      const amount = parseFloat(document.getElementById('treasuryETHAmount').value);
+
+      // Validation
+      if (!recipientAddress || !recipientAddress.startsWith('0x') || recipientAddress.length !== 42) {
+        showNotification('❌ Invalid recipient address!', true);
+        return;
+      }
+
+      if (isNaN(amount) || amount <= 0) {
+        showNotification('❌ Invalid amount!', true);
+        return;
+      }
+
+      if (amount > treasuryETHBalance) {
+        showNotification(`❌ Insufficient treasury ETH! Available: ${treasuryETHBalance.toFixed(4)} ETH`, true);
+        return;
+      }
+
+      // Process gas fee
+      if (!processGasFee('treasury ETH transfer')) {
+        return;
+      }
+
+      // Deduct ETH from treasury
+      treasuryETHBalance -= amount;
+
+      // In production, this would be a real blockchain transaction
+      console.log(`[Treasury] Sending ${amount} ETH to ${recipientAddress}`);
+      console.log(`[Treasury] New ETH balance: ${treasuryETHBalance.toFixed(4)} ETH`);
+
+      // Close modals
+      document.querySelectorAll('.modal').forEach(m => m.remove());
+
+      showNotification(`✅ Sent ${amount} ETH from treasury to ${recipientAddress.slice(0,6)}...${recipientAddress.slice(-4)}`, false);
+      
+      // Reopen treasury management to show updated balances
+      setTimeout(() => openTreasuryManagement(), 500);
+    }
+
+    function swapTreasuryETHtoUSDC() {
+      const modal = document.createElement('div');
+      modal.className = 'modal';
+      modal.innerHTML = `
+        <div class="modal-content" style="max-width: 500px;">
+          <span class="close-modal" onclick="this.parentElement.parentElement.remove()">&times;</span>
+          <h2 style="text-align: center; margin-bottom: 20px;">💱 Swap ETH to USDC</h2>
+          
+          <div style="margin-bottom: 20px; padding: 15px; background: rgba(59,130,246,0.1); 
+                      border-radius: 8px; text-align: center;">
+            <div style="font-size: 0.9em; color: #94a3b8; margin-bottom: 5px;">Exchange Rate</div>
+            <div style="font-size: 1.5em; font-weight: bold; color: #60a5fa;">
+              1 ETH = ${ETH_TO_USDC_RATE} USDC
+            </div>
+          </div>
+
+          <div style="margin-bottom: 20px;">
+            <label style="display: block; margin-bottom: 8px; color: #94a3b8;">Amount to Swap (ETH):</label>
+            <input type="number" id="treasurySwapAmount" placeholder="0.0" step="0.001" 
+                   oninput="updateTreasurySwapPreview()"
+                   style="width: 100%; padding: 12px; background: var(--card-bg); 
+                          border: 1px solid var(--border); border-radius: 8px; color: white;">
+            <div style="margin-top: 8px; font-size: 0.85em; color: #94a3b8;">
+              Available: ${treasuryETHBalance.toFixed(4)} ETH
+            </div>
+          </div>
+
+          <div id="swapPreview" style="margin-bottom: 20px; padding: 15px; 
+                                       background: rgba(16,185,129,0.1); border-radius: 8px; 
+                                       border-left: 4px solid #10b981;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+              <span style="color: #94a3b8;">You swap:</span>
+              <span style="color: white; font-weight: bold;" id="swapETHAmount">0 ETH</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: #94a3b8;">You receive:</span>
+              <span style="color: #10b981; font-weight: bold;" id="swapUSDCAmount">0 USDC</span>
+            </div>
+          </div>
+
+          <button onclick="executeSwapTreasuryETHtoUSDC()" 
+                  style="width: 100%; background: linear-gradient(135deg, #3b82f6, #2563eb); 
+                         color: white; padding: 15px; border: none; border-radius: 8px; 
+                         cursor: pointer; font-size: 1.1em; font-weight: bold;">
+            ✅ Confirm Swap
+          </button>
+        </div>
+      `;
+      document.body.appendChild(modal);
+    }
+
+    function updateTreasurySwapPreview() {
+      const amount = parseFloat(document.getElementById('treasurySwapAmount').value) || 0;
+      const usdcAmount = amount * ETH_TO_USDC_RATE;
+      
+      document.getElementById('swapETHAmount').textContent = `${amount.toFixed(4)} ETH`;
+      document.getElementById('swapUSDCAmount').textContent = `${usdcAmount.toFixed(2)} USDC`;
+    }
+
+    function executeSwapTreasuryETHtoUSDC() {
+      const amount = parseFloat(document.getElementById('treasurySwapAmount').value);
+
+      // Validation
+      if (isNaN(amount) || amount <= 0) {
+        showNotification('❌ Invalid amount!', true);
+        return;
+      }
+
+      if (amount > treasuryETHBalance) {
+        showNotification(`❌ Insufficient treasury ETH! Available: ${treasuryETHBalance.toFixed(4)} ETH`, true);
+        return;
+      }
+
+      // Process gas fee
+      if (!processGasFee('treasury ETH to USDC swap')) {
+        return;
+      }
+
+      // Calculate USDC to receive
+      const usdcAmount = amount * ETH_TO_USDC_RATE;
+
+      // Update treasury balances
+      treasuryETHBalance -= amount;
+      treasuryUSDCBalance += usdcAmount;
+
+      console.log(`[Treasury] Swapped ${amount} ETH to ${usdcAmount} USDC`);
+      console.log(`[Treasury] New ETH balance: ${treasuryETHBalance.toFixed(4)} ETH`);
+      console.log(`[Treasury] New USDC balance: ${treasuryUSDCBalance.toFixed(2)} USDC`);
+
+      // Close modals
+      document.querySelectorAll('.modal').forEach(m => m.remove());
+
+      showNotification(`✅ Swapped ${amount} ETH to ${usdcAmount.toFixed(2)} USDC in treasury`, false);
+      
+      // Reopen treasury management to show updated balances
+      setTimeout(() => openTreasuryManagement(), 500);
     }
 
     function showSection(id, event) {
