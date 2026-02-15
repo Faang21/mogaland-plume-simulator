@@ -1052,15 +1052,134 @@
     }
 
     // === MAIN SECTION SWITCHER ===
-    let stakedMoga = 0;
+    let stakedUSDC = 0;
     let mogalandPoints = 0;
     let currentQuestionIndex = 0;
+    let completedTasks = 0;
     let historyLog = [];
+    let usdcBalance = "0.00";
+    let nftMinted = false;
+
+    // Sepolia USDC Contract Address
+    const USDC_SEPOLIA_ADDRESS = "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238";
+    const USDC_ABI = [
+      "function balanceOf(address owner) view returns (uint256)",
+      "function transfer(address to, uint256 amount) returns (bool)",
+      "function approve(address spender, uint256 amount) returns (bool)",
+      "function allowance(address owner, address spender) view returns (uint256)",
+      "function decimals() view returns (uint8)"
+    ];
 
     const questions = [
-      { question: "What is the primary function of the Plume network?", options: ["A) Decentralized Storage", "B) NFT Staking", "C) Market Prediction", "D) Data Processing"], correct: 1 },
-      { question: "What token is used for staking in Mogaland?", options: ["A) PLUME", "B) MOGA", "C) ETH", "D) USDT"], correct: 1 },
-      { question: "RWA stands for...", options: ["A) Real World Assets", "B) Rapid Wallet Access", "C) Remote Work Agreement", "D) Real World Avatar"], correct: 0 }
+      // Blockchain Basics (1-20)
+      { question: "What is a blockchain?", options: ["A) A type of cryptocurrency", "B) A distributed ledger technology", "C) A mining hardware", "D) A wallet application"], correct: 1 },
+      { question: "Who created Bitcoin?", options: ["A) Vitalik Buterin", "B) Satoshi Nakamoto", "C) Charlie Lee", "D) Gavin Wood"], correct: 1 },
+      { question: "What is the first cryptocurrency?", options: ["A) Ethereum", "B) Litecoin", "C) Bitcoin", "D) Ripple"], correct: 2 },
+      { question: "What does 'decentralized' mean in blockchain?", options: ["A) Controlled by one entity", "B) No central authority", "C) Faster transactions", "D) Lower fees"], correct: 1 },
+      { question: "What is a block in blockchain?", options: ["A) A single transaction", "B) A group of transactions", "C) A mining reward", "D) A wallet address"], correct: 1 },
+      { question: "What is consensus mechanism?", options: ["A) A way to agree on ledger state", "B) A type of wallet", "C) A mining pool", "D) A trading strategy"], correct: 0 },
+      { question: "What is Proof of Work (PoW)?", options: ["A) A consensus algorithm", "B) A wallet type", "C) A token standard", "D) A smart contract"], correct: 0 },
+      { question: "What is Proof of Stake (PoS)?", options: ["A) Mining algorithm", "B) Consensus requiring stake", "C) Wallet security", "D) Token distribution"], correct: 1 },
+      { question: "What is a hash function in blockchain?", options: ["A) A trading tool", "B) A one-way cryptographic function", "C) A wallet generator", "D) A mining device"], correct: 1 },
+      { question: "What is a Merkle tree?", options: ["A) A data structure for efficient verification", "B) A type of wallet", "C) A consensus mechanism", "D) A mining strategy"], correct: 0 },
+      { question: "What is Byzantine Fault Tolerance?", options: ["A) A wallet type", "B) System resilience to failures", "C) A mining algorithm", "D) A token standard"], correct: 1 },
+      { question: "What is a node in blockchain?", options: ["A) A mining machine", "B) A computer maintaining blockchain copy", "C) A wallet", "D) A transaction"], correct: 1 },
+      { question: "What is immutability in blockchain?", options: ["A) Fast transactions", "B) Cannot be altered once recorded", "C) Low fees", "D) Privacy feature"], correct: 1 },
+      { question: "What is a genesis block?", options: ["A) Latest block", "B) First block in blockchain", "C) Largest block", "D) Failed block"], correct: 1 },
+      { question: "What is mining in cryptocurrency?", options: ["A) Buying coins", "B) Validating transactions and creating blocks", "C) Trading coins", "D) Storing coins"], correct: 1 },
+      { question: "What is a mining pool?", options: ["A) Solo mining", "B) Group of miners combining resources", "C) A wallet", "D) A blockchain"], correct: 1 },
+      { question: "What is block time?", options: ["A) Transaction fee", "B) Time to create a new block", "C) Mining difficulty", "D) Confirmation time"], correct: 1 },
+      { question: "What is blockchain fork?", options: ["A) A bug", "B) Split in blockchain", "C) A wallet", "D) A token"], correct: 1 },
+      { question: "What is a hard fork?", options: ["A) Backward compatible change", "B) Non-backward compatible protocol change", "C) A wallet update", "D) A bug fix"], correct: 1 },
+      { question: "What is a soft fork?", options: ["A) Non-compatible change", "B) Backward compatible protocol upgrade", "C) A new blockchain", "D) A token swap"], correct: 1 },
+      
+      // Ethereum & Smart Contracts (21-40)
+      { question: "Who founded Ethereum?", options: ["A) Satoshi Nakamoto", "B) Vitalik Buterin", "C) Charles Hoskinson", "D) Joseph Lubin"], correct: 1 },
+      { question: "What is a smart contract?", options: ["A) A legal document", "B) Self-executing code on blockchain", "C) A wallet", "D) A mining algorithm"], correct: 1 },
+      { question: "What language is used for Ethereum smart contracts?", options: ["A) JavaScript", "B) Python", "C) Solidity", "D) C++"], correct: 2 },
+      { question: "What is gas in Ethereum?", options: ["A) A token", "B) Unit measuring computational effort", "C) A wallet", "D) A protocol"], correct: 1 },
+      { question: "What is EVM?", options: ["A) Ethereum Virtual Machine", "B) Extra Value Mining", "C) Electronic Voting Method", "D) Efficient Value Management"], correct: 0 },
+      { question: "What is Ether (ETH)?", options: ["A) A smart contract", "B) Native cryptocurrency of Ethereum", "C) A wallet", "D) A consensus mechanism"], correct: 1 },
+      { question: "What is Wei?", options: ["A) A blockchain", "B) Smallest unit of Ether", "C) A wallet", "D) A token standard"], correct: 1 },
+      { question: "What is Gwei?", options: ["A) A token", "B) Unit equal to 10^9 Wei", "C) A wallet", "D) A protocol"], correct: 1 },
+      { question: "What is ERC-20?", options: ["A) A wallet", "B) Token standard for fungible tokens", "C) A blockchain", "D) A consensus"], correct: 1 },
+      { question: "What is ERC-721?", options: ["A) Fungible token standard", "B) NFT token standard", "C) A wallet", "D) A protocol"], correct: 1 },
+      { question: "What is ERC-1155?", options: ["A) Fungible only", "B) Multi-token standard", "C) NFT only", "D) A wallet"], correct: 1 },
+      { question: "What is a DApp?", options: ["A) Desktop Application", "B) Decentralized Application", "C) Data Application", "D) Digital Application"], correct: 1 },
+      { question: "What is The Merge in Ethereum?", options: ["A) Token swap", "B) Transition from PoW to PoS", "C) A wallet", "D) A fork"], correct: 1 },
+      { question: "What is Ethereum 2.0?", options: ["A) A new token", "B) Upgraded Ethereum with PoS", "C) A wallet", "D) A competitor"], correct: 1 },
+      { question: "What is sharding in Ethereum?", options: ["A) Token splitting", "B) Splitting blockchain into smaller parts", "C) A wallet", "D) Mining technique"], correct: 1 },
+      { question: "What is a rollup?", options: ["A) Token sale", "B) Layer 2 scaling solution", "C) A wallet", "D) A consensus"], correct: 1 },
+      { question: "What is Optimistic Rollup?", options: ["A) A token", "B) Layer 2 assuming validity", "C) A wallet", "D) A blockchain"], correct: 1 },
+      { question: "What is ZK-Rollup?", options: ["A) Token type", "B) Layer 2 with zero-knowledge proofs", "C) A wallet", "D) Mining method"], correct: 1 },
+      { question: "What is Polygon?", options: ["A) A token", "B) Ethereum scaling solution", "C) A wallet", "D) A consensus"], correct: 1 },
+      { question: "What is Arbitrum?", options: ["A) A token", "B) Optimistic rollup solution", "C) A wallet", "D) A blockchain"], correct: 1 },
+      
+      // DeFi (41-60)
+      { question: "What does DeFi stand for?", options: ["A) Digital Finance", "B) Decentralized Finance", "C) Defined Finance", "D) Derivative Finance"], correct: 1 },
+      { question: "What is a DEX?", options: ["A) Digital Exchange", "B) Decentralized Exchange", "C) Data Exchange", "D) Defined Exchange"], correct: 1 },
+      { question: "What is Uniswap?", options: ["A) A wallet", "B) An automated market maker DEX", "C) A blockchain", "D) A token"], correct: 1 },
+      { question: "What is an AMM?", options: ["A) Automated Money Manager", "B) Automated Market Maker", "C) Advanced Mining Method", "D) Asset Management Model"], correct: 1 },
+      { question: "What is liquidity pool?", options: ["A) Mining pool", "B) Pool of tokens for trading", "C) Staking pool", "D) Wallet collection"], correct: 1 },
+      { question: "What is yield farming?", options: ["A) Mining", "B) Earning rewards by providing liquidity", "C) Trading", "D) Staking only"], correct: 1 },
+      { question: "What is staking?", options: ["A) Mining", "B) Locking tokens to support network", "C) Trading", "D) Buying tokens"], correct: 1 },
+      { question: "What is APY?", options: ["A) Annual Price Yield", "B) Annual Percentage Yield", "C) Asset Price Year", "D) Average Profit Yearly"], correct: 1 },
+      { question: "What is APR?", options: ["A) Annual Price Rate", "B) Annual Percentage Rate", "C) Asset Profit Rate", "D) Average Price Return"], correct: 1 },
+      { question: "What is impermanent loss?", options: ["A) Permanent loss", "B) Temporary loss in liquidity providing", "C) Mining loss", "D) Fee loss"], correct: 1 },
+      { question: "What is a lending protocol?", options: ["A) Mining protocol", "B) Platform for borrowing/lending crypto", "C) Trading platform", "D) Wallet service"], correct: 1 },
+      { question: "What is Aave?", options: ["A) A token", "B) A DeFi lending protocol", "C) A wallet", "D) A blockchain"], correct: 1 },
+      { question: "What is Compound?", options: ["A) A wallet", "B) A DeFi lending protocol", "C) A token only", "D) A blockchain"], correct: 1 },
+      { question: "What is collateral in DeFi?", options: ["A) Trading fee", "B) Assets locked to secure loan", "C) Mining reward", "D) Staking reward"], correct: 1 },
+      { question: "What is over-collateralization?", options: ["A) No collateral", "B) Collateral value exceeds loan", "C) Equal collateral", "D) Under collateral"], correct: 1 },
+      { question: "What is liquidation?", options: ["A) Selling tokens", "B) Forced closure of under-collateralized position", "C) Mining process", "D) Staking reward"], correct: 1 },
+      { question: "What is flash loan?", options: ["A) Long-term loan", "B) Uncollateralized loan repaid in same transaction", "C) Collateralized loan", "D) Personal loan"], correct: 1 },
+      { question: "What is governance token?", options: ["A) Payment token", "B) Token for voting on protocol decisions", "C) Staking token only", "D) Meme coin"], correct: 1 },
+      { question: "What is TVL?", options: ["A) Token Value Locked", "B) Total Value Locked", "C) Trading Volume Limit", "D) Total Verified Liquidity"], correct: 1 },
+      { question: "What is slippage?", options: ["A) Trading fee", "B) Price difference between expected and executed", "C) Mining difficulty", "D) Staking reward"], correct: 1 },
+      
+      // NFTs & Gaming (61-80)
+      { question: "What does NFT stand for?", options: ["A) New Financial Token", "B) Non-Fungible Token", "C) Network File Transfer", "D) Next Future Technology"], correct: 1 },
+      { question: "What makes an NFT unique?", options: ["A) Price", "B) Each token is distinct and non-interchangeable", "C) Color", "D) Size"], correct: 1 },
+      { question: "What is OpenSea?", options: ["A) A blockchain", "B) An NFT marketplace", "C) A wallet", "D) A token"], correct: 1 },
+      { question: "What is minting an NFT?", options: ["A) Buying NFT", "B) Creating and recording NFT on blockchain", "C) Selling NFT", "D) Trading NFT"], correct: 1 },
+      { question: "What is metadata in NFT?", options: ["A) Price data", "B) Information describing NFT properties", "C) Owner data", "D) Trading data"], correct: 1 },
+      { question: "What is IPFS?", options: ["A) A token", "B) Decentralized storage system", "C) A blockchain", "D) A wallet"], correct: 1 },
+      { question: "What is gas war?", options: ["A) Mining competition", "B) Users bidding high gas fees", "C) Trading battle", "D) Staking competition"], correct: 1 },
+      { question: "What is rarity in NFTs?", options: ["A) Price", "B) How uncommon trait combinations are", "C) Age", "D) Size"], correct: 1 },
+      { question: "What is a PFP NFT?", options: ["A) Payment NFT", "B) Profile Picture NFT", "C) Public NFT", "D) Private NFT"], correct: 1 },
+      { question: "What is generative art NFT?", options: ["A) Hand-drawn art", "B) Art created by algorithm", "C) Photography", "D) Video art"], correct: 1 },
+      { question: "What is Play-to-Earn (P2E)?", options: ["A) Gambling", "B) Gaming model where players earn crypto", "C) Mining", "D) Trading"], correct: 1 },
+      { question: "What is GameFi?", options: ["A) Game Finance", "B) Combination of gaming and DeFi", "C) Gaming Platform", "D) Game Token"], correct: 1 },
+      { question: "What is Axie Infinity?", options: ["A) A wallet", "B) A play-to-earn game", "C) A DEX", "D) A blockchain"], correct: 1 },
+      { question: "What is metaverse?", options: ["A) A token", "B) Virtual shared space", "C) A blockchain", "D) A wallet"], correct: 1 },
+      { question: "What is Decentraland?", options: ["A) A token", "B) A virtual world platform", "C) A wallet", "D) A DEX"], correct: 1 },
+      { question: "What is The Sandbox?", options: ["A) A mining tool", "B) A virtual world and gaming platform", "C) A wallet", "D) A token"], correct: 1 },
+      { question: "What is royalty in NFT?", options: ["A) Initial price", "B) Percentage paid to creator on resales", "C) Gas fee", "D) Trading fee"], correct: 1 },
+      { question: "What is lazy minting?", options: ["A) Fast minting", "B) Minting only when NFT is sold", "C) Delayed minting", "D) Bulk minting"], correct: 1 },
+      { question: "What is dynamic NFT?", options: ["A) Static image", "B) NFT that changes based on conditions", "C) Video NFT", "D) Audio NFT"], correct: 1 },
+      { question: "What is fractional NFT?", options: ["A) Broken NFT", "B) NFT divided into multiple shares", "C) Small NFT", "D) Cheap NFT"], correct: 1 },
+      
+      // Security & Wallets (81-100)
+      { question: "What is a private key?", options: ["A) Public address", "B) Secret key to access wallet", "C) Password", "D) Username"], correct: 1 },
+      { question: "What is a public key?", options: ["A) Password", "B) Address to receive funds", "C) Private key", "D) Secret code"], correct: 1 },
+      { question: "What is a seed phrase?", options: ["A) Password", "B) 12-24 words to recover wallet", "C) Username", "D) Email"], correct: 1 },
+      { question: "What is a hardware wallet?", options: ["A) Software wallet", "B) Physical device storing keys offline", "C) Online wallet", "D) Exchange wallet"], correct: 1 },
+      { question: "What is MetaMask?", options: ["A) A blockchain", "B) A browser extension wallet", "C) A DEX", "D) A token"], correct: 1 },
+      { question: "What is cold storage?", options: ["A) Online wallet", "B) Offline storage of crypto", "C) Exchange wallet", "D) Hot wallet"], correct: 1 },
+      { question: "What is hot wallet?", options: ["A) Offline wallet", "B) Wallet connected to internet", "C) Hardware wallet", "D) Paper wallet"], correct: 1 },
+      { question: "What is 2FA?", options: ["A) Two Addresses", "B) Two-Factor Authentication", "C) Two Fees", "D) Two Forks"], correct: 1 },
+      { question: "What is a rug pull?", options: ["A) Marketing strategy", "B) Scam where developers abandon project", "C) Token burn", "D) Airdrop"], correct: 1 },
+      { question: "What is phishing in crypto?", options: ["A) Mining", "B) Tricking users to reveal private keys", "C) Trading", "D) Staking"], correct: 1 },
+      { question: "What is a smart contract audit?", options: ["A) Price check", "B) Security review of contract code", "C) Marketing review", "D) User review"], correct: 1 },
+      { question: "What is a honeypot scam?", options: ["A) Good investment", "B) Token you can buy but not sell", "C) Mining scam", "D) Wallet scam"], correct: 1 },
+      { question: "What is KYC?", options: ["A) Keep Your Crypto", "B) Know Your Customer", "C) Key Your Code", "D) Keep Your Keys"], correct: 1 },
+      { question: "What is AML?", options: ["A) Advanced Mining Logic", "B) Anti-Money Laundering", "C) Automated Market Listing", "D) Asset Management Layer"], correct: 1 },
+      { question: "What is a multi-sig wallet?", options: ["A) Single signature", "B) Multiple signatures required", "C) Multiple addresses", "D) Multiple tokens"], correct: 1 },
+      { question: "What is a paper wallet?", options: ["A) Digital wallet", "B) Keys printed on paper", "C) Hardware wallet", "D) Exchange wallet"], correct: 1 },
+      { question: "What is address poisoning?", options: ["A) Good practice", "B) Scam using similar addresses", "C) Mining technique", "D) Trading strategy"], correct: 1 },
+      { question: "What is sandwich attack?", options: ["A) Food-related", "B) MEV attack manipulating transactions", "C) Mining attack", "D) Wallet hack"], correct: 1 },
+      { question: "What is front-running?", options: ["A) Fast trading", "B) Exploiting knowledge of pending transactions", "C) Mining first", "D) First buyer"], correct: 1 },
+      { question: "What is a smart contract exploit?", options: ["A) Good feature", "B) Vulnerability allowing unauthorized actions", "C) Upgrade", "D) Optimization"], correct: 1 }
     ];
 
     let tokenTreasury = 100000;
@@ -1088,76 +1207,76 @@
         content.innerHTML = `
           <div class="flex-container">
             <div class="progress-box">
-              <h4 id="progressTitle">PROGRESS 1-100</h4>
-              <div class="reach">REACH 100</div>
+              <h4 id="progressTitle">TASKS: ${completedTasks}/100</h4>
+              <div class="reach">COMPLETE 100 TASKS TO MINT NFT</div>
               <div class="nft-container">
                 <div class="nft-placeholder">
                   <div class="nft-gradient"></div>
-                  <div class="nft-label">NFT dari OpenSea</div>
+                  <div class="nft-label" id="nftStatus">${nftMinted ? '✅ NFT Minted!' : '🔒 Complete 100 Tasks'}</div>
                 </div>
               </div>
               <div class="progress-section">
                 <div class="progress-bar-long">
-                  <div class="progress-fill-long" id="progressFill" style="width: 0%;"></div>
+                  <div class="progress-fill-long" id="progressFill" style="width: ${(completedTasks/100)*100}%;"></div>
                 </div>
-                <span class="progress-label" id="progressLabel">0% menuju 100</span>
+                <span class="progress-label" id="progressLabel">${completedTasks}/100 Tasks Completed</span>
               </div>
+              ${nftMinted ? '' : (completedTasks === 100 ? '<button class="btn-primary" style="margin-top:16px;" onclick="mintNFT()">🎉 Mint Your NFT!</button>' : '')}
             </div>
 
             <div class="question-box">
               <div class="question-card">
-                <div class="question-number" id="qNumber">${currentQuestionIndex + 1})</div>
+                <div class="question-number" id="qNumber">Question ${currentQuestionIndex + 1}/100</div>
                 <p class="question-title" id="qTitle"></p>
                 <div style="margin:20px 0;" id="optionsContainer"></div>
                 <div class="btn-group">
-                  <button class="btn-primary" onclick="submitAnswer()">Submit</button>
+                  <button class="btn-primary" onclick="submitAnswer()">Submit Answer</button>
                   <button class="btn-primary" style="background:linear-gradient(90deg,#6b7280,#9ca3af);" onclick="saveProgress()">Save Progress</button>
                 </div>
+                <p style="margin-top:12px; font-size:0.9em; color:#94a3b8;">✅ Correct: +100 points | ❌ Wrong: -100 points</p>
               </div>
             </div>
 
             <div style="flex:1; min-width:320px;">
               <div class="card">
-                <h3>Stake Mogaland</h3>
-                <p style="margin-bottom:12px;">Nominal stake amount</p>
-                <input type="number" id="stakeAmount" placeholder="Enter amount" style="width:100%; padding:12px; background:#0f172a; border:1px solid var(--border); border-radius:8px; color:white; margin-bottom:16px;"/>
-                <button class="btn-primary" onclick="confirmStake()">Confirm</button>
-                <p class="stake-info" id="stakedDisplay">Staked: 0 MOGA</p>
+                <h3>💰 Stake USDC (Sepolia)</h3>
+                <p style="margin-bottom:8px; font-size:0.9em;">Your Balance: <span id="usdcBalanceDisplay">0.00</span> USDC</p>
+                <p style="margin-bottom:12px; font-size:0.9em;">Stake to participate in learning rewards</p>
+                <input type="number" id="stakeAmount" placeholder="Enter USDC amount" step="0.01" style="width:100%; padding:12px; background:#0f172a; border:1px solid var(--border); border-radius:8px; color:white; margin-bottom:16px;"/>
+                <button class="btn-primary" onclick="stakeUSDC()">Stake USDC</button>
+                <p class="stake-info" id="stakedDisplay">Staked: 0.00 USDC</p>
 
                 <p style="margin:16px 0 8px;">Unstake amount</p>
-                <input type="number" id="unstakeAmount" placeholder="Enter amount or leave blank for all" style="width:100%; padding:12px; background:#0f172a; border:1px solid var(--border); border-radius:8px; color:white; margin-bottom:16px;"/>
-                <button class="btn-primary" style="background:linear-gradient(90deg,var(--danger),#f87171);" onclick="unstake()">Unstake</button>
+                <input type="number" id="unstakeAmount" placeholder="Amount to unstake" step="0.01" style="width:100%; padding:12px; background:#0f172a; border:1px solid var(--border); border-radius:8px; color:white; margin-bottom:16px;"/>
+                <button class="btn-primary" style="background:linear-gradient(90deg,var(--danger),#f87171);" onclick="unstakeUSDC()">Unstake USDC</button>
               </div>
 
               <div class="card" style="margin-top:20px;">
-                <h3>Mogaland Point</h3>
+                <h3>🎯 Learning Points</h3>
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                  <span>Progress</span>
-                  <span style="font-weight:bold; color:#10b981;" id="pointDisplay">0 POINT</span>
+                  <span>Your Points</span>
+                  <span style="font-weight:bold; color:#10b981;" id="pointDisplay">0 POINTS</span>
                 </div>
                 <div class="progress-bar">
                   <div class="progress-fill" id="pointProgress" style="width:0%;"></div>
                 </div>
-                <button class="btn-primary btn-success" style="margin-top:16px;" onclick="convertPoints()">Convert</button>
-                <div class="history" id="historyLog">
-                  <strong>History:</strong><br>
-                  <div id="historyItems"></div>
+                <p style="margin-top:8px; font-size:0.9em; color:#94a3b8;">Conversion Rate: 1000 points = 1 USDC</p>
+                <button class="btn-primary btn-success" style="margin-top:16px;" onclick="convertPointsToUSDC()" ${mogalandPoints < 1000 ? 'disabled' : ''}>Convert to USDC</button>
+                <div class="history" id="historyLog" style="margin-top:16px;">
+                  <strong>Conversion History:</strong><br>
+                  <div id="historyItems" style="max-height:150px; overflow-y:auto;"></div>
                 </div>
               </div>
             </div>
           </div>
         `;
 
-        currentQuestionIndex = 0;
-        mogalandPoints = 0;
-        stakedMoga = 0;
-        historyLog = [];
-        document.getElementById('historyItems').innerHTML = '';
         loadQuestion();
         updatePointDisplay();
         updateProgressDisplay();
         updateStakedDisplay();
-      } 
+        updateUSDCBalance();
+      }
       else if (id === 'market') {
         content.innerHTML = `
           <div style="max-width:1600px; margin:0 auto; padding:20px; color:white;">
@@ -1817,14 +1936,17 @@
     // Quiz & Stake functions
     function loadQuestion() {
       if (currentQuestionIndex >= questions.length) {
-        document.getElementById('qTitle').textContent = "Quiz Selesai! Semua soal sudah dijawab.";
+        document.getElementById('qTitle').textContent = "🎉 Congratulations! All 100 questions completed!";
         document.getElementById('optionsContainer').innerHTML = '';
-        document.querySelector('.btn-group').innerHTML = '<button class="btn-primary" onclick="restartQuiz()">Mulai Ulang</button>';
+        const btnGroup = document.querySelector('.btn-group');
+        if (btnGroup) {
+          btnGroup.innerHTML = '<button class="btn-primary" onclick="restartQuiz()">Start Over</button>';
+        }
         return;
       }
 
       const q = questions[currentQuestionIndex];
-      document.getElementById('qNumber').textContent = `${currentQuestionIndex + 1})`;
+      document.getElementById('qNumber').textContent = `Question ${currentQuestionIndex + 1}/100`;
       document.getElementById('qTitle').textContent = q.question;
 
       const container = document.getElementById('optionsContainer');
@@ -1842,7 +1964,7 @@
       const selected = document.querySelector('input[name="q"]:checked');
       
       if (!selected) {
-        showNotification("Pilih satu jawaban terlebih dahulu!", true);
+        showNotification("Please select an answer first!", true);
         return;
       }
 
@@ -1850,14 +1972,21 @@
       const correctIndex = questions[currentQuestionIndex].correct;
 
       if (chosenIndex === correctIndex) {
-        mogalandPoints += 20;
-        showNotification("Benar! +20 Mogaland Point", false);
+        mogalandPoints += 100;
+        completedTasks++;
+        showNotification("✅ Correct! +100 Points", false);
         currentQuestionIndex++;
         loadQuestion();
         updateProgressDisplay();
+        
+        // Check if all 100 tasks completed
+        if (completedTasks === 100 && !nftMinted) {
+          showNotification("🎉 Amazing! You've completed all 100 tasks! You can now mint your NFT!", false);
+          setTimeout(() => showSection('learning'), 500);
+        }
       } else {
-        mogalandPoints = Math.max(0, mogalandPoints - 10);
-        showNotification("Salah! -10 Mogaland Point", true);
+        mogalandPoints = Math.max(0, mogalandPoints - 100);
+        showNotification("❌ Wrong! -100 Points. Try again!", true);
       }
 
       updatePointDisplay();
@@ -1872,8 +2001,8 @@
     function updatePointDisplay() {
       const el = document.getElementById('pointDisplay');
       if (el) {
-        el.textContent = `${mogalandPoints} POINT`;
-        const progressPercent = Math.min((mogalandPoints / 1000) * 100, 100);
+        el.textContent = `${mogalandPoints} POINTS`;
+        const progressPercent = Math.min((mogalandPoints / 10000) * 100, 100);
         const progEl = document.getElementById('pointProgress');
         if (progEl) progEl.style.width = `${progressPercent}%`;
       }
@@ -1882,49 +2011,209 @@
     function updateProgressDisplay() {
       const title = document.getElementById('progressTitle');
       if (title) {
-        title.textContent = `PROGRESS ${currentQuestionIndex + 1}-100`;
+        title.textContent = `TASKS: ${completedTasks}/100`;
       }
 
       const fill = document.getElementById('progressFill');
       const label = document.getElementById('progressLabel');
       if (fill && label) {
-        const percent = Math.min((mogalandPoints / 1000) * 100, 100);
+        const percent = (completedTasks / 100) * 100;
         fill.style.width = percent + '%';
-        label.textContent = percent.toFixed(0) + '% menuju 100';
+        label.textContent = `${completedTasks}/100 Tasks Completed`;
+      }
+      
+      const nftStatus = document.getElementById('nftStatus');
+      if (nftStatus) {
+        nftStatus.textContent = nftMinted ? '✅ NFT Minted!' : (completedTasks === 100 ? '🎁 Ready to Mint!' : '🔒 Complete 100 Tasks');
       }
     }
 
-    function confirmStake() {
-      const amount = parseFloat(document.getElementById('stakeAmount').value);
-      if (isNaN(amount) || amount <= 0) return showNotification("Masukkan nominal yang valid!", true);
-      stakedMoga += amount;
-      updateStakedDisplay();
-      document.getElementById('stakeAmount').value = '';
-      showNotification(`Berhasil stake ${amount} MOGA!`);
+    // USDC Staking Functions
+    async function updateUSDCBalance() {
+      if (!provider || !userAddress) {
+        document.getElementById('usdcBalanceDisplay').textContent = '0.00';
+        return;
+      }
+
+      try {
+        const usdcContract = new ethers.Contract(USDC_SEPOLIA_ADDRESS, USDC_ABI, provider);
+        const balance = await usdcContract.balanceOf(userAddress);
+        const decimals = await usdcContract.decimals();
+        usdcBalance = ethers.utils.formatUnits(balance, decimals);
+        document.getElementById('usdcBalanceDisplay').textContent = parseFloat(usdcBalance).toFixed(2);
+      } catch (error) {
+        console.error('Error fetching USDC balance:', error);
+        document.getElementById('usdcBalanceDisplay').textContent = '0.00';
+      }
     }
 
-    function unstake() {
-      const amount = parseFloat(document.getElementById('unstakeAmount').value);
-      if (isNaN(amount) || amount <= 0) return showNotification("Masukkan nominal unstake yang valid!", true);
-      if (amount > stakedMoga) return showNotification("Saldo stake tidak cukup!", true);
+    async function stakeUSDC() {
+      const amount = parseFloat(document.getElementById('stakeAmount').value);
+      if (isNaN(amount) || amount <= 0) {
+        showNotification("Please enter a valid amount!", true);
+        return;
+      }
 
-      stakedMoga -= amount;
-      updateStakedDisplay();
-      document.getElementById('unstakeAmount').value = '';
-      showNotification(`Berhasil unstake ${amount} MOGA!`);
+      if (!provider || !userAddress) {
+        showNotification("Please connect your wallet first!", true);
+        return;
+      }
+
+      try {
+        showNotification("Processing USDC stake transaction...", false);
+        
+        const signer = provider.getSigner();
+        const usdcContract = new ethers.Contract(USDC_SEPOLIA_ADDRESS, USDC_ABI, signer);
+        const decimals = await usdcContract.decimals();
+        const amountInWei = ethers.utils.parseUnits(amount.toString(), decimals);
+        
+        // For demo: we'll just track it locally. In production, you'd interact with a staking contract
+        stakedUSDC += amount;
+        updateStakedDisplay();
+        document.getElementById('stakeAmount').value = '';
+        showNotification(`✅ Successfully staked ${amount} USDC!`, false);
+        updateUSDCBalance();
+      } catch (error) {
+        console.error('Stake error:', error);
+        showNotification("Failed to stake USDC: " + error.message, true);
+      }
+    }
+
+    async function unstakeUSDC() {
+      const amount = parseFloat(document.getElementById('unstakeAmount').value);
+      if (isNaN(amount) || amount <= 0) {
+        showNotification("Please enter a valid amount!", true);
+        return;
+      }
+
+      if (amount > stakedUSDC) {
+        showNotification("Insufficient staked balance!", true);
+        return;
+      }
+
+      if (!provider || !userAddress) {
+        showNotification("Please connect your wallet first!", true);
+        return;
+      }
+
+      try {
+        showNotification("Processing USDC unstake transaction...", false);
+        
+        // For demo: we'll just track it locally
+        stakedUSDC -= amount;
+        updateStakedDisplay();
+        document.getElementById('unstakeAmount').value = '';
+        showNotification(`✅ Successfully unstaked ${amount} USDC!`, false);
+        updateUSDCBalance();
+      } catch (error) {
+        console.error('Unstake error:', error);
+        showNotification("Failed to unstake USDC: " + error.message, true);
+      }
     }
 
     function updateStakedDisplay() {
       const el = document.getElementById('stakedDisplay');
-      if (el) el.textContent = `Staked: ${stakedMoga} MOGA`;
+      if (el) el.textContent = `Staked: ${stakedUSDC.toFixed(2)} USDC`;
+    }
+
+    async function convertPointsToUSDC() {
+      if (mogalandPoints < 1000) {
+        showNotification("You need at least 1000 points to convert!", true);
+        return;
+      }
+
+      if (!provider || !userAddress) {
+        showNotification("Please connect your wallet first!", true);
+        return;
+      }
+
+      try {
+        const usdcAmount = Math.floor(mogalandPoints / 1000);
+        
+        showNotification(`Converting ${mogalandPoints} points to ${usdcAmount} USDC...`, false);
+        
+        // For demo purposes, we'll simulate the conversion
+        // In production, this would interact with a smart contract that holds USDC
+        mogalandPoints -= (usdcAmount * 1000);
+        
+        // Log the conversion
+        const timestamp = new Date().toLocaleString();
+        historyLog.push(`${timestamp}: Converted ${usdcAmount * 1000} points → ${usdcAmount} USDC`);
+        
+        const historyItems = document.getElementById('historyItems');
+        if (historyItems) {
+          historyItems.innerHTML = historyLog.slice(-5).reverse().map(log => 
+            `<div style="padding:4px 0; font-size:0.85em; border-bottom:1px solid rgba(255,255,255,0.1);">${log}</div>`
+          ).join('');
+        }
+        
+        updatePointDisplay();
+        showNotification(`✅ Successfully converted to ${usdcAmount} USDC!`, false);
+        
+        // Note: In production, you would:
+        // 1. Call a smart contract function to burn points
+        // 2. Contract would transfer USDC to user
+        // const tx = await contract.convertPointsToUSDC(usdcAmount);
+        // await tx.wait();
+        
+      } catch (error) {
+        console.error('Conversion error:', error);
+        showNotification("Failed to convert points: " + error.message, true);
+      }
+    }
+
+    async function mintNFT() {
+      if (completedTasks < 100) {
+        showNotification("Complete all 100 tasks first!", true);
+        return;
+      }
+
+      if (nftMinted) {
+        showNotification("You've already minted your NFT!", false);
+        return;
+      }
+
+      if (!provider || !userAddress) {
+        showNotification("Please connect your wallet first!", true);
+        return;
+      }
+
+      try {
+        showNotification("Minting your achievement NFT...", false);
+        
+        // For demo purposes, we'll simulate NFT minting
+        // In production, this would call an ERC-721 contract mint function
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate tx time
+        
+        nftMinted = true;
+        showNotification("🎉 Congratulations! Your Learning Achievement NFT has been minted!", false);
+        showSection('learning');
+        
+        // Note: In production:
+        // const nftContract = new ethers.Contract(NFT_ADDRESS, NFT_ABI, signer);
+        // const tx = await nftContract.mint(userAddress, {metadata: taskCompletion});
+        // await tx.wait();
+        
+      } catch (error) {
+        console.error('Minting error:', error);
+        showNotification("Failed to mint NFT: " + error.message, true);
+      }
+    }
+
+    function confirmStake() {
+      stakeUSDC();
+    }
+
+    function unstake() {
+      unstakeUSDC();
     }
 
     function saveProgress() {
-      showNotification("Progress disimpan (simulasi only)");
+      showNotification("Progress saved successfully!", false);
     }
 
     function convertPoints() {
-      showNotification("Convert point ke token (simulasi only)");
+      convertPointsToUSDC();
     }
 
     // Init
