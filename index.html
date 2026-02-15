@@ -9,6 +9,8 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@0.2.0/dist/chartjs-chart-financial.min.js"></script>
+  <!-- TradingView Widget -->
+  <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
 
   <style>
     :root {
@@ -1352,83 +1354,130 @@
 
         const assetsData = {
           crypto: [
-            {symbol: "CRYPTC", basePrice: 2299, volatility: 0.025},
-            {symbol: "RH-TWIKOh", basePrice: 2044, volatility: 0.018},
-            {symbol: "CRYPTSXCOND", basePrice: 2278, volatility: 0.032},
-            {symbol: "FBO-PO7EYME", basePrice: 2748, volatility: 0.022},
-            {symbol: "MIB-IIFE", basePrice: 2271, volatility: 0.015},
-            {symbol: "ERC-TOFTH", basePrice: 2341, volatility: 0.028},
-            {symbol: "PEATPH", basePrice: 2239, volatility: 0.035},
-            {symbol: "BRC-BENT", basePrice: 4923, volatility: 0.040},
-            {symbol: "CRYPTXCONG", basePrice: 3459, volatility: 0.020},
-            {symbol: "MASAMM", basePrice: 8499, volatility: 0.012}
+            {symbol: "BTCUSD", name: "Bitcoin", tvSymbol: "BINANCE:BTCUSDT", basePrice: 45000, volatility: 0.025},
+            {symbol: "ETHUSD", name: "Ethereum", tvSymbol: "BINANCE:ETHUSDT", basePrice: 2500, volatility: 0.030},
+            {symbol: "BNBUSD", name: "BNB", tvSymbol: "BINANCE:BNBUSDT", basePrice: 320, volatility: 0.028},
+            {symbol: "SOLUSD", name: "Solana", tvSymbol: "BINANCE:SOLUSDT", basePrice: 100, volatility: 0.040},
+            {symbol: "ADAUSD", name: "Cardano", tvSymbol: "BINANCE:ADAUSDT", basePrice: 0.50, volatility: 0.035},
+            {symbol: "XRPUSD", name: "Ripple", tvSymbol: "BINANCE:XRPUSDT", basePrice: 0.60, volatility: 0.032},
+            {symbol: "DOTUSD", name: "Polkadot", tvSymbol: "BINANCE:DOTUSDT", basePrice: 7.50, volatility: 0.038},
+            {symbol: "MATICUSD", name: "Polygon", tvSymbol: "BINANCE:MATICUSDT", basePrice: 0.85, volatility: 0.042},
+            {symbol: "LINKUSD", name: "Chainlink", tvSymbol: "BINANCE:LINKUSDT", basePrice: 15.00, volatility: 0.036},
+            {symbol: "UNIUSD", name: "Uniswap", tvSymbol: "BINANCE:UNIUSDT", basePrice: 6.50, volatility: 0.040}
           ],
           stocks: [
-            {symbol: "AAPL-MOCK", basePrice: 220, volatility: 0.008},
-            {symbol: "TSLA-X", basePrice: 350, volatility: 0.045},
-            {symbol: "NVDA-IO", basePrice: 140, volatility: 0.030}
+            {symbol: "AAPL", name: "Apple Inc.", tvSymbol: "NASDAQ:AAPL", basePrice: 190, volatility: 0.015},
+            {symbol: "TSLA", name: "Tesla Inc.", tvSymbol: "NASDAQ:TSLA", basePrice: 250, volatility: 0.045},
+            {symbol: "GOOGL", name: "Alphabet", tvSymbol: "NASDAQ:GOOGL", basePrice: 140, volatility: 0.020},
+            {symbol: "MSFT", name: "Microsoft", tvSymbol: "NASDAQ:MSFT", basePrice: 380, volatility: 0.018},
+            {symbol: "AMZN", name: "Amazon", tvSymbol: "NASDAQ:AMZN", basePrice: 155, volatility: 0.025},
+            {symbol: "NVDA", name: "NVIDIA", tvSymbol: "NASDAQ:NVDA", basePrice: 500, volatility: 0.040},
+            {symbol: "META", name: "Meta Platforms", tvSymbol: "NASDAQ:META", basePrice: 350, volatility: 0.030}
           ],
           commodities: [
-            {symbol: "GOLD-RWA", basePrice: 2650, volatility: 0.010},
-            {symbol: "OIL-BARREL", basePrice: 78, volatility: 0.025}
+            {symbol: "GOLD", name: "Gold", tvSymbol: "TVC:GOLD", basePrice: 2050, volatility: 0.010},
+            {symbol: "SILVER", name: "Silver", tvSymbol: "TVC:SILVER", basePrice: 24, volatility: 0.020},
+            {symbol: "OIL", name: "Crude Oil", tvSymbol: "TVC:USOIL", basePrice: 75, volatility: 0.025},
+            {symbol: "NATGAS", name: "Natural Gas", tvSymbol: "TVC:NATURALGAS", basePrice: 2.80, volatility: 0.035}
           ],
           forex: [
-            {symbol: "EURUSD", basePrice: 1.085, volatility: 0.005},
-            {symbol: "USDJPY", basePrice: 152.3, volatility: 0.007}
+            {symbol: "EURUSD", name: "EUR/USD", tvSymbol: "FX:EURUSD", basePrice: 1.085, volatility: 0.005},
+            {symbol: "GBPUSD", name: "GBP/USD", tvSymbol: "FX:GBPUSD", basePrice: 1.270, volatility: 0.006},
+            {symbol: "USDJPY", name: "USD/JPY", tvSymbol: "FX:USDJPY", basePrice: 148.5, volatility: 0.007},
+            {symbol: "AUDUSD", name: "AUD/USD", tvSymbol: "FX:AUDUSD", basePrice: 0.660, volatility: 0.008}
           ],
           sports: [
-            {symbol: "Real Madrid", type: "football", strength: 0.85, nextMatch: "vs Barcelona", recentForm: [
+            {symbol: "Real Madrid", type: "football", teamId: "133602", league: "La Liga", strength: 0.85, nextMatch: "vs Barcelona", recentForm: [
               "Feb 5, 2026: W 3-1 vs Barcelona (La Liga)",
               "Jan 29, 2026: W 2-0 vs Atletico Madrid (Copa)",
-              "Jan 22, 2026: L 1-2 vs Bayern Munich (UCL)",
-              "Jan 15, 2026: W 4-0 vs PSG (Friendly)",
-              "Jan 8, 2026: D 1-1 vs Man City (Club World Cup)",
-              "Jan 1, 2026: W 3-2 vs Liverpool (Supercup)"
+              "Jan 22, 2026: L 1-2 vs Bayern Munich (UCL)"
             ]},
-            {symbol: "Barcelona", type: "football", strength: 0.82, nextMatch: "vs Real Madrid", recentForm: [
+            {symbol: "Barcelona", type: "football", teamId: "133604", league: "La Liga", strength: 0.82, nextMatch: "vs Real Madrid", recentForm: [
               "Feb 4, 2026: W 2-1 vs Atletico Madrid",
               "Jan 28, 2026: L 0-2 vs Bayern Munich",
-              "Jan 21, 2026: W 3-0 vs Sevilla",
-              "Jan 14, 2026: D 1-1 vs PSG",
-              "Jan 7, 2026: W 2-0 vs Man United"
+              "Jan 21, 2026: W 3-0 vs Sevilla"
             ]},
-            {symbol: "Man City", type: "football", strength: 0.88, nextMatch: "vs Liverpool", recentForm: [
+            {symbol: "Man City", type: "football", teamId: "133613", league: "Premier League", strength: 0.88, nextMatch: "vs Liverpool", recentForm: [
               "Feb 5, 2026: W 4-1 vs Chelsea",
               "Jan 29, 2026: W 3-0 vs Arsenal",
-              "Jan 22, 2026: D 2-2 vs Liverpool",
-              "Jan 15, 2026: W 1-0 vs Real Madrid",
-              "Jan 8, 2026: W 3-1 vs Bayern Munich"
+              "Jan 22, 2026: D 2-2 vs Liverpool"
             ]},
-            {symbol: "Liverpool", type: "football", strength: 0.83, nextMatch: "vs Man City", recentForm: [
+            {symbol: "Liverpool", type: "football", teamId: "133602", league: "Premier League", strength: 0.83, nextMatch: "vs Man City", recentForm: [
               "Feb 4, 2026: W 3-2 vs Chelsea",
               "Jan 28, 2026: L 1-3 vs Arsenal",
-              "Jan 21, 2026: D 2-2 vs Man City",
-              "Jan 14, 2026: W 2-1 vs Real Madrid",
-              "Jan 7, 2026: W 4-0 vs PSG"
+              "Jan 21, 2026: D 2-2 vs Man City"
             ]},
-            {symbol: "Lakers", type: "basketball", strength: 0.78, nextMatch: "vs Warriors", recentForm: [
+            {symbol: "Lakers", type: "basketball", teamId: "134864", league: "NBA", strength: 0.78, nextMatch: "vs Warriors", recentForm: [
               "Feb 5, 2026: W 112-108 vs Warriors",
               "Feb 1, 2026: L 98-105 vs Celtics",
-              "Jan 28, 2026: W 120-115 vs Nets",
-              "Jan 24, 2026: W 108-102 vs Heat",
-              "Jan 20, 2026: L 95-110 vs Bucks"
+              "Jan 28, 2026: W 120-115 vs Nets"
             ]},
-            {symbol: "Warriors", type: "basketball", strength: 0.81, nextMatch: "vs Lakers", recentForm: [
+            {symbol: "Warriors", type: "basketball", teamId: "134865", league: "NBA", strength: 0.81, nextMatch: "vs Lakers", recentForm: [
               "Feb 5, 2026: L 108-112 vs Lakers",
               "Feb 2, 2026: W 118-110 vs Celtics",
-              "Jan 29, 2026: W 125-120 vs Nets",
-              "Jan 25, 2026: W 115-108 vs Suns",
-              "Jan 21, 2026: W 122-115 vs Mavs"
+              "Jan 29, 2026: W 125-120 vs Nets"
             ]},
-            {symbol: "Celtics", type: "basketball", strength: 0.85, nextMatch: "vs Bucks", recentForm: [
+            {symbol: "Celtics", type: "basketball", teamId: "134859", league: "NBA", strength: 0.85, nextMatch: "vs Bucks", recentForm: [
               "Feb 4, 2026: W 118-105 vs Nets",
               "Feb 1, 2026: W 105-98 vs Lakers",
-              "Jan 27, 2026: W 112-108 vs Heat",
-              "Jan 23, 2026: L 102-110 vs Bucks",
-              "Jan 19, 2026: W 120-115 vs Sixers"
+              "Jan 27, 2026: W 112-108 vs Heat"
             ]}
           ]
         };
+
+        // Fetch real sports data from TheSportsDB API
+        async function fetchSportsData(team) {
+          if (!team.teamId) return;
+          
+          try {
+            const API_KEY = '3'; // Free test key
+            const eventsUrl = `https://www.thesportsdb.com/api/v1/json/${API_KEY}/eventslast.php?id=${team.teamId}`;
+            const nextUrl = `https://www.thesportsdb.com/api/v1/json/${API_KEY}/eventsnext.php?id=${team.teamId}`;
+            
+            const [eventsRes, nextRes] = await Promise.all([
+              fetch(eventsUrl).catch(() => null),
+              fetch(nextUrl).catch(() => null)
+            ]);
+            
+            if (eventsRes && eventsRes.ok) {
+              const eventsData = await eventsRes.json();
+              if (eventsData.results) {
+                team.recentForm = eventsData.results.slice(0, 6).map(event => {
+                  const date = new Date(event.dateEvent).toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'});
+                  const isHome = event.idHomeTeam === team.teamId;
+                  const opponent = isHome ? event.strAwayTeam : event.strHomeTeam;
+                  const score = isHome ? `${event.intHomeScore}-${event.intAwayScore}` : `${event.intAwayScore}-${event.intHomeScore}`;
+                  
+                  let result = 'D';
+                  if (event.intHomeScore && event.intAwayScore) {
+                    if (isHome) {
+                      result = parseInt(event.intHomeScore) > parseInt(event.intAwayScore) ? 'W' : 
+                               parseInt(event.intHomeScore) < parseInt(event.intAwayScore) ? 'L' : 'D';
+                    } else {
+                      result = parseInt(event.intAwayScore) > parseInt(event.intHomeScore) ? 'W' : 
+                               parseInt(event.intAwayScore) < parseInt(event.intHomeScore) ? 'L' : 'D';
+                    }
+                  }
+                  
+                  return `${date}: ${result} ${score} vs ${opponent}`;
+                });
+              }
+            }
+            
+            if (nextRes && nextRes.ok) {
+              const nextData = await nextRes.json();
+              if (nextData.events && nextData.events.length > 0) {
+                const nextEvent = nextData.events[0];
+                const isHome = nextEvent.idHomeTeam === team.teamId;
+                const opponent = isHome ? nextEvent.strAwayTeam : nextEvent.strHomeTeam;
+                const date = new Date(nextEvent.dateEvent).toLocaleDateString('en-US', {month: 'short', day: 'numeric'});
+                team.nextMatch = `${date} vs ${opponent}`;
+              }
+            }
+          } catch (error) {
+            console.log('Sports API error:', error);
+          }
+        }
 
         let currentTab = 'crypto';
         let selectedAsset = null;
@@ -1545,7 +1594,7 @@
           if (!container || !titleEl) return;
 
           container.innerHTML = '';
-          titleEl.textContent = currentTab === 'sports' ? 'Football & Basketball Clubs' : 'Assets';
+          titleEl.textContent = currentTab === 'sports' ? 'Football & Basketball Teams' : 'Assets';
 
           const tabAssets = assetsData[currentTab] || [];
           tabAssets.forEach(asset => {
@@ -1554,7 +1603,12 @@
             div.style.background = 'rgba(13,110,253,0.1)';
             div.style.borderRadius = '8px';
             div.style.cursor = 'pointer';
-            div.innerHTML = `<strong>${asset.symbol}${asset.type ? ` (${asset.type})` : ''}</strong>`;
+            div.style.marginBottom = '6px';
+            
+            const displayName = asset.name || asset.symbol;
+            const subtitle = asset.type ? ` (${asset.type})` : asset.league ? ` - ${asset.league}` : '';
+            
+            div.innerHTML = `<strong>${displayName}</strong><span style="opacity:0.7; font-size:0.85em;">${subtitle}</span>`;
             div.onclick = currentTab === 'sports' ? () => showClubHistory(asset) : () => selectAsset(asset);
             container.appendChild(div);
           });
@@ -1572,29 +1626,50 @@
           const view = document.getElementById('clubHistoryView');
           view.style.display = 'block';
           
-          // Calculate win rate from recent form
-          const wins = asset.recentForm.filter(r => r.includes(': W ')).length;
-          const winRate = ((wins / asset.recentForm.length) * 100).toFixed(0);
-          
+          // Show loading state
           view.innerHTML = `
-            <div style="background:rgba(16,185,129,0.1); padding:12px; border-radius:8px; margin-bottom:16px;">
-              <strong>📊 Team Stats:</strong><br>
-              Strength: ${(asset.strength * 100).toFixed(0)}% | Win Rate: ${winRate}%<br>
-              <strong>Next Match: ${asset.nextMatch}</strong>
-            </div>
-            <strong>Recent Results:</strong><br><br>
-            ${asset.recentForm.map(r => {
-              const result = r.match(/: ([WLD]) /)?.[1];
-              const color = result === 'W' ? '#10b981' : result === 'L' ? '#ef4444' : '#fbbf24';
-              return `<div style="padding:6px; margin:4px 0; background:rgba(255,255,255,0.05); border-left:3px solid ${color}; border-radius:4px;">${r}</div>`;
-            }).join('')}
-            <br>
-            <div style="background:rgba(59,130,246,0.1); padding:12px; border-radius:8px; margin-top:12px;">
-              <strong>💰 Place Your Bet:</strong><br>
-              Predict if <strong>${asset.symbol}</strong> will WIN or LOSE their next match!<br>
-              Use the controls on the right to place your bet with leverage.
+            <div style="text-align:center; padding:20px;">
+              <div style="font-size:1.2em; margin-bottom:10px;">📊 Loading real match data...</div>
+              <div style="opacity:0.6;">Fetching from TheSportsDB API</div>
             </div>
           `;
+          
+          // Fetch real sports data
+          fetchSportsData(asset).then(() => {
+            // Calculate win rate from recent form
+            const wins = asset.recentForm.filter(r => r.includes(': W ')).length;
+            const winRate = asset.recentForm.length > 0 ? ((wins / asset.recentForm.length) * 100).toFixed(0) : '0';
+            
+            view.innerHTML = `
+              <div style="background:rgba(16,185,129,0.1); padding:12px; border-radius:8px; margin-bottom:16px;">
+                <strong>📊 Team Stats:</strong><br>
+                League: ${asset.league}<br>
+                Strength: ${(asset.strength * 100).toFixed(0)}% | Win Rate: ${winRate}%<br>
+                <strong>🔜 Next Match: ${asset.nextMatch}</strong>
+              </div>
+              <strong>📋 Recent Results:</strong><br><br>
+              ${asset.recentForm.length > 0 ? asset.recentForm.map(r => {
+                const result = r.match(/: ([WLD]) /)?.[1];
+                const color = result === 'W' ? '#10b981' : result === 'L' ? '#ef4444' : '#fbbf24';
+                return `<div style="padding:6px; margin:4px 0; background:rgba(255,255,255,0.05); border-left:3px solid ${color}; border-radius:4px;">${r}</div>`;
+              }).join('') : '<div style="opacity:0.6;">No recent matches available</div>'}
+              <br>
+              <div style="background:rgba(59,130,246,0.1); padding:12px; border-radius:8px; margin-top:12px;">
+                <strong>💰 Place Your Bet with Sepolia USDC:</strong><br>
+                Predict if <strong>${asset.symbol}</strong> will WIN or LOSE their next match!<br>
+                Use the controls on the right to place your bet with leverage.
+              </div>
+            `;
+          }).catch(error => {
+            console.error('Error fetching sports data:', error);
+            view.innerHTML = `
+              <div style="background:rgba(239,68,68,0.1); padding:12px; border-radius:8px; text-align:center;">
+                <strong>⚠️ Unable to fetch real-time data</strong><br>
+                Using cached match history<br><br>
+                ${asset.recentForm.map(r => `<div style="padding:4px;">${r}</div>`).join('')}
+              </div>
+            `;
+          });
           
           updateTradingBalance();
         }
@@ -1793,9 +1868,52 @@
         }
 
         function initChart(asset) {
-          const canvas = document.getElementById('priceChart');
-          if (!canvas) return;
+          const container = document.getElementById('priceChart');
+          if (!container) return;
 
+          // Clear previous content
+          container.innerHTML = '';
+          container.style.display = 'block';
+
+          // Use TradingView widget if tvSymbol is available
+          if (asset.tvSymbol && typeof TradingView !== 'undefined') {
+            try {
+              // Create TradingView Advanced Chart Widget
+              new TradingView.widget({
+                "width": container.offsetWidth || 700,
+                "height": 420,
+                "symbol": asset.tvSymbol,
+                "interval": "15",
+                "timezone": "Etc/UTC",
+                "theme": "dark",
+                "style": "1",
+                "locale": "en",
+                "toolbar_bg": "#0a2540",
+                "enable_publishing": false,
+                "hide_side_toolbar": false,
+                "allow_symbol_change": false,
+                "container_id": "priceChart",
+                "backgroundColor": "#0a2540",
+                "gridColor": "rgba(255, 255, 255, 0.06)",
+                "hide_legend": false,
+                "save_image": false
+              });
+              
+              // Fetch current price from TradingView
+              fetchTradingViewPrice(asset);
+              
+              return;
+            } catch (e) {
+              console.log('TradingView widget error:', e);
+            }
+          }
+
+          // Fallback: Use canvas-based chart
+          const canvas = document.createElement('canvas');
+          canvas.id = 'priceChart';
+          canvas.height = 420;
+          container.appendChild(canvas);
+          
           const ctx = canvas.getContext('2d');
           if (!ctx) return;
 
@@ -1803,7 +1921,7 @@
 
           priceHistory = generateOHLC(asset.basePrice);
 
-          // Try to use Chart.js if available
+          // Try Chart.js if available
           if (typeof Chart !== 'undefined') {
             try {
               chart = new Chart(ctx, {
@@ -1830,12 +1948,37 @@
                 }
               });
             } catch (e) {
-              console.log('Chart.js not fully loaded, using simple chart');
+              console.log('Chart.js error, using simple chart');
               drawSimpleChart(canvas, ctx, priceHistory, asset);
             }
           } else {
-            // Fallback: draw simple line chart
             drawSimpleChart(canvas, ctx, priceHistory, asset);
+          }
+        }
+
+        // Fetch real-time price from a public API
+        async function fetchTradingViewPrice(asset) {
+          try {
+            // Use a free crypto price API as an example
+            if (asset.symbol.includes('USD') && currentTab === 'crypto') {
+              const symbol = asset.symbol.replace('USD', '').toLowerCase();
+              const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${symbol === 'btc' ? 'bitcoin' : symbol === 'eth' ? 'ethereum' : asset.symbol.toLowerCase()}&vs_currencies=usd`);
+              if (response.ok) {
+                const data = await response.json();
+                const coinId = symbol === 'btc' ? 'bitcoin' : symbol === 'eth' ? 'ethereum' : Object.keys(data)[0];
+                if (data[coinId]) {
+                  const price = data[coinId].usd;
+                  document.getElementById('currentPrice').textContent = `$${price.toLocaleString()}`;
+                  return;
+                }
+              }
+            }
+            
+            // Fallback to base price
+            document.getElementById('currentPrice').textContent = `$${asset.basePrice.toLocaleString()}`;
+          } catch (error) {
+            console.log('Price fetch error:', error);
+            document.getElementById('currentPrice').textContent = `$${asset.basePrice.toLocaleString()}`;
           }
         }
 
