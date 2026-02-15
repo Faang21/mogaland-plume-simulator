@@ -93,9 +93,65 @@
       border-radius: 30px;
       cursor: pointer;
       transition: all 0.3s;
+      position: relative;
     }
     .top-btn:hover { background: var(--primary); transform: scale(1.05); }
     .top-btn.connected { background: var(--success); border-color: var(--success); }
+    
+    .wallet-dropdown {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      margin-top: 8px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      min-width: 280px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+      z-index: 1000;
+      display: none;
+      padding: 16px;
+    }
+    .wallet-dropdown.show { display: block; }
+    .wallet-address {
+      font-family: monospace;
+      font-size: 0.85rem;
+      background: rgba(13,110,253,0.1);
+      padding: 10px;
+      border-radius: 8px;
+      word-break: break-all;
+      margin-bottom: 12px;
+      color: #60a5fa;
+    }
+    .wallet-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .wallet-action-btn {
+      background: rgba(13,110,253,0.2);
+      color: white;
+      border: 1px solid var(--primary);
+      padding: 10px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-size: 0.95rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .wallet-action-btn:hover {
+      background: var(--primary);
+      transform: translateX(4px);
+    }
+    .wallet-action-btn.disconnect {
+      background: rgba(239,68,68,0.2);
+      border-color: var(--danger);
+    }
+    .wallet-action-btn.disconnect:hover {
+      background: var(--danger);
+    }
     .nav-bar {
       position: fixed;
       bottom: 20px;
@@ -628,7 +684,23 @@
   <!-- Main Dashboard -->
   <div class="main-app hidden" id="mainApp">
     <header>
-      <button class="top-btn" id="walletBtn">Connected Wallet</button>
+      <div style="position: relative;">
+        <button class="top-btn" id="walletBtn" onclick="toggleWalletDropdown()">Connect Wallet</button>
+        <div class="wallet-dropdown" id="walletDropdown">
+          <div class="wallet-address" id="walletAddressDisplay">Not Connected</div>
+          <div class="wallet-actions">
+            <button class="wallet-action-btn" onclick="copyWalletAddress()">
+              📋 Copy Address
+            </button>
+            <button class="wallet-action-btn" onclick="viewOnExplorer()">
+              🔍 View on Explorer
+            </button>
+            <button class="wallet-action-btn disconnect" onclick="disconnectWallet()">
+              🔌 Disconnect Wallet
+            </button>
+          </div>
+        </div>
+      </div>
       <button class="top-btn" onclick="showProfile()">Profile</button>
     </header>
 
@@ -955,9 +1027,18 @@
         const balanceWei = await provider.getBalance(userAddress);
         const balanceEth = ethers.utils.formatEther(balanceWei);
         
-        // Update UI
-        document.getElementById('walletBtn').textContent = `Connected: ${userAddress.slice(0,6)}...${userAddress.slice(-4)}`;
-        document.getElementById('walletBtn').classList.add('connected');
+        // Update UI - wallet button
+        const walletBtn = document.getElementById('walletBtn');
+        if (walletBtn) {
+          walletBtn.textContent = `${userAddress.slice(0,6)}...${userAddress.slice(-4)}`;
+          walletBtn.classList.add('connected');
+        }
+        
+        // Update wallet dropdown address display
+        const addressDisplay = document.getElementById('walletAddressDisplay');
+        if (addressDisplay) {
+          addressDisplay.textContent = userAddress;
+        }
         
         // Update profile balance displays
         const profileTotal = document.querySelector('.profile-slide-total');
@@ -1174,7 +1255,94 @@
         walletBtn.textContent = 'Connect Wallet';
         walletBtn.classList.remove('connected');
       }
+      
+      // Hide wallet dropdown
+      const dropdown = document.getElementById('walletDropdown');
+      if (dropdown) {
+        dropdown.classList.remove('show');
+      }
     }
+
+    // Wallet dropdown functions
+    function toggleWalletDropdown() {
+      const dropdown = document.getElementById('walletDropdown');
+      if (!dropdown) return;
+      
+      // If not connected, show wallet options instead
+      if (!userAddress) {
+        showWalletOptions();
+        return;
+      }
+      
+      // Update address display
+      const addressDisplay = document.getElementById('walletAddressDisplay');
+      if (addressDisplay && userAddress) {
+        addressDisplay.textContent = userAddress;
+      }
+      
+      dropdown.classList.toggle('show');
+    }
+
+    function copyWalletAddress() {
+      if (!userAddress) return;
+      
+      navigator.clipboard.writeText(userAddress).then(() => {
+        showNotification('Address copied to clipboard!', false);
+      }).catch(() => {
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = userAddress;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        showNotification('Address copied to clipboard!', false);
+      });
+    }
+
+    function viewOnExplorer() {
+      if (!userAddress) return;
+      
+      const explorerUrl = `${SEPOLIA_EXPLORER}/address/${userAddress}`;
+      window.open(explorerUrl, '_blank');
+      showNotification('Opening Sepolia Explorer...', false);
+    }
+
+    function disconnectWallet() {
+      if (confirm('Are you sure you want to disconnect your wallet?')) {
+        // Clear wallet connection
+        userAddress = null;
+        provider = null;
+        
+        // Update UI
+        const walletBtn = document.getElementById('walletBtn');
+        if (walletBtn) {
+          walletBtn.textContent = 'Connect Wallet';
+          walletBtn.classList.remove('connected');
+        }
+        
+        // Hide dropdown
+        const dropdown = document.getElementById('walletDropdown');
+        if (dropdown) {
+          dropdown.classList.remove('show');
+        }
+        
+        showNotification('Wallet disconnected', false);
+      }
+    }
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(event) {
+      const dropdown = document.getElementById('walletDropdown');
+      const walletBtn = document.getElementById('walletBtn');
+      
+      if (dropdown && walletBtn) {
+        if (!dropdown.contains(event.target) && !walletBtn.contains(event.target)) {
+          dropdown.classList.remove('show');
+        }
+      }
+    });
+
 
     function openDepositModal() {
       if (!userAddress) {
@@ -3019,9 +3187,12 @@
           <p style="text-align:center; font-size:1.2em; color:#94a3b8; margin-bottom:16px;">
             Stake your Mogaland NFTs and earn USDC Sepolia rewards
           </p>
+          <p style="text-align:center; font-size:0.9em; color:#64748b; margin-bottom:8px;">
+            NFT Contract (Sepolia): <span style="color:#60a5fa; font-family:monospace;">${NFT_CONTRACT_ADDRESS}</span> | 
+            <a href="${SEPOLIA_EXPLORER}/address/${NFT_CONTRACT_ADDRESS}" target="_blank" style="color:#60a5fa;">View on Explorer</a>
+          </p>
           <p style="text-align:center; font-size:0.9em; color:#64748b; margin-bottom:32px;">
-            NFT Contract: ${NFT_CONTRACT_ADDRESS.slice(0,6)}...${NFT_CONTRACT_ADDRESS.slice(-4)} | 
-            <a href="https://testnets.opensea.io/assets/sepolia/${NFT_CONTRACT_ADDRESS}" target="_blank" style="color:#60a5fa;">View on OpenSea</a>
+            <a href="https://testnets.opensea.io/assets/sepolia/${NFT_CONTRACT_ADDRESS}" target="_blank" style="color:#60a5fa;">📦 View Collection on OpenSea</a>
           </p>
 
           <div class="stats-grid">
