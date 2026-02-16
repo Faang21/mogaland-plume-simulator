@@ -684,22 +684,88 @@
       cursor: pointer;
       margin-top: 20px;
     }
+    
+    /* Ethers Loading Indicator */
+    #ethersLoadingIndicator {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(135deg, #0d6efd 0%, #0a2540 100%);
+      color: white;
+      padding: 8px 16px;
+      text-align: center;
+      z-index: 9999;
+      font-size: 0.9em;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      display: none;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+    
+    @keyframes slideIn {
+      from {
+        transform: translateX(-50%) translateY(-20px);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(-50%) translateY(0);
+        opacity: 1;
+      }
+    }
+    
+    .ethers-error-overlay {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #dc3545;
+      color: white;
+      padding: 24px;
+      border-radius: 12px;
+      z-index: 10000;
+      max-width: 540px;
+      text-align: center;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      border: 2px solid #ff4444;
+      animation: slideIn 0.3s ease-out;
+    }
+    
+    .ethers-error-overlay button {
+      background: white;
+      color: #dc3545;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 1em;
+      transition: all 0.2s;
+      margin: 0 5px;
+    }
+    
+    .ethers-error-overlay button:hover {
+      transform: scale(1.05);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    
+    .ethers-error-overlay button.secondary {
+      background: #f8f9fa;
+      color: #333;
+    }
   </style>
 </head>
 <body>
   
   <!-- Loading Indicator for Ethers Library -->
-  <div id="ethersLoadingIndicator" style="position:fixed;top:0;left:0;right:0;background:linear-gradient(135deg, #0d6efd 0%, #0a2540 100%);color:white;padding:8px 16px;text-align:center;z-index:9999;font-size:0.9em;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:none;">
+  <div id="ethersLoadingIndicator">
     <span style="display:inline-block;margin-right:8px;">⏳</span>
     <span id="loadingText">Loading Web3 libraries...</span>
     <span style="display:inline-block;margin-left:8px;animation:pulse 1.5s ease-in-out infinite;">●</span>
   </div>
-  <style>
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.3; }
-    }
-  </style>
 
   <!-- Login Page -->
   <div class="login-container" id="loginPage">
@@ -956,8 +1022,11 @@
     let ethersLoadAttempts = 0;
     
     function initializeApp() {
-      // Show loading indicator
+      // Cache loading indicator reference to avoid redundant DOM queries
       const loadingIndicator = document.getElementById('ethersLoadingIndicator');
+      const loadingText = document.getElementById('loadingText');
+      
+      // Show loading indicator on first attempt
       if (loadingIndicator && ethersLoadAttempts === 0) {
         loadingIndicator.style.display = 'block';
       }
@@ -965,12 +1034,9 @@
       if (typeof ethers === 'undefined' && !window.ethersLoaded) {
         ethersLoadAttempts++;
         
-        // Update loading text
-        if (loadingIndicator && ethersLoadAttempts % 10 === 0) {
-          const loadingText = document.getElementById('loadingText');
-          if (loadingText) {
-            loadingText.textContent = 'Loading Web3 libraries... (Attempt ' + Math.floor(ethersLoadAttempts / 10) + ')';
-          }
+        // Update loading text periodically
+        if (loadingText && ethersLoadAttempts % 10 === 0) {
+          loadingText.textContent = 'Loading Web3 libraries... (Attempt ' + Math.floor(ethersLoadAttempts / 10) + ')';
         }
         
         // Check if all CDNs have failed
@@ -982,16 +1048,57 @@
             loadingIndicator.style.display = 'none';
           }
           
-          // Show error in a non-blocking, accessible way
+          // Create error overlay using DOM methods for better security
           const errorDiv = document.createElement('div');
-          errorDiv.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#dc3545;color:white;padding:24px;border-radius:12px;z-index:10000;max-width:540px;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,0.4);border:2px solid #ff4444;animation:slideIn 0.3s ease-out;';
+          errorDiv.className = 'ethers-error-overlay';
           errorDiv.setAttribute('role', 'alert');
-          errorDiv.innerHTML = '<div style="font-size:2em;margin-bottom:12px;">⚠️</div><strong style="font-size:1.3em;display:block;margin-bottom:12px;">Connection Failed - ethers not defined</strong><p style="margin-bottom:16px;line-height:1.5;">Failed to load required libraries. This prevents wallet connections (MetaMask, TrustWallet, OKX).</p><p style="font-size:0.9em;opacity:0.9;margin-bottom:12px;">Please try:</p><ul style="text-align:left;margin:0 auto 16px;display:inline-block;font-size:0.9em;"><li>✓ Check your internet connection</li><li>✓ Disable ad blockers/content blockers for this site</li><li>✓ Try a different browser or device</li><li>✓ Check firewall/proxy settings</li></ul><div style="display:flex;gap:10px;justify-content:center;"><button onclick="location.reload(true)" style="background:white;color:#dc3545;border:none;padding:12px 24px;border-radius:6px;font-weight:bold;cursor:pointer;font-size:1em;transition:all 0.2s;">🔄 Hard Refresh</button><button onclick="location.href=location.href" style="background:#f8f9fa;color:#333;border:none;padding:12px 24px;border-radius:6px;font-weight:bold;cursor:pointer;font-size:1em;transition:all 0.2s;">↻ Reload</button></div>';
           
-          // Add animation style
-          const style = document.createElement('style');
-          style.textContent = '@keyframes slideIn { from { transform: translateX(-50%) translateY(-20px); opacity: 0; } to { transform: translateX(-50%) translateY(0); opacity: 1; } }';
-          document.head.appendChild(style);
+          // Create error content
+          const icon = document.createElement('div');
+          icon.style.cssText = 'font-size:2em;margin-bottom:12px;';
+          icon.textContent = '⚠️';
+          
+          const title = document.createElement('strong');
+          title.style.cssText = 'font-size:1.3em;display:block;margin-bottom:12px;';
+          title.textContent = 'Connection Failed - ethers not defined';
+          
+          const description = document.createElement('p');
+          description.style.cssText = 'margin-bottom:16px;line-height:1.5;';
+          description.textContent = 'Failed to load required libraries. This prevents wallet connections (MetaMask, TrustWallet, OKX).';
+          
+          const tryText = document.createElement('p');
+          tryText.style.cssText = 'font-size:0.9em;opacity:0.9;margin-bottom:12px;';
+          tryText.textContent = 'Please try:';
+          
+          const suggestions = document.createElement('ul');
+          suggestions.style.cssText = 'text-align:left;margin:0 auto 16px;display:inline-block;font-size:0.9em;';
+          suggestions.innerHTML = '<li>✓ Check your internet connection</li><li>✓ Disable ad blockers/content blockers for this site</li><li>✓ Try a different browser or device</li><li>✓ Check firewall/proxy settings</li>';
+          
+          const buttonContainer = document.createElement('div');
+          buttonContainer.style.cssText = 'display:flex;gap:10px;justify-content:center;';
+          
+          const hardRefreshBtn = document.createElement('button');
+          hardRefreshBtn.textContent = '🔄 Hard Refresh';
+          hardRefreshBtn.addEventListener('click', function() {
+            location.reload(true);
+          });
+          
+          const reloadBtn = document.createElement('button');
+          reloadBtn.className = 'secondary';
+          reloadBtn.textContent = '↻ Reload';
+          reloadBtn.addEventListener('click', function() {
+            location.href = location.href;
+          });
+          
+          buttonContainer.appendChild(hardRefreshBtn);
+          buttonContainer.appendChild(reloadBtn);
+          
+          errorDiv.appendChild(icon);
+          errorDiv.appendChild(title);
+          errorDiv.appendChild(description);
+          errorDiv.appendChild(tryText);
+          errorDiv.appendChild(suggestions);
+          errorDiv.appendChild(buttonContainer);
           
           document.body.insertBefore(errorDiv, document.body.firstChild);
           return;
@@ -1004,8 +1111,7 @@
         return;
       }
       
-      // Hide loading indicator on success
-      const loadingIndicator = document.getElementById('ethersLoadingIndicator');
+      // Hide loading indicator on success (using cached reference from above)
       if (loadingIndicator) {
         loadingIndicator.style.display = 'none';
       }
