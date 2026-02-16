@@ -1222,6 +1222,7 @@
     // Gas and price constants
     let ETH_TO_USDC_RATE = 2500; // 1 ETH = 2500 USDC (will be updated with real Uniswap price)
     const GAS_FEE_USDC = 0.01; // 0.01 USDC per action
+    const CHART_HEIGHT = 420; // Standard height for trading charts in pixels
     
     // Gas estimation constants for different transaction types
     const GAS_LIMITS = {
@@ -2108,7 +2109,7 @@
           </div>
         `;
         
-        const apiKey = 'YourEtherscanAPIKey'; // Free API, no key required for basic queries
+        const apiKey = ''; // Free API - basic queries work without key. Add your own Etherscan API key for higher rate limits
         const url = `https://api-sepolia.etherscan.io/api?module=account&action=txlist&address=${userAddress}&startblock=0&endblock=99999999&page=1&offset=10&sort=desc&apikey=${apiKey}`;
         
         const response = await fetch(url);
@@ -4220,7 +4221,7 @@
               // Create TradingView Advanced Chart Widget
               new TradingView.widget({
                 "width": container.offsetWidth || 700,
-                "height": 420,
+                "height": CHART_HEIGHT,
                 "symbol": asset.tvSymbol,
                 "interval": "15",
                 "timezone": "Etc/UTC",
@@ -4266,10 +4267,10 @@
               const coinId = coinGeckoIds[asset.symbol];
               if (coinId) {
                 container.innerHTML = `
-                  <div style="background: var(--card-bg); border-radius: 12px; padding: 16px; height: 420px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                  <div style="background: var(--card-bg); border-radius: 12px; padding: 16px; height: ${CHART_HEIGHT}px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
                     <iframe 
-                      src="https://www.coingecko.com/en/coins/${coinId}/chart_widget?height=380&width=100%" 
-                      style="border: none; width: 100%; height: 380px; border-radius: 8px;"
+                      src="https://www.coingecko.com/en/coins/${coinId}/chart_widget?height=${CHART_HEIGHT - 40}&width=100%" 
+                      style="border: none; width: 100%; height: ${CHART_HEIGHT - 40}px; border-radius: 8px;"
                       frameborder="0"
                       scrolling="no"
                     ></iframe>
@@ -4289,7 +4290,7 @@
           // Third fallback: Use canvas-based chart
           const canvas = document.createElement('canvas');
           canvas.id = 'priceChart';
-          canvas.height = 420;
+          canvas.height = CHART_HEIGHT;
           container.appendChild(canvas);
           
           const ctx = canvas.getContext('2d');
@@ -4397,7 +4398,7 @@
           
           // Set canvas size
           canvas.width = canvas.offsetWidth;
-          canvas.height = canvas.offsetHeight || 420;
+          canvas.height = canvas.offsetHeight || CHART_HEIGHT;
           
           if (data.length === 0) return;
           
