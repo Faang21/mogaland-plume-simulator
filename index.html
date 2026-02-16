@@ -16,15 +16,23 @@
         // Fallback minimal Buffer implementation
         window.Buffer = window.Buffer || { 
           isBuffer: () => false,
-          from: (data) => data,
-          alloc: (size) => new Uint8Array(size)
+          from: function(data, encoding) {
+            if (typeof data === 'string') {
+              // Basic string to Uint8Array conversion
+              const encoder = new TextEncoder();
+              return encoder.encode(data);
+            }
+            return data;
+          },
+          alloc: (size) => new Uint8Array(size),
+          toString: function() { return '[Buffer]'; }
         };
       }
       
       // Mock process.env for WalletConnect
       window.process = window.process || { 
         env: { NODE_ENV: 'production' },
-        version: 'v16.0.0',
+        version: 'v18.0.0', // Use recent LTS version
         nextTick: (fn) => setTimeout(fn, 0)
       };
       
