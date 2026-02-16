@@ -6018,6 +6018,7 @@
       showNotification(`✅ Successfully staked ${count} NFT(s) | Gas: ${GAS_FEE_ETH} ETH`);
       console.log(`[NFT] Staked ${count} NFTs with gas fee`);
     }
+    window.stakeSelectedNFTs = stakeSelectedNFTs;
     
     async function unstakeSelectedNFTs() {
       if (selectedNFTs.size === 0) return showNotification("No staked NFTs selected!", true);
@@ -6057,6 +6058,7 @@
       showNotification(`✅ Successfully unstaked ${count} NFT(s) | Gas: ${GAS_FEE_ETH} ETH`);
       console.log(`[NFT] Unstaked ${count} NFTs with gas fee`);
     }
+    window.unstakeSelectedNFTs = unstakeSelectedNFTs;
     
     window.claimAllRewards = async function() {
       if (stakedNFTsData.length === 0) {
