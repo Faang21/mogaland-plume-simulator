@@ -1237,6 +1237,15 @@
       DEFAULT: 100000
     };
     
+    // Liquidation system constants
+    const LIQUIDATION_CONFIG = {
+      MAINTENANCE_MARGIN_PERCENT: 20, // 20% of position value must remain as equity
+      LIQUIDATION_THRESHOLD_PERCENT: 15, // Liquidation triggers at 15% equity
+      WARNING_THRESHOLD_PERCENT: 30, // Show warning at 30% equity
+      LIQUIDATION_FEE_PERCENT: 5, // 5% fee goes to treasury on liquidation
+      CHECK_INTERVAL_MS: 5000 // Check for liquidations every 5 seconds
+    };
+    
     // Function to fetch live ETH/USDC rate from Uniswap V3
     async function fetchLiveETHtoUSDCRate() {
       try {
@@ -3823,6 +3832,8 @@
         let currentBet = null;
         let openPositions = [];
         let tradeHistoryList = [];
+        let liquidationHistory = []; // Track liquidation events
+        let liquidationMonitorInterval = null; // Interval for checking liquidations
         // Note: tradingUSDCBalance is now declared in global scope
         
         // Fetch real USDC balance for trading
@@ -3866,6 +3877,176 @@
           }
         }
 
+        // === LIQUIDATION SYSTEM ===
+        
+        /**
+         * Calculate position equity percentage
+         * Equity = (Current Value - Initial Value) / Margin
+         * Where Current Value = Position Amount × Leverage × (Current Price / Entry Price)
+         */
+        function calculatePositionEquity(position, currentPrice) {
+          if (!position.entryPrice || position.entryPrice === 0) return 100;
+          
+          const priceChange = (currentPrice - position.entryPrice) / position.entryPrice;
+          const positionPnL = priceChange * position.leverage;
+          
+          // For long positions: profit when price goes up
+          // For short positions: profit when price goes down
+          const effectivePnL = position.type === 'long' ? positionPnL : -positionPnL;
+          
+          // Equity % = 100% + P&L%
+          const equityPercent = 100 + (effectivePnL * 100);
+          
+          return equityPercent;
+        }
+        
+        /**
+         * Check if position should be liquidated
+         * Returns { shouldLiquidate: boolean, equityPercent: number, reason: string }
+         */
+        function checkLiquidation(position, currentPrice) {
+          const equityPercent = calculatePositionEquity(position, currentPrice);
+          
+          if (equityPercent <= LIQUIDATION_CONFIG.LIQUIDATION_THRESHOLD_PERCENT) {
+            return {
+              shouldLiquidate: true,
+              equityPercent: equityPercent,
+              reason: `Equity fell to ${equityPercent.toFixed(2)}% (below ${LIQUIDATION_CONFIG.LIQUIDATION_THRESHOLD_PERCENT}% threshold)`
+            };
+          }
+          
+          return {
+            shouldLiquidate: false,
+            equityPercent: equityPercent,
+            reason: null
+          };
+        }
+        
+        /**
+         * Execute liquidation for a position
+         * Transfers remaining equity to treasury (acts as insurance fund)
+         */
+        function liquidatePosition(position, idx, currentPrice, reason) {
+          console.log(`🔴 LIQUIDATING POSITION #${idx}:`, position);
+          
+          // Calculate final values
+          const equityPercent = calculatePositionEquity(position, currentPrice);
+          const remainingEquity = position.amount * (equityPercent / 100);
+          const loss = position.amount - remainingEquity;
+          const liquidationFee = remainingEquity * (LIQUIDATION_CONFIG.LIQUIDATION_FEE_PERCENT / 100);
+          const returnToUser = Math.max(0, remainingEquity - liquidationFee);
+          
+          // Transfer remaining equity to treasury (insurance fund)
+          if (remainingEquity > 0) {
+            // Note: Position amount already in treasury, liquidation fee stays there
+            console.log(`💰 Liquidation fee (${LIQUIDATION_CONFIG.LIQUIDATION_FEE_PERCENT}%): ${liquidationFee.toFixed(4)} USDC to treasury`);
+          }
+          
+          // Return remaining funds to user if any
+          if (returnToUser > 0) {
+            if (transferFromTreasury(returnToUser)) {
+              console.log(`↩️ Returned ${returnToUser.toFixed(4)} USDC to user after liquidation`);
+            }
+          }
+          
+          // Record liquidation event
+          const liquidationEvent = {
+            timestamp: new Date().toISOString(),
+            position: {...position},
+            liquidationPrice: currentPrice,
+            equityPercent: equityPercent,
+            amountLost: loss,
+            liquidationFee: liquidationFee,
+            returnedToUser: returnToUser,
+            reason: reason
+          };
+          
+          liquidationHistory.push(liquidationEvent);
+          
+          // Add to trade history with liquidation flag
+          tradeHistoryList.push({
+            asset: position.asset,
+            type: position.type,
+            leverage: position.leverage,
+            amount: position.amount,
+            entryPrice: position.entryPrice,
+            exitPrice: currentPrice,
+            pnl: -(loss),
+            closeTime: new Date().toLocaleTimeString(),
+            liquidated: true
+          });
+          
+          // Remove from open positions
+          openPositions.splice(idx, 1);
+          
+          // Show liquidation notification
+          showNotification(
+            `⚠️ LIQUIDATED: ${position.asset.symbol} ${position.type.toUpperCase()} position | ` +
+            `Lost: $${loss.toFixed(2)} | Returned: $${returnToUser.toFixed(2)} | ` +
+            `Reason: ${reason}`,
+            true
+          );
+          
+          // Update displays
+          updatePositionsDisplay();
+          updateTradeHistory();
+          updateTradingBalance();
+          
+          console.log(`📊 Liquidation complete. Treasury now holds: ${treasuryUSDCBalance.toFixed(2)} USDC`);
+        }
+        
+        /**
+         * Monitor all open positions for liquidation
+         */
+        function monitorLiquidations() {
+          if (openPositions.length === 0) return;
+          
+          openPositions.forEach((position, idx) => {
+            // Skip sports bets (they have their own settlement)
+            if (position.isSportsBet) return;
+            
+            // Get current price for this asset
+            const currentPrice = priceHistory.length > 0 ? 
+              priceHistory[priceHistory.length - 1]?.c : 
+              position.entryPrice;
+            
+            if (!currentPrice || currentPrice === 0) return;
+            
+            // Check liquidation status
+            const liquidationCheck = checkLiquidation(position, currentPrice);
+            
+            if (liquidationCheck.shouldLiquidate) {
+              liquidatePosition(position, idx, currentPrice, liquidationCheck.reason);
+            }
+          });
+        }
+        
+        /**
+         * Start liquidation monitoring system
+         */
+        function startLiquidationMonitoring() {
+          if (liquidationMonitorInterval) {
+            clearInterval(liquidationMonitorInterval);
+          }
+          
+          liquidationMonitorInterval = setInterval(() => {
+            monitorLiquidations();
+          }, LIQUIDATION_CONFIG.CHECK_INTERVAL_MS);
+          
+          console.log('🔄 Liquidation monitoring started (checking every 5 seconds)');
+        }
+        
+        /**
+         * Stop liquidation monitoring system
+         */
+        function stopLiquidationMonitoring() {
+          if (liquidationMonitorInterval) {
+            clearInterval(liquidationMonitorInterval);
+            liquidationMonitorInterval = null;
+            console.log('⏹️ Liquidation monitoring stopped');
+          }
+        }
+
         // Update positions display
         function updatePositionsDisplay() {
           const container = document.getElementById('openPositions');
@@ -3905,8 +4086,27 @@
             const pnlPercent = (pnl / pos.amount) * 100;
             const pnlColor = pnl >= 0 ? '#10b981' : '#ef4444';
             
+            // Calculate equity and liquidation risk
+            const equityPercent = calculatePositionEquity(pos, currentPrice);
+            let riskIndicator = '';
+            let riskColor = '#10b981';
+            
+            if (equityPercent <= LIQUIDATION_CONFIG.LIQUIDATION_THRESHOLD_PERCENT) {
+              riskIndicator = '⚠️ LIQUIDATION IMMINENT';
+              riskColor = '#ef4444';
+            } else if (equityPercent <= LIQUIDATION_CONFIG.WARNING_THRESHOLD_PERCENT) {
+              riskIndicator = '⚡ HIGH RISK';
+              riskColor = '#f59e0b';
+            } else if (equityPercent <= 50) {
+              riskIndicator = '⚠️ MODERATE RISK';
+              riskColor = '#eab308';
+            } else {
+              riskIndicator = '✓ HEALTHY';
+              riskColor = '#10b981';
+            }
+            
             return `
-              <div style="padding:8px; background:rgba(13,110,253,0.08); border-radius:6px; margin-bottom:6px;">
+              <div style="padding:8px; background:rgba(13,110,253,0.08); border:${equityPercent <= LIQUIDATION_CONFIG.WARNING_THRESHOLD_PERCENT ? '2px solid ' + riskColor : '1px solid rgba(255,255,255,0.1)'}; border-radius:6px; margin-bottom:6px;">
                 <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
                   <span><strong>${pos.asset.symbol}</strong> ${pos.leverage}x</span>
                   <span style="color:${pos.type === 'long' ? '#10b981' : '#ef4444'}">${pos.type.toUpperCase()}</span>
@@ -3917,7 +4117,11 @@
                 <div style="color:${pnlColor}; font-weight:bold; margin-top:4px;">
                   P&L: ${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)} (${pnlPercent >= 0 ? '+' : ''}${pnlPercent.toFixed(2)}%)
                 </div>
-                <button onclick="closePosition(${idx})" style="margin-top:4px; padding:4px 8px; background:#ef4444; color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.85em;">Close</button>
+                <div style="margin-top:4px; font-size:0.85em;">
+                  <div style="color:${riskColor}; font-weight:600;">Equity: ${equityPercent.toFixed(1)}% ${riskIndicator}</div>
+                  <div style="opacity:0.7; font-size:0.9em;">Liquidation at ${LIQUIDATION_CONFIG.LIQUIDATION_THRESHOLD_PERCENT}% equity</div>
+                </div>
+                <button onclick="closePosition(${idx})" style="margin-top:6px; padding:4px 8px; background:#ef4444; color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.85em;">Close</button>
               </div>
             `;
           }).join('');
@@ -3935,9 +4139,13 @@
           
           container.innerHTML = tradeHistoryList.slice(-5).reverse().map(trade => {
             const pnlColor = trade.pnl >= 0 ? '#10b981' : '#ef4444';
+            const liquidationBadge = trade.liquidated ? 
+              '<span style="background:#ef4444; color:white; padding:2px 5px; border-radius:3px; font-size:0.75em; margin-left:4px; font-weight:bold;">LIQ</span>' : 
+              '';
+            
             return `
               <div style="padding:6px; border-bottom:1px solid rgba(255,255,255,0.1); font-size:0.85em;">
-                <div><strong>${trade.asset.symbol}</strong> ${trade.leverage}x ${trade.type.toUpperCase()}</div>
+                <div><strong>${trade.asset.symbol}</strong> ${trade.leverage}x ${trade.type.toUpperCase()} ${liquidationBadge}</div>
                 <div style="opacity:0.8;">${trade.amount.toFixed(2)} USDC</div>
                 <div style="color:${pnlColor};">P&L: ${trade.pnl >= 0 ? '+' : ''}$${trade.pnl.toFixed(2)}</div>
               </div>
@@ -4191,6 +4399,11 @@
           openPositions.push(position);
           tradingUSDCBalance -= amount;
           transferToTreasury(amount); // Move position to treasury
+          
+          // Start liquidation monitoring when first position is opened
+          if (openPositions.length === 1) {
+            startLiquidationMonitoring();
+          }
 
           showNotification(`🔓 Opened ${type.toUpperCase()} position: ${selectedAsset.symbol} ${leverage}x at $${currentPrice.toFixed(2)}`, false);
           
@@ -4251,6 +4464,11 @@
           
           // Remove from open positions
           openPositions.splice(idx, 1);
+          
+          // Stop liquidation monitoring if no positions remain
+          if (openPositions.length === 0) {
+            stopLiquidationMonitoring();
+          }
           
           updatePositionsDisplay();
           updateTradeHistory();
