@@ -789,6 +789,92 @@
       background: #f8f9fa;
       color: #333;
     }
+    
+    /* Responsive Design Improvements */
+    @media (max-width: 768px) {
+      /* Profile panel full width on mobile */
+      .profile-slide-panel {
+        width: 100%;
+        max-width: 100vw;
+      }
+      
+      /* Swap section adjustments */
+      .flex-container > div {
+        min-width: 100%;
+      }
+      
+      /* Learning section cards stack properly */
+      .question-box, .progress-box {
+        min-width: 100%;
+      }
+      
+      /* Market charts don't overlap */
+      .chart-container {
+        width: 100% !important;
+        height: 300px !important;
+      }
+      
+      /* NFT cards responsive grid */
+      .nft-grid {
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important;
+      }
+      
+      /* Input fields full width on mobile */
+      input[type="number"], input[type="text"], select {
+        width: 100% !important;
+        max-width: 100%;
+      }
+      
+      /* Buttons stack on mobile */
+      .btn-group {
+        flex-direction: column;
+        gap: 8px;
+      }
+      
+      .btn-group button {
+        width: 100%;
+      }
+    }
+    
+    @media (min-width: 769px) and (max-width: 1024px) {
+      /* Tablet adjustments */
+      .profile-slide-panel {
+        width: 60%;
+        max-width: 480px;
+      }
+      
+      /* Flex containers adapt to tablet */
+      .flex-container {
+        gap: 16px;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      /* Extra small screens */
+      h1 { font-size: 2.2rem; }
+      .subtitle { font-size: 1rem; }
+      
+      /* Smaller padding on mobile */
+      .card {
+        padding: 16px;
+      }
+      
+      /* Wallet button text shorter */
+      #walletBtn {
+        font-size: 0.9em;
+        padding: 8px 12px;
+      }
+      
+      /* Navigation adjustments */
+      nav {
+        padding: 12px 16px;
+      }
+      
+      .nav-btn {
+        padding: 8px 12px;
+        font-size: 0.9em;
+      }
+    }
   </style>
 </head>
 <body>
@@ -1084,6 +1170,119 @@
     let userAddress = null;
     let walletConnectProvider = null;
     
+    // Wallet persistence constants
+    const WALLET_CONNECTION_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
+    const AUTO_RECONNECT_DELAY_MS = 1000; // 1 second
+    const BALANCE_REFRESH_DELAY_MS = 1000; // 1 second
+    
+    // Wallet persistence helpers
+    function saveWalletConnection(walletType, address) {
+      localStorage.setItem('lastWalletType', walletType);
+      localStorage.setItem('lastWalletAddress', address);
+      localStorage.setItem('walletConnectedAt', Date.now().toString());
+    }
+    
+    function clearWalletConnection() {
+      localStorage.removeItem('lastWalletType');
+      localStorage.removeItem('lastWalletAddress');
+      localStorage.removeItem('walletConnectedAt');
+    }
+    
+    function getSavedWalletConnection() {
+      const walletType = localStorage.getItem('lastWalletType');
+      const address = localStorage.getItem('lastWalletAddress');
+      const connectedAt = localStorage.getItem('walletConnectedAt');
+      
+      // Check if connection is less than expiry time
+      if (walletType && address && connectedAt) {
+        const age = Date.now() - parseInt(connectedAt);
+        if (age < WALLET_CONNECTION_EXPIRY_MS) {
+          return { walletType, address };
+        }
+      }
+      return null;
+    }
+    
+    // Auto-reconnect wallet on page load
+    async function autoReconnectWallet() {
+      const saved = getSavedWalletConnection();
+      if (!saved) return false;
+      
+      console.log(`[Auto-reconnect] Attempting to reconnect ${saved.walletType}...`);
+      
+      try {
+        if (saved.walletType === 'MetaMask' && window.ethereum) {
+          await connectMetaMask();
+          return true;
+        } else if (saved.walletType === 'OKX' && window.okxwallet) {
+          await connectOKX();
+          return true;
+        } else if (saved.walletType === 'Trust' && window.ethereum) {
+          await connectTrustWallet();
+          return true;
+        }
+      } catch (e) {
+        console.log('[Auto-reconnect] Failed:', e.message);
+        clearWalletConnection();
+      }
+      return false;
+    }
+    
+    // Wallet event listeners for account/chain changes
+    function setupWalletEventListeners() {
+      if (window.ethereum) {
+        // Listen for account changes
+        window.ethereum.on('accountsChanged', async (accounts) => {
+          if (accounts.length === 0) {
+            // User disconnected wallet
+            showNotification("Wallet disconnected", true);
+            disconnectWallet();
+          } else if (accounts[0].toLowerCase() !== (userAddress?.toLowerCase() || '')) {
+            // User switched account
+            showNotification("Account changed. Reconnecting...", false);
+            userAddress = accounts[0].toLowerCase();
+            saveWalletConnection(localStorage.getItem('lastWalletType') || 'MetaMask', userAddress);
+            updateWalletUI();
+            if (typeof fetchRealBalances === 'function') {
+              fetchRealBalances();
+            }
+          }
+        });
+        
+        // Listen for chain changes
+        window.ethereum.on('chainChanged', (chainId) => {
+          const expectedChainId = parseInt(SEPOLIA_CHAIN_HEX, 16);
+          if (parseInt(chainId, 16) !== expectedChainId) {
+            showNotification("Network changed. Please switch back to Sepolia.", true);
+          } else {
+            showNotification("Switched to Sepolia testnet", false);
+          }
+          // Reload balances on chain change
+          if (typeof fetchRealBalances === 'function') {
+            setTimeout(() => fetchRealBalances(), BALANCE_REFRESH_DELAY_MS);
+          }
+        });
+        
+        console.log('✅ Wallet event listeners configured');
+      }
+    }
+    
+    // Update wallet UI helper
+    function updateWalletUI() {
+      if (!userAddress) return;
+      
+      const walletBtn = document.getElementById('walletBtn');
+      if (walletBtn) {
+        walletBtn.textContent = `${userAddress.slice(0,6)}...${userAddress.slice(-4)}`;
+        walletBtn.classList.add('connected');
+      }
+      
+      const addressDisplay = document.getElementById('walletAddressDisplay');
+      if (addressDisplay) {
+        addressDisplay.textContent = userAddress;
+      }
+    }
+    
     // Login UI functions - Available immediately (don't need ethers.js)
     function showEmailLogin() { toggleSections('emailLogin'); }
     function showXLogin() { toggleSections('xLogin'); }
@@ -1267,6 +1466,12 @@
           ethBalanceEl.textContent = parseFloat(balanceEth).toFixed(4);
         }
         
+        // Save wallet connection for auto-reconnect
+        saveWalletConnection(walletType, userAddress);
+        
+        // Setup wallet event listeners
+        setupWalletEventListeners();
+        
         showNotification(`Connected via ${walletType} on Sepolia – Balance: ${parseFloat(balanceEth).toFixed(4)} ETH`, false);
         enterDashboard(walletType);
         
@@ -1276,6 +1481,7 @@
         }
       } catch (e) {
         showNotification("Connection failed: " + (e.message || "Error"), true);
+        clearWalletConnection();
       }
     }
 
@@ -1506,6 +1712,14 @@
       
       console.log('✅ Ethers library loaded successfully - Wallet connections enabled');
       startApp();
+      
+      // Try to auto-reconnect wallet after a brief delay (allowing startApp to initialize)
+      setTimeout(async () => {
+        const reconnected = await autoReconnectWallet();
+        if (reconnected) {
+          console.log('✅ Wallet auto-reconnected successfully');
+        }
+      }, AUTO_RECONNECT_DELAY_MS);
     }
     
     function startApp() {
@@ -1555,6 +1769,9 @@
       }
       
       try {
+        // Show loading notification
+        showNotification("🔄 Updating balances...", false);
+        
         // Fetch ETH balance
         const ethBalanceWei = await provider.getBalance(userAddress);
         const ethBalance = parseFloat(ethers.utils.formatEther(ethBalanceWei));
@@ -1570,8 +1787,11 @@
         const usdtBalance = parseFloat(ethers.utils.formatUnits(usdtBalanceRaw, 6)); // USDT has 6 decimals
         
         // Update UI with real balances
-        document.getElementById('ethBalance').textContent = ethBalance.toFixed(4);
-        document.querySelector('.profile-slide-total').textContent = `${ethBalance.toFixed(4)} ETH`;
+        const ethBalanceEl = document.getElementById('ethBalance');
+        if (ethBalanceEl) ethBalanceEl.textContent = ethBalance.toFixed(4);
+        
+        const profileTotal = document.querySelector('.profile-slide-total');
+        if (profileTotal) profileTotal.textContent = `${ethBalance.toFixed(4)} ETH`;
         
         // Update USDC display using IDs
         const usdcBalanceEl = document.getElementById('usdcBalance');
@@ -1587,9 +1807,18 @@
         const usdtBalanceUSDEl = document.getElementById('usdtBalanceUSD');
         if (usdtBalanceUSDEl) usdtBalanceUSDEl.textContent = `$${usdtBalance.toFixed(2)}`;
         
-        console.log(`Balances updated: ETH=${ethBalance}, USDC=${usdcBalance}, USDT=${usdtBalance}`);
+        // Update trading balance in Market section if it exists
+        if (typeof tradingUSDCBalance !== 'undefined') {
+          tradingUSDCBalance = usdcBalance;
+          if (typeof updateTradingBalance === 'function') {
+            updateTradingBalance();
+          }
+        }
+        
+        console.log(`✅ Balances updated: ETH=${ethBalance}, USDC=${usdcBalance}, USDT=${usdtBalance}`);
       } catch (error) {
         console.error('Error fetching balances:', error);
+        showNotification("⚠️ Failed to fetch balances: " + (error.message || "Unknown error"), true);
       }
     }
 
@@ -1696,9 +1925,11 @@
         localStorage.setItem('lastSection', currentSection.id || 'swap');
       }
       
-      // Clear wallet connection
+      // Clear wallet connection and persistence
       userAddress = null;
       provider = null;
+      walletConnected = false;
+      clearWalletConnection();
       
       // Clear social connections status
       localStorage.removeItem('socialConnections');
@@ -1721,6 +1952,9 @@
       if (dropdown) {
         dropdown.classList.remove('show');
       }
+      
+      // Reset all balances
+      resetBalanceDisplay();
     }
 
     // Wallet dropdown functions
@@ -1773,6 +2007,10 @@
         // Clear wallet connection
         userAddress = null;
         provider = null;
+        walletConnected = false;
+        
+        // Clear saved connection from localStorage
+        clearWalletConnection();
         
         // Update UI
         const walletBtn = document.getElementById('walletBtn');
@@ -3215,7 +3453,33 @@
         let currentBet = null;
         let openPositions = [];
         let tradeHistoryList = [];
-        let tradingUSDCBalance = 1000; // Demo balance
+        let tradingUSDCBalance = 0; // Will be populated with real wallet balance asynchronously
+        
+        // Fetch real USDC balance for trading
+        async function fetchTradingBalance() {
+          if (!provider || !userAddress) {
+            tradingUSDCBalance = 0;
+            updateTradingBalance();
+            return;
+          }
+          
+          try {
+            const usdcContract = new ethers.Contract(USDC_SEPOLIA_ADDRESS, USDC_ABI, provider);
+            const balance = await usdcContract.balanceOf(userAddress);
+            const decimals = await usdcContract.decimals();
+            tradingUSDCBalance = parseFloat(ethers.utils.formatUnits(balance, decimals));
+            updateTradingBalance();
+            console.log('✅ Trading balance loaded:', tradingUSDCBalance, 'USDC');
+          } catch (error) {
+            console.error('Failed to fetch trading balance:', error);
+            showNotification("Failed to load trading balance", true);
+          }
+        }
+        
+        // Call fetchTradingBalance when market section is opened
+        if (provider && userAddress) {
+          fetchTradingBalance();
+        }
 
         // Update leverage info display
         function updateLeverageInfo() {
@@ -3422,6 +3686,13 @@
 
         // Open a new position
         function openPosition(type) {
+          // Check wallet connection first
+          if (!provider || !userAddress) {
+            showNotification('⚠️ Please connect your wallet to start trading!', true);
+            connectWalletFromApp();
+            return;
+          }
+          
           if (!selectedAsset) {
             showNotification('Please select an asset/team first!', true);
             return;
@@ -4176,6 +4447,13 @@
         };
 
         window.confirmBridge = function() {
+          // Check wallet connection FIRST
+          if (!userAddress || !provider) {
+            showNotification("⚠️ Please connect wallet first!", true);
+            connectWalletFromApp();
+            return;
+          }
+          
           const amount = parseFloat(document.getElementById('bridgeAmount')?.value || 0);
           const fromChainSelect = document.getElementById('fromChain');
           const fromChain = fromChainSelect?.options[fromChainSelect?.selectedIndex]?.text || 'Goerli';
@@ -4405,10 +4683,12 @@
     async function loadUserNFTs() {
       if (!provider || !userAddress) {
         console.log('[NFT] No wallet connected, using demo NFTs');
+        showNotification("💡 Connect wallet to load your NFTs", false);
         return;
       }
       
       try {
+        showNotification("🔄 Loading your NFTs...", false);
         const nftContract = new ethers.Contract(NFT_CONTRACT_ADDRESS, NFT_ABI, provider);
         const balance = await nftContract.balanceOf(userAddress);
         
@@ -4425,8 +4705,14 @@
         }
         
         console.log(`[NFT] Loaded ${userNFTs.length} NFTs from wallet`);
+        if (userNFTs.length > 0) {
+          showNotification(`✅ Loaded ${userNFTs.length} NFT(s) from your wallet`, false);
+        } else {
+          showNotification("📦 No NFTs found. Complete learning to mint your first NFT!", false);
+        }
       } catch (error) {
-        console.log('[NFT] Error loading NFTs, using demo mode:', error.message);
+        console.error('[NFT] Error loading NFTs:', error);
+        showNotification("⚠️ Failed to load NFTs: " + (error.message || "Unknown error"), true);
       }
     }
     
@@ -4505,8 +4791,10 @@
     async function stakeSelectedNFTs() {
       if (selectedNFTs.size === 0) return showNotification("No NFTs selected!", true);
       
-      if (!walletConnected && loginMethod !== 'wallet') {
-        showNotification("Please connect your wallet to stake NFTs!", true);
+      // Proper wallet validation
+      if (!userAddress || !provider) {
+        showNotification("⚠️ Please connect your wallet to stake NFTs!", true);
+        connectWalletFromApp();
         return;
       }
       
@@ -4545,8 +4833,10 @@
     async function unstakeSelectedNFTs() {
       if (selectedNFTs.size === 0) return showNotification("No staked NFTs selected!", true);
       
-      if (!walletConnected && loginMethod !== 'wallet') {
-        showNotification("Please connect your wallet to unstake NFTs!", true);
+      // Proper wallet validation
+      if (!userAddress || !provider) {
+        showNotification("⚠️ Please connect your wallet to unstake NFTs!", true);
+        connectWalletFromApp();
         return;
       }
       
@@ -4589,8 +4879,10 @@
         return showNotification("No rewards available yet!", true);
       }
       
-      if (!walletConnected && loginMethod !== 'wallet') {
-        showNotification("Please connect your wallet to claim rewards!", true);
+      // Proper wallet validation
+      if (!userAddress || !provider) {
+        showNotification("⚠️ Please connect your wallet to claim rewards!", true);
+        connectWalletFromApp();
         return;
       }
       
@@ -4618,8 +4910,10 @@
         return showNotification("Need at least 1000 points to redeem!", true);
       }
       
-      if (!walletConnected && loginMethod !== 'wallet') {
-        showNotification("Please connect your wallet to redeem rewards!", true);
+      // Proper wallet validation
+      if (!userAddress || !provider) {
+        showNotification("⚠️ Please connect your wallet to redeem rewards!", true);
+        connectWalletFromApp();
         return;
       }
       
@@ -4858,9 +5152,18 @@
     }
 
     window.confirmSwap = function() {
+      // Check wallet connection FIRST
+      if (!userAddress || !provider) {
+        showNotification("⚠️ Please connect wallet first!", true);
+        connectWalletFromApp();
+        return;
+      }
+      
       const amt = parseFloat(document.getElementById('fromInput')?.value) || 0;
-      if (amt <= 0) return showNotification("Enter amount > 0", true);
-      if (!userAddress) return showNotification("Please connect wallet first", true);
+      if (amt <= 0) {
+        showNotification("Enter amount > 0", true);
+        return;
+      }
 
       const fromToken = document.getElementById('fromTokenSelect')?.value || 'ETH';
       const toToken = document.getElementById('toTokenSelect')?.value || 'USDC';
@@ -4909,28 +5212,9 @@
 
     // Quiz & Stake functions
     function loadQuestion() {
-      // Check if user has staked USDC before allowing learning
-      if (stakedUSDC <= 0) {
-        document.getElementById('qTitle').textContent = "⚠️ Stake USDC Required";
-        document.getElementById('optionsContainer').innerHTML = `
-          <div style="text-align: center; padding: 40px 20px;">
-            <p style="font-size: 1.2em; margin-bottom: 20px;">
-              You must stake USDC before accessing learning questions.
-            </p>
-            <p style="margin-bottom: 30px;">
-              Stake any amount of USDC below to unlock the learning quiz and earn rewards!
-            </p>
-            <button class="btn-primary" onclick="document.getElementById('stakeAmountInput').focus()">
-              Go to Stake Section
-            </button>
-          </div>
-        `;
-        const btnGroup = document.querySelector('.btn-group');
-        if (btnGroup) {
-          btnGroup.innerHTML = '';
-        }
-        showNotification("⚠️ Please stake USDC first to access learning!", true);
-        return;
+      // Show optional staking prompt if not staked yet, but don't block learning
+      if (stakedUSDC <= 0 && currentQuestionIndex === 0) {
+        showNotification("💡 Tip: Stake USDC to earn additional rewards while learning!", false);
       }
       
       if (currentQuestionIndex >= questions.length) {
