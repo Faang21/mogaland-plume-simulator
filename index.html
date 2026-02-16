@@ -1049,7 +1049,14 @@
       const div = document.createElement('div');
       div.className = 'notification';
       div.style.borderColor = error ? 'var(--danger)' : 'var(--bell)';
-      div.innerHTML = `<span>${error ? '⚠️' : '🔔'}</span> ${msg}`;
+      
+      const icon = document.createElement('span');
+      icon.textContent = error ? '⚠️' : '🔔';
+      
+      const text = document.createTextNode(' ' + msg);
+      
+      div.appendChild(icon);
+      div.appendChild(text);
       document.body.appendChild(div);
       setTimeout(() => div.remove(), 6000);
     }
@@ -1748,7 +1755,11 @@
       
       // Generate QR code
       const qrDiv = document.getElementById('depositQR');
-      qrDiv.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${userAddress}" alt="QR Code" style="width: 200px; height: 200px;">`;
+      const qrImg = document.createElement('img');
+      qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(userAddress);
+      qrImg.alt = 'QR Code';
+      qrImg.style.cssText = 'width: 200px; height: 200px;';
+      qrDiv.appendChild(qrImg);
       
       console.log('[Treasury] Deposit modal opened - deposits will be processed through treasury');
     }
