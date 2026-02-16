@@ -4,15 +4,45 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Mogaland-Plume Simulator</title>
+  <!-- Node.js Polyfills for WalletConnect v2 - MUST BE FIRST -->
+  <script src="https://cdn.jsdelivr.net/npm/buffer@6.0.3/index.min.js"></script>
+  <script>
+    // Polyfills for Node.js globals required by WalletConnect v2
+    (function() {
+      // Use buffer library loaded above
+      if (typeof buffer !== 'undefined' && buffer.Buffer) {
+        window.Buffer = buffer.Buffer;
+      } else {
+        // Fallback minimal Buffer implementation
+        window.Buffer = window.Buffer || { 
+          isBuffer: () => false,
+          from: (data) => data,
+          alloc: (size) => new Uint8Array(size)
+        };
+      }
+      
+      // Mock process.env for WalletConnect
+      window.process = window.process || { 
+        env: { NODE_ENV: 'production' },
+        version: 'v16.0.0',
+        nextTick: (fn) => setTimeout(fn, 0)
+      };
+      
+      // Global reference
+      window.global = window.global || window;
+      
+      console.log('✅ Node.js polyfills loaded for WalletConnect v2');
+    })();
+  </script>
+  
   <!-- Ethers.js with fallback CDN support -->
   <script>
     // Ethers.js CDN Fallback Loader
     (function() {
       const ethersCDNs = [
-        'https://cdn.ethers.io/lib/ethers-5.7.umd.min.js',
         'https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js',
-        'https://unpkg.com/ethers@5.7.2/dist/ethers.umd.min.js',
-        'https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js'
+        'https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js',
+        'https://unpkg.com/ethers@5.7.2/dist/ethers.umd.min.js'
       ];
       let currentCDNIndex = 0;
       
@@ -26,6 +56,7 @@
         const script = document.createElement('script');
         script.src = ethersCDNs[currentCDNIndex];
         script.async = false;
+        script.crossOrigin = 'anonymous';
         
         script.onload = function() {
           console.log('✅ Ethers.js loaded successfully from: ' + ethersCDNs[currentCDNIndex]);
@@ -44,25 +75,27 @@
       loadEthers();
     })();
   </script>
-  <!-- Polyfill for WalletConnect v2 - provides Node.js globals needed by the library -->
-  <script>
-    // Polyfill for process.env which WalletConnect v2 expects
-    window.process = window.process || { env: {} };
-    window.global = window.global || window;
-    window.Buffer = window.Buffer || { isBuffer: () => false };
-  </script>
-  <!-- WalletConnect v2 Ethereum Provider -->
+  
+  <!-- WalletConnect v2 Ethereum Provider with proper error handling -->
   <script type="module">
-    window.WalletConnectV2Available = false;
-    import('https://unpkg.com/@walletconnect/ethereum-provider@2.11.0/dist/index.umd.js')
-      .then((module) => {
-        window.EthereumProvider = module.EthereumProvider || module.default;
+    (async function() {
+      window.WalletConnectV2Available = false;
+      window.WalletConnectProvider = null;
+      
+      try {
+        const module = await import('https://unpkg.com/@walletconnect/ethereum-provider@2.11.0/dist/index.umd.js');
+        
+        // Properly expose EthereumProvider
+        window.EthereumProvider = module.EthereumProvider || module.default || module;
         window.WalletConnectV2Available = true;
+        
         console.log('✅ WalletConnect v2 loaded successfully');
-      })
-      .catch(err => {
-        console.warn('⚠️ WalletConnect v2 failed to load:', err);
-      });
+        console.log('   - EthereumProvider available:', typeof window.EthereumProvider !== 'undefined');
+      } catch (err) {
+        console.warn('⚠️ WalletConnect v2 failed to load:', err.message);
+        console.warn('   WalletConnect will not be available. Use MetaMask, OKX, or Trust Wallet instead.');
+      }
+    })();
   </script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
@@ -1711,35 +1744,73 @@
       }
       
       if (!window.WalletConnectV2Available || typeof window.EthereumProvider === 'undefined') {
-        showNotification("WalletConnect v2 library still loading. Please wait a moment and try again.", true);
+        showNotification("⏳ WalletConnect v2 library still loading. Please wait a moment and try again.", true);
+        console.warn('WalletConnect not available:', {
+          v2Available: window.WalletConnectV2Available,
+          providerType: typeof window.EthereumProvider
+        });
         return;
       }
       
       try {
-        // Initialize WalletConnect v2 provider
+        showNotification("🔄 Initializing WalletConnect...", false);
+        
+        // Check if provider already exists and is connected
+        if (window.WalletConnectProvider && window.WalletConnectProvider.connected) {
+          console.log('Using existing WalletConnect session');
+          connectWallet("WalletConnect", () => new ethers.providers.Web3Provider(window.WalletConnectProvider));
+          return;
+        }
+        
+        // Initialize WalletConnect v2 provider with proper configuration
         const wcProvider = await window.EthereumProvider.init({
           projectId: WALLETCONNECT_PROJECT_ID,
-          chains: [SEPOLIA_CHAIN_ID],
+          chains: [SEPOLIA_CHAIN_ID], // eip155 format handled internally
           optionalChains: [SEPOLIA_CHAIN_ID],
           rpcMap: {
             [SEPOLIA_CHAIN_ID]: SEPOLIA_RPC
           },
           showQrModal: true,
           qrModalOptions: {
-            themeMode: 'dark'
+            themeMode: 'dark',
+            themeVariables: {
+              '--wcm-z-index': '10000'
+            }
+          },
+          metadata: {
+            name: 'Mogaland-Plume Simulator',
+            description: 'DeFi Learning & Trading Simulator',
+            url: window.location.origin,
+            icons: ['https://avatars.githubusercontent.com/u/37784886']
           }
         });
         
+        console.log('WalletConnect provider initialized');
+        
+        // Store provider globally for reuse
+        window.WalletConnectProvider = wcProvider;
+        
         // Enable session (shows QR code modal)
+        showNotification("📱 Scan QR code with your wallet app...", false);
         await wcProvider.enable();
+        
+        console.log('WalletConnect session enabled');
+        
+        // Assign to window for ethers.js access
+        window.walletProvider = wcProvider;
         
         // Connect wallet
         connectWallet("WalletConnect", () => new ethers.providers.Web3Provider(wcProvider));
       } catch (e) {
-        if (e.message.includes('User closed modal')) {
-          showNotification("WalletConnect connection cancelled", false);
+        // Clear stored provider on error
+        window.WalletConnectProvider = null;
+        
+        if (e.message && e.message.includes('User closed modal')) {
+          showNotification("❌ WalletConnect connection cancelled", false);
+        } else if (e.message && e.message.includes('User rejected')) {
+          showNotification("❌ Connection rejected by user", false);
         } else {
-          showNotification("WalletConnect error: " + (e.message || "Connection failed"), true);
+          showNotification("❌ WalletConnect error: " + (e.message || "Connection failed"), true);
           console.error("WalletConnect v2 error:", e);
         }
       }
