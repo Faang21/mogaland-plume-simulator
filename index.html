@@ -1275,6 +1275,7 @@
     // Gas and price constants
     let ETH_TO_USDC_RATE = 2500; // 1 ETH = 2500 USDC (will be updated with real Uniswap price)
     const GAS_FEE_ETH = 0.00001; // Gas fee in ETH Sepolia (approximately 0.00001 ETH per action)
+    const GAS_FEE_USDC = 0.025; // Gas fee in USDC equivalent (approximately 0.025 USDC per action)
     const CHART_HEIGHT = 420; // Standard height for trading charts in pixels
     
     // Gas estimation constants for different transaction types
@@ -2528,7 +2529,7 @@
     });
 
 
-    function openDepositModal() {
+    window.openDepositModal = function() {
       if (!userAddress) {
         showNotification("Please connect wallet first", true);
         return;
@@ -4455,7 +4456,7 @@
         }
 
         // Open a new position
-        async function openPosition(type) {
+        window.openPosition = async function(type) {
           // Check wallet connection first
           if (!provider || !userAddress) {
             showNotification('⚠️ Please connect your wallet to start trading!', true);
