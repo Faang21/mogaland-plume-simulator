@@ -121,6 +121,35 @@
       transition: all 0.3s;
     }
     .login-option:hover { background: #0b5ed7; transform: scale(1.02); }
+    .wallet-choice {
+      background: linear-gradient(135deg, rgba(13,110,253,0.3), rgba(13,110,253,0.5));
+      color: white;
+      border: 2px solid var(--primary);
+      padding: 16px 20px;
+      font-size: 1.15rem;
+      border-radius: 12px;
+      cursor: pointer;
+      margin: 10px 0;
+      width: 100%;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+    }
+    .wallet-choice:hover { 
+      background: linear-gradient(135deg, var(--primary), #0b5ed7);
+      transform: scale(1.02);
+      box-shadow: 0 4px 12px rgba(13,110,253,0.4);
+    }
+    .wallet-choice.primary-wallet {
+      background: linear-gradient(135deg, rgba(13,110,253,0.4), rgba(13,110,253,0.6));
+      border: 2px solid #60a5fa;
+    }
+    .wallet-choice.primary-wallet:hover {
+      background: linear-gradient(135deg, var(--primary), #2563eb);
+      border-color: #3b82f6;
+    }
     .input-field {
       width: 100%;
       padding: 14px;
@@ -791,19 +820,38 @@
   <!-- Login Page -->
   <div class="login-container" id="loginPage">
     <h1>Mogaland-Plume Simulator</h1>
-    <p class="subtitle">Connect wallet or use mock login (demo only)</p>
+    <p class="subtitle">Connect your wallet to get started</p>
 
-    <button class="login-option" onclick="showWalletOptions()">Connect Wallet</button>
-    <button class="login-option" onclick="showEmailLogin()">Login with Email</button>
-    <button class="login-option" onclick="showXLogin()">Login with X (@username)</button>
-
-    <div id="walletOptions" class="hidden">
-      <h3 style="margin:20px 0;">Select Wallet</h3>
-      <button class="wallet-choice" onclick="connectMetaMask()">MetaMask</button>
-      <button class="wallet-choice" onclick="connectOKX()">OKX Wallet</button>
-      <button class="wallet-choice" onclick="connectTrustWallet()">Trust Wallet</button>
-      <button class="wallet-choice" onclick="connectWalletConnect()">WalletConnect</button>
+    <div style="margin-bottom: 30px;">
+      <h3 style="margin-bottom: 15px; color: #60a5fa; font-size: 1.2rem;">Connect Wallet</h3>
+      <button class="wallet-choice primary-wallet" onclick="connectMetaMask()">
+        <span style="font-size: 1.5rem; margin-right: 10px;">🦊</span>
+        MetaMask
+      </button>
+      <button class="wallet-choice primary-wallet" onclick="connectOKX()">
+        <span style="font-size: 1.5rem; margin-right: 10px;">⚫</span>
+        OKX Wallet
+      </button>
+      <button class="wallet-choice primary-wallet" onclick="connectTrustWallet()">
+        <span style="font-size: 1.5rem; margin-right: 10px;">🛡️</span>
+        Trust Wallet
+      </button>
     </div>
+
+    <div style="margin: 30px 0; display: flex; align-items: center; opacity: 0.5;">
+      <div style="flex: 1; height: 1px; background: rgba(255,255,255,0.2);"></div>
+      <span style="margin: 0 15px; font-size: 0.9rem;">OR</span>
+      <div style="flex: 1; height: 1px; background: rgba(255,255,255,0.2);"></div>
+    </div>
+
+    <button class="login-option" onclick="showEmailLogin()">
+      <span style="font-size: 1.2rem; margin-right: 8px;">📧</span>
+      Login with Email
+    </button>
+    <button class="login-option" onclick="showXLogin()">
+      <span style="font-size: 1.2rem; margin-right: 8px;">𝕏</span>
+      Login with X
+    </button>
 
     <div id="emailLogin" class="hidden">
       <input type="email" id="emailInput" class="input-field" placeholder="Gmail or Yahoo email" />
@@ -1054,12 +1102,16 @@
     let walletConnectProvider = null;
     
     // Login UI functions - Available immediately (don't need ethers.js)
-    function showWalletOptions() { toggleSections('walletOptions'); }
     function showEmailLogin() { toggleSections('emailLogin'); }
     function showXLogin() { toggleSections('xLogin'); }
     
     function toggleSections(showId) {
-      ['walletOptions', 'emailLogin', 'xLogin'].forEach(id => document.getElementById(id).classList.toggle('hidden', id !== showId));
+      ['emailLogin', 'xLogin'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.classList.toggle('hidden', id !== showId);
+        }
+      });
     }
     
     // Notification system - available before ethers loads
