@@ -999,12 +999,12 @@
     <div id="emailLogin" class="hidden">
       <input type="email" id="emailInput" class="input-field" placeholder="Gmail or Yahoo email" pattern="[a-zA-Z0-9._%+-]+@(gmail\.com|yahoo\.com)" title="Please use a valid Gmail or Yahoo email address" />
       <button class="login-option" onclick="sendEmailCode()">Send Mock OTP</button>
-      <input type="text" id="otpInput" class="input-field hidden" placeholder="OTP (123456)" maxlength="6" pattern="[0-9]{6}" />
+      <input type="text" id="otpInput" class="input-field hidden" placeholder="OTP (123456)" maxlength="6" pattern="[0-9]{6}" title="Enter 6-digit OTP" />
       <button class="login-option hidden" id="verifyOtpBtn" onclick="verifyEmailOtp()">Verify</button>
     </div>
 
     <div id="xLogin" class="hidden">
-      <input type="text" id="xInput" class="input-field" placeholder="@yourusername" pattern="@[a-zA-Z0-9_]{1,15}" title="Enter a valid X username (e.g., @username)" />
+      <input type="text" id="xInput" class="input-field" placeholder="@yourusername" title="Enter a valid X username starting with @ (e.g., @username)" />
       <button class="login-option" onclick="confirmXLogin()">Confirm</button>
     </div>
 
