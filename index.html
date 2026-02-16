@@ -676,6 +676,15 @@
       border-bottom: 1px solid #1e2535;
     }
     .profile-slide-asset-row:last-child { border-bottom: none; }
+    .profile-asset-hover {
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .profile-asset-hover:hover {
+      background: rgba(59,130,246,0.1);
+      border-radius: 8px;
+      padding: 16px 8px;
+    }
     .profile-slide-asset-icon {
       width: 44px;
       height: 44px;
@@ -1072,8 +1081,8 @@
 
       <div class="tab-wrapper" style="position:relative; min-height:300px;">
         <div id="assetsContent" class="tab-content active">
-          <a href="https://sepolia.etherscan.io/address/${userAddress || '0x0'}" target="_blank" rel="noopener noreferrer" style="text-decoration:none; color:inherit;">
-            <div class="profile-slide-asset-row" style="cursor:pointer; transition:background 0.2s;" onmouseover="this.style.background='rgba(59,130,246,0.1)'" onmouseout="this.style.background=''">
+          <a href="#" id="ethExplorerLink" target="_blank" rel="noopener noreferrer" style="text-decoration:none; color:inherit;">
+            <div class="profile-slide-asset-row profile-asset-hover">
               <img src="https://cryptologos.cc/logos/ethereum-eth-logo.png?v=035" alt="ETH" class="profile-slide-asset-icon">
               <div class="profile-slide-asset-details">
                 <div class="profile-slide-asset-name">ETH</div>
@@ -1086,8 +1095,8 @@
             </div>
           </a>
 
-          <a href="https://sepolia.etherscan.io/token/${WBTC_SEPOLIA}?a=${userAddress || '0x0'}" target="_blank" rel="noopener noreferrer" style="text-decoration:none; color:inherit;">
-            <div class="profile-slide-asset-row" style="cursor:pointer; transition:background 0.2s;" onmouseover="this.style.background='rgba(59,130,246,0.1)'" onmouseout="this.style.background=''">
+          <a href="#" id="wbtcExplorerLink" target="_blank" rel="noopener noreferrer" style="text-decoration:none; color:inherit;">
+            <div class="profile-slide-asset-row profile-asset-hover">
               <img src="https://cryptologos.cc/logos/wrapped-bitcoin-wbtc-logo.png?v=035" alt="WBTC" class="profile-slide-asset-icon">
               <div class="profile-slide-asset-details">
                 <div class="profile-slide-asset-name">WBTC</div>
@@ -1100,8 +1109,8 @@
             </div>
           </a>
 
-          <a href="https://sepolia.etherscan.io/token/${USDC_SEPOLIA_ADDRESS}?a=${userAddress || '0x0'}" target="_blank" rel="noopener noreferrer" style="text-decoration:none; color:inherit;">
-            <div class="profile-slide-asset-row" style="cursor:pointer; transition:background 0.2s;" onmouseover="this.style.background='rgba(59,130,246,0.1)'" onmouseout="this.style.background=''">
+          <a href="#" id="usdcExplorerLink" target="_blank" rel="noopener noreferrer" style="text-decoration:none; color:inherit;">
+            <div class="profile-slide-asset-row profile-asset-hover">
               <img src="https://cryptologos.cc/logos/usd-coin-usdc-logo.png?v=035" alt="USDC" class="profile-slide-asset-icon">
               <div class="profile-slide-asset-details">
                 <div class="profile-slide-asset-name">USDC</div>
@@ -1114,8 +1123,8 @@
             </div>
           </a>
 
-          <a href="https://sepolia.etherscan.io/token/${USDT_SEPOLIA_ADDRESS}?a=${userAddress || '0x0'}" target="_blank" rel="noopener noreferrer" style="text-decoration:none; color:inherit;">
-            <div class="profile-slide-asset-row" style="cursor:pointer; transition:background 0.2s;" onmouseover="this.style.background='rgba(59,130,246,0.1)'" onmouseout="this.style.background=''">
+          <a href="#" id="usdtExplorerLink" target="_blank" rel="noopener noreferrer" style="text-decoration:none; color:inherit;">
+            <div class="profile-slide-asset-row profile-asset-hover">
               <img src="https://cryptologos.cc/logos/tether-usdt-logo.png?v=035" alt="USDT" class="profile-slide-asset-icon">
               <div class="profile-slide-asset-details">
                 <div class="profile-slide-asset-name">USDT</div>
@@ -2167,6 +2176,9 @@
         // Show loading notification
         showNotification("🔄 Updating balances...", false);
         
+        // Update asset explorer links when wallet is connected
+        updateAssetLinks();
+        
         // Fetch live ETH/USDC rate from Uniswap in the background
         fetchLiveETHtoUSDCRate().catch(err => console.log('[Uniswap] Rate fetch error:', err));
         
@@ -2897,8 +2909,42 @@
           if (tabName === 'activity') {
             fetchTransactionHistory();
           }
+          
+          // Update asset links when assets tab is opened
+          if (tabName === 'assets') {
+            updateAssetLinks();
+          }
         });
       });
+    }
+    
+    // Function to update asset links dynamically
+    function updateAssetLinks() {
+      if (!userAddress) return;
+      
+      // Update ETH link
+      const ethLink = document.getElementById('ethExplorerLink');
+      if (ethLink) {
+        ethLink.href = `https://sepolia.etherscan.io/address/${userAddress}`;
+      }
+      
+      // Update WBTC link
+      const wbtcLink = document.getElementById('wbtcExplorerLink');
+      if (wbtcLink) {
+        wbtcLink.href = `https://sepolia.etherscan.io/token/${WBTC_SEPOLIA}?a=${userAddress}`;
+      }
+      
+      // Update USDC link
+      const usdcLink = document.getElementById('usdcExplorerLink');
+      if (usdcLink) {
+        usdcLink.href = `https://sepolia.etherscan.io/token/${USDC_SEPOLIA_ADDRESS}?a=${userAddress}`;
+      }
+      
+      // Update USDT link
+      const usdtLink = document.getElementById('usdtExplorerLink');
+      if (usdtLink) {
+        usdtLink.href = `https://sepolia.etherscan.io/token/${USDT_SEPOLIA_ADDRESS}?a=${userAddress}`;
+      }
     }
 
     // Social Media Connection Management
@@ -6495,9 +6541,11 @@
           const icon = answer.correct ? '✅' : '❌';
           const color = answer.correct ? '#10b981' : '#ef4444';
           const pointChange = answer.pointChange > 0 ? `+${answer.pointChange}` : answer.pointChange;
+          // Sanitize question text to prevent XSS
+          const safeQuestion = answer.question.replace(/</g, '&lt;').replace(/>/g, '&gt;').substring(0, 30);
           return `<div style="padding:6px 0; font-size:0.85em; border-bottom:1px solid rgba(255,255,255,0.1);">
             <div style="display:flex; justify-content:space-between; align-items:center;">
-              <span style="color:${color};">${icon} ${answer.question.substring(0, 30)}...</span>
+              <span style="color:${color};">${icon} ${safeQuestion}...</span>
               <span style="color:${color}; font-weight:bold;">${pointChange}</span>
             </div>
             <div style="font-size:0.75em; color:#94a3b8; margin-top:2px;">Total: ${answer.totalPoints} pts | ${answer.timestamp}</div>
