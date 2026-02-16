@@ -44,7 +44,7 @@
       loadEthers();
     })();
   </script>
-  <!-- NOTE: WalletConnect v1 is deprecated. Bridge URL (wss://e.bridge.walletconnect.org) is no longer available.
+  <!-- NOTE: WalletConnect v1 is deprecated. Bridge URL (wss://x.bridge.walletconnect.org) is no longer available.
        This causes WebSocket connection errors but doesn't affect MetaMask, OKX, or Trust Wallet.
        TODO: Upgrade to WalletConnect v2 (requires significant refactoring of wallet connection logic).
        Tracking: WalletConnect v1 will continue to show WebSocket errors but wallet functionality works via other providers. -->
@@ -104,6 +104,35 @@
       transition: all 0.3s;
     }
     .login-option:hover { background: #0b5ed7; transform: scale(1.02); }
+    .wallet-choice {
+      background: linear-gradient(135deg, rgba(13,110,253,0.3), rgba(13,110,253,0.5));
+      color: white;
+      border: 2px solid var(--primary);
+      padding: 16px 20px;
+      font-size: 1.15rem;
+      border-radius: 12px;
+      cursor: pointer;
+      margin: 10px 0;
+      width: 100%;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+    }
+    .wallet-choice:hover { 
+      background: linear-gradient(135deg, var(--primary), #0b5ed7);
+      transform: scale(1.02);
+      box-shadow: 0 4px 12px rgba(13,110,253,0.4);
+    }
+    .wallet-choice.primary-wallet {
+      background: linear-gradient(135deg, rgba(13,110,253,0.4), rgba(13,110,253,0.6));
+      border: 2px solid #60a5fa;
+    }
+    .wallet-choice.primary-wallet:hover {
+      background: linear-gradient(135deg, var(--primary), #2563eb);
+      border-color: #3b82f6;
+    }
     .input-field {
       width: 100%;
       padding: 14px;
@@ -774,19 +803,38 @@
   <!-- Login Page -->
   <div class="login-container" id="loginPage">
     <h1>Mogaland-Plume Simulator</h1>
-    <p class="subtitle">Connect wallet or use mock login (demo only)</p>
+    <p class="subtitle">Connect your wallet to get started</p>
 
-    <button class="login-option" onclick="showWalletOptions()">Connect Wallet</button>
-    <button class="login-option" onclick="showEmailLogin()">Login with Email</button>
-    <button class="login-option" onclick="showXLogin()">Login with X (@username)</button>
-
-    <div id="walletOptions" class="hidden">
-      <h3 style="margin:20px 0;">Select Wallet</h3>
-      <button class="wallet-choice" onclick="connectMetaMask()">MetaMask</button>
-      <button class="wallet-choice" onclick="connectOKX()">OKX Wallet</button>
-      <button class="wallet-choice" onclick="connectTrustWallet()">Trust Wallet</button>
-      <button class="wallet-choice" onclick="connectWalletConnect()">WalletConnect</button>
+    <div style="margin-bottom: 30px;">
+      <h3 style="margin-bottom: 15px; color: #60a5fa; font-size: 1.2rem;">Connect Wallet</h3>
+      <button class="wallet-choice primary-wallet" onclick="connectMetaMask()">
+        <span style="font-size: 1.5rem; margin-right: 10px;">🦊</span>
+        MetaMask
+      </button>
+      <button class="wallet-choice primary-wallet" onclick="connectOKX()">
+        <span style="font-size: 1.5rem; margin-right: 10px;">⚫</span>
+        OKX Wallet
+      </button>
+      <button class="wallet-choice primary-wallet" onclick="connectTrustWallet()">
+        <span style="font-size: 1.5rem; margin-right: 10px;">🛡️</span>
+        Trust Wallet
+      </button>
     </div>
+
+    <div style="margin: 30px 0; display: flex; align-items: center; opacity: 0.5;">
+      <div style="flex: 1; height: 1px; background: rgba(255,255,255,0.2);"></div>
+      <span style="margin: 0 15px; font-size: 0.9rem;">OR</span>
+      <div style="flex: 1; height: 1px; background: rgba(255,255,255,0.2);"></div>
+    </div>
+
+    <button class="login-option" onclick="showEmailLogin()">
+      <span style="font-size: 1.2rem; margin-right: 8px;">📧</span>
+      Login with Email
+    </button>
+    <button class="login-option" onclick="showXLogin()">
+      <span style="font-size: 1.2rem; margin-right: 8px;">𝕏</span>
+      Login with X
+    </button>
 
     <div id="emailLogin" class="hidden">
       <input type="email" id="emailInput" class="input-field" placeholder="Gmail or Yahoo email" />
@@ -892,8 +940,8 @@
               <div class="profile-slide-asset-subtitle">Mogaland Token</div>
             </div>
             <div class="profile-slide-asset-amounts">
-              <div class="profile-slide-token-amount">1,245.67</div>
-              <div class="profile-slide-usd-amount">$1.87</div>
+              <div class="profile-slide-token-amount" id="mogaBalance">0.0000</div>
+              <div class="profile-slide-usd-amount" id="mogaBalanceUSD">$0.00</div>
             </div>
           </div>
 
@@ -904,8 +952,8 @@
               <div class="profile-slide-asset-subtitle">USD Coin</div>
             </div>
             <div class="profile-slide-asset-amounts">
-              <div class="profile-slide-token-amount">0.004</div>
-              <div class="profile-slide-usd-amount">$0.004</div>
+              <div class="profile-slide-token-amount" id="usdcBalance">0.0000</div>
+              <div class="profile-slide-usd-amount" id="usdcBalanceUSD">$0.00</div>
             </div>
           </div>
 
@@ -916,8 +964,8 @@
               <div class="profile-slide-asset-subtitle">Tether</div>
             </div>
             <div class="profile-slide-asset-amounts">
-              <div class="profile-slide-token-amount">0.500</div>
-              <div class="profile-slide-usd-amount">$0.500</div>
+              <div class="profile-slide-token-amount" id="usdtBalance">0.0000</div>
+              <div class="profile-slide-usd-amount" id="usdtBalanceUSD">$0.00</div>
             </div>
           </div>
         </div>
@@ -1037,12 +1085,16 @@
     let walletConnectProvider = null;
     
     // Login UI functions - Available immediately (don't need ethers.js)
-    function showWalletOptions() { toggleSections('walletOptions'); }
     function showEmailLogin() { toggleSections('emailLogin'); }
     function showXLogin() { toggleSections('xLogin'); }
     
     function toggleSections(showId) {
-      ['walletOptions', 'emailLogin', 'xLogin'].forEach(id => document.getElementById(id).classList.toggle('hidden', id !== showId));
+      ['emailLogin', 'xLogin'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.classList.toggle('hidden', id !== showId);
+        }
+      });
     }
     
     // Notification system - available before ethers loads
@@ -1231,11 +1283,13 @@
       if (!window.ethereum) return showNotification("MetaMask not found. Please install MetaMask extension.", true);
       connectWallet("MetaMask", () => new ethers.providers.Web3Provider(window.ethereum));
     }
+    window.connectMetaMask = connectMetaMask;
 
     function connectOKX() {
       if (!window.okxwallet) return showNotification("OKX Wallet not found. Please install OKX Wallet extension.", true);
       connectWallet("OKX", () => new ethers.providers.Web3Provider(window.okxwallet));
     }
+    window.connectOKX = connectOKX;
 
     function connectTrustWallet() {
       // Note: Trust Wallet detection is challenging as it uses window.ethereum like MetaMask
@@ -1243,8 +1297,10 @@
       if (!window.ethereum) return showNotification("Trust Wallet not detected. Please install Trust Wallet extension or use Trust Wallet browser.", true);
       connectWallet("Trust", () => new ethers.providers.Web3Provider(window.ethereum));
     }
+    window.connectTrustWallet = connectTrustWallet;
 
     async function connectWalletConnect() {
+      // NOTE: WalletConnect v1 is deprecated but we'll try to connect anyway
       if (typeof ethers === 'undefined') {
         return showNotification("Web3 libraries still loading. Please wait...", true);
       }
@@ -1258,21 +1314,26 @@
             qrcode: true
           });
         } catch (e) {
-          return showNotification("WalletConnect initialization failed: " + e.message, true);
+          showNotification("⚠️ WalletConnect v1 is deprecated. Initialization failed. Please use MetaMask, OKX, or Trust Wallet instead.", true);
+          console.error("WalletConnect initialization error:", e);
+          return;
         }
       }
       
       if (!walletConnectProvider) {
-        return showNotification("WalletConnect library not loaded", true);
+        showNotification("WalletConnect library not loaded. Please use MetaMask, OKX, or Trust Wallet instead.", true);
+        return;
       }
       
       try {
         await walletConnectProvider.enable();
         connectWallet("WalletConnect", () => new ethers.providers.Web3Provider(walletConnectProvider));
       } catch (e) {
-        showNotification("WalletConnect connection cancelled or failed", true);
+        showNotification("⚠️ WalletConnect connection failed. Please use MetaMask, OKX, or Trust Wallet for better experience.", true);
+        console.error("WalletConnect error:", e);
       }
     }
+    window.connectWalletConnect = connectWalletConnect;
     
     // Function to connect wallet from within the app (after email/X login)
     function connectWalletFromApp() {
@@ -1324,6 +1385,7 @@
       modal.appendChild(modalContent);
       document.body.appendChild(modal);
     }
+    window.connectWalletFromApp = connectWalletFromApp;
     
     function initializeApp() {
       // Cache loading indicator reference to avoid redundant DOM queries
@@ -1465,8 +1527,32 @@
     // Note: connectWallet, connectMetaMask, connectOKX, connectTrustWallet, connectWalletConnect are now in global scope
     
     // Fetch real token balances from Sepolia
+    // Helper function to reset all balance displays
+    function resetBalanceDisplay() {
+      // Configuration object for balance elements with their default values
+      const balanceElements = [
+        { id: null, selector: '.profile-slide-total', value: 'Connect Wallet' },
+        { id: 'ethBalance', value: '0.0000' },
+        { id: 'usdcBalance', value: '0.0000' },
+        { id: 'usdcBalanceUSD', value: '$0.00' },
+        { id: 'usdtBalance', value: '0.0000' },
+        { id: 'usdtBalanceUSD', value: '$0.00' },
+        { id: 'mogaBalance', value: '0.0000' }, // Placeholder - update when MOGA token contract is available
+        { id: 'mogaBalanceUSD', value: '$0.00' }
+      ];
+      
+      balanceElements.forEach(item => {
+        const el = item.id ? document.getElementById(item.id) : document.querySelector(item.selector);
+        if (el) el.textContent = item.value;
+      });
+    }
+    
     async function fetchRealBalances() {
-      if (!userAddress || !provider) return;
+      if (!userAddress || !provider) {
+        // Not connected - reset all balances
+        resetBalanceDisplay();
+        return;
+      }
       
       try {
         // Fetch ETH balance
@@ -1483,22 +1569,23 @@
         const usdtBalanceRaw = await usdtContract.balanceOf(userAddress);
         const usdtBalance = parseFloat(ethers.utils.formatUnits(usdtBalanceRaw, 6)); // USDT has 6 decimals
         
-        // Update UI
+        // Update UI with real balances
         document.getElementById('ethBalance').textContent = ethBalance.toFixed(4);
         document.querySelector('.profile-slide-total').textContent = `${ethBalance.toFixed(4)} ETH`;
         
-        // Update USDC display
-        const usdcElements = document.querySelectorAll('.profile-slide-asset-row');
-        if (usdcElements[2]) {
-          usdcElements[2].querySelector('.profile-slide-token-amount').textContent = usdcBalance.toFixed(4);
-          usdcElements[2].querySelector('.profile-slide-usd-amount').textContent = `$${usdcBalance.toFixed(2)}`;
-        }
+        // Update USDC display using IDs
+        const usdcBalanceEl = document.getElementById('usdcBalance');
+        if (usdcBalanceEl) usdcBalanceEl.textContent = usdcBalance.toFixed(4);
         
-        // Update USDT display
-        if (usdcElements[3]) {
-          usdcElements[3].querySelector('.profile-slide-token-amount').textContent = usdtBalance.toFixed(4);
-          usdcElements[3].querySelector('.profile-slide-usd-amount').textContent = `$${usdtBalance.toFixed(2)}`;
-        }
+        const usdcBalanceUSDEl = document.getElementById('usdcBalanceUSD');
+        if (usdcBalanceUSDEl) usdcBalanceUSDEl.textContent = `$${usdcBalance.toFixed(2)}`;
+        
+        // Update USDT display using IDs
+        const usdtBalanceEl = document.getElementById('usdtBalance');
+        if (usdtBalanceEl) usdtBalanceEl.textContent = usdtBalance.toFixed(4);
+        
+        const usdtBalanceUSDEl = document.getElementById('usdtBalanceUSD');
+        if (usdtBalanceUSDEl) usdtBalanceUSDEl.textContent = `$${usdtBalance.toFixed(2)}`;
         
         console.log(`Balances updated: ETH=${ethBalance}, USDC=${usdcBalance}, USDT=${usdtBalance}`);
       } catch (error) {
@@ -1580,9 +1667,12 @@
     window.showProfile = function() {
       document.getElementById('profileSlidePanel').classList.remove('hidden');
       // Refresh data when profile is opened
-      if (userAddress) {
+      if (userAddress && provider) {
         fetchRealBalances();
         fetchTransactionHistory();
+      } else {
+        // Not connected - ensure "Connect Wallet" is shown
+        fetchRealBalances(); // This will handle the not-connected state
       }
     }
 
@@ -1691,17 +1781,8 @@
           walletBtn.classList.remove('connected');
         }
         
-        // Update profile balance display to show "Connect Wallet"
-        const profileTotal = document.querySelector('.profile-slide-total');
-        if (profileTotal) {
-          profileTotal.textContent = 'Connect Wallet';
-        }
-        
-        // Reset balance displays
-        const ethBalanceEl = document.getElementById('ethBalance');
-        if (ethBalanceEl) {
-          ethBalanceEl.textContent = '0.0000';
-        }
+        // Reset all balance displays using helper function
+        resetBalanceDisplay();
         
         // Hide dropdown
         const dropdown = document.getElementById('walletDropdown');
