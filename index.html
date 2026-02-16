@@ -789,6 +789,92 @@
       background: #f8f9fa;
       color: #333;
     }
+    
+    /* Responsive Design Improvements */
+    @media (max-width: 768px) {
+      /* Profile panel full width on mobile */
+      .profile-slide-panel {
+        width: 100%;
+        max-width: 100vw;
+      }
+      
+      /* Swap section adjustments */
+      .flex-container > div {
+        min-width: 100%;
+      }
+      
+      /* Learning section cards stack properly */
+      .question-box, .progress-box {
+        min-width: 100%;
+      }
+      
+      /* Market charts don't overlap */
+      .chart-container {
+        width: 100% !important;
+        height: 300px !important;
+      }
+      
+      /* NFT cards responsive grid */
+      .nft-grid {
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important;
+      }
+      
+      /* Input fields full width on mobile */
+      input[type="number"], input[type="text"], select {
+        width: 100% !important;
+        max-width: 100%;
+      }
+      
+      /* Buttons stack on mobile */
+      .btn-group {
+        flex-direction: column;
+        gap: 8px;
+      }
+      
+      .btn-group button {
+        width: 100%;
+      }
+    }
+    
+    @media (min-width: 769px) and (max-width: 1024px) {
+      /* Tablet adjustments */
+      .profile-slide-panel {
+        width: 60%;
+        max-width: 480px;
+      }
+      
+      /* Flex containers adapt to tablet */
+      .flex-container {
+        gap: 16px;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      /* Extra small screens */
+      h1 { font-size: 2.2rem; }
+      .subtitle { font-size: 1rem; }
+      
+      /* Smaller padding on mobile */
+      .card {
+        padding: 16px;
+      }
+      
+      /* Wallet button text shorter */
+      #walletBtn {
+        font-size: 0.9em;
+        padding: 8px 12px;
+      }
+      
+      /* Navigation adjustments */
+      nav {
+        padding: 12px 16px;
+      }
+      
+      .nav-btn {
+        padding: 8px 12px;
+        font-size: 0.9em;
+      }
+    }
   </style>
 </head>
 <body>
@@ -1678,6 +1764,9 @@
       }
       
       try {
+        // Show loading notification
+        showNotification("🔄 Updating balances...", false);
+        
         // Fetch ETH balance
         const ethBalanceWei = await provider.getBalance(userAddress);
         const ethBalance = parseFloat(ethers.utils.formatEther(ethBalanceWei));
@@ -1693,8 +1782,11 @@
         const usdtBalance = parseFloat(ethers.utils.formatUnits(usdtBalanceRaw, 6)); // USDT has 6 decimals
         
         // Update UI with real balances
-        document.getElementById('ethBalance').textContent = ethBalance.toFixed(4);
-        document.querySelector('.profile-slide-total').textContent = `${ethBalance.toFixed(4)} ETH`;
+        const ethBalanceEl = document.getElementById('ethBalance');
+        if (ethBalanceEl) ethBalanceEl.textContent = ethBalance.toFixed(4);
+        
+        const profileTotal = document.querySelector('.profile-slide-total');
+        if (profileTotal) profileTotal.textContent = `${ethBalance.toFixed(4)} ETH`;
         
         // Update USDC display using IDs
         const usdcBalanceEl = document.getElementById('usdcBalance');
@@ -1710,9 +1802,18 @@
         const usdtBalanceUSDEl = document.getElementById('usdtBalanceUSD');
         if (usdtBalanceUSDEl) usdtBalanceUSDEl.textContent = `$${usdtBalance.toFixed(2)}`;
         
-        console.log(`Balances updated: ETH=${ethBalance}, USDC=${usdcBalance}, USDT=${usdtBalance}`);
+        // Update trading balance in Market section if it exists
+        if (typeof tradingUSDCBalance !== 'undefined') {
+          tradingUSDCBalance = usdcBalance;
+          if (typeof updateTradingBalance === 'function') {
+            updateTradingBalance();
+          }
+        }
+        
+        console.log(`✅ Balances updated: ETH=${ethBalance}, USDC=${usdcBalance}, USDT=${usdtBalance}`);
       } catch (error) {
         console.error('Error fetching balances:', error);
+        showNotification("⚠️ Failed to fetch balances: " + (error.message || "Unknown error"), true);
       }
     }
 
@@ -1819,9 +1920,11 @@
         localStorage.setItem('lastSection', currentSection.id || 'swap');
       }
       
-      // Clear wallet connection
+      // Clear wallet connection and persistence
       userAddress = null;
       provider = null;
+      walletConnected = false;
+      clearWalletConnection();
       
       // Clear social connections status
       localStorage.removeItem('socialConnections');
@@ -1844,6 +1947,9 @@
       if (dropdown) {
         dropdown.classList.remove('show');
       }
+      
+      // Reset all balances
+      resetBalanceDisplay();
     }
 
     // Wallet dropdown functions
