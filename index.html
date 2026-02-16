@@ -997,14 +997,14 @@
     </button>
 
     <div id="emailLogin" class="hidden">
-      <input type="email" id="emailInput" class="input-field" placeholder="Gmail or Yahoo email" />
+      <input type="email" id="emailInput" class="input-field" placeholder="Gmail or Yahoo email" pattern="[a-zA-Z0-9._%+-]+@(gmail\.com|yahoo\.com)" title="Please use a valid Gmail or Yahoo email address" />
       <button class="login-option" onclick="sendEmailCode()">Send Mock OTP</button>
-      <input type="text" id="otpInput" class="input-field hidden" placeholder="OTP (123456)" />
+      <input type="text" id="otpInput" class="input-field hidden" placeholder="OTP (123456)" maxlength="6" pattern="[0-9]{6}" />
       <button class="login-option hidden" id="verifyOtpBtn" onclick="verifyEmailOtp()">Verify</button>
     </div>
 
     <div id="xLogin" class="hidden">
-      <input type="text" id="xInput" class="input-field" placeholder="@yourusername" />
+      <input type="text" id="xInput" class="input-field" placeholder="@yourusername" pattern="@[a-zA-Z0-9_]{1,15}" title="Enter a valid X username (e.g., @username)" />
       <button class="login-option" onclick="confirmXLogin()">Confirm</button>
     </div>
 
@@ -1563,8 +1563,10 @@
     function sendEmailCode() {
       try {
         const email = document.getElementById('emailInput').value.trim();
-        if (!email.includes('@gmail.com') && !email.includes('@yahoo.com')) {
-          return showNotification("Use Gmail or Yahoo email.", true);
+        // Proper email validation with regex
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@(gmail\.com|yahoo\.com)$/;
+        if (!emailRegex.test(email)) {
+          return showNotification("Please use a valid Gmail or Yahoo email address.", true);
         }
         showNotification(`Mock OTP sent: ${mockOtp}`);
         document.getElementById('otpInput').classList.remove('hidden');
@@ -1594,8 +1596,10 @@
     function confirmXLogin() {
       try {
         const handle = document.getElementById('xInput').value.trim();
-        if (!handle.startsWith('@')) {
-          return showNotification("Invalid @username", true);
+        // Proper X username validation: starts with @, followed by 1-15 alphanumeric/underscore characters
+        const xUsernameRegex = /^@[a-zA-Z0-9_]{1,15}$/;
+        if (!xUsernameRegex.test(handle)) {
+          return showNotification("Please enter a valid X username (e.g., @username)", true);
         }
         enterDashboard("X");
       } catch (error) {
