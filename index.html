@@ -892,8 +892,8 @@
               <div class="profile-slide-asset-subtitle">Mogaland Token</div>
             </div>
             <div class="profile-slide-asset-amounts">
-              <div class="profile-slide-token-amount">1,245.67</div>
-              <div class="profile-slide-usd-amount">$1.87</div>
+              <div class="profile-slide-token-amount" id="mogaBalance">0.0000</div>
+              <div class="profile-slide-usd-amount" id="mogaBalanceUSD">$0.00</div>
             </div>
           </div>
 
@@ -904,8 +904,8 @@
               <div class="profile-slide-asset-subtitle">USD Coin</div>
             </div>
             <div class="profile-slide-asset-amounts">
-              <div class="profile-slide-token-amount">0.004</div>
-              <div class="profile-slide-usd-amount">$0.004</div>
+              <div class="profile-slide-token-amount" id="usdcBalance">0.0000</div>
+              <div class="profile-slide-usd-amount" id="usdcBalanceUSD">$0.00</div>
             </div>
           </div>
 
@@ -916,8 +916,8 @@
               <div class="profile-slide-asset-subtitle">Tether</div>
             </div>
             <div class="profile-slide-asset-amounts">
-              <div class="profile-slide-token-amount">0.500</div>
-              <div class="profile-slide-usd-amount">$0.500</div>
+              <div class="profile-slide-token-amount" id="usdtBalance">0.0000</div>
+              <div class="profile-slide-usd-amount" id="usdtBalanceUSD">$0.00</div>
             </div>
           </div>
         </div>
@@ -1466,7 +1466,28 @@
     
     // Fetch real token balances from Sepolia
     async function fetchRealBalances() {
-      if (!userAddress || !provider) return;
+      if (!userAddress || !provider) {
+        // Not connected - ensure balances show zeros or "Connect Wallet"
+        const profileTotal = document.querySelector('.profile-slide-total');
+        if (profileTotal) profileTotal.textContent = 'Connect Wallet';
+        
+        const ethBalanceEl = document.getElementById('ethBalance');
+        if (ethBalanceEl) ethBalanceEl.textContent = '0.0000';
+        
+        const usdcBalanceEl = document.getElementById('usdcBalance');
+        if (usdcBalanceEl) usdcBalanceEl.textContent = '0.0000';
+        
+        const usdcBalanceUSDEl = document.getElementById('usdcBalanceUSD');
+        if (usdcBalanceUSDEl) usdcBalanceUSDEl.textContent = '$0.00';
+        
+        const usdtBalanceEl = document.getElementById('usdtBalance');
+        if (usdtBalanceEl) usdtBalanceEl.textContent = '0.0000';
+        
+        const usdtBalanceUSDEl = document.getElementById('usdtBalanceUSD');
+        if (usdtBalanceUSDEl) usdtBalanceUSDEl.textContent = '$0.00';
+        
+        return;
+      }
       
       try {
         // Fetch ETH balance
@@ -1483,22 +1504,23 @@
         const usdtBalanceRaw = await usdtContract.balanceOf(userAddress);
         const usdtBalance = parseFloat(ethers.utils.formatUnits(usdtBalanceRaw, 6)); // USDT has 6 decimals
         
-        // Update UI
+        // Update UI with real balances
         document.getElementById('ethBalance').textContent = ethBalance.toFixed(4);
         document.querySelector('.profile-slide-total').textContent = `${ethBalance.toFixed(4)} ETH`;
         
-        // Update USDC display
-        const usdcElements = document.querySelectorAll('.profile-slide-asset-row');
-        if (usdcElements[2]) {
-          usdcElements[2].querySelector('.profile-slide-token-amount').textContent = usdcBalance.toFixed(4);
-          usdcElements[2].querySelector('.profile-slide-usd-amount').textContent = `$${usdcBalance.toFixed(2)}`;
-        }
+        // Update USDC display using IDs
+        const usdcBalanceEl = document.getElementById('usdcBalance');
+        if (usdcBalanceEl) usdcBalanceEl.textContent = usdcBalance.toFixed(4);
         
-        // Update USDT display
-        if (usdcElements[3]) {
-          usdcElements[3].querySelector('.profile-slide-token-amount').textContent = usdtBalance.toFixed(4);
-          usdcElements[3].querySelector('.profile-slide-usd-amount').textContent = `$${usdtBalance.toFixed(2)}`;
-        }
+        const usdcBalanceUSDEl = document.getElementById('usdcBalanceUSD');
+        if (usdcBalanceUSDEl) usdcBalanceUSDEl.textContent = `$${usdcBalance.toFixed(2)}`;
+        
+        // Update USDT display using IDs
+        const usdtBalanceEl = document.getElementById('usdtBalance');
+        if (usdtBalanceEl) usdtBalanceEl.textContent = usdtBalance.toFixed(4);
+        
+        const usdtBalanceUSDEl = document.getElementById('usdtBalanceUSD');
+        if (usdtBalanceUSDEl) usdtBalanceUSDEl.textContent = `$${usdtBalance.toFixed(2)}`;
         
         console.log(`Balances updated: ETH=${ethBalance}, USDC=${usdcBalance}, USDT=${usdtBalance}`);
       } catch (error) {
@@ -1580,9 +1602,12 @@
     window.showProfile = function() {
       document.getElementById('profileSlidePanel').classList.remove('hidden');
       // Refresh data when profile is opened
-      if (userAddress) {
+      if (userAddress && provider) {
         fetchRealBalances();
         fetchTransactionHistory();
+      } else {
+        // Not connected - ensure "Connect Wallet" is shown
+        fetchRealBalances(); // This will handle the not-connected state
       }
     }
 
@@ -1697,11 +1722,21 @@
           profileTotal.textContent = 'Connect Wallet';
         }
         
-        // Reset balance displays
+        // Reset all balance displays
         const ethBalanceEl = document.getElementById('ethBalance');
-        if (ethBalanceEl) {
-          ethBalanceEl.textContent = '0.0000';
-        }
+        if (ethBalanceEl) ethBalanceEl.textContent = '0.0000';
+        
+        const usdcBalanceEl = document.getElementById('usdcBalance');
+        if (usdcBalanceEl) usdcBalanceEl.textContent = '0.0000';
+        
+        const usdcBalanceUSDEl = document.getElementById('usdcBalanceUSD');
+        if (usdcBalanceUSDEl) usdcBalanceUSDEl.textContent = '$0.00';
+        
+        const usdtBalanceEl = document.getElementById('usdtBalance');
+        if (usdtBalanceEl) usdtBalanceEl.textContent = '0.0000';
+        
+        const usdtBalanceUSDEl = document.getElementById('usdtBalanceUSD');
+        if (usdtBalanceUSDEl) usdtBalanceUSDEl.textContent = '$0.00';
         
         // Hide dropdown
         const dropdown = document.getElementById('walletDropdown');
