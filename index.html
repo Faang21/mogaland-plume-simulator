@@ -1998,9 +1998,35 @@
 
     // Fetch transaction history from Sepolia Etherscan API
     async function fetchTransactionHistory() {
-      if (!userAddress) return;
+      const activityContainer = document.getElementById('activityContent');
+      
+      if (!userAddress || !provider) {
+        // Not connected - show prompt to connect
+        activityContainer.innerHTML = `
+          <div style="height: 300px; display: flex; align-items: center; justify-content: center; text-align: center; color: #94a3b8; font-size: 1.1em; padding: 20px;">
+            <div>
+              <div style="font-size: 2.8em; margin-bottom: 12px;">🔌</div>
+              <div style="margin-bottom: 16px;">Connect your wallet to view activity</div>
+              <button onclick="connectWalletFromApp()" style="background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; padding: 12px 24px; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer;">
+                Connect Wallet
+              </button>
+            </div>
+          </div>
+        `;
+        return;
+      }
       
       try {
+        // Show loading state
+        activityContainer.innerHTML = `
+          <div style="height: 300px; display: flex; align-items: center; justify-content: center; text-align: center; color: #94a3b8; font-size: 1.1em; padding: 20px;">
+            <div>
+              <div style="font-size: 2.8em; margin-bottom: 12px;">🔄</div>
+              <div>Loading activity...</div>
+            </div>
+          </div>
+        `;
+        
         const apiKey = 'YourEtherscanAPIKey'; // Users should add their own key
         const url = `https://api-sepolia.etherscan.io/api?module=account&action=txlist&address=${userAddress}&startblock=0&endblock=99999999&page=1&offset=10&sort=desc&apikey=${apiKey}`;
         
@@ -2008,7 +2034,6 @@
         const data = await response.json();
         
         if (data.status === '1' && data.result && data.result.length > 0) {
-          const activityContainer = document.getElementById('activityContent');
           activityContainer.innerHTML = '';
           
           data.result.slice(0, 10).forEach(tx => {
@@ -2037,29 +2062,45 @@
             activityContainer.appendChild(txDiv);
           });
         } else {
-          // If no transactions or API error, try to show at least connected status
-          const activityContainer = document.getElementById('activityContent');
+          // If no transactions or API error, show wallet info and link to explorer
           activityContainer.innerHTML = `
             <div style="height: 300px; display: flex; align-items: center; justify-content: center; text-align: center; color: #94a3b8; font-size: 1.1em; padding: 20px;">
               <div>
                 <div style="font-size: 2.8em; margin-bottom: 12px;">📭</div>
-                <div>No recent transactions found</div>
-                <div style="font-size: 0.9em; margin-top: 8px; opacity: 0.7;">Wallet: ${userAddress.slice(0,6)}...${userAddress.slice(-4)}</div>
+                <div style="margin-bottom: 8px;">No recent transactions found</div>
+                <div style="font-size: 0.9em; margin-top: 8px; opacity: 0.7;">
+                  Wallet: <span style="color: #60a5fa; font-family: monospace;">${userAddress.slice(0,10)}...${userAddress.slice(-8)}</span>
+                </div>
+                <div style="margin-top: 16px;">
+                  <a href="${SEPOLIA_EXPLORER}/address/${userAddress}" target="_blank" 
+                     style="background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-size: 0.9em; display: inline-block;">
+                    View on Sepolia Explorer
+                  </a>
+                </div>
               </div>
             </div>
           `;
         }
       } catch (error) {
         console.error('Error fetching transaction history:', error);
-        // Show fallback with wallet info
-        const activityContainer = document.getElementById('activityContent');
+        // Show fallback with wallet info and explorer link
         activityContainer.innerHTML = `
           <div style="height: 300px; display: flex; align-items: center; justify-content: center; text-align: center; color: #94a3b8; font-size: 1.1em; padding: 20px;">
             <div>
               <div style="font-size: 2.8em; margin-bottom: 12px;">🔗</div>
-              <div>Connected Wallet</div>
-              <div style="font-size: 0.9em; margin-top: 8px; opacity: 0.7;">${userAddress.slice(0,6)}...${userAddress.slice(-4)}</div>
-              <div style="font-size: 0.85em; margin-top: 8px; opacity: 0.6;">Add Etherscan API key to view history</div>
+              <div style="margin-bottom: 8px;">Connected Wallet</div>
+              <div style="font-size: 0.9em; margin-top: 8px; opacity: 0.7;">
+                <span style="color: #60a5fa; font-family: monospace;">${userAddress.slice(0,10)}...${userAddress.slice(-8)}</span>
+              </div>
+              <div style="font-size: 0.85em; margin-top: 12px; opacity: 0.6; max-width: 300px; margin-left: auto; margin-right: auto;">
+                Transaction history loading failed. View your activity on the explorer:
+              </div>
+              <div style="margin-top: 16px;">
+                <a href="${SEPOLIA_EXPLORER}/address/${userAddress}" target="_blank" 
+                   style="background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-size: 0.9em; display: inline-block;">
+                  View on Sepolia Explorer
+                </a>
+              </div>
             </div>
           </div>
         `;
@@ -4883,25 +4924,57 @@
     async function loadUserNFTs() {
       if (!provider || !userAddress) {
         console.log('[NFT] No wallet connected, using demo NFTs');
+        userNFTs = []; // Clear NFTs when not connected
         showNotification("💡 Connect wallet to load your NFTs", false);
         return;
       }
       
       try {
         showNotification("🔄 Loading your NFTs...", false);
+        
+        // Check if contract exists by testing code at address
+        const code = await provider.getCode(NFT_CONTRACT_ADDRESS);
+        if (code === '0x' || code === '0x0') {
+          console.log('[NFT] Contract not deployed at this address');
+          userNFTs = [];
+          showNotification("📦 NFT contract not deployed yet. Complete learning to mint your first NFT!", false);
+          return;
+        }
+        
         const nftContract = new ethers.Contract(NFT_CONTRACT_ADDRESS, NFT_ABI, provider);
-        const balance = await nftContract.balanceOf(userAddress);
+        
+        // Try to get balance with better error handling
+        let balance;
+        try {
+          balance = await nftContract.balanceOf(userAddress);
+        } catch (balanceError) {
+          console.log('[NFT] balanceOf call failed:', balanceError.message);
+          userNFTs = [];
+          showNotification("📦 No NFTs found or contract not compatible. Complete learning to mint!", false);
+          return;
+        }
         
         userNFTs = [];
-        for (let i = 0; i < balance.toNumber(); i++) {
-          const tokenId = await nftContract.tokenOfOwnerByIndex(userAddress, i);
-          const tokenURI = await nftContract.tokenURI(tokenId);
-          userNFTs.push({
-            id: tokenId.toString(),
-            uri: tokenURI,
-            rarity: getRarityFromTokenId(tokenId.toNumber()),
-            apy: nftAPYs[getRarityFromTokenId(tokenId.toNumber())]
-          });
+        const balanceNum = balance.toNumber();
+        
+        if (balanceNum === 0) {
+          showNotification("📦 No NFTs found. Complete learning to mint your first NFT!", false);
+          return;
+        }
+        
+        for (let i = 0; i < balanceNum; i++) {
+          try {
+            const tokenId = await nftContract.tokenOfOwnerByIndex(userAddress, i);
+            const tokenURI = await nftContract.tokenURI(tokenId);
+            userNFTs.push({
+              id: tokenId.toString(),
+              uri: tokenURI,
+              rarity: getRarityFromTokenId(tokenId.toNumber()),
+              apy: nftAPYs[getRarityFromTokenId(tokenId.toNumber())]
+            });
+          } catch (tokenError) {
+            console.log(`[NFT] Error loading token ${i}:`, tokenError.message);
+          }
         }
         
         console.log(`[NFT] Loaded ${userNFTs.length} NFTs from wallet`);
@@ -4912,7 +4985,9 @@
         }
       } catch (error) {
         console.error('[NFT] Error loading NFTs:', error);
-        showNotification("⚠️ Failed to load NFTs: " + (error.message || "Unknown error"), true);
+        userNFTs = [];
+        // More user-friendly error message
+        showNotification("💡 NFT loading skipped. Connect wallet and complete learning to mint NFTs!", false);
       }
     }
     
