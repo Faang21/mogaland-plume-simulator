@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Mogaland-Plume Simulator</title>
-  <script src="https://cdn.ethers.io/lib/ethers-5.7.umd.min.js" onerror="console.error('Failed to load ethers.js from CDN. Check ad blockers.');"></script>
-  <script src="https://unpkg.com/@walletconnect/web3-provider@1.8.0/dist/umd/index.min.js"></script>
+  <script src="https://cdn.ethers.io/lib/ethers-5.7.umd.min.js" onerror="console.error('❌ Failed to load ethers.js from CDN. Check internet connection and ad blockers.');"></script>
+  <script src="https://unpkg.com/@walletconnect/web3-provider@1.8.0/dist/umd/index.min.js" onerror="console.warn('⚠️ WalletConnect library failed to load. WalletConnect feature may not work.');"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@0.2.0/dist/chartjs-chart-financial.min.js"></script>
@@ -728,7 +728,7 @@
       </div>
 
       <div class="profile-slide-balance">
-        <div class="profile-slide-total">$3.87</div>
+        <div class="profile-slide-total" id="profileBalanceDisplay">Connect Wallet</div>
         <div class="profile-slide-addresses">Addresses ></div>
       </div>
 
@@ -910,9 +910,9 @@
           console.error('Failed to load ethers library after ' + MAX_LOAD_TIMEOUT_MS + 'ms');
           // Show error in a non-blocking, accessible way
           const errorDiv = document.createElement('div');
-          errorDiv.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#dc3545;color:white;padding:20px;border-radius:8px;z-index:10000;max-width:500px;text-align:center;';
+          errorDiv.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#dc3545;color:white;padding:24px;border-radius:12px;z-index:10000;max-width:520px;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,0.4);border:2px solid #ff4444;';
           errorDiv.setAttribute('role', 'alert');
-          errorDiv.innerHTML = '<strong>⚠️ Library Loading Failed</strong><br>Failed to load required libraries. Please check your internet connection and ad blocker settings, then refresh the page.';
+          errorDiv.innerHTML = '<div style="font-size:2em;margin-bottom:12px;">⚠️</div><strong style="font-size:1.3em;display:block;margin-bottom:12px;">Connection Failed - ethers not defined</strong><p style="margin-bottom:16px;line-height:1.5;">Failed to load required libraries. This prevents wallet connections (MetaMask, TrustWallet, OKX).</p><p style="font-size:0.9em;opacity:0.9;margin-bottom:12px;">Please:</p><ul style="text-align:left;margin:0 auto 16px;display:inline-block;font-size:0.9em;"><li>✓ Check your internet connection</li><li>✓ Disable ad blockers for this site</li><li>✓ Refresh the page</li></ul><button onclick="location.reload()" style="background:white;color:#dc3545;border:none;padding:12px 24px;border-radius:6px;font-weight:bold;cursor:pointer;font-size:1em;">🔄 Refresh Page</button>';
           document.body.insertBefore(errorDiv, document.body.firstChild);
           return;
         }
@@ -920,7 +920,7 @@
         setTimeout(initializeApp, POLL_INTERVAL_MS);
         return;
       }
-      console.log('Ethers library loaded successfully');
+      console.log('✅ Ethers library loaded successfully - Wallet connections enabled');
       startApp();
     }
     
@@ -1357,6 +1357,18 @@
           walletBtn.classList.remove('connected');
         }
         
+        // Update profile balance display to show "Connect Wallet"
+        const profileTotal = document.querySelector('.profile-slide-total');
+        if (profileTotal) {
+          profileTotal.textContent = 'Connect Wallet';
+        }
+        
+        // Reset balance displays
+        const ethBalanceEl = document.getElementById('ethBalance');
+        if (ethBalanceEl) {
+          ethBalanceEl.textContent = '0.0000';
+        }
+        
         // Hide dropdown
         const dropdown = document.getElementById('walletDropdown');
         if (dropdown) {
@@ -1450,6 +1462,10 @@
               <option value="ETH">ETH (Sepolia)</option>
               <option value="USDC">USDC (Sepolia)</option>
               <option value="USDT">USDT (Sepolia)</option>
+              <option value="LINK">LINK (Sepolia)</option>
+              <option value="WBTC">WBTC (Sepolia)</option>
+              <option value="AAVE">AAVE (Sepolia)</option>
+              <option value="EURO">EURO (Sepolia)</option>
             </select>
           </div>
           
@@ -1817,6 +1833,10 @@
     // Sepolia Token Contract Addresses
     const USDC_SEPOLIA_ADDRESS = "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238";
     const USDT_SEPOLIA_ADDRESS = "0x7169D38820dfd117C3FA1f22a697dBA58d90BA06";
+    const LINK_SEPOLIA_ADDRESS = "0x779877A7B0D9E8603169DdbD7836e478b4624789";
+    const WBTC_SEPOLIA_ADDRESS = "0x29f2D40B0605204364af54EC677bD022dA425d03";
+    const AAVE_SEPOLIA_ADDRESS = "0x88541670E55cC00bEEFD87eB59EDd1b7C511AC9a";
+    const EURE_SEPOLIA_ADDRESS = "0x08210F9170F89Ab7658F0B5E3fF39b0E03C594D4";
     
     // Treasury Wallet Configuration
     const TREASURY_WALLET_ADDRESS = "0xa959f26847211f71A22aDb087EBe50E0743e7D66";
@@ -3217,11 +3237,50 @@
               
               return;
             } catch (e) {
-              console.log('TradingView widget error:', e);
+              console.log('TradingView widget error, trying CoinGecko:', e);
             }
           }
 
-          // Fallback: Use canvas-based chart
+          // Second fallback: Try CoinGecko chart for crypto assets
+          if (currentTab === 'crypto' && asset.symbol) {
+            try {
+              const coinGeckoIds = {
+                'BTCUSD': 'bitcoin',
+                'ETHUSD': 'ethereum',
+                'BNBUSD': 'binancecoin',
+                'SOLUSD': 'solana',
+                'ADAUSD': 'cardano',
+                'XRPUSD': 'ripple',
+                'DOTUSD': 'polkadot',
+                'MATICUSD': 'matic-network',
+                'LINKUSD': 'chainlink',
+                'UNIUSD': 'uniswap'
+              };
+              
+              const coinId = coinGeckoIds[asset.symbol];
+              if (coinId) {
+                container.innerHTML = `
+                  <div style="background: var(--card-bg); border-radius: 12px; padding: 16px; height: 420px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                    <iframe 
+                      src="https://www.coingecko.com/en/coins/${coinId}/chart_widget?height=380&width=100%" 
+                      style="border: none; width: 100%; height: 380px; border-radius: 8px;"
+                      frameborder="0"
+                      scrolling="no"
+                    ></iframe>
+                    <p style="margin-top: 8px; font-size: 0.85em; color: #94a3b8;">Data from CoinGecko</p>
+                  </div>
+                `;
+                
+                // Fetch current price
+                fetchCoinGeckoPrice(asset, coinId);
+                return;
+              }
+            } catch (e) {
+              console.log('CoinGecko chart error:', e);
+            }
+          }
+
+          // Third fallback: Use canvas-based chart
           const canvas = document.createElement('canvas');
           canvas.id = 'priceChart';
           canvas.height = 420;
@@ -3291,6 +3350,30 @@
             document.getElementById('currentPrice').textContent = `$${asset.basePrice.toLocaleString()}`;
           } catch (error) {
             console.log('Price fetch error:', error);
+            document.getElementById('currentPrice').textContent = `$${asset.basePrice.toLocaleString()}`;
+          }
+        }
+
+        // Fetch price from CoinGecko API
+        async function fetchCoinGeckoPrice(asset, coinId) {
+          try {
+            const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=usd`);
+            if (response.ok) {
+              const data = await response.json();
+              if (data[coinId]) {
+                const price = data[coinId].usd;
+                const priceDisplay = document.getElementById('currentPrice');
+                if (priceDisplay) {
+                  priceDisplay.textContent = `$${price.toLocaleString()}`;
+                }
+                return;
+              }
+            }
+            
+            // Fallback to base price
+            document.getElementById('currentPrice').textContent = `$${asset.basePrice.toLocaleString()}`;
+          } catch (error) {
+            console.log('CoinGecko price fetch error:', error);
             document.getElementById('currentPrice').textContent = `$${asset.basePrice.toLocaleString()}`;
           }
         }
@@ -3460,6 +3543,10 @@
                   <option value="ETH">ETH Sepolia</option>
                   <option value="USDC">USDC Sepolia</option>
                   <option value="USDT">USDT Sepolia</option>
+                  <option value="LINK">LINK Sepolia</option>
+                  <option value="WBTC">WBTC Sepolia</option>
+                  <option value="AAVE">AAVE Sepolia</option>
+                  <option value="EURO">EURO Sepolia</option>
                 </select>
 
                 <button onclick="toggleSwapDirection()" style="background: #0d6efd; width: 48px; height: 48px; border-radius: 50%; border: none; font-size: 1.5em; color: white; cursor: pointer; box-shadow: 0 4px 12px rgba(13,110,253,0.4); transition: transform 0.2s;">
@@ -3470,6 +3557,10 @@
                   <option value="USDC">USDC Sepolia</option>
                   <option value="ETH">ETH Sepolia</option>
                   <option value="USDT">USDT Sepolia</option>
+                  <option value="LINK">LINK Sepolia</option>
+                  <option value="WBTC">WBTC Sepolia</option>
+                  <option value="AAVE">AAVE Sepolia</option>
+                  <option value="EURO">EURO Sepolia</option>
                 </select>
               </div>
 
@@ -3511,7 +3602,7 @@
             </p>
 
             <p style="text-align: center; margin-top: 12px; color: #94a3b8; font-size: 0.9em;">
-              Sepolia Testnet • ETH ↔ USDC/USDT • Demo Mode
+              Sepolia Testnet • ETH ↔ USDC/USDT/LINK/WBTC/AAVE/EURO • Demo Mode
             </p>
           </div>
         `;
@@ -4285,21 +4376,29 @@
 
     function updateSwapEstimate() {
       const fromAmt = parseFloat(document.getElementById('fromInput')?.value) || 0;
-      const fromToken = document.getElementById('fromTokenSelect')?.value || 'PLUME';
-      const toToken = document.getElementById('toTokenSelect')?.value || 'MOGA';
+      const fromToken = document.getElementById('fromTokenSelect')?.value || 'ETH';
+      const toToken = document.getElementById('toTokenSelect')?.value || 'USDC';
 
-      let rate = 1;
-      if (fromToken === 'PLUME' && toToken === 'MOGA') rate = 100;
-      if (fromToken === 'MOGA' && toToken === 'PLUME') rate = 0.01;
-      if (fromToken === 'PLUME' && (toToken === 'USDT' || toToken === 'USDC')) rate = 0.01;
-      if ((fromToken === 'USDT' || fromToken === 'USDC') && toToken === 'PLUME') rate = 100;
+      const exchangeRates = {
+        'ETH': 2500,
+        'USDC': 1,
+        'USDT': 1,
+        'LINK': 15,
+        'WBTC': 45000,
+        'AAVE': 100,
+        'EURO': 1.08
+      };
 
-      const estOut = (fromAmt * rate).toFixed(4);
+      const fromValue = fromAmt * (exchangeRates[fromToken] || 1);
+      const toAmount = fromValue / (exchangeRates[toToken] || 1);
+      const rate = (exchangeRates[fromToken] || 1) / (exchangeRates[toToken] || 1);
+
+      const estOut = toAmount.toFixed(6);
       const impact = fromAmt > 0 ? `~0.12% impact (${currentSlippageTolerance.toFixed(1)}% tolerance)` : "";
 
       const estEl = document.getElementById('swapEstimate');
       if (estEl) {
-        estEl.innerHTML = `Estimasi: <strong>${estOut} ${toToken}</strong> (1 ${fromToken} ≈ ${rate} ${toToken})<br><small style="color:#94a3b8;">${impact}</small>`;
+        estEl.innerHTML = `Estimasi: <strong>${estOut} ${toToken}</strong> (1 ${fromToken} ≈ ${rate.toFixed(4)} ${toToken})<br><small style="color:#94a3b8;">${impact}</small>`;
       }
     }
 
@@ -4342,7 +4441,11 @@
       const exchangeRates = {
         'ETH': 2500,  // 1 ETH = 2500 USDC
         'USDC': 1,
-        'USDT': 1
+        'USDT': 1,
+        'LINK': 15,   // 1 LINK = 15 USDC
+        'WBTC': 45000, // 1 WBTC = 45000 USDC (approx Bitcoin price)
+        'AAVE': 100,   // 1 AAVE = 100 USDC
+        'EURO': 1.08   // 1 EURO = 1.08 USDC
       };
       
       const fromValue = amt * exchangeRates[fromToken];
