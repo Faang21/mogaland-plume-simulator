@@ -44,6 +44,10 @@
       loadEthers();
     })();
   </script>
+  <!-- NOTE: WalletConnect v1 is deprecated. Bridge URL (wss://e.bridge.walletconnect.org) is no longer available.
+       This causes WebSocket connection errors but doesn't affect MetaMask, OKX, or Trust Wallet.
+       TODO: Upgrade to WalletConnect v2 (requires significant refactoring of wallet connection logic).
+       Tracking: WalletConnect v1 will continue to show WebSocket errors but wallet functionality works via other providers. -->
   <script src="https://unpkg.com/@walletconnect/web3-provider@1.8.0/dist/umd/index.min.js" onerror="console.warn('⚠️ WalletConnect library failed to load. WalletConnect feature may not work.');"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
@@ -1021,6 +1025,17 @@
     const maxEthersLoadAttempts = MAX_LOAD_TIMEOUT_MS / POLL_INTERVAL_MS; // 150 attempts
     let ethersLoadAttempts = 0;
     
+    // Global constants for Sepolia network
+    const SEPOLIA_CHAIN_ID = 11155111;
+    const SEPOLIA_CHAIN_HEX = "0xaa36a7";
+    const SEPOLIA_RPC = "https://rpc.sepolia.org";
+    const SEPOLIA_EXPLORER = "https://sepolia.etherscan.io";
+    
+    // Global wallet variables
+    let provider = null;
+    let userAddress = null;
+    let walletConnectProvider = null;
+    
     // Login UI functions - Available immediately (don't need ethers.js)
     function showWalletOptions() { toggleSections('walletOptions'); }
     function showEmailLogin() { toggleSections('emailLogin'); }
@@ -1035,7 +1050,14 @@
       const div = document.createElement('div');
       div.className = 'notification';
       div.style.borderColor = error ? 'var(--danger)' : 'var(--bell)';
-      div.innerHTML = `<span>${error ? '⚠️' : '🔔'}</span> ${msg}`;
+      
+      const icon = document.createElement('span');
+      icon.textContent = error ? '⚠️' : '🔔';
+      
+      const text = document.createTextNode(' ' + msg);
+      
+      div.appendChild(icon);
+      div.appendChild(text);
       document.body.appendChild(div);
       setTimeout(() => div.remove(), 6000);
     }
@@ -1066,7 +1088,7 @@
 
     function enterDashboard(method) {
       loginMethod = method.toLowerCase();
-      if (method === 'Wallet' || method === 'MetaMask' || method === 'OKX' || method === 'WalletConnect') {
+      if (method === 'Wallet' || method === 'MetaMask' || method === 'OKX' || method === 'Trust' || method === 'WalletConnect') {
         loginMethod = 'wallet';
         walletConnected = true;
       } else if (method === 'Email') {
@@ -1111,6 +1133,196 @@
       if (typeof startSportsAutoUpdate === 'function') {
         startSportsAutoUpdate();
       }
+    }
+    
+    // Wallet connection functions - need to be global for onclick handlers
+    // These will be populated once ethers.js loads
+    async function connectWallet(walletType, getProvider) {
+      if (typeof ethers === 'undefined') {
+        return showNotification("Web3 libraries still loading. Please wait...", true);
+      }
+      
+      try {
+        provider = getProvider();
+        await provider.send("eth_requestAccounts", []);
+        
+        // Check current network and auto-switch to Sepolia if needed
+        const network = await provider.getNetwork();
+        if (network.chainId !== SEPOLIA_CHAIN_ID) {
+          try {
+            // Try to switch to Sepolia
+            await window.ethereum.request({
+              method: 'wallet_switchEthereumChain',
+              params: [{ chainId: SEPOLIA_CHAIN_HEX }],
+            });
+            showNotification("Switched to Sepolia testnet", false);
+          } catch (switchError) {
+            // If network doesn't exist, add it
+            if (switchError.code === 4902) {
+              try {
+                await window.ethereum.request({
+                  method: 'wallet_addEthereumChain',
+                  params: [{
+                    chainId: SEPOLIA_CHAIN_HEX,
+                    chainName: 'Sepolia Testnet',
+                    nativeCurrency: {
+                      name: 'Sepolia ETH',
+                      symbol: 'ETH',
+                      decimals: 18
+                    },
+                    rpcUrls: [SEPOLIA_RPC],
+                    blockExplorerUrls: [SEPOLIA_EXPLORER]
+                  }],
+                });
+                showNotification("Added and switched to Sepolia", false);
+              } catch (addError) {
+                showNotification("Failed to add Sepolia network", true);
+                return;
+              }
+            } else {
+              showNotification("Failed to switch to Sepolia", true);
+              return;
+            }
+          }
+        }
+        
+        // Get user address and balance
+        userAddress = (await provider.getSigner().getAddress()).toLowerCase();
+        const balanceWei = await provider.getBalance(userAddress);
+        const balanceEth = ethers.utils.formatEther(balanceWei);
+        
+        // Update UI - wallet button
+        const walletBtn = document.getElementById('walletBtn');
+        if (walletBtn) {
+          walletBtn.textContent = `${userAddress.slice(0,6)}...${userAddress.slice(-4)}`;
+          walletBtn.classList.add('connected');
+        }
+        
+        // Update wallet dropdown address display
+        const addressDisplay = document.getElementById('walletAddressDisplay');
+        if (addressDisplay) {
+          addressDisplay.textContent = userAddress;
+        }
+        
+        // Update profile balance displays
+        const profileTotal = document.querySelector('.profile-slide-total');
+        if (profileTotal) {
+          profileTotal.textContent = `${parseFloat(balanceEth).toFixed(4)} ETH`;
+        }
+        
+        const ethBalanceEl = document.getElementById('ethBalance');
+        if (ethBalanceEl) {
+          ethBalanceEl.textContent = parseFloat(balanceEth).toFixed(4);
+        }
+        
+        showNotification(`Connected via ${walletType} on Sepolia – Balance: ${parseFloat(balanceEth).toFixed(4)} ETH`, false);
+        enterDashboard(walletType);
+        
+        // Fetch real balances if function is available (may not be defined yet if startApp() hasn't completed)
+        if (typeof fetchRealBalances === 'function') {
+          fetchRealBalances();
+        }
+      } catch (e) {
+        showNotification("Connection failed: " + (e.message || "Error"), true);
+      }
+    }
+
+    function connectMetaMask() {
+      if (!window.ethereum) return showNotification("MetaMask not found. Please install MetaMask extension.", true);
+      connectWallet("MetaMask", () => new ethers.providers.Web3Provider(window.ethereum));
+    }
+
+    function connectOKX() {
+      if (!window.okxwallet) return showNotification("OKX Wallet not found. Please install OKX Wallet extension.", true);
+      connectWallet("OKX", () => new ethers.providers.Web3Provider(window.okxwallet));
+    }
+
+    function connectTrustWallet() {
+      // Note: Trust Wallet detection is challenging as it uses window.ethereum like MetaMask
+      // This checks for ethereum but may also work with other wallet extensions
+      if (!window.ethereum) return showNotification("Trust Wallet not detected. Please install Trust Wallet extension or use Trust Wallet browser.", true);
+      connectWallet("Trust", () => new ethers.providers.Web3Provider(window.ethereum));
+    }
+
+    async function connectWalletConnect() {
+      if (typeof ethers === 'undefined') {
+        return showNotification("Web3 libraries still loading. Please wait...", true);
+      }
+      
+      // Initialize WalletConnect provider if not already done
+      if (!walletConnectProvider && typeof WalletConnectProvider !== 'undefined') {
+        try {
+          walletConnectProvider = new WalletConnectProvider.default({
+            rpc: { [SEPOLIA_CHAIN_ID]: SEPOLIA_RPC },
+            chainId: SEPOLIA_CHAIN_ID,
+            qrcode: true
+          });
+        } catch (e) {
+          return showNotification("WalletConnect initialization failed: " + e.message, true);
+        }
+      }
+      
+      if (!walletConnectProvider) {
+        return showNotification("WalletConnect library not loaded", true);
+      }
+      
+      try {
+        await walletConnectProvider.enable();
+        connectWallet("WalletConnect", () => new ethers.providers.Web3Provider(walletConnectProvider));
+      } catch (e) {
+        showNotification("WalletConnect connection cancelled or failed", true);
+      }
+    }
+    
+    // Function to connect wallet from within the app (after email/X login)
+    function connectWalletFromApp() {
+      if (userAddress) {
+        showNotification("Wallet already connected!", false);
+        return;
+      }
+      
+      // Create modal using DOM methods for security
+      const modal = document.createElement('div');
+      modal.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); display:flex; align-items:center; justify-content:center; z-index:10000;';
+      
+      const modalContent = document.createElement('div');
+      modalContent.style.cssText = 'background:var(--card-bg); border-radius:20px; padding:40px; max-width:400px; width:90%; text-align:center; border:1px solid var(--border);';
+      
+      const title = document.createElement('h2');
+      title.style.cssText = 'margin-bottom:24px; color:white;';
+      title.textContent = 'Connect Wallet';
+      modalContent.appendChild(title);
+      
+      // Helper function to create wallet buttons
+      function createWalletButton(text, connectFn) {
+        const btn = document.createElement('button');
+        btn.className = 'wallet-choice';
+        btn.style.cssText = 'width:100%; margin:12px 0; padding:16px; background:var(--primary); color:white; border:none; border-radius:12px; cursor:pointer; font-size:1.1em;';
+        btn.textContent = text;
+        btn.addEventListener('click', () => {
+          connectFn();
+          document.body.removeChild(modal);
+        });
+        return btn;
+      }
+      
+      // Add wallet buttons
+      modalContent.appendChild(createWalletButton('MetaMask', connectMetaMask));
+      modalContent.appendChild(createWalletButton('OKX Wallet', connectOKX));
+      modalContent.appendChild(createWalletButton('Trust Wallet', connectTrustWallet));
+      modalContent.appendChild(createWalletButton('WalletConnect', connectWalletConnect));
+      
+      // Cancel button
+      const cancelBtn = document.createElement('button');
+      cancelBtn.style.cssText = 'width:100%; margin:20px 0 0; padding:14px; background:var(--danger); color:white; border:none; border-radius:12px; cursor:pointer; font-size:1em;';
+      cancelBtn.textContent = 'Cancel';
+      cancelBtn.addEventListener('click', () => {
+        document.body.removeChild(modal);
+      });
+      modalContent.appendChild(cancelBtn);
+      
+      modal.appendChild(modalContent);
+      document.body.appendChild(modal);
     }
     
     function initializeApp() {
@@ -1235,139 +1447,22 @@
     }
     
     function startApp() {
-    const SEPOLIA_CHAIN_ID = 11155111;
-    const SEPOLIA_CHAIN_HEX = "0xaa36a7";
-    const SEPOLIA_RPC = "https://rpc.sepolia.org"; // Public Sepolia RPC endpoint
-    const SEPOLIA_EXPLORER = "https://sepolia.etherscan.io";
-
-    let provider = null;
-    let userAddress = null;
-
-    // Initialize WalletConnect only if library is available
-    let walletConnectProvider = null;
-    try {
-      if (typeof WalletConnectProvider !== 'undefined') {
+    // Note: SEPOLIA constants, provider, userAddress, and walletConnectProvider are now in global scope
+    
+    // Initialize WalletConnect only if library is available and not already initialized
+    if (!walletConnectProvider && typeof WalletConnectProvider !== 'undefined') {
+      try {
         walletConnectProvider = new WalletConnectProvider.default({
           rpc: { [SEPOLIA_CHAIN_ID]: SEPOLIA_RPC },
           chainId: SEPOLIA_CHAIN_ID,
           qrcode: true
         });
-      }
-    } catch (e) {
-      console.warn('WalletConnect not available:', e.message);
-    }
-
-
-    // Wallet connection functions - need ethers.js
-    async function connectWallet(walletType, getProvider) {
-      try {
-        provider = getProvider();
-        await provider.send("eth_requestAccounts", []);
-        
-        // Check current network and auto-switch to Sepolia if needed
-        const network = await provider.getNetwork();
-        if (network.chainId !== SEPOLIA_CHAIN_ID) {
-          try {
-            // Try to switch to Sepolia
-            await window.ethereum.request({
-              method: 'wallet_switchEthereumChain',
-              params: [{ chainId: SEPOLIA_CHAIN_HEX }],
-            });
-            showNotification("Switched to Sepolia testnet", false);
-          } catch (switchError) {
-            // If network doesn't exist, add it
-            if (switchError.code === 4902) {
-              try {
-                await window.ethereum.request({
-                  method: 'wallet_addEthereumChain',
-                  params: [{
-                    chainId: SEPOLIA_CHAIN_HEX,
-                    chainName: 'Sepolia Testnet',
-                    nativeCurrency: {
-                      name: 'Sepolia ETH',
-                      symbol: 'ETH',
-                      decimals: 18
-                    },
-                    rpcUrls: [SEPOLIA_RPC],
-                    blockExplorerUrls: [SEPOLIA_EXPLORER]
-                  }],
-                });
-                showNotification("Added and switched to Sepolia", false);
-              } catch (addError) {
-                showNotification("Failed to add Sepolia network", true);
-                return;
-              }
-            } else {
-              showNotification("Failed to switch to Sepolia", true);
-              return;
-            }
-          }
-        }
-        
-        // Get user address and balance
-        userAddress = (await provider.getSigner().getAddress()).toLowerCase();
-        const balanceWei = await provider.getBalance(userAddress);
-        const balanceEth = ethers.utils.formatEther(balanceWei);
-        
-        // Update UI - wallet button
-        const walletBtn = document.getElementById('walletBtn');
-        if (walletBtn) {
-          walletBtn.textContent = `${userAddress.slice(0,6)}...${userAddress.slice(-4)}`;
-          walletBtn.classList.add('connected');
-        }
-        
-        // Update wallet dropdown address display
-        const addressDisplay = document.getElementById('walletAddressDisplay');
-        if (addressDisplay) {
-          addressDisplay.textContent = userAddress;
-        }
-        
-        // Update profile balance displays
-        const profileTotal = document.querySelector('.profile-slide-total');
-        if (profileTotal) {
-          profileTotal.textContent = `${parseFloat(balanceEth).toFixed(4)} ETH`;
-        }
-        
-        const ethBalanceEl = document.getElementById('ethBalance');
-        if (ethBalanceEl) {
-          ethBalanceEl.textContent = parseFloat(balanceEth).toFixed(4);
-        }
-        
-        showNotification(`Connected via ${walletType} on Sepolia – Balance: ${parseFloat(balanceEth).toFixed(4)} ETH`, false);
-        enterDashboard(walletType);
       } catch (e) {
-        showNotification("Connection failed: " + (e.message || "Error"), true);
+        console.warn('WalletConnect not available:', e.message);
       }
     }
 
-    function connectMetaMask() {
-      if (!window.ethereum) return showNotification("MetaMask not found", true);
-      connectWallet("MetaMask", () => new ethers.providers.Web3Provider(window.ethereum));
-    }
-
-    function connectOKX() {
-      if (!window.okxwallet) return showNotification("OKX not found", true);
-      connectWallet("OKX", () => new ethers.providers.Web3Provider(window.okxwallet));
-    }
-
-    function connectTrustWallet() {
-      if (!window.ethereum || !window.ethereum.isTrust) return showNotification("Trust not detected", true);
-      connectWallet("Trust", () => new ethers.providers.Web3Provider(window.ethereum));
-    }
-
-    async function connectWalletConnect() {
-      if (!walletConnectProvider) {
-        return showNotification("WalletConnect library not loaded", true);
-      }
-      try {
-        await walletConnectProvider.enable();
-        connectWallet("WalletConnect", () => new ethers.providers.Web3Provider(walletConnectProvider));
-      } catch (e) {
-        showNotification("WalletConnect error", true);
-      }
-    }
-
-    // Notification function moved outside startApp() - see global scope
+    // Note: connectWallet, connectMetaMask, connectOKX, connectTrustWallet, connectWalletConnect are now in global scope
     
     // Fetch real token balances from Sepolia
     async function fetchRealBalances() {
@@ -1661,9 +1756,19 @@
       `;
       document.body.appendChild(modal);
       
-      // Generate QR code
+      // Generate QR code using external service
+      // Note: This sends the address to qrserver.com for QR generation
+      // Consider using a client-side library for better privacy in production
       const qrDiv = document.getElementById('depositQR');
-      qrDiv.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${userAddress}" alt="QR Code" style="width: 200px; height: 200px;">`;
+      // Clear any existing QR codes
+      while (qrDiv.firstChild) {
+        qrDiv.removeChild(qrDiv.firstChild);
+      }
+      const qrImg = document.createElement('img');
+      qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(userAddress);
+      qrImg.alt = 'QR Code';
+      qrImg.style.cssText = 'width: 200px; height: 200px;';
+      qrDiv.appendChild(qrImg);
       
       console.log('[Treasury] Deposit modal opened - deposits will be processed through treasury');
     }
@@ -2047,10 +2152,12 @@
     }
 
     function handleWalletConnect() {
-      // Close back profile and show login page to connect wallet
+      // Close back profile and connect wallet using modal
       closeBackProfile();
       if (!userAddress) {
-        showNotification('Please connect your wallet from the main page', false);
+        connectWalletFromApp();
+      } else {
+        showNotification('Wallet already connected!', false);
       }
     }
 
@@ -4091,7 +4198,7 @@
             <div style="background:rgba(239,68,68,0.1); border:1px solid #ef4444; border-radius:12px; padding:20px; margin:20px 0; text-align:center;">
               <p style="color:#ef4444; font-size:1.1em; margin-bottom:12px;">⚠️ Wallet Not Connected</p>
               <p style="color:#94a3b8; margin-bottom:16px;">Connect your wallet to interact with NFTs</p>
-              <button class="btn-primary" onclick="showWalletOptions()">Connect Wallet</button>
+              <button class="btn-primary" onclick="connectWalletFromApp()">Connect Wallet</button>
             </div>
           ` : ''}
 
