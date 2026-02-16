@@ -4997,7 +4997,8 @@
                   return;
                 }
               } catch (innerError) {
-                console.log('CoinGecko API error:', innerError);
+                console.log(`[TradingView] CoinGecko API error for ${asset.symbol}:`, innerError.message);
+                console.log('[TradingView] Falling back to base price');
               }
             }
             
