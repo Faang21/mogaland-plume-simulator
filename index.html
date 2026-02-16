@@ -1077,7 +1077,7 @@
 
     function enterDashboard(method) {
       loginMethod = method.toLowerCase();
-      if (method === 'Wallet' || method === 'MetaMask' || method === 'OKX' || method === 'WalletConnect') {
+      if (method === 'Wallet' || method === 'MetaMask' || method === 'OKX' || method === 'Trust' || method === 'WalletConnect') {
         loginMethod = 'wallet';
         walletConnected = true;
       } else if (method === 'Email') {
