@@ -1210,7 +1210,7 @@
         showNotification(`Connected via ${walletType} on Sepolia – Balance: ${parseFloat(balanceEth).toFixed(4)} ETH`, false);
         enterDashboard(walletType);
         
-        // Fetch real balances if function is available
+        // Fetch real balances if function is available (may not be defined yet if startApp() hasn't completed)
         if (typeof fetchRealBalances === 'function') {
           fetchRealBalances();
         }
@@ -1230,7 +1230,7 @@
     }
 
     function connectTrustWallet() {
-      if (!window.ethereum) return showNotification("Trust Wallet not detected. Please use Trust Wallet browser.", true);
+      if (!window.ethereum) return showNotification("Trust Wallet not detected. Please install Trust Wallet extension or use Trust Wallet browser.", true);
       connectWallet("Trust", () => new ethers.providers.Web3Provider(window.ethereum));
     }
 
@@ -1271,29 +1271,47 @@
         return;
       }
       
-      // Create a modal for wallet selection
+      // Create modal using DOM methods for security
       const modal = document.createElement('div');
       modal.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); display:flex; align-items:center; justify-content:center; z-index:10000;';
-      modal.innerHTML = `
-        <div style="background:var(--card-bg); border-radius:20px; padding:40px; max-width:400px; width:90%; text-align:center; border:1px solid var(--border);">
-          <h2 style="margin-bottom:24px; color:white;">Connect Wallet</h2>
-          <button class="wallet-choice" onclick="connectMetaMask(); this.parentElement.parentElement.remove();" style="width:100%; margin:12px 0; padding:16px; background:var(--primary); color:white; border:none; border-radius:12px; cursor:pointer; font-size:1.1em;">
-            MetaMask
-          </button>
-          <button class="wallet-choice" onclick="connectOKX(); this.parentElement.parentElement.remove();" style="width:100%; margin:12px 0; padding:16px; background:var(--primary); color:white; border:none; border-radius:12px; cursor:pointer; font-size:1.1em;">
-            OKX Wallet
-          </button>
-          <button class="wallet-choice" onclick="connectTrustWallet(); this.parentElement.parentElement.remove();" style="width:100%; margin:12px 0; padding:16px; background:var(--primary); color:white; border:none; border-radius:12px; cursor:pointer; font-size:1.1em;">
-            Trust Wallet
-          </button>
-          <button class="wallet-choice" onclick="connectWalletConnect(); this.parentElement.parentElement.remove();" style="width:100%; margin:12px 0; padding:16px; background:var(--primary); color:white; border:none; border-radius:12px; cursor:pointer; font-size:1.1em;">
-            WalletConnect
-          </button>
-          <button onclick="this.parentElement.parentElement.remove()" style="width:100%; margin:20px 0 0; padding:14px; background:var(--danger); color:white; border:none; border-radius:12px; cursor:pointer; font-size:1em;">
-            Cancel
-          </button>
-        </div>
-      `;
+      
+      const modalContent = document.createElement('div');
+      modalContent.style.cssText = 'background:var(--card-bg); border-radius:20px; padding:40px; max-width:400px; width:90%; text-align:center; border:1px solid var(--border);';
+      
+      const title = document.createElement('h2');
+      title.style.cssText = 'margin-bottom:24px; color:white;';
+      title.textContent = 'Connect Wallet';
+      modalContent.appendChild(title);
+      
+      // Helper function to create wallet buttons
+      function createWalletButton(text, connectFn) {
+        const btn = document.createElement('button');
+        btn.className = 'wallet-choice';
+        btn.style.cssText = 'width:100%; margin:12px 0; padding:16px; background:var(--primary); color:white; border:none; border-radius:12px; cursor:pointer; font-size:1.1em;';
+        btn.textContent = text;
+        btn.addEventListener('click', () => {
+          connectFn();
+          document.body.removeChild(modal);
+        });
+        return btn;
+      }
+      
+      // Add wallet buttons
+      modalContent.appendChild(createWalletButton('MetaMask', connectMetaMask));
+      modalContent.appendChild(createWalletButton('OKX Wallet', connectOKX));
+      modalContent.appendChild(createWalletButton('Trust Wallet', connectTrustWallet));
+      modalContent.appendChild(createWalletButton('WalletConnect', connectWalletConnect));
+      
+      // Cancel button
+      const cancelBtn = document.createElement('button');
+      cancelBtn.style.cssText = 'width:100%; margin:20px 0 0; padding:14px; background:var(--danger); color:white; border:none; border-radius:12px; cursor:pointer; font-size:1em;';
+      cancelBtn.textContent = 'Cancel';
+      cancelBtn.addEventListener('click', () => {
+        document.body.removeChild(modal);
+      });
+      modalContent.appendChild(cancelBtn);
+      
+      modal.appendChild(modalContent);
       document.body.appendChild(modal);
     }
     
