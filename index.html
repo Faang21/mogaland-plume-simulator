@@ -1841,8 +1841,8 @@
         const gasPrice = await provider.getGasPrice();
         const gasPriceGwei = parseFloat(ethers.utils.formatUnits(gasPrice, 'gwei'));
         
-        // Estimate gas fee in ETH (approximate)
-        const estimatedGasLimit = details.gasLimit || 100000; // Default gas limit
+        // Estimate gas fee in ETH (approximate) - use DEFAULT if not specified
+        const estimatedGasLimit = details.gasLimit || GAS_LIMITS.DEFAULT;
         const gasFeeWei = gasPrice.mul(estimatedGasLimit);
         const gasFeeEth = parseFloat(ethers.utils.formatEther(gasFeeWei));
         
@@ -1857,7 +1857,7 @@
             <br>
             <strong>⛽ Estimated Gas Fee:</strong><br>
             ${gasFeeEth.toFixed(6)} ETH (~$${(gasFeeEth * ETH_TO_USDC_RATE).toFixed(2)})<br>
-            <small style="color: #94a3b8;">${gasPriceGwei.toFixed(2)} Gwei</small>
+            <small style="color: #94a3b8;">${gasPriceGwei.toFixed(2)} Gwei | Note: ETH price approximation</small>
           </div>
         `;
         
@@ -2069,7 +2069,7 @@
                 <div style="font-size: 2.8em; margin-bottom: 12px;">📭</div>
                 <div style="margin-bottom: 8px;">No recent transactions found</div>
                 <div style="font-size: 0.9em; margin-top: 8px; opacity: 0.7;">
-                  Wallet: <span style="color: #60a5fa; font-family: monospace;">${userAddress.slice(0,10)}...${userAddress.slice(-8)}</span>
+                  Wallet: <span style="color: #60a5fa; font-family: monospace;">${formatAddress(userAddress)}</span>
                 </div>
                 <div style="margin-top: 16px;">
                   <a href="${SEPOLIA_EXPLORER}/address/${userAddress}" target="_blank" 
@@ -2090,7 +2090,7 @@
               <div style="font-size: 2.8em; margin-bottom: 12px;">🔗</div>
               <div style="margin-bottom: 8px;">Connected Wallet</div>
               <div style="font-size: 0.9em; margin-top: 8px; opacity: 0.7;">
-                <span style="color: #60a5fa; font-family: monospace;">${userAddress.slice(0,10)}...${userAddress.slice(-8)}</span>
+                <span style="color: #60a5fa; font-family: monospace;">${formatAddress(userAddress)}</span>
               </div>
               <div style="font-size: 0.85em; margin-top: 12px; opacity: 0.6; max-width: 300px; margin-left: auto; margin-right: auto;">
                 Transaction history loading failed. View your activity on the explorer:
@@ -2724,7 +2724,24 @@
     let treasuryUSDCBalance = 0; // Will be fetched from Sepolia
     let treasuryETHBalance = 0; // Will be fetched from Sepolia
     let tradingUSDCBalance = 0; // Will be populated with real wallet balance asynchronously
-    const ETH_TO_USDC_RATE = 2500; // 1 ETH = 2500 USDC
+    const ETH_TO_USDC_RATE = 2500; // 1 ETH = 2500 USDC (approximate exchange rate - may vary with market)
+    
+    // Gas estimation constants for different transaction types
+    const GAS_LIMITS = {
+      LEARNING: 50000,
+      SWAP: 150000,
+      BRIDGE: 200000,
+      STAKE_BASE: 100000,
+      STAKE_PER_NFT: 50000,
+      TRADE: 120000,
+      DEFAULT: 100000
+    };
+    
+    // Helper function for consistent address truncation
+    function formatAddress(address, startChars = 10, endChars = 8) {
+      if (!address) return 'N/A';
+      return `${address.slice(0, startChars)}...${address.slice(-endChars)}`;
+    }
 
     // Fetch real treasury balances from Sepolia
     async function fetchTreasuryBalances() {
@@ -3933,7 +3950,7 @@
           const confirmed = await requestWalletConfirmation(`Open ${type.toUpperCase()} Position`, {
             amount: `${amount} USDC (${leverage}x leverage)`,
             from: `${selectedAsset.symbol} - ${type === 'long' ? 'UP ⬆️' : 'DOWN ⬇️'}`,
-            gasLimit: 120000
+            gasLimit: GAS_LIMITS.TRADE
           });
           
           if (!confirmed) {
@@ -4698,7 +4715,7 @@
             amount: `${amount} ${token}`,
             from: fromChain,
             to: 'Sepolia',
-            gasLimit: 200000 // Estimated gas for bridge
+            gasLimit: GAS_LIMITS.BRIDGE
           });
           
           if (!confirmed) {
@@ -4934,7 +4951,7 @@
         
         // Check if contract exists by testing code at address
         const code = await provider.getCode(NFT_CONTRACT_ADDRESS);
-        if (code === '0x' || code === '0x0') {
+        if (code === '0x') {
           console.log('[NFT] Contract not deployed at this address');
           userNFTs = [];
           showNotification("📦 NFT contract not deployed yet. Complete learning to mint your first NFT!", false);
@@ -5077,7 +5094,7 @@
       const nftCount = selectedNFTs.size;
       const confirmed = await requestWalletConfirmation('Stake NFTs', {
         amount: `${nftCount} NFT${nftCount > 1 ? 's' : ''}`,
-        gasLimit: 100000 + (nftCount * 50000) // Base + per NFT gas
+        gasLimit: GAS_LIMITS.STAKE_BASE + (nftCount * GAS_LIMITS.STAKE_PER_NFT)
       });
       
       if (!confirmed) {
@@ -5473,7 +5490,7 @@
       // Request wallet confirmation with gas fee
       const confirmed = await requestWalletConfirmation('Swap Tokens', {
         amount: `${amt} ${fromToken} → ${toAmount.toFixed(4)} ${toToken}`,
-        gasLimit: 150000 // Estimated gas for swap
+        gasLimit: GAS_LIMITS.SWAP
       });
       
       if (!confirmed) {
@@ -5559,7 +5576,7 @@
       // Request wallet confirmation for gas fee
       const confirmed = await requestWalletConfirmation('Submit Learning Answer', {
         amount: `Gas Fee: ${GAS_FEE_USDC} USDC`,
-        gasLimit: 50000 // Estimated gas for answer submission
+        gasLimit: GAS_LIMITS.LEARNING
       });
       
       if (!confirmed) {
