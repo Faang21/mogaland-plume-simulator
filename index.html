@@ -1021,6 +1021,15 @@
     const maxEthersLoadAttempts = MAX_LOAD_TIMEOUT_MS / POLL_INTERVAL_MS; // 150 attempts
     let ethersLoadAttempts = 0;
     
+    // Login UI functions - Available immediately (don't need ethers.js)
+    function showWalletOptions() { toggleSections('walletOptions'); }
+    function showEmailLogin() { toggleSections('emailLogin'); }
+    function showXLogin() { toggleSections('xLogin'); }
+    
+    function toggleSections(showId) {
+      ['walletOptions','emailLogin','xLogin'].forEach(id => document.getElementById(id).classList.toggle('hidden', id !== showId));
+    }
+    
     function initializeApp() {
       // Cache loading indicator reference to avoid redundant DOM queries
       const loadingIndicator = document.getElementById('ethersLoadingIndicator');
@@ -1166,14 +1175,8 @@
       console.warn('WalletConnect not available:', e.message);
     }
 
-    function showWalletOptions() { toggleSections('walletOptions'); }
-    function showEmailLogin() { toggleSections('emailLogin'); }
-    function showXLogin() { toggleSections('xLogin'); }
-
-    function toggleSections(showId) {
-      ['walletOptions','emailLogin','xLogin'].forEach(id => document.getElementById(id).classList.toggle('hidden', id !== showId));
-    }
-
+    // Login UI functions moved outside startApp() - now globally accessible
+    
     function sendEmailCode() {
       const email = document.getElementById('emailInput').value.trim();
       if (!email.includes('@gmail.com') && !email.includes('@yahoo.com')) return showNotification("Use Gmail or Yahoo email.", true);
