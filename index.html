@@ -1278,6 +1278,34 @@
     const GAS_FEE_USDC = 0.025; // Gas fee in USDC equivalent (approximately 0.025 USDC per action)
     const CHART_HEIGHT = 420; // Standard height for trading charts in pixels
     
+    // CORS proxy for CoinGecko API (fallback when direct access fails)
+    const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
+    
+    // Helper function to fetch with CORS proxy fallback
+    async function fetchWithCORSFallback(url) {
+      try {
+        // Try direct fetch first
+        const response = await fetch(url);
+        if (response.ok) {
+          return await response.json();
+        }
+        throw new Error('Direct fetch failed');
+      } catch (error) {
+        console.log('[CORS] Direct fetch failed, trying proxy...', error.message);
+        try {
+          // Try with CORS proxy
+          const proxyResponse = await fetch(CORS_PROXY + encodeURIComponent(url));
+          if (proxyResponse.ok) {
+            return await proxyResponse.json();
+          }
+        } catch (proxyError) {
+          console.log('[CORS] Proxy fetch also failed:', proxyError.message);
+        }
+        // Return null if both fail - caller should handle fallback
+        return null;
+      }
+    }
+    
     // Gas estimation constants for different transaction types
     const GAS_LIMITS = {
       LEARNING: 50000,
@@ -2194,12 +2222,11 @@
         if (wbtcBalanceEl) wbtcBalanceEl.textContent = wbtcBalance.toFixed(8);
         
         const wbtcBalanceUSDEl = document.getElementById('wbtcBalanceUSD');
-        // Fetch BTC price from CoinGecko for WBTC USD value
+        // Fetch BTC price from CoinGecko for WBTC USD value with CORS fallback
         try {
-          const btcPriceResponse = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd');
-          if (btcPriceResponse.ok) {
-            const btcPriceData = await btcPriceResponse.json();
-            const wbtcPriceUSD = btcPriceData.bitcoin?.usd || 45000; // Fallback to approximate price
+          const btcPriceData = await fetchWithCORSFallback('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd');
+          if (btcPriceData && btcPriceData.bitcoin?.usd) {
+            const wbtcPriceUSD = btcPriceData.bitcoin.usd;
             if (wbtcBalanceUSDEl) wbtcBalanceUSDEl.textContent = `$${(wbtcBalance * wbtcPriceUSD).toFixed(2)}`;
           } else {
             // Fallback to approximate price if API fails
@@ -4824,21 +4851,11 @@
               
               const coinId = coinIdMap[symbol] || symbol;
               
-              // Try direct fetch first, then fallback to CORS proxy
-              let response;
+              // Try fetch with CORS fallback
               try {
-                response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=usd&include_24hr_change=true`);
-              } catch (corsError) {
-                console.log('[CoinGecko] CORS error, using fallback price simulation');
-                // Use base price with slight random variation for demo
-                const simulatedPrice = asset.basePrice * (1 + (Math.random() - 0.5) * SIMULATED_PRICE_VARIATION);
-                updatePriceDisplay(simulatedPrice);
-                return;
-              }
-              
-              if (response && response.ok) {
-                const data = await response.json();
-                if (data[coinId]) {
+                const data = await fetchWithCORSFallback(`https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=usd&include_24hr_change=true`);
+                
+                if (data && data[coinId]) {
                   const price = data[coinId].usd;
                   const change24h = data[coinId].usd_24h_change || 0;
                   
