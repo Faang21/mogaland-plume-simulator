@@ -997,14 +997,14 @@
     </button>
 
     <div id="emailLogin" class="hidden">
-      <input type="email" id="emailInput" class="input-field" placeholder="Gmail or Yahoo email" />
+      <input type="email" id="emailInput" class="input-field" placeholder="Gmail or Yahoo email" pattern="[a-zA-Z0-9._%+-]+@(gmail\.com|yahoo\.com)" title="Please use a valid Gmail or Yahoo email address" />
       <button class="login-option" onclick="sendEmailCode()">Send Mock OTP</button>
-      <input type="text" id="otpInput" class="input-field hidden" placeholder="OTP (123456)" />
+      <input type="text" id="otpInput" class="input-field hidden" placeholder="OTP (123456)" maxlength="6" pattern="[0-9]{6}" title="Enter 6-digit OTP" />
       <button class="login-option hidden" id="verifyOtpBtn" onclick="verifyEmailOtp()">Verify</button>
     </div>
 
     <div id="xLogin" class="hidden">
-      <input type="text" id="xInput" class="input-field" placeholder="@yourusername" />
+      <input type="text" id="xInput" class="input-field" placeholder="@yourusername" title="Enter a valid X username starting with @ (e.g., @username)" />
       <button class="login-option" onclick="confirmXLogin()">Confirm</button>
     </div>
 
@@ -1525,6 +1525,10 @@
     function showEmailLogin() { toggleSections('emailLogin'); }
     function showXLogin() { toggleSections('xLogin'); }
     
+    // Expose login functions to window for onclick handlers
+    window.showEmailLogin = showEmailLogin;
+    window.showXLogin = showXLogin;
+    
     function toggleSections(showId) {
       ['emailLogin', 'xLogin'].forEach(id => {
         const el = document.getElementById(id);
@@ -1557,23 +1561,53 @@
     let walletConnected = false;
     
     function sendEmailCode() {
-      const email = document.getElementById('emailInput').value.trim();
-      if (!email.includes('@gmail.com') && !email.includes('@yahoo.com')) return showNotification("Use Gmail or Yahoo email.", true);
-      showNotification(`Mock OTP sent: ${mockOtp}`);
-      document.getElementById('otpInput').classList.remove('hidden');
-      document.getElementById('verifyOtpBtn').classList.remove('hidden');
+      try {
+        const email = document.getElementById('emailInput').value.trim();
+        // Proper email validation with regex
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@(gmail\.com|yahoo\.com)$/;
+        if (!emailRegex.test(email)) {
+          return showNotification("Please use a valid Gmail or Yahoo email address.", true);
+        }
+        showNotification(`Mock OTP sent: ${mockOtp}`);
+        document.getElementById('otpInput').classList.remove('hidden');
+        document.getElementById('verifyOtpBtn').classList.remove('hidden');
+      } catch (error) {
+        console.error("Email login error:", error);
+        showNotification("Error sending OTP. Please try again.", true);
+      }
     }
+    window.sendEmailCode = sendEmailCode;
 
     function verifyEmailOtp() {
-      if (document.getElementById('otpInput').value.trim() === mockOtp) enterDashboard("Email");
-      else showNotification("Wrong OTP", true);
+      try {
+        const otpValue = document.getElementById('otpInput').value.trim();
+        if (otpValue === mockOtp) {
+          enterDashboard("Email");
+        } else {
+          showNotification("Wrong OTP", true);
+        }
+      } catch (error) {
+        console.error("OTP verification error:", error);
+        showNotification("Error verifying OTP. Please try again.", true);
+      }
     }
+    window.verifyEmailOtp = verifyEmailOtp;
 
     function confirmXLogin() {
-      const handle = document.getElementById('xInput').value.trim();
-      if (!handle.startsWith('@')) return showNotification("Invalid @username", true);
-      enterDashboard("X");
+      try {
+        const handle = document.getElementById('xInput').value.trim();
+        // Proper X username validation: starts with @, followed by 1-15 alphanumeric/underscore characters
+        const xUsernameRegex = /^@[a-zA-Z0-9_]{1,15}$/;
+        if (!xUsernameRegex.test(handle)) {
+          return showNotification("Please enter a valid X username (e.g., @username)", true);
+        }
+        enterDashboard("X");
+      } catch (error) {
+        console.error("X login error:", error);
+        showNotification("Error with X login. Please try again.", true);
+      }
     }
+    window.confirmXLogin = confirmXLogin;
 
     function enterDashboard(method) {
       loginMethod = method.toLowerCase();
@@ -5988,6 +6022,7 @@
       showNotification(`✅ Successfully staked ${count} NFT(s) | Gas: ${GAS_FEE_ETH} ETH`);
       console.log(`[NFT] Staked ${count} NFTs with gas fee`);
     }
+    window.stakeSelectedNFTs = stakeSelectedNFTs;
     
     async function unstakeSelectedNFTs() {
       if (selectedNFTs.size === 0) return showNotification("No staked NFTs selected!", true);
@@ -6027,6 +6062,7 @@
       showNotification(`✅ Successfully unstaked ${count} NFT(s) | Gas: ${GAS_FEE_ETH} ETH`);
       console.log(`[NFT] Unstaked ${count} NFTs with gas fee`);
     }
+    window.unstakeSelectedNFTs = unstakeSelectedNFTs;
     
     window.claimAllRewards = async function() {
       if (stakedNFTsData.length === 0) {
