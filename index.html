@@ -48,23 +48,6 @@
        This causes WebSocket connection errors but doesn't affect MetaMask, OKX, or Trust Wallet.
        TODO: Upgrade to WalletConnect v2 (requires significant refactoring of wallet connection logic).
        Tracking: WalletConnect v1 will continue to show WebSocket errors but wallet functionality works via other providers. -->
-  <script>
-    // Suppress WalletConnect v1 WebSocket errors in console
-    (function() {
-      const originalError = console.error;
-      console.error = function(...args) {
-        const msg = args.join(' ');
-        // Filter out known WalletConnect v1 bridge errors
-        if (msg.includes('bridge.walletconnect.org') || 
-            msg.includes('x.bridge.walletconnect') ||
-            msg.includes('e.bridge.walletconnect')) {
-          console.warn('⚠️ WalletConnect v1 bridge unavailable (deprecated). Use MetaMask, OKX, or Trust Wallet instead.');
-          return;
-        }
-        originalError.apply(console, args);
-      };
-    })();
-  </script>
   <script src="https://unpkg.com/@walletconnect/web3-provider@1.8.0/dist/umd/index.min.js" onerror="console.warn('⚠️ WalletConnect library failed to load. WalletConnect feature may not work.');"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
@@ -1317,10 +1300,7 @@
     window.connectTrustWallet = connectTrustWallet;
 
     async function connectWalletConnect() {
-      // NOTE: WalletConnect v1 is deprecated and may not work reliably
-      // Show warning to users
-      showNotification("⚠️ WalletConnect v1 is deprecated. Please use MetaMask, OKX, or Trust Wallet for better experience.", true);
-      
+      // NOTE: WalletConnect v1 is deprecated but we'll try to connect anyway
       if (typeof ethers === 'undefined') {
         return showNotification("Web3 libraries still loading. Please wait...", true);
       }
@@ -1334,19 +1314,21 @@
             qrcode: true
           });
         } catch (e) {
-          return showNotification("WalletConnect initialization failed: " + e.message + ". Please use MetaMask, OKX, or Trust Wallet instead.", true);
+          showNotification("⚠️ WalletConnect v1 is deprecated. Initialization failed: " + e.message + ". Please use MetaMask, OKX, or Trust Wallet instead.", true);
+          return;
         }
       }
       
       if (!walletConnectProvider) {
-        return showNotification("WalletConnect library not loaded. Please use MetaMask, OKX, or Trust Wallet instead.", true);
+        showNotification("WalletConnect library not loaded. Please use MetaMask, OKX, or Trust Wallet instead.", true);
+        return;
       }
       
       try {
         await walletConnectProvider.enable();
         connectWallet("WalletConnect", () => new ethers.providers.Web3Provider(walletConnectProvider));
       } catch (e) {
-        showNotification("WalletConnect connection failed. Please use MetaMask, OKX, or Trust Wallet instead.", true);
+        showNotification("⚠️ WalletConnect connection failed. Please use MetaMask, OKX, or Trust Wallet for better experience.", true);
         console.error("WalletConnect error:", e);
       }
     }
@@ -1544,27 +1526,38 @@
     // Note: connectWallet, connectMetaMask, connectOKX, connectTrustWallet, connectWalletConnect are now in global scope
     
     // Fetch real token balances from Sepolia
+    // Helper function to reset all balance displays
+    function resetBalanceDisplay() {
+      const profileTotal = document.querySelector('.profile-slide-total');
+      if (profileTotal) profileTotal.textContent = 'Connect Wallet';
+      
+      const ethBalanceEl = document.getElementById('ethBalance');
+      if (ethBalanceEl) ethBalanceEl.textContent = '0.0000';
+      
+      const usdcBalanceEl = document.getElementById('usdcBalance');
+      if (usdcBalanceEl) usdcBalanceEl.textContent = '0.0000';
+      
+      const usdcBalanceUSDEl = document.getElementById('usdcBalanceUSD');
+      if (usdcBalanceUSDEl) usdcBalanceUSDEl.textContent = '$0.00';
+      
+      const usdtBalanceEl = document.getElementById('usdtBalance');
+      if (usdtBalanceEl) usdtBalanceEl.textContent = '0.0000';
+      
+      const usdtBalanceUSDEl = document.getElementById('usdtBalanceUSD');
+      if (usdtBalanceUSDEl) usdtBalanceUSDEl.textContent = '$0.00';
+      
+      // Note: MOGA balance is a placeholder - update when MOGA token contract is available
+      const mogaBalanceEl = document.getElementById('mogaBalance');
+      if (mogaBalanceEl) mogaBalanceEl.textContent = '0.0000';
+      
+      const mogaBalanceUSDEl = document.getElementById('mogaBalanceUSD');
+      if (mogaBalanceUSDEl) mogaBalanceUSDEl.textContent = '$0.00';
+    }
+    
     async function fetchRealBalances() {
       if (!userAddress || !provider) {
-        // Not connected - ensure balances show zeros or "Connect Wallet"
-        const profileTotal = document.querySelector('.profile-slide-total');
-        if (profileTotal) profileTotal.textContent = 'Connect Wallet';
-        
-        const ethBalanceEl = document.getElementById('ethBalance');
-        if (ethBalanceEl) ethBalanceEl.textContent = '0.0000';
-        
-        const usdcBalanceEl = document.getElementById('usdcBalance');
-        if (usdcBalanceEl) usdcBalanceEl.textContent = '0.0000';
-        
-        const usdcBalanceUSDEl = document.getElementById('usdcBalanceUSD');
-        if (usdcBalanceUSDEl) usdcBalanceUSDEl.textContent = '$0.00';
-        
-        const usdtBalanceEl = document.getElementById('usdtBalance');
-        if (usdtBalanceEl) usdtBalanceEl.textContent = '0.0000';
-        
-        const usdtBalanceUSDEl = document.getElementById('usdtBalanceUSD');
-        if (usdtBalanceUSDEl) usdtBalanceUSDEl.textContent = '$0.00';
-        
+        // Not connected - reset all balances
+        resetBalanceDisplay();
         return;
       }
       
@@ -1795,27 +1788,8 @@
           walletBtn.classList.remove('connected');
         }
         
-        // Update profile balance display to show "Connect Wallet"
-        const profileTotal = document.querySelector('.profile-slide-total');
-        if (profileTotal) {
-          profileTotal.textContent = 'Connect Wallet';
-        }
-        
-        // Reset all balance displays
-        const ethBalanceEl = document.getElementById('ethBalance');
-        if (ethBalanceEl) ethBalanceEl.textContent = '0.0000';
-        
-        const usdcBalanceEl = document.getElementById('usdcBalance');
-        if (usdcBalanceEl) usdcBalanceEl.textContent = '0.0000';
-        
-        const usdcBalanceUSDEl = document.getElementById('usdcBalanceUSD');
-        if (usdcBalanceUSDEl) usdcBalanceUSDEl.textContent = '$0.00';
-        
-        const usdtBalanceEl = document.getElementById('usdtBalance');
-        if (usdtBalanceEl) usdtBalanceEl.textContent = '0.0000';
-        
-        const usdtBalanceUSDEl = document.getElementById('usdtBalanceUSD');
-        if (usdtBalanceUSDEl) usdtBalanceUSDEl.textContent = '$0.00';
+        // Reset all balance displays using helper function
+        resetBalanceDisplay();
         
         // Hide dropdown
         const dropdown = document.getElementById('walletDropdown');
