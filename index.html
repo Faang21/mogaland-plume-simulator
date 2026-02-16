@@ -1077,21 +1077,30 @@
           const buttonContainer = document.createElement('div');
           buttonContainer.style.cssText = 'display:flex;gap:10px;justify-content:center;';
           
-          const hardRefreshBtn = document.createElement('button');
-          hardRefreshBtn.textContent = '🔄 Hard Refresh';
-          hardRefreshBtn.addEventListener('click', function() {
-            location.reload(true);
+          const refreshBtn = document.createElement('button');
+          refreshBtn.textContent = '🔄 Refresh Page';
+          refreshBtn.addEventListener('click', function() {
+            location.reload();
           });
           
-          const reloadBtn = document.createElement('button');
-          reloadBtn.className = 'secondary';
-          reloadBtn.textContent = '↻ Reload';
-          reloadBtn.addEventListener('click', function() {
-            location.href = location.href;
+          const clearCacheBtn = document.createElement('button');
+          clearCacheBtn.className = 'secondary';
+          clearCacheBtn.textContent = '🗑️ Clear & Reload';
+          clearCacheBtn.addEventListener('click', function() {
+            // Clear any cached data and reload with cache-busting parameter
+            if ('caches' in window) {
+              caches.keys().then(function(names) {
+                names.forEach(function(name) {
+                  caches.delete(name);
+                });
+              });
+            }
+            // Add timestamp to force fresh load
+            window.location.href = window.location.pathname + '?t=' + Date.now();
           });
           
-          buttonContainer.appendChild(hardRefreshBtn);
-          buttonContainer.appendChild(reloadBtn);
+          buttonContainer.appendChild(refreshBtn);
+          buttonContainer.appendChild(clearCacheBtn);
           
           errorDiv.appendChild(icon);
           errorDiv.appendChild(title);
