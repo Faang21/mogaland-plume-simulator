@@ -2669,7 +2669,7 @@
       }
 
       // Process gas fee
-      if (!processGasFee('USDC contribution to treasury')) {
+      if (!await processGasFee('USDC contribution to treasury')) {
         return;
       }
 
@@ -3198,16 +3198,18 @@
     async function sendViaTreasury(token, amount, toAddress) {
       console.log(`[Treasury] Send: User → Treasury → ${toAddress}`);
       
-      if (tradingUSDCBalance < amount + GAS_FEE_USDC) {
-        showNotification(`Insufficient balance! Need ${(amount + GAS_FEE_USDC).toFixed(2)} USDC (${amount} + ${GAS_FEE_USDC} gas)`, true);
+      if (tradingUSDCBalance < amount) {
+        showNotification(`Insufficient balance! Need ${amount.toFixed(2)} USDC`, true);
+        return false;
+      }
+      
+      // Check gas fee separately (ETH balance check in processGasFee)
+      if (!await processGasFee('send')) {
         return false;
       }
       
       // Deduct from user
       tradingUSDCBalance -= amount;
-      
-      // Process gas fee
-      processGasFee('send');
       
       // Treasury receives and forwards
       treasuryUSDCBalance += amount;
@@ -3346,7 +3348,7 @@
       document.body.appendChild(modal);
     }
 
-    function executeSendETHFromTreasury() {
+    async function executeSendETHFromTreasury() {
       const recipientAddress = document.getElementById('treasuryRecipientAddress').value.trim();
       const amount = parseFloat(document.getElementById('treasuryETHAmount').value);
 
@@ -3367,7 +3369,7 @@
       }
 
       // Process gas fee
-      if (!processGasFee('treasury ETH transfer')) {
+      if (!await processGasFee('treasury ETH transfer')) {
         return;
       }
 
@@ -3446,7 +3448,7 @@
       document.getElementById('swapUSDCAmount').textContent = `${usdcAmount.toFixed(2)} USDC`;
     }
 
-    window.executeSwapTreasuryETHtoUSDC = function() {
+    window.executeSwapTreasuryETHtoUSDC = async function() {
       const amount = parseFloat(document.getElementById('treasurySwapAmount').value);
 
       // Validation
@@ -3461,7 +3463,7 @@
       }
 
       // Process gas fee
-      if (!processGasFee('treasury ETH to USDC swap')) {
+      if (!await processGasFee('treasury ETH to USDC swap')) {
         return;
       }
 
@@ -4070,10 +4072,9 @@
             return;
           }
 
-          // Check total required: position amount + gas fee
-          const totalRequired = amount + GAS_FEE_USDC;
-          if (totalRequired > tradingUSDCBalance) {
-            showNotification(`Insufficient balance! Need ${totalRequired.toFixed(2)} USDC (${amount} position + ${GAS_FEE_USDC} gas)`, true);
+          // Check USDC balance for position
+          if (amount > tradingUSDCBalance) {
+            showNotification(`Insufficient USDC balance! Need ${amount.toFixed(2)} USDC for position`, true);
             return;
           }
 
@@ -4090,7 +4091,7 @@
           }
 
           // Process gas fee
-          if (!processGasFee('trade')) {
+          if (!await processGasFee('trade')) {
             return;
           }
 
@@ -4855,7 +4856,7 @@
           }
           
           // Check and process gas fee before bridging
-          if (!processGasFee('bridge')) {
+          if (!await processGasFee('bridge')) {
             return;
           }
           
@@ -5023,7 +5024,7 @@
       if (selectedNFTs.size === 0) return showNotification("No NFTs selected!", true);
       
       // Check and process gas fee before staking
-      if (!processGasFee('NFT staking')) {
+      if (!await processGasFee('NFT staking')) {
         return;
       }
       
@@ -5036,11 +5037,11 @@
       console.log(`[NFT] Staked ${count} NFTs with gas fee`);
     }
 
-    window.unstakeSelectedNFTs = function() {
+    window.unstakeSelectedNFTs = async function() {
       if (selectedNFTs.size === 0) return showNotification("No staked NFTs selected!", true);
       
       // Check and process gas fee before unstaking
-      if (!processGasFee('NFT unstaking')) {
+      if (!await processGasFee('NFT unstaking')) {
         return;
       }
       
@@ -5056,7 +5057,7 @@
       if (nftRewards <= 0) return showNotification("No rewards available", true);
       
       // Check and process gas fee before claiming
-      if (!processGasFee('NFT rewards claim')) {
+      if (!await processGasFee('NFT rewards claim')) {
         return;
       }
       
@@ -5234,7 +5235,7 @@
       }
       
       // Check and process gas fee
-      if (!processGasFee('NFT staking')) {
+      if (!await processGasFee('NFT staking')) {
         return;
       }
       
@@ -5276,7 +5277,7 @@
       }
       
       // Check and process gas fee
-      if (!processGasFee('NFT unstaking')) {
+      if (!await processGasFee('NFT unstaking')) {
         return;
       }
       
@@ -5322,7 +5323,7 @@
       }
       
       // Check and process gas fee
-      if (!processGasFee('NFT rewards claim')) {
+      if (!await processGasFee('NFT rewards claim')) {
         return;
       }
       
@@ -5353,7 +5354,7 @@
       }
       
       // Check and process gas fee
-      if (!processGasFee('points redemption')) {
+      if (!await processGasFee('points redemption')) {
         return;
       }
       
@@ -5386,7 +5387,7 @@
       }
       
       // Check and process gas fee
-      if (!processGasFee('NFT minting')) {
+      if (!await processGasFee('NFT minting')) {
         return;
       }
       
@@ -5631,7 +5632,7 @@
       }
       
       // Check and process gas fee before swap
-      if (!processGasFee('swap')) {
+      if (!await processGasFee('swap')) {
         return;
       }
       
@@ -5717,7 +5718,7 @@
       }
 
       // Check and process gas fee before submitting answer
-      if (!processGasFee('learning answer')) {
+      if (!await processGasFee('learning answer')) {
         return;
       }
 
