@@ -676,6 +676,15 @@
       border-bottom: 1px solid #1e2535;
     }
     .profile-slide-asset-row:last-child { border-bottom: none; }
+    .profile-asset-hover {
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .profile-asset-hover:hover {
+      background: rgba(59,130,246,0.1);
+      border-radius: 8px;
+      padding: 16px 8px;
+    }
     .profile-slide-asset-icon {
       width: 44px;
       height: 44px;
@@ -1072,53 +1081,61 @@
 
       <div class="tab-wrapper" style="position:relative; min-height:300px;">
         <div id="assetsContent" class="tab-content active">
-          <div class="profile-slide-asset-row">
-            <img src="https://cryptologos.cc/logos/ethereum-eth-logo.png?v=035" alt="ETH" class="profile-slide-asset-icon">
-            <div class="profile-slide-asset-details">
-              <div class="profile-slide-asset-name">ETH</div>
-              <div class="profile-slide-asset-subtitle">Sepolia Testnet</div>
+          <a href="#" id="ethExplorerLink" target="_blank" rel="noopener noreferrer" style="text-decoration:none; color:inherit;">
+            <div class="profile-slide-asset-row profile-asset-hover">
+              <img src="https://cryptologos.cc/logos/ethereum-eth-logo.png?v=035" alt="ETH" class="profile-slide-asset-icon">
+              <div class="profile-slide-asset-details">
+                <div class="profile-slide-asset-name">ETH</div>
+                <div class="profile-slide-asset-subtitle">Sepolia Testnet • View on Explorer →</div>
+              </div>
+              <div class="profile-slide-asset-amounts">
+                <div class="profile-slide-token-amount" id="ethBalance">0.0000</div>
+                <div class="profile-slide-usd-amount">Testnet</div>
+              </div>
             </div>
-            <div class="profile-slide-asset-amounts">
-              <div class="profile-slide-token-amount" id="ethBalance">0.0000</div>
-              <div class="profile-slide-usd-amount">Testnet</div>
-            </div>
-          </div>
+          </a>
 
-          <div class="profile-slide-asset-row">
-            <img src="https://cryptologos.cc/logos/wrapped-bitcoin-wbtc-logo.png?v=035" alt="WBTC" class="profile-slide-asset-icon">
-            <div class="profile-slide-asset-details">
-              <div class="profile-slide-asset-name">WBTC</div>
-              <div class="profile-slide-asset-subtitle">Wrapped Bitcoin</div>
+          <a href="#" id="wbtcExplorerLink" target="_blank" rel="noopener noreferrer" style="text-decoration:none; color:inherit;">
+            <div class="profile-slide-asset-row profile-asset-hover">
+              <img src="https://cryptologos.cc/logos/wrapped-bitcoin-wbtc-logo.png?v=035" alt="WBTC" class="profile-slide-asset-icon">
+              <div class="profile-slide-asset-details">
+                <div class="profile-slide-asset-name">WBTC</div>
+                <div class="profile-slide-asset-subtitle">Wrapped Bitcoin • View on Explorer →</div>
+              </div>
+              <div class="profile-slide-asset-amounts">
+                <div class="profile-slide-token-amount" id="wbtcBalance">0.0000</div>
+                <div class="profile-slide-usd-amount" id="wbtcBalanceUSD">$0.00</div>
+              </div>
             </div>
-            <div class="profile-slide-asset-amounts">
-              <div class="profile-slide-token-amount" id="wbtcBalance">0.0000</div>
-              <div class="profile-slide-usd-amount" id="wbtcBalanceUSD">$0.00</div>
-            </div>
-          </div>
+          </a>
 
-          <div class="profile-slide-asset-row">
-            <img src="https://cryptologos.cc/logos/usd-coin-usdc-logo.png?v=035" alt="USDC" class="profile-slide-asset-icon">
-            <div class="profile-slide-asset-details">
-              <div class="profile-slide-asset-name">USDC</div>
-              <div class="profile-slide-asset-subtitle">USD Coin</div>
+          <a href="#" id="usdcExplorerLink" target="_blank" rel="noopener noreferrer" style="text-decoration:none; color:inherit;">
+            <div class="profile-slide-asset-row profile-asset-hover">
+              <img src="https://cryptologos.cc/logos/usd-coin-usdc-logo.png?v=035" alt="USDC" class="profile-slide-asset-icon">
+              <div class="profile-slide-asset-details">
+                <div class="profile-slide-asset-name">USDC</div>
+                <div class="profile-slide-asset-subtitle">USD Coin • View on Explorer →</div>
+              </div>
+              <div class="profile-slide-asset-amounts">
+                <div class="profile-slide-token-amount" id="usdcBalance">0.0000</div>
+                <div class="profile-slide-usd-amount" id="usdcBalanceUSD">$0.00</div>
+              </div>
             </div>
-            <div class="profile-slide-asset-amounts">
-              <div class="profile-slide-token-amount" id="usdcBalance">0.0000</div>
-              <div class="profile-slide-usd-amount" id="usdcBalanceUSD">$0.00</div>
-            </div>
-          </div>
+          </a>
 
-          <div class="profile-slide-asset-row">
-            <img src="https://cryptologos.cc/logos/tether-usdt-logo.png?v=035" alt="USDT" class="profile-slide-asset-icon">
-            <div class="profile-slide-asset-details">
-              <div class="profile-slide-asset-name">USDT</div>
-              <div class="profile-slide-asset-subtitle">Tether</div>
+          <a href="#" id="usdtExplorerLink" target="_blank" rel="noopener noreferrer" style="text-decoration:none; color:inherit;">
+            <div class="profile-slide-asset-row profile-asset-hover">
+              <img src="https://cryptologos.cc/logos/tether-usdt-logo.png?v=035" alt="USDT" class="profile-slide-asset-icon">
+              <div class="profile-slide-asset-details">
+                <div class="profile-slide-asset-name">USDT</div>
+                <div class="profile-slide-asset-subtitle">Tether • View on Explorer →</div>
+              </div>
+              <div class="profile-slide-asset-amounts">
+                <div class="profile-slide-token-amount" id="usdtBalance">0.0000</div>
+                <div class="profile-slide-usd-amount" id="usdtBalanceUSD">$0.00</div>
+              </div>
             </div>
-            <div class="profile-slide-asset-amounts">
-              <div class="profile-slide-token-amount" id="usdtBalance">0.0000</div>
-              <div class="profile-slide-usd-amount" id="usdtBalanceUSD">$0.00</div>
-            </div>
-          </div>
+          </a>
         </div>
 
         <div id="activityContent" class="tab-content">
@@ -1275,7 +1292,43 @@
     // Gas and price constants
     let ETH_TO_USDC_RATE = 2500; // 1 ETH = 2500 USDC (will be updated with real Uniswap price)
     const GAS_FEE_ETH = 0.00001; // Gas fee in ETH Sepolia (approximately 0.00001 ETH per action)
+    const GAS_FEE_USDC = 0.025; // Gas fee in USDC equivalent (approximately 0.025 USDC per action)
     const CHART_HEIGHT = 420; // Standard height for trading charts in pixels
+    
+    // CORS proxy for CoinGecko API (fallback when direct access fails)
+    // Note: For production, consider:
+    // 1. Backend proxy server (Node.js/Express) for better security and control
+    // 2. CoinGecko Pro API with CORS support
+    // 3. Your own API server that caches price data
+    // Current proxy: allorigins.win (free CORS proxy service)
+    const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
+    
+    // Helper function to fetch with CORS proxy fallback
+    // Attempts direct fetch first, then falls back to proxy if CORS blocks the request
+    async function fetchWithCORSFallback(url) {
+      try {
+        // Try direct fetch first
+        const response = await fetch(url);
+        if (response.ok) {
+          return await response.json();
+        }
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      } catch (error) {
+        console.log(`[CORS] Direct fetch failed for ${url}:`, error.message);
+        try {
+          // Try with CORS proxy
+          const proxyResponse = await fetch(CORS_PROXY + encodeURIComponent(url));
+          if (proxyResponse.ok) {
+            return await proxyResponse.json();
+          }
+          throw new Error(`Proxy HTTP ${proxyResponse.status}: ${proxyResponse.statusText}`);
+        } catch (proxyError) {
+          console.log('[CORS] Proxy fetch also failed:', proxyError.message);
+        }
+        // Return null if both fail - caller should handle fallback
+        return null;
+      }
+    }
     
     // Gas estimation constants for different transaction types
     const GAS_LIMITS = {
@@ -2130,6 +2183,9 @@
         // Show loading notification
         showNotification("🔄 Updating balances...", false);
         
+        // Update asset explorer links when wallet is connected
+        updateAssetLinks();
+        
         // Fetch live ETH/USDC rate from Uniswap in the background
         fetchLiveETHtoUSDCRate().catch(err => console.log('[Uniswap] Rate fetch error:', err));
         
@@ -2193,12 +2249,11 @@
         if (wbtcBalanceEl) wbtcBalanceEl.textContent = wbtcBalance.toFixed(8);
         
         const wbtcBalanceUSDEl = document.getElementById('wbtcBalanceUSD');
-        // Fetch BTC price from CoinGecko for WBTC USD value
+        // Fetch BTC price from CoinGecko for WBTC USD value with CORS fallback
         try {
-          const btcPriceResponse = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd');
-          if (btcPriceResponse.ok) {
-            const btcPriceData = await btcPriceResponse.json();
-            const wbtcPriceUSD = btcPriceData.bitcoin?.usd || 45000; // Fallback to approximate price
+          const btcPriceData = await fetchWithCORSFallback('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd');
+          if (btcPriceData && btcPriceData.bitcoin?.usd) {
+            const wbtcPriceUSD = btcPriceData.bitcoin.usd;
             if (wbtcBalanceUSDEl) wbtcBalanceUSDEl.textContent = `$${(wbtcBalance * wbtcPriceUSD).toFixed(2)}`;
           } else {
             // Fallback to approximate price if API fails
@@ -2528,7 +2583,7 @@
     });
 
 
-    function openDepositModal() {
+    window.openDepositModal = function() {
       if (!userAddress) {
         showNotification("Please connect wallet first", true);
         return;
@@ -2861,8 +2916,42 @@
           if (tabName === 'activity') {
             fetchTransactionHistory();
           }
+          
+          // Update asset links when assets tab is opened
+          if (tabName === 'assets') {
+            updateAssetLinks();
+          }
         });
       });
+    }
+    
+    // Function to update asset links dynamically
+    function updateAssetLinks() {
+      if (!userAddress) return;
+      
+      // Update ETH link
+      const ethLink = document.getElementById('ethExplorerLink');
+      if (ethLink) {
+        ethLink.href = `https://sepolia.etherscan.io/address/${userAddress}`;
+      }
+      
+      // Update WBTC link
+      const wbtcLink = document.getElementById('wbtcExplorerLink');
+      if (wbtcLink) {
+        wbtcLink.href = `https://sepolia.etherscan.io/token/${WBTC_SEPOLIA}?a=${userAddress}`;
+      }
+      
+      // Update USDC link
+      const usdcLink = document.getElementById('usdcExplorerLink');
+      if (usdcLink) {
+        usdcLink.href = `https://sepolia.etherscan.io/token/${USDC_SEPOLIA_ADDRESS}?a=${userAddress}`;
+      }
+      
+      // Update USDT link
+      const usdtLink = document.getElementById('usdtExplorerLink');
+      if (usdtLink) {
+        usdtLink.href = `https://sepolia.etherscan.io/token/${USDT_SEPOLIA_ADDRESS}?a=${userAddress}`;
+      }
     }
 
     // Social Media Connection Management
@@ -2980,6 +3069,7 @@
     let currentQuestionIndex = 0;
     let completedTasks = 0;
     let historyLog = [];
+    let answerHistory = []; // Track answer history: {question, correct, pointChange, timestamp}
     let usdcBalance = "0.00";
     let nftMinted = false;
 
@@ -3690,8 +3780,8 @@
                 <p style="margin-top:4px; font-size:0.85em; color:#f59e0b;">⛽ Gas Fee: ${GAS_FEE_ETH} ETH per answer</p>
                 <button class="btn-primary btn-success" style="margin-top:16px;" onclick="convertPointsToUSDC()" ${mogalandPoints < 1000 ? 'disabled' : ''}>Convert to USDC</button>
                 <div class="history" id="historyLog" style="margin-top:16px;">
-                  <strong>Conversion History:</strong><br>
-                  <div id="historyItems" style="max-height:150px; overflow-y:auto;"></div>
+                  <strong>Answer History (Recent 5):</strong><br>
+                  <div id="historyItems" style="max-height:200px; overflow-y:auto;"></div>
                 </div>
               </div>
             </div>
@@ -3701,6 +3791,7 @@
         loadQuestion();
         updatePointDisplay();
         updateProgressDisplay();
+        updateAnswerHistoryDisplay();
         updateStakedDisplay();
         updateUSDCBalance();
       }
@@ -4455,7 +4546,7 @@
         }
 
         // Open a new position
-        async function openPosition(type) {
+        window.openPosition = async function(type) {
           // Check wallet connection first
           if (!provider || !userAddress) {
             showNotification('⚠️ Please connect your wallet to start trading!', true);
@@ -4823,21 +4914,11 @@
               
               const coinId = coinIdMap[symbol] || symbol;
               
-              // Try direct fetch first, then fallback to CORS proxy
-              let response;
+              // Try fetch with CORS fallback
               try {
-                response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=usd&include_24hr_change=true`);
-              } catch (corsError) {
-                console.log('[CoinGecko] CORS error, using fallback price simulation');
-                // Use base price with slight random variation for demo
-                const simulatedPrice = asset.basePrice * (1 + (Math.random() - 0.5) * SIMULATED_PRICE_VARIATION);
-                updatePriceDisplay(simulatedPrice);
-                return;
-              }
-              
-              if (response && response.ok) {
-                const data = await response.json();
-                if (data[coinId]) {
+                const data = await fetchWithCORSFallback(`https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=usd&include_24hr_change=true`);
+                
+                if (data && data[coinId]) {
                   const price = data[coinId].usd;
                   const change24h = data[coinId].usd_24h_change || 0;
                   
@@ -4922,20 +5003,12 @@
           return data;
         }
 
-        // Fetch price from CoinGecko API
+        // Fetch price from CoinGecko API with CORS fallback
         async function fetchCoinGeckoPrice(asset, coinId) {
           try {
-            const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=usd`);
+            const data = await fetchWithCORSFallback(`https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=usd`);
             
-            if (!response.ok) {
-              console.log(`CoinGecko API error: ${response.status} ${response.statusText}`);
-              // Fallback to base price
-              updatePriceDisplay(asset.basePrice);
-              return;
-            }
-            
-            const data = await response.json();
-            if (data[coinId]) {
+            if (data && data[coinId]) {
               const price = data[coinId].usd;
               updatePriceDisplay(price);
               return;
@@ -5027,13 +5100,10 @@
               };
               
               const coinId = coinIdMap[symbol] || symbol;
-              const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=usd`);
+              const data = await fetchWithCORSFallback(`https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=usd`);
               
-              if (response.ok) {
-                const data = await response.json();
-                if (data[coinId]) {
-                  return data[coinId].usd;
-                }
+              if (data && data[coinId]) {
+                return data[coinId].usd;
               }
             }
           } catch (error) {
@@ -6377,14 +6447,33 @@
 
       const chosenIndex = parseInt(selected.value);
       const correctIndex = questions[currentQuestionIndex].correct;
+      const questionText = questions[currentQuestionIndex].question;
+      const timestamp = new Date().toLocaleString();
 
       if (chosenIndex === correctIndex) {
         mogalandPoints += 100;
         completedTasks++;
-        showNotification("✅ Correct! +100 Points", false);
+        
+        // Add to answer history
+        answerHistory.push({
+          question: questionText,
+          correct: true,
+          pointChange: +100,
+          timestamp: timestamp,
+          totalPoints: mogalandPoints
+        });
+        
+        // Show enhanced notification with point change
+        showNotification(`✅ Correct! +100 Points | Total: ${mogalandPoints} points`, false);
+        
+        // Update displays immediately
+        updatePointDisplay();
+        updateProgressDisplay();
+        updateAnswerHistoryDisplay();
+        
+        // Move to next question
         currentQuestionIndex++;
         loadQuestion();
-        updateProgressDisplay();
         
         // Check if all 100 tasks completed
         if (completedTasks === 100 && !nftMinted) {
@@ -6392,11 +6481,25 @@
           setTimeout(() => showSection('learning'), 500);
         }
       } else {
-        mogalandPoints = Math.max(0, mogalandPoints - 100);
-        showNotification("❌ Wrong! -100 Points. Try again!", true);
+        const pointLoss = 100;
+        mogalandPoints = Math.max(0, mogalandPoints - pointLoss);
+        
+        // Add to answer history
+        answerHistory.push({
+          question: questionText,
+          correct: false,
+          pointChange: -pointLoss,
+          timestamp: timestamp,
+          totalPoints: mogalandPoints
+        });
+        
+        // Show enhanced notification with point change
+        showNotification(`❌ Wrong! -100 Points | Total: ${mogalandPoints} points. Try again!`, true);
+        
+        // Update displays immediately
+        updatePointDisplay();
+        updateAnswerHistoryDisplay();
       }
-
-      updatePointDisplay();
     }
 
     window.restartQuiz = function() {
@@ -6432,6 +6535,39 @@
       const nftStatus = document.getElementById('nftStatus');
       if (nftStatus) {
         nftStatus.textContent = nftMinted ? '✅ NFT Minted!' : (completedTasks === 100 ? '🎁 Ready to Mint!' : '🔒 Complete 100 Tasks');
+      }
+    }
+    
+    // Function to update answer history display
+    function updateAnswerHistoryDisplay() {
+      const historyItems = document.getElementById('historyItems');
+      if (historyItems) {
+        // Show last 5 answers
+        const recentAnswers = answerHistory.slice(-5).reverse();
+        historyItems.innerHTML = recentAnswers.map(answer => {
+          const icon = answer.correct ? '✅' : '❌';
+          const color = answer.correct ? '#10b981' : '#ef4444';
+          const pointChange = answer.pointChange > 0 ? `+${answer.pointChange}` : answer.pointChange;
+          // Comprehensive XSS sanitization
+          const safeQuestion = answer.question
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#x27;')
+            .substring(0, 30);
+          return `<div style="padding:6px 0; font-size:0.85em; border-bottom:1px solid rgba(255,255,255,0.1);">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span style="color:${color};">${icon} ${safeQuestion}...</span>
+              <span style="color:${color}; font-weight:bold;">${pointChange}</span>
+            </div>
+            <div style="font-size:0.75em; color:#94a3b8; margin-top:2px;">Total: ${answer.totalPoints} pts | ${answer.timestamp}</div>
+          </div>`;
+        }).join('');
+        
+        if (recentAnswers.length === 0) {
+          historyItems.innerHTML = '<div style="padding:8px; text-align:center; color:#94a3b8; font-size:0.85em;">No answers yet. Start the quiz!</div>';
+        }
       }
     }
 
@@ -6564,36 +6700,65 @@
       }
 
       if (!provider || !userAddress) {
-        showNotification("Please connect your wallet first!", true);
+        showNotification("⚠️ Wallet not connected. Please connect your wallet to convert points.", true);
+        connectWalletFromApp();
         return;
       }
 
       try {
         const usdcAmount = Math.floor(mogalandPoints / 1000);
+        const pointsToConvert = usdcAmount * 1000;
         
-        showNotification(`Converting ${mogalandPoints} points to ${usdcAmount} USDC...`, false);
+        // Show confirmation
+        const confirmed = await requestWalletConfirmation('Convert Points to USDC', {
+          amount: `${pointsToConvert} points → ${usdcAmount} USDC`,
+          from: 'Learning Points',
+          to: 'Treasury USDC',
+          gasLimit: GAS_LIMITS.SWAP
+        });
         
-        // For demo purposes, we'll simulate the conversion
-        // In production, this would interact with a smart contract that holds USDC
-        mogalandPoints -= (usdcAmount * 1000);
-        
-        // Log the conversion
-        const timestamp = new Date().toLocaleString();
-        historyLog.push(`${timestamp}: Converted ${usdcAmount * 1000} points → ${usdcAmount} USDC`);
-        
-        const historyItems = document.getElementById('historyItems');
-        if (historyItems) {
-          historyItems.innerHTML = historyLog.slice(-5).reverse().map(log => 
-            `<div style="padding:4px 0; font-size:0.85em; border-bottom:1px solid rgba(255,255,255,0.1);">${log}</div>`
-          ).join('');
+        if (!confirmed) {
+          showNotification('❌ Conversion cancelled', true);
+          return;
         }
         
+        showNotification(`Converting ${pointsToConvert} points to ${usdcAmount} USDC from treasury...`, false);
+        
+        // Deduct points immediately
+        mogalandPoints -= pointsToConvert;
         updatePointDisplay();
-        showNotification(`✅ Successfully converted to ${usdcAmount} USDC!`, false);
+        
+        // Check treasury balance and transfer USDC
+        if (treasuryUSDCBalance >= usdcAmount) {
+          treasuryUSDCBalance -= usdcAmount;
+          showNotification(`✅ Successfully converted ${pointsToConvert} points to ${usdcAmount} USDC from treasury!`, false);
+          
+          // Update user's USDC balance display
+          if (typeof fetchRealBalances === 'function') {
+            setTimeout(() => fetchRealBalances(), 1000);
+          }
+        } else {
+          // Treasury has insufficient funds
+          showNotification(`⚠️ Treasury balance insufficient. Conversion recorded but USDC transfer pending. Treasury: ${treasuryUSDCBalance.toFixed(2)} USDC, Needed: ${usdcAmount} USDC`, true);
+        }
+        
+        // Log the conversion to answer history for tracking
+        const timestamp = new Date().toLocaleString();
+        answerHistory.push({
+          question: 'Points Conversion',
+          correct: true,
+          pointChange: -pointsToConvert,
+          timestamp: timestamp,
+          totalPoints: mogalandPoints,
+          note: `Converted to ${usdcAmount} USDC from treasury`
+        });
+        
+        updateAnswerHistoryDisplay();
+        showNotification(`✅ Successfully converted ${pointsToConvert} points to ${usdcAmount} USDC from treasury!`, false);
         
         // Note: In production, you would:
         // 1. Call a smart contract function to burn points
-        // 2. Contract would transfer USDC to user
+        // 2. Contract would transfer USDC from treasury to user
         // const tx = await contract.convertPointsToUSDC(usdcAmount);
         // await tx.wait();
         
