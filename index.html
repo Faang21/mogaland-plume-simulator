@@ -1030,6 +1030,89 @@
       ['walletOptions','emailLogin','xLogin'].forEach(id => document.getElementById(id).classList.toggle('hidden', id !== showId));
     }
     
+    // Notification system - available before ethers loads
+    function showNotification(msg, error = false) {
+      const div = document.createElement('div');
+      div.className = 'notification';
+      div.style.borderColor = error ? 'var(--danger)' : 'var(--bell)';
+      div.innerHTML = `<span>${error ? '⚠️' : '🔔'}</span> ${msg}`;
+      document.body.appendChild(div);
+      setTimeout(() => div.remove(), 6000);
+    }
+    
+    // Mock login variables and functions - available before ethers loads
+    const mockOtp = "123456";
+    let loginMethod = null; // 'wallet', 'email', or 'x'
+    let walletConnected = false;
+    
+    function sendEmailCode() {
+      const email = document.getElementById('emailInput').value.trim();
+      if (!email.includes('@gmail.com') && !email.includes('@yahoo.com')) return showNotification("Use Gmail or Yahoo email.", true);
+      showNotification(`Mock OTP sent: ${mockOtp}`);
+      document.getElementById('otpInput').classList.remove('hidden');
+      document.getElementById('verifyOtpBtn').classList.remove('hidden');
+    }
+
+    function verifyEmailOtp() {
+      if (document.getElementById('otpInput').value.trim() === mockOtp) enterDashboard("Email");
+      else showNotification("Wrong OTP", true);
+    }
+
+    function confirmXLogin() {
+      const handle = document.getElementById('xInput').value.trim();
+      if (!handle.startsWith('@')) return showNotification("Invalid @username", true);
+      enterDashboard("X");
+    }
+
+    function enterDashboard(method) {
+      loginMethod = method.toLowerCase();
+      if (method === 'Wallet' || method === 'MetaMask' || method === 'OKX' || method === 'WalletConnect') {
+        loginMethod = 'wallet';
+        walletConnected = true;
+      } else if (method === 'Email') {
+        loginMethod = 'email';
+      } else if (method === 'X') {
+        loginMethod = 'x';
+      }
+      console.log(`[Login] Method: ${loginMethod}, Wallet: ${walletConnected}`);
+      showNotification(`Entered via ${method}`, false);
+      document.getElementById('loginPage').classList.add('hidden');
+      document.getElementById('mainApp').classList.remove('hidden');
+      
+      // Initialize profile tabs if startApp has loaded
+      if (typeof initProfileTabs === 'function') {
+        initProfileTabs();
+      }
+      
+      // Load social connections status if startApp has loaded
+      if (typeof loadSocialConnections === 'function') {
+        loadSocialConnections();
+      }
+      
+      // Restore last visited section
+      const lastSection = localStorage.getItem('lastSection');
+      if (lastSection) {
+        setTimeout(() => {
+          if (typeof showSection === 'function') {
+            showSection(lastSection);
+            localStorage.removeItem('lastSection'); // Clear after restoring
+          }
+        }, 500);
+      } else {
+        // Default to swap if showSection is available
+        setTimeout(() => {
+          if (typeof showSection === 'function') {
+            showSection('swap');
+          }
+        }, 100);
+      }
+      
+      // Start sports auto-update (every 5 minutes) if available
+      if (typeof startSportsAutoUpdate === 'function') {
+        startSportsAutoUpdate();
+      }
+    }
+    
     function initializeApp() {
       // Cache loading indicator reference to avoid redundant DOM queries
       const loadingIndicator = document.getElementById('ethersLoadingIndicator');
@@ -1159,7 +1242,6 @@
 
     let provider = null;
     let userAddress = null;
-    const mockOtp = "123456";
 
     // Initialize WalletConnect only if library is available
     let walletConnectProvider = null;
@@ -1175,65 +1257,8 @@
       console.warn('WalletConnect not available:', e.message);
     }
 
-    // Login UI functions moved outside startApp() - now globally accessible
-    
-    function sendEmailCode() {
-      const email = document.getElementById('emailInput').value.trim();
-      if (!email.includes('@gmail.com') && !email.includes('@yahoo.com')) return showNotification("Use Gmail or Yahoo email.", true);
-      showNotification(`Mock OTP sent: ${mockOtp}`);
-      document.getElementById('otpInput').classList.remove('hidden');
-      document.getElementById('verifyOtpBtn').classList.remove('hidden');
-    }
 
-    function verifyEmailOtp() {
-      if (document.getElementById('otpInput').value.trim() === mockOtp) enterDashboard("Email");
-      else showNotification("Wrong OTP", true);
-    }
-
-    function confirmXLogin() {
-      const handle = document.getElementById('xInput').value.trim();
-      if (!handle.startsWith('@')) return showNotification("Invalid @username", true);
-      enterDashboard("X");
-    }
-
-    function enterDashboard(method) {
-      loginMethod = method.toLowerCase();
-      if (method === 'Wallet' || method === 'MetaMask' || method === 'OKX' || method === 'WalletConnect') {
-        loginMethod = 'wallet';
-        walletConnected = true;
-      } else if (method === 'Email') {
-        loginMethod = 'email';
-      } else if (method === 'X') {
-        loginMethod = 'x';
-      }
-      console.log(`[Login] Method: ${loginMethod}, Wallet: ${walletConnected}`);
-      showNotification(`Entered via ${method}`, false);
-      document.getElementById('loginPage').classList.add('hidden');
-      document.getElementById('mainApp').classList.remove('hidden');
-      
-      // Initialize profile tabs
-      initProfileTabs();
-      
-      // Load social connections status
-      loadSocialConnections();
-      
-      // Restore last visited section
-      const lastSection = localStorage.getItem('lastSection');
-      if (lastSection) {
-        setTimeout(() => {
-          showSection(lastSection);
-          localStorage.removeItem('lastSection'); // Clear after restoring
-        }, 500);
-      } else {
-        showSection('swap'); // Default to swap
-      }
-      
-      // Start sports auto-update (every 5 minutes)
-      if (typeof startSportsAutoUpdate === 'function') {
-        startSportsAutoUpdate();
-      }
-    }
-
+    // Wallet connection functions - need ethers.js
     async function connectWallet(walletType, getProvider) {
       try {
         provider = getProvider();
@@ -1342,15 +1367,8 @@
       }
     }
 
-    function showNotification(msg, error = false) {
-      const div = document.createElement('div');
-      div.className = 'notification';
-      div.style.borderColor = error ? 'var(--danger)' : 'var(--bell)';
-      div.innerHTML = `<span>${error ? '⚠️' : '🔔'}</span> ${msg}`;
-      document.body.appendChild(div);
-      setTimeout(() => div.remove(), 6000);
-    }
-
+    // Notification function moved outside startApp() - see global scope
+    
     // Fetch real token balances from Sepolia
     async function fetchRealBalances() {
       if (!userAddress || !provider) return;
@@ -2121,9 +2139,7 @@
       "function ownerOf(uint256 tokenId) view returns (address)"
     ];
     
-    // Login method tracking
-    let loginMethod = null; // 'wallet', 'email', or 'x'
-    let walletConnected = false;
+    // Login method tracking - moved outside startApp() to global scope
     let socialConnected = false;
     
     const ERC20_ABI = [
