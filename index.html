@@ -1296,9 +1296,15 @@
     const CHART_HEIGHT = 420; // Standard height for trading charts in pixels
     
     // CORS proxy for CoinGecko API (fallback when direct access fails)
+    // Note: For production, consider:
+    // 1. Backend proxy server (Node.js/Express) for better security and control
+    // 2. CoinGecko Pro API with CORS support
+    // 3. Your own API server that caches price data
+    // Current proxy: allorigins.win (free CORS proxy service)
     const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
     
     // Helper function to fetch with CORS proxy fallback
+    // Attempts direct fetch first, then falls back to proxy if CORS blocks the request
     async function fetchWithCORSFallback(url) {
       try {
         // Try direct fetch first
