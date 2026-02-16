@@ -44,11 +44,7 @@
       loadEthers();
     })();
   </script>
-  <!-- NOTE: WalletConnect v1 is deprecated. Bridge URL (wss://x.bridge.walletconnect.org) is no longer available.
-       This causes WebSocket connection errors but doesn't affect MetaMask, OKX, or Trust Wallet.
-       TODO: Upgrade to WalletConnect v2 (requires significant refactoring of wallet connection logic).
-       Tracking: WalletConnect v1 will continue to show WebSocket errors but wallet functionality works via other providers. -->
-  <script src="https://unpkg.com/@walletconnect/web3-provider@1.8.0/dist/umd/index.min.js" onerror="console.warn('⚠️ WalletConnect library failed to load. WalletConnect feature may not work.');"></script>
+  <!-- WalletConnect v1 has been removed due to deprecation. Use MetaMask, OKX, or Trust Wallet instead. -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@0.2.0/dist/chartjs-chart-financial.min.js"></script>
@@ -1168,7 +1164,6 @@
     // Global wallet variables
     let provider = null;
     let userAddress = null;
-    let walletConnectProvider = null;
     
     // Wallet persistence constants
     const WALLET_CONNECTION_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -1339,7 +1334,7 @@
 
     function enterDashboard(method) {
       loginMethod = method.toLowerCase();
-      if (method === 'Wallet' || method === 'MetaMask' || method === 'OKX' || method === 'Trust' || method === 'WalletConnect') {
+      if (method === 'Wallet' || method === 'MetaMask' || method === 'OKX' || method === 'Trust' || method === 'Trust Wallet') {
         loginMethod = 'wallet';
         walletConnected = true;
       } else if (method === 'Email') {
@@ -1486,60 +1481,64 @@
     }
 
     function connectMetaMask() {
-      if (!window.ethereum) return showNotification("MetaMask not found. Please install MetaMask extension.", true);
-      connectWallet("MetaMask", () => new ethers.providers.Web3Provider(window.ethereum));
-    }
-    window.connectMetaMask = connectMetaMask;
-
-    function connectOKX() {
-      if (!window.okxwallet) return showNotification("OKX Wallet not found. Please install OKX Wallet extension.", true);
-      connectWallet("OKX", () => new ethers.providers.Web3Provider(window.okxwallet));
-    }
-    window.connectOKX = connectOKX;
-
-    function connectTrustWallet() {
-      // Note: Trust Wallet detection is challenging as it uses window.ethereum like MetaMask
-      // This checks for ethereum but may also work with other wallet extensions
-      if (!window.ethereum) return showNotification("Trust Wallet not detected. Please install Trust Wallet extension or use Trust Wallet browser.", true);
-      connectWallet("Trust", () => new ethers.providers.Web3Provider(window.ethereum));
-    }
-    window.connectTrustWallet = connectTrustWallet;
-
-    async function connectWalletConnect() {
-      // NOTE: WalletConnect v1 is deprecated but we'll try to connect anyway
       if (typeof ethers === 'undefined') {
         return showNotification("Web3 libraries still loading. Please wait...", true);
       }
       
-      // Initialize WalletConnect provider if not already done
-      if (!walletConnectProvider && typeof WalletConnectProvider !== 'undefined') {
-        try {
-          walletConnectProvider = new WalletConnectProvider.default({
-            rpc: { [SEPOLIA_CHAIN_ID]: SEPOLIA_RPC },
-            chainId: SEPOLIA_CHAIN_ID,
-            qrcode: true
-          });
-        } catch (e) {
-          showNotification("⚠️ WalletConnect v1 is deprecated. Initialization failed. Please use MetaMask, OKX, or Trust Wallet instead.", true);
-          console.error("WalletConnect initialization error:", e);
-          return;
-        }
-      }
-      
-      if (!walletConnectProvider) {
-        showNotification("WalletConnect library not loaded. Please use MetaMask, OKX, or Trust Wallet instead.", true);
+      if (!window.ethereum) {
+        showNotification("MetaMask not found. Please install MetaMask extension from https://metamask.io", true);
         return;
       }
       
-      try {
-        await walletConnectProvider.enable();
-        connectWallet("WalletConnect", () => new ethers.providers.Web3Provider(walletConnectProvider));
-      } catch (e) {
-        showNotification("⚠️ WalletConnect connection failed. Please use MetaMask, OKX, or Trust Wallet for better experience.", true);
-        console.error("WalletConnect error:", e);
+      // Check if it's actually MetaMask
+      if (window.ethereum.isMetaMask) {
+        connectWallet("MetaMask", () => new ethers.providers.Web3Provider(window.ethereum));
+      } else {
+        // Fallback for injected ethereum provider
+        showNotification("MetaMask not detected. Connecting with available wallet...", false);
+        connectWallet("MetaMask", () => new ethers.providers.Web3Provider(window.ethereum));
       }
     }
-    window.connectWalletConnect = connectWalletConnect;
+    window.connectMetaMask = connectMetaMask;
+
+    function connectOKX() {
+      if (typeof ethers === 'undefined') {
+        return showNotification("Web3 libraries still loading. Please wait...", true);
+      }
+      
+      // OKX Wallet can be available at window.okxwallet or window.okex
+      const okxProvider = window.okxwallet || window.okex;
+      
+      if (!okxProvider) {
+        showNotification("OKX Wallet not found. Please install OKX Wallet extension from https://okx.com/web3", true);
+        return;
+      }
+      
+      connectWallet("OKX", () => new ethers.providers.Web3Provider(okxProvider));
+    }
+    window.connectOKX = connectOKX;
+
+    function connectTrustWallet() {
+      if (typeof ethers === 'undefined') {
+        return showNotification("Web3 libraries still loading. Please wait...", true);
+      }
+      
+      // Trust Wallet uses window.ethereum but has isTrust property when in Trust Wallet browser
+      if (!window.ethereum) {
+        showNotification("Trust Wallet not detected. Please install Trust Wallet extension or use Trust Wallet browser from https://trustwallet.com", true);
+        return;
+      }
+      
+      // Check if it's Trust Wallet
+      if (window.ethereum.isTrust) {
+        connectWallet("Trust Wallet", () => new ethers.providers.Web3Provider(window.ethereum));
+      } else {
+        // Fallback - might work with other wallets
+        showNotification("Trust Wallet not specifically detected. Connecting with available wallet...", false);
+        connectWallet("Trust Wallet", () => new ethers.providers.Web3Provider(window.ethereum));
+      }
+    }
+    window.connectTrustWallet = connectTrustWallet;
     
     // Function to connect wallet from within the app (after email/X login)
     function connectWalletFromApp() {
@@ -1573,11 +1572,10 @@
         return btn;
       }
       
-      // Add wallet buttons
+      // Add wallet buttons (removed WalletConnect - deprecated)
       modalContent.appendChild(createWalletButton('MetaMask', connectMetaMask));
       modalContent.appendChild(createWalletButton('OKX Wallet', connectOKX));
       modalContent.appendChild(createWalletButton('Trust Wallet', connectTrustWallet));
-      modalContent.appendChild(createWalletButton('WalletConnect', connectWalletConnect));
       
       // Cancel button
       const cancelBtn = document.createElement('button');
@@ -1723,22 +1721,10 @@
     }
     
     function startApp() {
-    // Note: SEPOLIA constants, provider, userAddress, and walletConnectProvider are now in global scope
+    // Note: SEPOLIA constants, provider, and userAddress are now in global scope
+    // WalletConnect v1 has been removed due to deprecation
     
-    // Initialize WalletConnect only if library is available and not already initialized
-    if (!walletConnectProvider && typeof WalletConnectProvider !== 'undefined') {
-      try {
-        walletConnectProvider = new WalletConnectProvider.default({
-          rpc: { [SEPOLIA_CHAIN_ID]: SEPOLIA_RPC },
-          chainId: SEPOLIA_CHAIN_ID,
-          qrcode: true
-        });
-      } catch (e) {
-        console.warn('WalletConnect not available:', e.message);
-      }
-    }
-
-    // Note: connectWallet, connectMetaMask, connectOKX, connectTrustWallet, connectWalletConnect are now in global scope
+    // Note: connectWallet, connectMetaMask, connectOKX, and connectTrustWallet are now in global scope
     
     // Fetch real token balances from Sepolia
     // Helper function to reset all balance displays
