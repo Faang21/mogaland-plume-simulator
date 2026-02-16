@@ -1435,6 +1435,9 @@
       }
       
       try {
+        // Show loading notification
+        showNotification(`🔄 Connecting to ${walletType}...`, false);
+        
         provider = getProvider();
         
         // Get the raw provider for network operations
@@ -1444,8 +1447,10 @@
         await provider.send("eth_requestAccounts", []);
         
         // Check current network and auto-switch to Sepolia if needed
+        showNotification(`🔄 Checking network...`, false);
         const network = await provider.getNetwork();
         if (network.chainId !== SEPOLIA_CHAIN_ID) {
+          showNotification(`🔄 Switching to Sepolia network...`, false);
           try {
             // Try to switch to Sepolia using the raw provider
             await rawProvider.request({
@@ -1823,6 +1828,85 @@
         }
       }, AUTO_RECONNECT_DELAY_MS);
     }
+    
+    // Helper function to show wallet confirmation dialog with gas estimation
+    async function requestWalletConfirmation(action, details = {}) {
+      if (!userAddress || !provider) {
+        showNotification("⚠️ Please connect wallet first!", true);
+        return false;
+      }
+      
+      try {
+        // Get current gas price from network
+        const gasPrice = await provider.getGasPrice();
+        const gasPriceGwei = parseFloat(ethers.utils.formatUnits(gasPrice, 'gwei'));
+        
+        // Estimate gas fee in ETH (approximate)
+        const estimatedGasLimit = details.gasLimit || 100000; // Default gas limit
+        const gasFeeWei = gasPrice.mul(estimatedGasLimit);
+        const gasFeeEth = parseFloat(ethers.utils.formatEther(gasFeeWei));
+        
+        // Show confirmation dialog
+        const message = `
+          <div style="text-align: left; line-height: 1.6;">
+            <strong>Transaction Confirmation</strong><br><br>
+            <strong>Action:</strong> ${action}<br>
+            ${details.amount ? `<strong>Amount:</strong> ${details.amount}<br>` : ''}
+            ${details.from ? `<strong>From:</strong> ${details.from}<br>` : ''}
+            ${details.to ? `<strong>To:</strong> ${details.to}<br>` : ''}
+            <br>
+            <strong>⛽ Estimated Gas Fee:</strong><br>
+            ${gasFeeEth.toFixed(6)} ETH (~$${(gasFeeEth * ETH_TO_USDC_RATE).toFixed(2)})<br>
+            <small style="color: #94a3b8;">${gasPriceGwei.toFixed(2)} Gwei</small>
+          </div>
+        `;
+        
+        // Create confirmation modal
+        return new Promise((resolve) => {
+          const modal = document.createElement('div');
+          modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 10000;';
+          
+          const content = document.createElement('div');
+          content.style.cssText = 'background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); padding: 30px; border-radius: 16px; max-width: 450px; width: 90%; border: 1px solid #334155; box-shadow: 0 10px 40px rgba(0,0,0,0.5);';
+          
+          content.innerHTML = message;
+          
+          const buttonContainer = document.createElement('div');
+          buttonContainer.style.cssText = 'display: flex; gap: 12px; margin-top: 24px;';
+          
+          const confirmBtn = document.createElement('button');
+          confirmBtn.textContent = '✅ Confirm';
+          confirmBtn.style.cssText = 'flex: 1; padding: 14px; background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s;';
+          confirmBtn.onmouseover = () => confirmBtn.style.transform = 'scale(1.02)';
+          confirmBtn.onmouseout = () => confirmBtn.style.transform = 'scale(1)';
+          confirmBtn.onclick = () => {
+            modal.remove();
+            resolve(true);
+          };
+          
+          const cancelBtn = document.createElement('button');
+          cancelBtn.textContent = '❌ Cancel';
+          cancelBtn.style.cssText = 'flex: 1; padding: 14px; background: linear-gradient(135deg, #ef4444, #dc2626); color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.2s;';
+          cancelBtn.onmouseover = () => cancelBtn.style.transform = 'scale(1.02)';
+          cancelBtn.onmouseout = () => cancelBtn.style.transform = 'scale(1)';
+          cancelBtn.onclick = () => {
+            modal.remove();
+            resolve(false);
+          };
+          
+          buttonContainer.appendChild(confirmBtn);
+          buttonContainer.appendChild(cancelBtn);
+          content.appendChild(buttonContainer);
+          modal.appendChild(content);
+          document.body.appendChild(modal);
+        });
+      } catch (error) {
+        console.error('Error getting gas estimation:', error);
+        showNotification('⚠️ Error estimating gas fee: ' + error.message, true);
+        return false;
+      }
+    }
+    window.requestWalletConfirmation = requestWalletConfirmation;
     
     function startApp() {
     // Note: SEPOLIA constants, provider, and userAddress are now in global scope
@@ -2598,6 +2682,7 @@
     const GAS_FEE_USDC = 0.01; // 0.01 USDC per action
     let treasuryUSDCBalance = 0; // Will be fetched from Sepolia
     let treasuryETHBalance = 0; // Will be fetched from Sepolia
+    let tradingUSDCBalance = 0; // Will be populated with real wallet balance asynchronously
     const ETH_TO_USDC_RATE = 2500; // 1 ETH = 2500 USDC
 
     // Fetch real treasury balances from Sepolia
@@ -3543,7 +3628,7 @@
         let currentBet = null;
         let openPositions = [];
         let tradeHistoryList = [];
-        let tradingUSDCBalance = 0; // Will be populated with real wallet balance asynchronously
+        // Note: tradingUSDCBalance is now declared in global scope
         
         // Fetch real USDC balance for trading
         async function fetchTradingBalance() {
@@ -3775,7 +3860,7 @@
         }
 
         // Open a new position
-        function openPosition(type) {
+        async function openPosition(type) {
           // Check wallet connection first
           if (!provider || !userAddress) {
             showNotification('⚠️ Please connect your wallet to start trading!', true);
@@ -3800,6 +3885,18 @@
           const totalRequired = amount + GAS_FEE_USDC;
           if (totalRequired > tradingUSDCBalance) {
             showNotification(`Insufficient balance! Need ${totalRequired.toFixed(2)} USDC (${amount} position + ${GAS_FEE_USDC} gas)`, true);
+            return;
+          }
+
+          // Request wallet confirmation for opening position
+          const confirmed = await requestWalletConfirmation(`Open ${type.toUpperCase()} Position`, {
+            amount: `${amount} USDC (${leverage}x leverage)`,
+            from: `${selectedAsset.symbol} - ${type === 'long' ? 'UP ⬆️' : 'DOWN ⬇️'}`,
+            gasLimit: 120000
+          });
+          
+          if (!confirmed) {
+            showNotification('❌ Trade cancelled by user', true);
             return;
           }
 
@@ -4536,7 +4633,7 @@
           updateBridgeEstimate();
         };
 
-        window.confirmBridge = function() {
+        window.confirmBridge = async function() {
           // Check wallet connection FIRST
           if (!userAddress || !provider) {
             showNotification("⚠️ Please connect wallet first!", true);
@@ -4552,6 +4649,19 @@
           
           if (amount <= 0) {
             showNotification('Please enter an amount to bridge', true);
+            return;
+          }
+          
+          // Request wallet confirmation for bridge with gas fee
+          const confirmed = await requestWalletConfirmation('Bridge Tokens', {
+            amount: `${amount} ${token}`,
+            from: fromChain,
+            to: 'Sepolia',
+            gasLimit: 200000 // Estimated gas for bridge
+          });
+          
+          if (!confirmed) {
+            showNotification('❌ Bridge cancelled by user', true);
             return;
           }
           
@@ -4888,6 +4998,18 @@
         return;
       }
       
+      // Request wallet confirmation for staking with gas fee
+      const nftCount = selectedNFTs.size;
+      const confirmed = await requestWalletConfirmation('Stake NFTs', {
+        amount: `${nftCount} NFT${nftCount > 1 ? 's' : ''}`,
+        gasLimit: 100000 + (nftCount * 50000) // Base + per NFT gas
+      });
+      
+      if (!confirmed) {
+        showNotification('❌ NFT staking cancelled', true);
+        return;
+      }
+      
       // Check and process gas fee
       if (!processGasFee('NFT staking')) {
         return;
@@ -5218,6 +5340,7 @@
         estEl.innerHTML = `Estimasi: <strong>${estOut} ${toToken}</strong> (1 ${fromToken} ≈ ${rate.toFixed(4)} ${toToken})<br><small style="color:#94a3b8;">${impact}</small>`;
       }
     }
+    window.updateSwapEstimate = updateSwapEstimate;
 
     window.setSlippage = function(value) {
       const val = parseFloat(value);
@@ -5241,7 +5364,7 @@
       updateSwapEstimate();
     }
 
-    window.confirmSwap = function() {
+    window.confirmSwap = async function() {
       // Check wallet connection FIRST
       if (!userAddress || !provider) {
         showNotification("⚠️ Please connect wallet first!", true);
@@ -5258,11 +5381,6 @@
       const fromToken = document.getElementById('fromTokenSelect')?.value || 'ETH';
       const toToken = document.getElementById('toTokenSelect')?.value || 'USDC';
       
-      // Check and process gas fee before swap
-      if (!processGasFee('swap')) {
-        return;
-      }
-      
       // Calculate swap amount (simplified exchange rate)
       const exchangeRates = {
         'ETH': 2500,  // 1 ETH = 2500 USDC
@@ -5276,6 +5394,22 @@
       
       const fromValue = amt * exchangeRates[fromToken];
       const toAmount = fromValue / exchangeRates[toToken];
+      
+      // Request wallet confirmation with gas fee
+      const confirmed = await requestWalletConfirmation('Swap Tokens', {
+        amount: `${amt} ${fromToken} → ${toAmount.toFixed(4)} ${toToken}`,
+        gasLimit: 150000 // Estimated gas for swap
+      });
+      
+      if (!confirmed) {
+        showNotification('❌ Swap cancelled by user', true);
+        return;
+      }
+      
+      // Check and process gas fee before swap
+      if (!processGasFee('swap')) {
+        return;
+      }
       
       // Process swap through treasury
       const finalAmount = swapViaTreasury(fromToken, toToken, amt, toAmount, currentSlippageTolerance);
@@ -5332,11 +5466,29 @@
       });
     }
 
-    window.submitAnswer = function() {
+    window.submitAnswer = async function() {
       const selected = document.querySelector('input[name="q"]:checked');
       
       if (!selected) {
         showNotification("Please select an answer first!", true);
+        return;
+      }
+
+      // Check wallet connection for gas fee
+      if (!userAddress || !provider) {
+        showNotification("⚠️ Please connect wallet first to submit answers!", true);
+        connectWalletFromApp();
+        return;
+      }
+
+      // Request wallet confirmation for gas fee
+      const confirmed = await requestWalletConfirmation('Submit Learning Answer', {
+        amount: `Gas Fee: ${GAS_FEE_USDC} USDC`,
+        gasLimit: 50000 // Estimated gas for answer submission
+      });
+      
+      if (!confirmed) {
+        showNotification('❌ Answer submission cancelled', true);
         return;
       }
 
