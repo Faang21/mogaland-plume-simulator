@@ -2100,7 +2100,9 @@
       if (!userAddress) return;
       
       try {
-        const apiKey = ''; // Etherscan API key (optional, works without for basic queries)
+        const apiKey = ''; // TODO: Add Etherscan API key for production use to avoid rate limits
+        // Free tier: 5 calls/second, 100k calls/day
+        // Sign up at: https://etherscan.io/apis
         const url = `https://api-sepolia.etherscan.io/api?module=account&action=tokentx&address=${userAddress}&startblock=0&endblock=99999999&page=1&offset=100&sort=desc&apikey=${apiKey}`;
         
         const response = await fetch(url);
@@ -3086,10 +3088,10 @@
           return false;
         }
         
-        showNotification(`⛽ Gas fee: ${GAS_FEE_ETH} ETH paid for ${action}`, false);
+        showNotification(`⛽ Estimated gas fee: ${GAS_FEE_ETH} ETH (simulated)`, false);
         
-        // Note: In a real implementation, gas would be deducted automatically by the blockchain
-        // For this demo, we're just checking balance availability
+        // Note: In a real blockchain implementation, gas would be deducted automatically
+        // This is a testnet simulation - actual gas deduction happens on-chain during real transactions
         return true;
       } catch (error) {
         console.error('[Gas Fee] Error:', error);
@@ -3198,17 +3200,19 @@
     async function sendViaTreasury(token, amount, toAddress) {
       console.log(`[Treasury] Send: User → Treasury → ${toAddress}`);
       
+      // Validate all conditions before making any changes
       if (tradingUSDCBalance < amount) {
         showNotification(`Insufficient balance! Need ${amount.toFixed(2)} USDC`, true);
         return false;
       }
       
       // Check gas fee separately (ETH balance check in processGasFee)
-      if (!await processGasFee('send')) {
+      const gasPassed = await processGasFee('send');
+      if (!gasPassed) {
         return false;
       }
       
-      // Deduct from user
+      // All validations passed - now execute the transaction
       tradingUSDCBalance -= amount;
       
       // Treasury receives and forwards
@@ -3584,7 +3588,7 @@
             </div>
 
             <div class="flex-container" style="gap:25px; align-items:stretch;">
-              <div class="card" style="flex:1; max-width:380px; overflow-y:auto; overflow-x:hidden; max-height:680px; padding:15px; scrollbar-gutter: stable;">
+              <div class="card" style="flex:1; max-width:380px; overflow-y:auto; overflow-x:hidden; max-height:680px; padding:15px;">
                 <h3 style="color:#60a5fa; text-align:center;" id="assetListTitle">Assets</h3>
                 <div id="assetList" style="display:flex; flex-direction:column; gap:8px;"></div>
               </div>
