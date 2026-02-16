@@ -1027,7 +1027,7 @@
     function showXLogin() { toggleSections('xLogin'); }
     
     function toggleSections(showId) {
-      ['walletOptions','emailLogin','xLogin'].forEach(id => document.getElementById(id).classList.toggle('hidden', id !== showId));
+      ['walletOptions', 'emailLogin', 'xLogin'].forEach(id => document.getElementById(id).classList.toggle('hidden', id !== showId));
     }
     
     // Notification system - available before ethers loads
@@ -1099,12 +1099,12 @@
           }
         }, 500);
       } else {
-        // Default to swap if showSection is available
+        // Default to swap section after brief delay to ensure DOM is ready
         setTimeout(() => {
           if (typeof showSection === 'function') {
             showSection('swap');
           }
-        }, 100);
+        }, 100); // 100ms delay for DOM readiness
       }
       
       // Start sports auto-update (every 5 minutes) if available
