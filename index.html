@@ -1031,12 +1031,12 @@
         loadingIndicator.style.display = 'block';
       }
       
-      if (typeof ethers === 'undefined' && !window.ethersLoaded) {
+      if (typeof ethers === 'undefined') {
         ethersLoadAttempts++;
         
-        // Update loading text periodically
+        // Update loading text periodically with actual attempt count
         if (loadingText && ethersLoadAttempts % 10 === 0) {
-          loadingText.textContent = 'Loading Web3 libraries... (Attempt ' + Math.floor(ethersLoadAttempts / 10) + ')';
+          loadingText.textContent = 'Loading Web3 libraries... (' + ethersLoadAttempts + '/' + maxEthersLoadAttempts + ')';
         }
         
         // Check if all CDNs have failed
@@ -1072,7 +1072,20 @@
           
           const suggestions = document.createElement('ul');
           suggestions.style.cssText = 'text-align:left;margin:0 auto 16px;display:inline-block;font-size:0.9em;';
-          suggestions.innerHTML = '<li>✓ Check your internet connection</li><li>✓ Disable ad blockers/content blockers for this site</li><li>✓ Try a different browser or device</li><li>✓ Check firewall/proxy settings</li>';
+          
+          // Create list items using DOM methods for consistency and security
+          const suggestionItems = [
+            '✓ Check your internet connection',
+            '✓ Disable ad blockers/content blockers for this site',
+            '✓ Try a different browser or device',
+            '✓ Check firewall/proxy settings'
+          ];
+          
+          suggestionItems.forEach(function(text) {
+            const li = document.createElement('li');
+            li.textContent = text;
+            suggestions.appendChild(li);
+          });
           
           const buttonContainer = document.createElement('div');
           buttonContainer.style.cssText = 'display:flex;gap:10px;justify-content:center;';
