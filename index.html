@@ -1199,8 +1199,9 @@
     // Uniswap V3 Contract Addresses on Sepolia
     const UNISWAP_V3_QUOTER_V2 = "0xEd1f6473345F45b75F8179591dd5bA1888cf2FB3";
     const WETH9_SEPOLIA = "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14";
-    const USDC_SEPOLIA = "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238";
+    const USDC_SEPOLIA = "0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8";
     const USDT_SEPOLIA = "0x7169D38820dfd117C3FA1f22a697dBA58d90BA06";
+    const GHO_SEPOLIA = "0xc4bF5CbDaBE595361438F8c6a187bDc330539c60"; // Aave GHO Token
     const LINK_SEPOLIA = "0x779877A7B0D9E8603169DdbD7836e478b4624789";
     const WBTC_SEPOLIA = "0x29f2D40B0605204364af54EC677bD022dA425d03";
     const AAVE_SEPOLIA = "0x88541670E55cC00bEEFD87eB59EDd1b7C511AC9a";
@@ -1209,6 +1210,7 @@
     // Aliases for backward compatibility
     const USDC_SEPOLIA_ADDRESS = USDC_SEPOLIA;
     const USDT_SEPOLIA_ADDRESS = USDT_SEPOLIA;
+    const GHO_SEPOLIA_ADDRESS = GHO_SEPOLIA;
     const LINK_SEPOLIA_ADDRESS = LINK_SEPOLIA;
     const WBTC_SEPOLIA_ADDRESS = WBTC_SEPOLIA;
     const AAVE_SEPOLIA_ADDRESS = AAVE_SEPOLIA;
@@ -1221,7 +1223,7 @@
     
     // Gas and price constants
     let ETH_TO_USDC_RATE = 2500; // 1 ETH = 2500 USDC (will be updated with real Uniswap price)
-    const GAS_FEE_USDC = 0.01; // 0.01 USDC per action
+    const GAS_FEE_ETH = 0.00001; // Gas fee in ETH Sepolia (approximately 0.00001 ETH per action)
     const CHART_HEIGHT = 420; // Standard height for trading charts in pixels
     
     // Gas estimation constants for different transaction types
@@ -2004,8 +2006,8 @@
         { id: 'usdcBalanceUSD', value: '$0.00' },
         { id: 'usdtBalance', value: '0.0000' },
         { id: 'usdtBalanceUSD', value: '$0.00' },
-        { id: 'mogaBalance', value: '0.0000' }, // Placeholder - update when MOGA token contract is available
-        { id: 'mogaBalanceUSD', value: '$0.00' }
+        { id: 'ghoBalance', value: '0.0000' },
+        { id: 'ghoBalanceUSD', value: '$0.00' }
       ];
       
       balanceElements.forEach(item => {
@@ -2042,6 +2044,14 @@
         const usdtBalanceRaw = await usdtContract.balanceOf(userAddress);
         const usdtBalance = parseFloat(ethers.utils.formatUnits(usdtBalanceRaw, 6)); // USDT has 6 decimals
         
+        // Fetch GHO balance
+        const ghoContract = new ethers.Contract(GHO_SEPOLIA_ADDRESS, ERC20_ABI, provider);
+        const ghoBalanceRaw = await ghoContract.balanceOf(userAddress);
+        const ghoBalance = parseFloat(ethers.utils.formatUnits(ghoBalanceRaw, 18)); // GHO has 18 decimals
+        
+        // Fetch all token balances from Etherscan API
+        await fetchAllTokenBalancesFromEtherscan();
+        
         // Update UI with real balances
         const ethBalanceEl = document.getElementById('ethBalance');
         if (ethBalanceEl) ethBalanceEl.textContent = ethBalance.toFixed(4);
@@ -2063,6 +2073,13 @@
         const usdtBalanceUSDEl = document.getElementById('usdtBalanceUSD');
         if (usdtBalanceUSDEl) usdtBalanceUSDEl.textContent = `$${usdtBalance.toFixed(2)}`;
         
+        // Update GHO display using IDs
+        const ghoBalanceEl = document.getElementById('ghoBalance');
+        if (ghoBalanceEl) ghoBalanceEl.textContent = ghoBalance.toFixed(4);
+        
+        const ghoBalanceUSDEl = document.getElementById('ghoBalanceUSD');
+        if (ghoBalanceUSDEl) ghoBalanceUSDEl.textContent = `$${ghoBalance.toFixed(2)}`; // GHO is a stablecoin ~$1
+        
         // Update trading balance in Market section if it exists
         if (typeof tradingUSDCBalance !== 'undefined') {
           tradingUSDCBalance = usdcBalance;
@@ -2071,10 +2088,44 @@
           }
         }
         
-        console.log(`✅ Balances updated: ETH=${ethBalance}, USDC=${usdcBalance}, USDT=${usdtBalance}`);
+        console.log(`✅ Balances updated: ETH=${ethBalance}, USDC=${usdcBalance}, USDT=${usdtBalance}, GHO=${ghoBalance}`);
       } catch (error) {
         console.error('Error fetching balances:', error);
         showNotification("⚠️ Failed to fetch balances: " + (error.message || "Unknown error"), true);
+      }
+    }
+
+    // Fetch all token balances from Etherscan API
+    async function fetchAllTokenBalancesFromEtherscan() {
+      if (!userAddress) return;
+      
+      try {
+        const apiKey = ''; // Etherscan API key (optional, works without for basic queries)
+        const url = `https://api-sepolia.etherscan.io/api?module=account&action=tokentx&address=${userAddress}&startblock=0&endblock=99999999&page=1&offset=100&sort=desc&apikey=${apiKey}`;
+        
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        if (data.status === '1' && data.result && data.result.length > 0) {
+          console.log(`[Etherscan] Found ${data.result.length} token transactions for ${userAddress}`);
+          
+          // Extract unique tokens from transactions
+          const uniqueTokens = new Set();
+          data.result.forEach(tx => {
+            if (tx.contractAddress && tx.tokenSymbol) {
+              uniqueTokens.add(JSON.stringify({
+                address: tx.contractAddress,
+                symbol: tx.tokenSymbol,
+                name: tx.tokenName,
+                decimals: parseInt(tx.tokenDecimal)
+              }));
+            }
+          });
+          
+          console.log(`[Etherscan] Detected ${uniqueTokens.size} unique tokens in wallet`);
+        }
+      } catch (error) {
+        console.log('[Etherscan] Token balance fetch error:', error);
       }
     }
 
@@ -2216,12 +2267,6 @@
     }
 
     function logoutUser() {
-      // Store current section for restoration on re-login
-      const currentSection = document.querySelector('.main-section:not([style*="display: none"])');
-      if (currentSection) {
-        localStorage.setItem('lastSection', currentSection.id || 'swap');
-      }
-      
       // Clear wallet connection and persistence
       userAddress = null;
       provider = null;
@@ -2230,10 +2275,15 @@
       
       // Clear social connections status
       localStorage.removeItem('socialConnections');
+      localStorage.removeItem('lastSection');
       
-      showNotification("Logged out successfully");
+      showNotification("✅ Logged out successfully", false);
+      
+      // Hide main app and show login page
       document.getElementById('mainApp').classList.add('hidden');
       document.getElementById('loginPage').classList.remove('hidden');
+      
+      // Close profile panels
       closeBackProfile();
       closeProfileSlide();
       
@@ -2252,7 +2302,10 @@
       
       // Reset all balances
       resetBalanceDisplay();
+      
+      console.log('[Logout] User logged out, returned to login screen');
     }
+    window.logoutUser = logoutUser;
 
     // Wallet dropdown functions
     window.toggleWalletDropdown = function() {
@@ -3016,21 +3069,33 @@
       // Treasury balance is tracked internally: ${treasuryUSDCBalance.toLocaleString()} USDC
     }
     
-    // Process gas fee for actions
-    function processGasFee(action = 'action') {
-      if (tradingUSDCBalance < GAS_FEE_USDC) {
-        showNotification(`⛽ Insufficient balance for gas fee! Need ${GAS_FEE_USDC} USDC`, true);
+    // Process gas fee for actions (now uses ETH instead of USDC)
+    async function processGasFee(action = 'action') {
+      if (!userAddress || !provider) {
+        showNotification('⚠️ Please connect wallet first!', true);
         return false;
       }
       
-      tradingUSDCBalance -= GAS_FEE_USDC;
-      treasuryUSDCBalance += GAS_FEE_USDC;
-      
-      showNotification(`⛽ Gas fee: ${GAS_FEE_USDC} USDC paid to treasury for ${action}`, false);
-      updateTreasuryDisplay();
-      updateTradingBalance();
-      
-      return true;
+      try {
+        // Check ETH balance for gas fee
+        const ethBalanceWei = await provider.getBalance(userAddress);
+        const ethBalance = parseFloat(ethers.utils.formatEther(ethBalanceWei));
+        
+        if (ethBalance < GAS_FEE_ETH) {
+          showNotification(`⛽ Insufficient ETH balance for gas fee! Need ${GAS_FEE_ETH} ETH`, true);
+          return false;
+        }
+        
+        showNotification(`⛽ Gas fee: ${GAS_FEE_ETH} ETH paid for ${action}`, false);
+        
+        // Note: In a real implementation, gas would be deducted automatically by the blockchain
+        // For this demo, we're just checking balance availability
+        return true;
+      } catch (error) {
+        console.error('[Gas Fee] Error:', error);
+        showNotification('⚠️ Error processing gas fee: ' + error.message, true);
+        return false;
+      }
     }
     
     // Transfer winnings from treasury to user
@@ -3485,7 +3550,7 @@
                   <div class="progress-fill" id="pointProgress" style="width:0%;"></div>
                 </div>
                 <p style="margin-top:8px; font-size:0.9em; color:#94a3b8;">Conversion Rate: 1000 points = 1 USDC</p>
-                <p style="margin-top:4px; font-size:0.85em; color:#f59e0b;">⛽ Gas Fee: ${GAS_FEE_USDC} USDC per answer</p>
+                <p style="margin-top:4px; font-size:0.85em; color:#f59e0b;">⛽ Gas Fee: ${GAS_FEE_ETH} ETH per answer</p>
                 <button class="btn-primary btn-success" style="margin-top:16px;" onclick="convertPointsToUSDC()" ${mogalandPoints < 1000 ? 'disabled' : ''}>Convert to USDC</button>
                 <div class="history" id="historyLog" style="margin-top:16px;">
                   <strong>Conversion History:</strong><br>
@@ -3517,7 +3582,7 @@
             </div>
 
             <div class="flex-container" style="gap:25px; align-items:stretch;">
-              <div class="card" style="flex:1; max-width:380px; overflow-y:auto; max-height:680px; padding:15px;">
+              <div class="card" style="flex:1; max-width:380px; overflow-y:auto; overflow-x:hidden; max-height:680px; padding:15px; scrollbar-gutter: stable;">
                 <h3 style="color:#60a5fa; text-align:center;" id="assetListTitle">Assets</h3>
                 <div id="assetList" style="display:flex; flex-direction:column; gap:8px;"></div>
               </div>
@@ -3561,7 +3626,7 @@
 
                 <p id="tradeStatus" style="margin-top:15px; font-weight:bold; min-height:40px; font-size:0.9em;"></p>
                 
-                <p style="font-size:0.85em; color:#f59e0b; margin-top:8px;">⛽ Gas Fee: ${GAS_FEE_USDC} USDC per trade</p>
+                <p style="font-size:0.85em; color:#f59e0b; margin-top:8px;">⛽ Gas Fee: ${GAS_FEE_ETH} ETH per trade</p>
 
                 <div style="margin-top:20px;">
                   <h4 style="color:#60a5fa; margin-bottom:8px;">Open Positions</h4>
@@ -4612,7 +4677,7 @@
             </button>
             
             <p style="text-align: center; margin-top: 12px; color: #f59e0b; font-size: 0.85em;">
-              ⛽ Gas Fee: ${GAS_FEE_USDC} USDC per swap
+              ⛽ Gas Fee: ${GAS_FEE_ETH} ETH per swap
             </p>
 
             <p style="text-align: center; margin-top: 12px; color: #94a3b8; font-size: 0.9em;">
@@ -4722,7 +4787,7 @@
               </button>
               
               <p style="text-align: center; margin-top: 12px; color: #f59e0b; font-size: 0.9em;">
-                ⛽ Gas Fee: ${GAS_FEE_USDC} USDC per bridge transaction
+                ⛽ Gas Fee: ${GAS_FEE_ETH} ETH per bridge transaction
               </p>
 
               <p style="text-align: center; margin-top: 12px; color: #94a3b8; font-size: 0.95em;">
@@ -4800,7 +4865,7 @@
           showNotification(`🌉 Bridging ${amount} ${token} from ${fromChain} to Sepolia via treasury...`, false);
           
           setTimeout(() => {
-            showNotification(`✅ Bridge complete! Received ${finalAmount.toFixed(6)} ${token} on Sepolia (via treasury) | Gas: ${GAS_FEE_USDC} USDC`, false);
+            showNotification(`✅ Bridge complete! Received ${finalAmount.toFixed(6)} ${token} on Sepolia (via treasury) | Gas: ${GAS_FEE_ETH} ETH`, false);
             console.log(`[Bridge] ${amount} ${token} bridged from ${fromChain} to Sepolia through treasury`);
           }, 2000);
         };
@@ -4912,7 +4977,7 @@
           </div>
           
           <p style="text-align:center; margin-top:40px; color:#64748b; font-size:0.9em;">
-            ⛽ Gas Fee: ${GAS_FEE_USDC} USDC per transaction | APY varies by NFT rarity
+            ⛽ Gas Fee: ${GAS_FEE_ETH} ETH per transaction | APY varies by NFT rarity
           </p>
         `;} else {
         content.innerHTML = `
@@ -4967,7 +5032,7 @@
       nftRewards += count * 2.5;
       selectedNFTs.clear();
       showSection('nft');
-      showNotification(`✅ Successfully staked ${count} NFT(s) | Gas: ${GAS_FEE_USDC} USDC`);
+      showNotification(`✅ Successfully staked ${count} NFT(s) | Gas: ${GAS_FEE_ETH} ETH`);
       console.log(`[NFT] Staked ${count} NFTs with gas fee`);
     }
 
@@ -4983,7 +5048,7 @@
       stakedNFTs = Math.max(0, stakedNFTs - count);
       selectedNFTs.clear();
       showSection('nft');
-      showNotification(`✅ Successfully unstaked ${count} NFT(s) | Gas: ${GAS_FEE_USDC} USDC`);
+      showNotification(`✅ Successfully unstaked ${count} NFT(s) | Gas: ${GAS_FEE_ETH} ETH`);
       console.log(`[NFT] Unstaked ${count} NFTs with gas fee`);
     }
 
@@ -4998,7 +5063,7 @@
       const claimed = nftRewards;
       nftRewards = 0;
       showSection('nft');
-      showNotification(`✅ Claimed ${claimed.toFixed(2)} PLUME rewards | Gas: ${GAS_FEE_USDC} USDC`);
+      showNotification(`✅ Claimed ${claimed.toFixed(2)} PLUME rewards | Gas: ${GAS_FEE_ETH} ETH`);
       console.log(`[NFT] Claimed ${claimed.toFixed(2)} PLUME rewards with gas fee`);
     }
 
@@ -5196,7 +5261,7 @@
       const count = selectedNFTs.size;
       selectedNFTs.clear();
       showSection('nft');
-      showNotification(`✅ Successfully staked ${count} NFT(s) | Gas: ${GAS_FEE_USDC} USDC`);
+      showNotification(`✅ Successfully staked ${count} NFT(s) | Gas: ${GAS_FEE_ETH} ETH`);
       console.log(`[NFT] Staked ${count} NFTs with gas fee`);
     }
     
@@ -5235,7 +5300,7 @@
       const count = selectedNFTs.size;
       selectedNFTs.clear();
       showSection('nft');
-      showNotification(`✅ Successfully unstaked ${count} NFT(s) | Gas: ${GAS_FEE_USDC} USDC`);
+      showNotification(`✅ Successfully unstaked ${count} NFT(s) | Gas: ${GAS_FEE_ETH} ETH`);
       console.log(`[NFT] Unstaked ${count} NFTs with gas fee`);
     }
     
@@ -5270,7 +5335,7 @@
         
         lastRewardClaim = Date.now();
         showSection('nft');
-        showNotification(`✅ Claimed ${totalRewards.toFixed(4)} USDC rewards | Gas: ${GAS_FEE_USDC} USDC`);
+        showNotification(`✅ Claimed ${totalRewards.toFixed(4)} USDC rewards | Gas: ${GAS_FEE_ETH} ETH`);
         console.log(`[NFT] Claimed ${totalRewards.toFixed(4)} USDC rewards`);
       }
     }
@@ -5298,7 +5363,7 @@
       if (transferFromTreasury(usdcAmount)) {
         mogalandPoints = 0;
         showSection('nft');
-        showNotification(`✅ Redeemed points for ${usdcAmount.toFixed(2)} USDC | Gas: ${GAS_FEE_USDC} USDC`);
+        showNotification(`✅ Redeemed points for ${usdcAmount.toFixed(2)} USDC | Gas: ${GAS_FEE_ETH} ETH`);
         console.log(`[NFT] Redeemed points for ${usdcAmount.toFixed(2)} USDC`);
       }
     }
@@ -5574,7 +5639,7 @@
       const finalAmount = swapViaTreasury(fromToken, toToken, amt, toAmount, currentSlippageTolerance);
 
       showNotification(
-        `✅ Swap executed via treasury: ${amt.toFixed(6)} ${fromToken} → ${finalAmount.toFixed(6)} ${toToken}<br>Slippage: ${currentSlippageTolerance.toFixed(1)}% | Gas: ${GAS_FEE_USDC} USDC`,
+        `✅ Swap executed via treasury: ${amt.toFixed(6)} ${fromToken} → ${finalAmount.toFixed(6)} ${toToken}<br>Slippage: ${currentSlippageTolerance.toFixed(1)}% | Gas: ${GAS_FEE_ETH} ETH`,
         false
       );
       
