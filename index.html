@@ -1561,23 +1561,49 @@
     let walletConnected = false;
     
     function sendEmailCode() {
-      const email = document.getElementById('emailInput').value.trim();
-      if (!email.includes('@gmail.com') && !email.includes('@yahoo.com')) return showNotification("Use Gmail or Yahoo email.", true);
-      showNotification(`Mock OTP sent: ${mockOtp}`);
-      document.getElementById('otpInput').classList.remove('hidden');
-      document.getElementById('verifyOtpBtn').classList.remove('hidden');
+      try {
+        const email = document.getElementById('emailInput').value.trim();
+        if (!email.includes('@gmail.com') && !email.includes('@yahoo.com')) {
+          return showNotification("Use Gmail or Yahoo email.", true);
+        }
+        showNotification(`Mock OTP sent: ${mockOtp}`);
+        document.getElementById('otpInput').classList.remove('hidden');
+        document.getElementById('verifyOtpBtn').classList.remove('hidden');
+      } catch (error) {
+        console.error("Email login error:", error);
+        showNotification("Error sending OTP. Please try again.", true);
+      }
     }
+    window.sendEmailCode = sendEmailCode;
 
     function verifyEmailOtp() {
-      if (document.getElementById('otpInput').value.trim() === mockOtp) enterDashboard("Email");
-      else showNotification("Wrong OTP", true);
+      try {
+        const otpValue = document.getElementById('otpInput').value.trim();
+        if (otpValue === mockOtp) {
+          enterDashboard("Email");
+        } else {
+          showNotification("Wrong OTP", true);
+        }
+      } catch (error) {
+        console.error("OTP verification error:", error);
+        showNotification("Error verifying OTP. Please try again.", true);
+      }
     }
+    window.verifyEmailOtp = verifyEmailOtp;
 
     function confirmXLogin() {
-      const handle = document.getElementById('xInput').value.trim();
-      if (!handle.startsWith('@')) return showNotification("Invalid @username", true);
-      enterDashboard("X");
+      try {
+        const handle = document.getElementById('xInput').value.trim();
+        if (!handle.startsWith('@')) {
+          return showNotification("Invalid @username", true);
+        }
+        enterDashboard("X");
+      } catch (error) {
+        console.error("X login error:", error);
+        showNotification("Error with X login. Please try again.", true);
+      }
     }
+    window.confirmXLogin = confirmXLogin;
 
     function enterDashboard(method) {
       loginMethod = method.toLowerCase();
