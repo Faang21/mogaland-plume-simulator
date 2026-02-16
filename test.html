@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quick Wallet Test - Mogaland</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 50px auto;
+      padding: 20px;
+      background: linear-gradient(135deg, #0a2540, #1e3a5f);
+      color: white;
+    }
+    .status-box {
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 8px;
+      border-left: 4px solid #28a745;
+      background: rgba(40, 167, 69, 0.1);
+    }
+    .status-box.fail {
+      border-left-color: #dc3545;
+      background: rgba(220, 53, 69, 0.1);
+    }
+    .status-box.pending {
+      border-left-color: #ffc107;
+      background: rgba(255, 193, 7, 0.1);
+    }
+    button {
+      padding: 15px 30px;
+      margin: 10px;
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: bold;
+    }
+    button:hover {
+      opacity: 0.9;
+    }
+    h1 { color: #60a5fa; }
+    h2 { color: #93c5fd; margin-top: 30px; }
+    .success { color: #28a745; font-weight: bold; }
+    .fail { color: #dc3545; font-weight: bold; }
+    code {
+      background: rgba(0,0,0,0.3);
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧪 Mogaland Wallet Connection Test</h1>
+  <p>Test ini akan memverifikasi semua perbaikan bekerja dengan baik di browser nyata.</p>
+
+  <h2>1. Library Loading Status</h2>
+  <div id="library-status"></div>
+
+  <h2>2. Function Availability</h2>
+  <div id="function-status"></div>
+
+  <h2>3. Test Wallet Connections</h2>
+  <p><small>Klik tombol di bawah untuk test koneksi wallet. Pastikan wallet extension terinstall.</small></p>
+  
+  <div style="text-align: center; margin: 30px 0;">
+    <button onclick="window.open('http://localhost:8080/index.html', '_blank')">
+      🚀 Buka Aplikasi Utama
+    </button>
+  </div>
+
+  <div id="test-results"></div>
+
+  <h2>4. Quick Diagnostic</h2>
+  <div id="diagnostic"></div>
+
+  <script>
+    // Check libraries after delay
+    setTimeout(function() {
+      const libraryStatus = document.getElementById('library-status');
+      const functionStatus = document.getElementById('function-status');
+      const diagnostic = document.getElementById('diagnostic');
+      
+      // Open main app in iframe to load its scripts
+      const iframe = document.createElement('iframe');
+      iframe.src = 'http://localhost:8080/index.html';
+      iframe.style.display = 'none';
+      document.body.appendChild(iframe);
+      
+      // Wait for iframe to load
+      iframe.onload = function() {
+        const win = iframe.contentWindow;
+        
+        // Check libraries
+        const checks = [
+          { 
+            name: 'Buffer Polyfill', 
+            test: () => typeof win.Buffer !== 'undefined' && typeof win.Buffer.from === 'function',
+            details: 'Required for WalletConnect v2'
+          },
+          { 
+            name: 'process.env Polyfill', 
+            test: () => typeof win.process !== 'undefined' && win.process.env,
+            details: 'Required for WalletConnect v2'
+          },
+          { 
+            name: 'Ethers.js Library', 
+            test: () => typeof win.ethers !== 'undefined',
+            details: 'Required for all wallet connections'
+          },
+          { 
+            name: 'WalletConnect v2', 
+            test: () => win.WalletConnectV2Available === true,
+            details: 'Optional - for mobile wallets'
+          }
+        ];
+        
+        checks.forEach(check => {
+          const passed = check.test();
+          const div = document.createElement('div');
+          div.className = 'status-box' + (passed ? '' : ' fail');
+          div.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span><strong>${check.name}</strong></span>
+              <span class="${passed ? 'success' : 'fail'}">${passed ? '✅ LOADED' : '❌ NOT LOADED'}</span>
+            </div>
+            <div style="font-size: 0.9em; color: #94a3b8; margin-top: 5px;">${check.details}</div>
+          `;
+          libraryStatus.appendChild(div);
+        });
+        
+        // Check functions
+        const functions = [
+          { name: 'connectMetaMask', desc: 'MetaMask connection' },
+          { name: 'connectOKX', desc: 'OKX Wallet connection' },
+          { name: 'connectTrustWallet', desc: 'Trust Wallet connection' },
+          { name: 'connectWalletConnect', desc: 'WalletConnect v2' }
+        ];
+        
+        functions.forEach(func => {
+          const available = typeof win[func.name] === 'function';
+          const div = document.createElement('div');
+          div.className = 'status-box' + (available ? '' : ' fail');
+          div.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span><code>${func.name}()</code></span>
+              <span class="${available ? 'success' : 'fail'}">${available ? '✅ AVAILABLE' : '❌ MISSING'}</span>
+            </div>
+            <div style="font-size: 0.9em; color: #94a3b8; margin-top: 5px;">${func.desc}</div>
+          `;
+          functionStatus.appendChild(div);
+        });
+        
+        // Diagnostic info
+        const allLibsLoaded = checks.every(c => c.test());
+        const allFuncsAvailable = functions.every(f => typeof win[f.name] === 'function');
+        
+        if (allLibsLoaded && allFuncsAvailable) {
+          diagnostic.innerHTML = `
+            <div class="status-box">
+              <h3 style="color: #28a745; margin: 0 0 10px 0;">✅ ALL SYSTEMS GO!</h3>
+              <p style="margin: 5px 0;">Semua perbaikan bekerja dengan sempurna. Wallet connections siap digunakan!</p>
+              <p style="margin: 10px 0 5px 0;"><strong>Next Steps:</strong></p>
+              <ul style="margin: 5px 0; padding-left: 20px;">
+                <li>Klik tombol "Buka Aplikasi Utama" di atas</li>
+                <li>Pilih wallet yang ingin Anda gunakan</li>
+                <li>Ikuti instruksi dari wallet extension</li>
+              </ul>
+            </div>
+          `;
+        } else {
+          const issues = [];
+          if (!allLibsLoaded) issues.push('Beberapa library tidak load (kemungkinan karena ad-blocker)');
+          if (!allFuncsAvailable) issues.push('Beberapa fungsi tidak tersedia');
+          
+          diagnostic.innerHTML = `
+            <div class="status-box fail">
+              <h3 style="color: #dc3545; margin: 0 0 10px 0;">⚠️ Ada Masalah</h3>
+              <p style="margin: 5px 0;"><strong>Issues detected:</strong></p>
+              <ul style="margin: 5px 0; padding-left: 20px;">
+                ${issues.map(i => '<li>' + i + '</li>').join('')}
+              </ul>
+              <p style="margin: 10px 0 5px 0;"><strong>Solusi:</strong></p>
+              <ul style="margin: 5px 0; padding-left: 20px;">
+                <li>Disable ad-blocker untuk localhost</li>
+                <li>Refresh halaman ini</li>
+                <li>Coba browser lain (Chrome, Firefox)</li>
+              </ul>
+            </div>
+          `;
+        }
+      };
+      
+    }, 2000);
+  </script>
+</body>
+</html>
