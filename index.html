@@ -44,7 +44,18 @@
       loadEthers();
     })();
   </script>
-  <!-- WalletConnect v1 has been removed due to deprecation. Use MetaMask, OKX, or Trust Wallet instead. -->
+  <!-- WalletConnect v2 Ethereum Provider -->
+  <script type="module">
+    window.WalletConnectV2Available = false;
+    import('https://unpkg.com/@walletconnect/ethereum-provider@2.11.0/dist/index.umd.js')
+      .then(() => {
+        window.WalletConnectV2Available = true;
+        console.log('✅ WalletConnect v2 loaded successfully');
+      })
+      .catch(err => {
+        console.warn('⚠️ WalletConnect v2 failed to load:', err);
+      });
+  </script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@0.2.0/dist/chartjs-chart-financial.min.js"></script>
@@ -901,6 +912,15 @@
         <span style="font-size: 1.5rem; margin-right: 10px;">🛡️</span>
         Trust Wallet
       </button>
+      <button class="wallet-choice primary-wallet" onclick="connectWalletConnect()">
+        <span style="font-size: 1.5rem; margin-right: 10px;">🔗</span>
+        WalletConnect
+      </button>
+      <p style="margin-top: 15px; font-size: 0.85rem; color: #94a3b8;">
+        <strong>Sepolia Testnet Required</strong><br>
+        Network: Sepolia | Chain ID: 11155111<br>
+        Need test ETH? Visit <a href="https://sepoliafaucet.com" target="_blank" style="color: #60a5fa;">Sepolia Faucet</a>
+      </p>
     </div>
 
     <div style="margin: 30px 0; display: flex; align-items: center; opacity: 0.5;">
@@ -1158,8 +1178,19 @@
     // Global constants for Sepolia network
     const SEPOLIA_CHAIN_ID = 11155111;
     const SEPOLIA_CHAIN_HEX = "0xaa36a7";
-    const SEPOLIA_RPC = "https://rpc.sepolia.org";
+    // Multiple RPC endpoints for better reliability
+    const SEPOLIA_RPC_URLS = [
+      "https://1rpc.io/sepolia",
+      "https://rpc.sepolia.org",
+      "https://ethereum-sepolia.publicnode.com",
+      "https://rpc2.sepolia.org"
+    ];
+    const SEPOLIA_RPC = SEPOLIA_RPC_URLS[0]; // Primary RPC
     const SEPOLIA_EXPLORER = "https://sepolia.etherscan.io";
+    const SEPOLIA_FAUCET = "https://sepoliafaucet.com";
+    
+    // WalletConnect v2 Project ID (you should replace this with your own from https://cloud.walletconnect.com)
+    const WALLETCONNECT_PROJECT_ID = "demo-project-id"; // Replace with actual project ID
     
     // Global wallet variables
     let provider = null;
@@ -1209,6 +1240,11 @@
         // Check for OKX wallet first (more specific)
         if ((saved.walletType === 'OKX') && (window.okxwallet || window.okex)) {
           await connectOKX();
+          return true;
+        }
+        // WalletConnect
+        else if (saved.walletType === 'WalletConnect' && window.WalletConnectV2Available) {
+          await connectWalletConnect();
           return true;
         }
         // Then check for MetaMask
@@ -1344,7 +1380,7 @@
 
     function enterDashboard(method) {
       loginMethod = method.toLowerCase();
-      if (method === 'Wallet' || method === 'MetaMask' || method === 'OKX' || method === 'Trust' || method === 'Trust Wallet') {
+      if (method === 'Wallet' || method === 'MetaMask' || method === 'OKX' || method === 'Trust' || method === 'Trust Wallet' || method === 'WalletConnect') {
         loginMethod = 'wallet';
         walletConnected = true;
       } else if (method === 'Email') {
@@ -1431,11 +1467,11 @@
                       symbol: 'ETH',
                       decimals: 18
                     },
-                    rpcUrls: [SEPOLIA_RPC],
+                    rpcUrls: SEPOLIA_RPC_URLS,
                     blockExplorerUrls: [SEPOLIA_EXPLORER]
                   }],
                 });
-                showNotification("Added and switched to Sepolia", false);
+                showNotification("Added and switched to Sepolia testnet ✅", false);
               } catch (addError) {
                 showNotification("Failed to add Sepolia network", true);
                 console.error("Add network error:", addError);
@@ -1556,6 +1592,47 @@
       }
     }
     window.connectTrustWallet = connectTrustWallet;
+
+    async function connectWalletConnect() {
+      if (typeof ethers === 'undefined') {
+        return showNotification("Web3 libraries still loading. Please wait...", true);
+      }
+      
+      if (!window.WalletConnectV2Available || typeof window.EthereumProvider === 'undefined') {
+        showNotification("WalletConnect v2 library still loading. Please wait a moment and try again.", true);
+        return;
+      }
+      
+      try {
+        // Initialize WalletConnect v2 provider
+        const wcProvider = await window.EthereumProvider.init({
+          projectId: WALLETCONNECT_PROJECT_ID,
+          chains: [SEPOLIA_CHAIN_ID],
+          optionalChains: [SEPOLIA_CHAIN_ID],
+          rpcMap: {
+            [SEPOLIA_CHAIN_ID]: SEPOLIA_RPC
+          },
+          showQrModal: true,
+          qrModalOptions: {
+            themeMode: 'dark'
+          }
+        });
+        
+        // Enable session (shows QR code modal)
+        await wcProvider.enable();
+        
+        // Connect wallet
+        connectWallet("WalletConnect", () => new ethers.providers.Web3Provider(wcProvider));
+      } catch (e) {
+        if (e.message.includes('User closed modal')) {
+          showNotification("WalletConnect connection cancelled", false);
+        } else {
+          showNotification("WalletConnect error: " + (e.message || "Connection failed"), true);
+          console.error("WalletConnect v2 error:", e);
+        }
+      }
+    }
+    window.connectWalletConnect = connectWalletConnect;
     
     // Function to connect wallet from within the app (after email/X login)
     function connectWalletFromApp() {
@@ -1589,10 +1666,11 @@
         return btn;
       }
       
-      // Add wallet buttons (removed WalletConnect - deprecated)
+      // Add wallet buttons (now includes WalletConnect v2)
       modalContent.appendChild(createWalletButton('MetaMask', connectMetaMask));
       modalContent.appendChild(createWalletButton('OKX Wallet', connectOKX));
       modalContent.appendChild(createWalletButton('Trust Wallet', connectTrustWallet));
+      modalContent.appendChild(createWalletButton('WalletConnect', connectWalletConnect));
       
       // Cancel button
       const cancelBtn = document.createElement('button');
