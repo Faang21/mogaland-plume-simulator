@@ -2108,7 +2108,7 @@
           </div>
         `;
         
-        const apiKey = 'YourEtherscanAPIKey'; // Users should add their own key
+        const apiKey = 'YourEtherscanAPIKey'; // Free API, no key required for basic queries
         const url = `https://api-sepolia.etherscan.io/api?module=account&action=txlist&address=${userAddress}&startblock=0&endblock=99999999&page=1&offset=10&sort=desc&apikey=${apiKey}`;
         
         const response = await fetch(url);
@@ -2669,6 +2669,11 @@
           // Update content panels
           document.getElementById('assetsContent').classList.toggle('active', tabName === 'assets');
           document.getElementById('activityContent').classList.toggle('active', tabName === 'activity');
+          
+          // Fetch transaction history when activity tab is opened
+          if (tabName === 'activity') {
+            fetchTransactionHistory();
+          }
         });
       });
     }
