@@ -1297,6 +1297,9 @@
       CHECK_INTERVAL_MS: 5000 // Check for liquidations every 5 seconds
     };
     
+    // Price simulation constants
+    const SIMULATED_PRICE_VARIATION = 0.02; // 2% price variation for fallback when API unavailable
+    
     // Function to fetch live ETH/USDC rate from Uniswap V3
     async function fetchLiveETHtoUSDCRate() {
       try {
@@ -2190,8 +2193,23 @@
         if (wbtcBalanceEl) wbtcBalanceEl.textContent = wbtcBalance.toFixed(8);
         
         const wbtcBalanceUSDEl = document.getElementById('wbtcBalanceUSD');
-        const wbtcPriceUSD = 45000; // Approximate BTC price, should fetch from API in production
-        if (wbtcBalanceUSDEl) wbtcBalanceUSDEl.textContent = `$${(wbtcBalance * wbtcPriceUSD).toFixed(2)}`;
+        // Fetch BTC price from CoinGecko for WBTC USD value
+        try {
+          const btcPriceResponse = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd');
+          if (btcPriceResponse.ok) {
+            const btcPriceData = await btcPriceResponse.json();
+            const wbtcPriceUSD = btcPriceData.bitcoin?.usd || 45000; // Fallback to approximate price
+            if (wbtcBalanceUSDEl) wbtcBalanceUSDEl.textContent = `$${(wbtcBalance * wbtcPriceUSD).toFixed(2)}`;
+          } else {
+            // Fallback to approximate price if API fails
+            const wbtcPriceUSD = 45000;
+            if (wbtcBalanceUSDEl) wbtcBalanceUSDEl.textContent = `$${(wbtcBalance * wbtcPriceUSD).toFixed(2)}`;
+          }
+        } catch (error) {
+          console.log('BTC price fetch error, using fallback:', error);
+          const wbtcPriceUSD = 45000; // Fallback to approximate price
+          if (wbtcBalanceUSDEl) wbtcBalanceUSDEl.textContent = `$${(wbtcBalance * wbtcPriceUSD).toFixed(2)}`;
+        }
         
         // Update trading balance in Market section if it exists
         if (typeof tradingUSDCBalance !== 'undefined') {
@@ -4341,10 +4359,14 @@
           
           // Fetch real sports data
           fetchSportsData(asset).then(() => {
-            // Calculate win rate from recent form
-            const wins = asset.recentForm.filter(r => r.includes(': W ')).length;
-            const losses = asset.recentForm.filter(r => r.includes(': L ')).length;
-            const draws = asset.recentForm.filter(r => r.includes(': D ')).length;
+            // Calculate win rate from recent form using single reduce operation
+            const { wins, losses, draws } = asset.recentForm.reduce((acc, match) => {
+              if (match.includes(': W ')) acc.wins++;
+              else if (match.includes(': L ')) acc.losses++;
+              else if (match.includes(': D ')) acc.draws++;
+              return acc;
+            }, { wins: 0, losses: 0, draws: 0 });
+            
             const totalGames = asset.recentForm.length;
             const winRate = totalGames > 0 ? ((wins / totalGames) * 100).toFixed(0) : '0';
             
@@ -4375,10 +4397,10 @@
               </div>
               
               <strong>📋 Recent Results:</strong><br><br>
-              ${totalGames > 0 ? asset.recentForm.map(r => {
-                const result = r.match(/: ([WLD]) /)?.[1];
+              ${totalGames > 0 ? asset.recentForm.map(matchResult => {
+                const result = matchResult.match(/: ([WLD]) /)?.[1];
                 const color = result === 'W' ? '#10b981' : result === 'L' ? '#ef4444' : '#fbbf24';
-                return `<div style="padding:6px; margin:4px 0; background:rgba(255,255,255,0.05); border-left:3px solid ${color}; border-radius:4px;">${r}</div>`;
+                return `<div style="padding:6px; margin:4px 0; background:rgba(255,255,255,0.05); border-left:3px solid ${color}; border-radius:4px;">${matchResult}</div>`;
               }).join('') : '<div style="opacity:0.6;">No recent matches available</div>'}
               <br>
               <div style="background:rgba(59,130,246,0.1); padding:12px; border-radius:8px; margin-top:12px;">
@@ -4393,7 +4415,7 @@
               <div style="background:rgba(239,68,68,0.1); padding:12px; border-radius:8px; text-align:center;">
                 <strong>⚠️ Unable to fetch real-time data</strong><br>
                 Using cached match history<br><br>
-                ${asset.recentForm.map(r => `<div style="padding:4px;">${r}</div>`).join('')}
+                ${asset.recentForm.map(matchResult => `<div style="padding:4px;">${matchResult}</div>`).join('')}
               </div>
             `;
           });
@@ -4808,7 +4830,7 @@
               } catch (corsError) {
                 console.log('[CoinGecko] CORS error, using fallback price simulation');
                 // Use base price with slight random variation for demo
-                const simulatedPrice = asset.basePrice * (1 + (Math.random() - 0.5) * 0.02);
+                const simulatedPrice = asset.basePrice * (1 + (Math.random() - 0.5) * SIMULATED_PRICE_VARIATION);
                 updatePriceDisplay(simulatedPrice);
                 return;
               }
