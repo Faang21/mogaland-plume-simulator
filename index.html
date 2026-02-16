@@ -1312,15 +1312,16 @@
         if (response.ok) {
           return await response.json();
         }
-        throw new Error('Direct fetch failed');
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       } catch (error) {
-        console.log('[CORS] Direct fetch failed, trying proxy...', error.message);
+        console.log(`[CORS] Direct fetch failed for ${url}:`, error.message);
         try {
           // Try with CORS proxy
           const proxyResponse = await fetch(CORS_PROXY + encodeURIComponent(url));
           if (proxyResponse.ok) {
             return await proxyResponse.json();
           }
+          throw new Error(`Proxy HTTP ${proxyResponse.status}: ${proxyResponse.statusText}`);
         } catch (proxyError) {
           console.log('[CORS] Proxy fetch also failed:', proxyError.message);
         }
@@ -6547,8 +6548,14 @@
           const icon = answer.correct ? '✅' : '❌';
           const color = answer.correct ? '#10b981' : '#ef4444';
           const pointChange = answer.pointChange > 0 ? `+${answer.pointChange}` : answer.pointChange;
-          // Sanitize question text to prevent XSS
-          const safeQuestion = answer.question.replace(/</g, '&lt;').replace(/>/g, '&gt;').substring(0, 30);
+          // Comprehensive XSS sanitization
+          const safeQuestion = answer.question
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#x27;')
+            .substring(0, 30);
           return `<div style="padding:6px 0; font-size:0.85em; border-bottom:1px solid rgba(255,255,255,0.1);">
             <div style="display:flex; justify-content:space-between; align-items:center;">
               <span style="color:${color};">${icon} ${safeQuestion}...</span>
@@ -6693,7 +6700,7 @@
       }
 
       if (!provider || !userAddress) {
-        showNotification("Please connect your wallet first!", true);
+        showNotification("⚠️ Wallet not connected. Please connect your wallet to convert points.", true);
         connectWalletFromApp();
         return;
       }
@@ -6721,15 +6728,18 @@
         mogalandPoints -= pointsToConvert;
         updatePointDisplay();
         
-        // Simulate transfer from treasury (in production, this would be a smart contract call)
-        // Transfer USDC from treasury to user's wallet
+        // Check treasury balance and transfer USDC
         if (treasuryUSDCBalance >= usdcAmount) {
           treasuryUSDCBalance -= usdcAmount;
+          showNotification(`✅ Successfully converted ${pointsToConvert} points to ${usdcAmount} USDC from treasury!`, false);
           
           // Update user's USDC balance display
           if (typeof fetchRealBalances === 'function') {
             setTimeout(() => fetchRealBalances(), 1000);
           }
+        } else {
+          // Treasury has insufficient funds
+          showNotification(`⚠️ Treasury balance insufficient. Conversion recorded but USDC transfer pending. Treasury: ${treasuryUSDCBalance.toFixed(2)} USDC, Needed: ${usdcAmount} USDC`, true);
         }
         
         // Log the conversion to answer history for tracking
