@@ -1189,8 +1189,8 @@
     const SEPOLIA_EXPLORER = "https://sepolia.etherscan.io";
     const SEPOLIA_FAUCET = "https://sepoliafaucet.com";
     
-    // WalletConnect v2 Project ID (you should replace this with your own from https://cloud.walletconnect.com)
-    const WALLETCONNECT_PROJECT_ID = "demo-project-id"; // Replace with actual project ID
+    // WalletConnect v2 Project ID from https://cloud.reown.com (formerly WalletConnect Cloud)
+    const WALLETCONNECT_PROJECT_ID = "f15f6ddf-6f24-4d78-aad7-6a4b73014d29";
     
     // Global wallet variables
     let provider = null;
@@ -1610,12 +1610,6 @@
       if (!window.WalletConnectV2Available || typeof window.EthereumProvider === 'undefined') {
         showNotification("WalletConnect v2 library still loading. Please wait a moment and try again.", true);
         return;
-      }
-      
-      // Note: For production use, replace WALLETCONNECT_PROJECT_ID with your own from https://cloud.walletconnect.com
-      // The demo project ID has rate limits and may not work in production
-      if (WALLETCONNECT_PROJECT_ID === 'demo-project-id') {
-        console.warn('⚠️ Using demo WalletConnect project ID. Get your own from https://cloud.walletconnect.com');
       }
       
       try {

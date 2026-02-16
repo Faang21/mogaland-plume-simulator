@@ -58,7 +58,7 @@ You need test ETH to perform transactions on Sepolia testnet. Here are the best 
 
 ### Recommended Faucets
 1. **Sepolia Faucet** - https://sepoliafaucet.com
-2. **Alchemy Sepolia Faucet** - https://sepoliafaucet.com (Alchemy login required)
+2. **Alchemy Sepolia Faucet** - https://www.alchemy.com/faucets/ethereum-sepolia (Alchemy login required)
 3. **Infura Sepolia Faucet** - https://www.infura.io/faucet/sepolia
 4. **QuickNode Faucet** - https://faucet.quicknode.com/ethereum/sepolia
 
@@ -77,17 +77,12 @@ WalletConnect allows you to connect any mobile wallet that supports WalletConnec
 3. Approve the connection in your wallet app
 4. The app will automatically switch to Sepolia
 
-### For Developers
-To use WalletConnect v2 in production:
-1. Create a free account at [WalletConnect Cloud](https://cloud.walletconnect.com)
-2. Create a new project
-3. Copy your Project ID
-4. Replace `WALLETCONNECT_PROJECT_ID` in index.html:
-   ```javascript
-   const WALLETCONNECT_PROJECT_ID = "your-project-id-here";
-   ```
+### Configuration
+The app is configured with a valid WalletConnect project ID from Reown (formerly WalletConnect Cloud).
+- Project ID: `f15f6ddf-6f24-4d78-aad7-6a4b73014d29`
+- Dashboard: https://dashboard.reown.com
 
-**Note**: The current demo project ID has rate limits and should be replaced for production use.
+This allows unlimited connections and full WalletConnect v2 functionality.
 
 ## Troubleshooting
 
