@@ -46,7 +46,8 @@
   </script>
   <!-- NOTE: WalletConnect v1 is deprecated. Bridge URL (wss://e.bridge.walletconnect.org) is no longer available.
        This causes WebSocket connection errors but doesn't affect MetaMask, OKX, or Trust Wallet.
-       Consider upgrading to WalletConnect v2 in the future. -->
+       TODO: Upgrade to WalletConnect v2 (requires significant refactoring of wallet connection logic).
+       Tracking: WalletConnect v1 will continue to show WebSocket errors but wallet functionality works via other providers. -->
   <script src="https://unpkg.com/@walletconnect/web3-provider@1.8.0/dist/umd/index.min.js" onerror="console.warn('⚠️ WalletConnect library failed to load. WalletConnect feature may not work.');"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
@@ -1237,6 +1238,8 @@
     }
 
     function connectTrustWallet() {
+      // Note: Trust Wallet detection is challenging as it uses window.ethereum like MetaMask
+      // This checks for ethereum but may also work with other wallet extensions
       if (!window.ethereum) return showNotification("Trust Wallet not detected. Please install Trust Wallet extension or use Trust Wallet browser.", true);
       connectWallet("Trust", () => new ethers.providers.Web3Provider(window.ethereum));
     }
@@ -1753,8 +1756,14 @@
       `;
       document.body.appendChild(modal);
       
-      // Generate QR code
+      // Generate QR code using external service
+      // Note: This sends the address to qrserver.com for QR generation
+      // Consider using a client-side library for better privacy in production
       const qrDiv = document.getElementById('depositQR');
+      // Clear any existing QR codes
+      while (qrDiv.firstChild) {
+        qrDiv.removeChild(qrDiv.firstChild);
+      }
       const qrImg = document.createElement('img');
       qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(userAddress);
       qrImg.alt = 'QR Code';
