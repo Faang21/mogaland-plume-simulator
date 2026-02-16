@@ -4343,17 +4343,39 @@
           fetchSportsData(asset).then(() => {
             // Calculate win rate from recent form
             const wins = asset.recentForm.filter(r => r.includes(': W ')).length;
-            const winRate = asset.recentForm.length > 0 ? ((wins / asset.recentForm.length) * 100).toFixed(0) : '0';
+            const losses = asset.recentForm.filter(r => r.includes(': L ')).length;
+            const draws = asset.recentForm.filter(r => r.includes(': D ')).length;
+            const totalGames = asset.recentForm.length;
+            const winRate = totalGames > 0 ? ((wins / totalGames) * 100).toFixed(0) : '0';
             
+            // Display with enhanced stats including win percentage
             view.innerHTML = `
               <div style="background:rgba(16,185,129,0.1); padding:12px; border-radius:8px; margin-bottom:16px;">
-                <strong>📊 Team Stats:</strong><br>
+                <strong>📊 Team Performance:</strong><br>
                 League: ${asset.league}<br>
-                Strength: ${(asset.strength * 100).toFixed(0)}% | Win Rate: ${winRate}%<br>
-                <strong>🔜 Next Match: ${asset.nextMatch}</strong>
+                <div style="margin-top:8px; display:flex; justify-content:space-between; align-items:center;">
+                  <div>
+                    <span style="color:#10b981; font-weight:bold; font-size:1.2em;">${winRate}%</span> Win Rate<br>
+                    <span style="font-size:0.9em; opacity:0.8;">Strength: ${(asset.strength * 100).toFixed(0)}%</span>
+                  </div>
+                  <div style="text-align:right; font-size:0.9em;">
+                    <span style="color:#10b981;">✓ ${wins}W</span> | 
+                    <span style="color:#fbbf24;">− ${draws}D</span> | 
+                    <span style="color:#ef4444;">✗ ${losses}L</span>
+                  </div>
+                </div>
+                <div style="margin-top:8px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.1);">
+                  <strong>🔜 Next Match: ${asset.nextMatch}</strong>
+                </div>
               </div>
+              
+              <div style="background:rgba(59,130,246,0.1); padding:10px; border-radius:8px; margin-bottom:12px; font-size:0.9em;">
+                <strong>📡 Live Scores:</strong> 
+                <span style="opacity:0.8;">Visit <a href="https://www.livescore.com/en/" target="_blank" style="color:#60a5fa;">LiveScore.com</a> for real-time match updates</span>
+              </div>
+              
               <strong>📋 Recent Results:</strong><br><br>
-              ${asset.recentForm.length > 0 ? asset.recentForm.map(r => {
+              ${totalGames > 0 ? asset.recentForm.map(r => {
                 const result = r.match(/: ([WLD]) /)?.[1];
                 const color = result === 'W' ? '#10b981' : result === 'L' ? '#ef4444' : '#fbbf24';
                 return `<div style="padding:6px; margin:4px 0; background:rgba(255,255,255,0.05); border-left:3px solid ${color}; border-radius:4px;">${r}</div>`;
@@ -4362,7 +4384,7 @@
               <div style="background:rgba(59,130,246,0.1); padding:12px; border-radius:8px; margin-top:12px;">
                 <strong>💰 Place Your Bet with Sepolia USDC:</strong><br>
                 Predict if <strong>${asset.symbol}</strong> will WIN or LOSE their next match!<br>
-                Use the controls on the right to place your bet with leverage.
+                <span style="font-size:0.9em; opacity:0.9;">Win Probability: <span style="color:#10b981; font-weight:bold;">${winRate}%</span> | Use the controls on the right to place your bet with leverage.</span>
               </div>
             `;
           }).catch(error => {
