@@ -1231,11 +1231,13 @@
       if (!window.ethereum) return showNotification("MetaMask not found. Please install MetaMask extension.", true);
       connectWallet("MetaMask", () => new ethers.providers.Web3Provider(window.ethereum));
     }
+    window.connectMetaMask = connectMetaMask;
 
     function connectOKX() {
       if (!window.okxwallet) return showNotification("OKX Wallet not found. Please install OKX Wallet extension.", true);
       connectWallet("OKX", () => new ethers.providers.Web3Provider(window.okxwallet));
     }
+    window.connectOKX = connectOKX;
 
     function connectTrustWallet() {
       // Note: Trust Wallet detection is challenging as it uses window.ethereum like MetaMask
@@ -1243,6 +1245,7 @@
       if (!window.ethereum) return showNotification("Trust Wallet not detected. Please install Trust Wallet extension or use Trust Wallet browser.", true);
       connectWallet("Trust", () => new ethers.providers.Web3Provider(window.ethereum));
     }
+    window.connectTrustWallet = connectTrustWallet;
 
     async function connectWalletConnect() {
       if (typeof ethers === 'undefined') {
@@ -1273,6 +1276,7 @@
         showNotification("WalletConnect connection cancelled or failed", true);
       }
     }
+    window.connectWalletConnect = connectWalletConnect;
     
     // Function to connect wallet from within the app (after email/X login)
     function connectWalletFromApp() {
@@ -1324,6 +1328,7 @@
       modal.appendChild(modalContent);
       document.body.appendChild(modal);
     }
+    window.connectWalletFromApp = connectWalletFromApp;
     
     function initializeApp() {
       // Cache loading indicator reference to avoid redundant DOM queries
