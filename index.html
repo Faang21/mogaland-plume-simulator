@@ -1084,6 +1084,114 @@
     let userAddress = null;
     let walletConnectProvider = null;
     
+    // Wallet persistence helpers
+    function saveWalletConnection(walletType, address) {
+      localStorage.setItem('lastWalletType', walletType);
+      localStorage.setItem('lastWalletAddress', address);
+      localStorage.setItem('walletConnectedAt', Date.now().toString());
+    }
+    
+    function clearWalletConnection() {
+      localStorage.removeItem('lastWalletType');
+      localStorage.removeItem('lastWalletAddress');
+      localStorage.removeItem('walletConnectedAt');
+    }
+    
+    function getSavedWalletConnection() {
+      const walletType = localStorage.getItem('lastWalletType');
+      const address = localStorage.getItem('lastWalletAddress');
+      const connectedAt = localStorage.getItem('walletConnectedAt');
+      
+      // Check if connection is less than 24 hours old
+      if (walletType && address && connectedAt) {
+        const age = Date.now() - parseInt(connectedAt);
+        if (age < 24 * 60 * 60 * 1000) { // 24 hours
+          return { walletType, address };
+        }
+      }
+      return null;
+    }
+    
+    // Auto-reconnect wallet on page load
+    async function autoReconnectWallet() {
+      const saved = getSavedWalletConnection();
+      if (!saved) return false;
+      
+      console.log(`[Auto-reconnect] Attempting to reconnect ${saved.walletType}...`);
+      
+      try {
+        if (saved.walletType === 'MetaMask' && window.ethereum) {
+          await connectMetaMask();
+          return true;
+        } else if (saved.walletType === 'OKX' && window.okxwallet) {
+          await connectOKX();
+          return true;
+        } else if (saved.walletType === 'Trust' && window.ethereum) {
+          await connectTrustWallet();
+          return true;
+        }
+      } catch (e) {
+        console.log('[Auto-reconnect] Failed:', e.message);
+        clearWalletConnection();
+      }
+      return false;
+    }
+    
+    // Wallet event listeners for account/chain changes
+    function setupWalletEventListeners() {
+      if (window.ethereum) {
+        // Listen for account changes
+        window.ethereum.on('accountsChanged', async (accounts) => {
+          if (accounts.length === 0) {
+            // User disconnected wallet
+            showNotification("Wallet disconnected", true);
+            disconnectWallet();
+          } else if (accounts[0].toLowerCase() !== userAddress) {
+            // User switched account
+            showNotification("Account changed. Reconnecting...", false);
+            userAddress = accounts[0].toLowerCase();
+            saveWalletConnection(localStorage.getItem('lastWalletType') || 'MetaMask', userAddress);
+            updateWalletUI();
+            if (typeof fetchRealBalances === 'function') {
+              fetchRealBalances();
+            }
+          }
+        });
+        
+        // Listen for chain changes
+        window.ethereum.on('chainChanged', (chainId) => {
+          const expectedChainId = parseInt(SEPOLIA_CHAIN_HEX, 16);
+          if (parseInt(chainId, 16) !== expectedChainId) {
+            showNotification("Network changed. Please switch back to Sepolia.", true);
+          } else {
+            showNotification("Switched to Sepolia testnet", false);
+          }
+          // Reload balances on chain change
+          if (typeof fetchRealBalances === 'function') {
+            setTimeout(() => fetchRealBalances(), 1000);
+          }
+        });
+        
+        console.log('✅ Wallet event listeners configured');
+      }
+    }
+    
+    // Update wallet UI helper
+    function updateWalletUI() {
+      if (!userAddress) return;
+      
+      const walletBtn = document.getElementById('walletBtn');
+      if (walletBtn) {
+        walletBtn.textContent = `${userAddress.slice(0,6)}...${userAddress.slice(-4)}`;
+        walletBtn.classList.add('connected');
+      }
+      
+      const addressDisplay = document.getElementById('walletAddressDisplay');
+      if (addressDisplay) {
+        addressDisplay.textContent = userAddress;
+      }
+    }
+    
     // Login UI functions - Available immediately (don't need ethers.js)
     function showEmailLogin() { toggleSections('emailLogin'); }
     function showXLogin() { toggleSections('xLogin'); }
@@ -1267,6 +1375,12 @@
           ethBalanceEl.textContent = parseFloat(balanceEth).toFixed(4);
         }
         
+        // Save wallet connection for auto-reconnect
+        saveWalletConnection(walletType, userAddress);
+        
+        // Setup wallet event listeners
+        setupWalletEventListeners();
+        
         showNotification(`Connected via ${walletType} on Sepolia – Balance: ${parseFloat(balanceEth).toFixed(4)} ETH`, false);
         enterDashboard(walletType);
         
@@ -1276,6 +1390,7 @@
         }
       } catch (e) {
         showNotification("Connection failed: " + (e.message || "Error"), true);
+        clearWalletConnection();
       }
     }
 
@@ -1506,6 +1621,14 @@
       
       console.log('✅ Ethers library loaded successfully - Wallet connections enabled');
       startApp();
+      
+      // Try to auto-reconnect wallet after a brief delay (allowing startApp to initialize)
+      setTimeout(async () => {
+        const reconnected = await autoReconnectWallet();
+        if (reconnected) {
+          console.log('✅ Wallet auto-reconnected successfully');
+        }
+      }, 1000);
     }
     
     function startApp() {
@@ -1773,6 +1896,10 @@
         // Clear wallet connection
         userAddress = null;
         provider = null;
+        walletConnected = false;
+        
+        // Clear saved connection from localStorage
+        clearWalletConnection();
         
         // Update UI
         const walletBtn = document.getElementById('walletBtn');
@@ -3215,7 +3342,33 @@
         let currentBet = null;
         let openPositions = [];
         let tradeHistoryList = [];
-        let tradingUSDCBalance = 1000; // Demo balance
+        let tradingUSDCBalance = 0; // Real balance from wallet
+        
+        // Fetch real USDC balance for trading
+        async function fetchTradingBalance() {
+          if (!provider || !userAddress) {
+            tradingUSDCBalance = 0;
+            updateTradingBalance();
+            return;
+          }
+          
+          try {
+            const usdcContract = new ethers.Contract(USDC_SEPOLIA_ADDRESS, USDC_ABI, provider);
+            const balance = await usdcContract.balanceOf(userAddress);
+            const decimals = await usdcContract.decimals();
+            tradingUSDCBalance = parseFloat(ethers.utils.formatUnits(balance, decimals));
+            updateTradingBalance();
+            console.log('✅ Trading balance loaded:', tradingUSDCBalance, 'USDC');
+          } catch (error) {
+            console.error('Failed to fetch trading balance:', error);
+            showNotification("Failed to load trading balance", true);
+          }
+        }
+        
+        // Call fetchTradingBalance when market section is opened
+        if (provider && userAddress) {
+          fetchTradingBalance();
+        }
 
         // Update leverage info display
         function updateLeverageInfo() {
@@ -3422,6 +3575,13 @@
 
         // Open a new position
         function openPosition(type) {
+          // Check wallet connection first
+          if (!provider || !userAddress) {
+            showNotification('⚠️ Please connect your wallet to start trading!', true);
+            connectWalletFromApp();
+            return;
+          }
+          
           if (!selectedAsset) {
             showNotification('Please select an asset/team first!', true);
             return;
@@ -4176,6 +4336,13 @@
         };
 
         window.confirmBridge = function() {
+          // Check wallet connection FIRST
+          if (!userAddress || !provider) {
+            showNotification("⚠️ Please connect wallet first!", true);
+            connectWalletFromApp();
+            return;
+          }
+          
           const amount = parseFloat(document.getElementById('bridgeAmount')?.value || 0);
           const fromChainSelect = document.getElementById('fromChain');
           const fromChain = fromChainSelect?.options[fromChainSelect?.selectedIndex]?.text || 'Goerli';
@@ -4405,10 +4572,12 @@
     async function loadUserNFTs() {
       if (!provider || !userAddress) {
         console.log('[NFT] No wallet connected, using demo NFTs');
+        showNotification("💡 Connect wallet to load your NFTs", false);
         return;
       }
       
       try {
+        showNotification("🔄 Loading your NFTs...", false);
         const nftContract = new ethers.Contract(NFT_CONTRACT_ADDRESS, NFT_ABI, provider);
         const balance = await nftContract.balanceOf(userAddress);
         
@@ -4425,8 +4594,14 @@
         }
         
         console.log(`[NFT] Loaded ${userNFTs.length} NFTs from wallet`);
+        if (userNFTs.length > 0) {
+          showNotification(`✅ Loaded ${userNFTs.length} NFT(s) from your wallet`, false);
+        } else {
+          showNotification("📦 No NFTs found. Complete learning to mint your first NFT!", false);
+        }
       } catch (error) {
-        console.log('[NFT] Error loading NFTs, using demo mode:', error.message);
+        console.error('[NFT] Error loading NFTs:', error);
+        showNotification("⚠️ Failed to load NFTs: " + (error.message || "Unknown error"), true);
       }
     }
     
@@ -4505,8 +4680,10 @@
     async function stakeSelectedNFTs() {
       if (selectedNFTs.size === 0) return showNotification("No NFTs selected!", true);
       
-      if (!walletConnected && loginMethod !== 'wallet') {
-        showNotification("Please connect your wallet to stake NFTs!", true);
+      // Proper wallet validation
+      if (!userAddress || !provider) {
+        showNotification("⚠️ Please connect your wallet to stake NFTs!", true);
+        connectWalletFromApp();
         return;
       }
       
@@ -4545,8 +4722,10 @@
     async function unstakeSelectedNFTs() {
       if (selectedNFTs.size === 0) return showNotification("No staked NFTs selected!", true);
       
-      if (!walletConnected && loginMethod !== 'wallet') {
-        showNotification("Please connect your wallet to unstake NFTs!", true);
+      // Proper wallet validation
+      if (!userAddress || !provider) {
+        showNotification("⚠️ Please connect your wallet to unstake NFTs!", true);
+        connectWalletFromApp();
         return;
       }
       
@@ -4589,8 +4768,10 @@
         return showNotification("No rewards available yet!", true);
       }
       
-      if (!walletConnected && loginMethod !== 'wallet') {
-        showNotification("Please connect your wallet to claim rewards!", true);
+      // Proper wallet validation
+      if (!userAddress || !provider) {
+        showNotification("⚠️ Please connect your wallet to claim rewards!", true);
+        connectWalletFromApp();
         return;
       }
       
@@ -4618,8 +4799,10 @@
         return showNotification("Need at least 1000 points to redeem!", true);
       }
       
-      if (!walletConnected && loginMethod !== 'wallet') {
-        showNotification("Please connect your wallet to redeem rewards!", true);
+      // Proper wallet validation
+      if (!userAddress || !provider) {
+        showNotification("⚠️ Please connect your wallet to redeem rewards!", true);
+        connectWalletFromApp();
         return;
       }
       
@@ -4858,9 +5041,18 @@
     }
 
     window.confirmSwap = function() {
+      // Check wallet connection FIRST
+      if (!userAddress || !provider) {
+        showNotification("⚠️ Please connect wallet first!", true);
+        connectWalletFromApp();
+        return;
+      }
+      
       const amt = parseFloat(document.getElementById('fromInput')?.value) || 0;
-      if (amt <= 0) return showNotification("Enter amount > 0", true);
-      if (!userAddress) return showNotification("Please connect wallet first", true);
+      if (amt <= 0) {
+        showNotification("Enter amount > 0", true);
+        return;
+      }
 
       const fromToken = document.getElementById('fromTokenSelect')?.value || 'ETH';
       const toToken = document.getElementById('toTokenSelect')?.value || 'USDC';
@@ -4909,28 +5101,9 @@
 
     // Quiz & Stake functions
     function loadQuestion() {
-      // Check if user has staked USDC before allowing learning
-      if (stakedUSDC <= 0) {
-        document.getElementById('qTitle').textContent = "⚠️ Stake USDC Required";
-        document.getElementById('optionsContainer').innerHTML = `
-          <div style="text-align: center; padding: 40px 20px;">
-            <p style="font-size: 1.2em; margin-bottom: 20px;">
-              You must stake USDC before accessing learning questions.
-            </p>
-            <p style="margin-bottom: 30px;">
-              Stake any amount of USDC below to unlock the learning quiz and earn rewards!
-            </p>
-            <button class="btn-primary" onclick="document.getElementById('stakeAmountInput').focus()">
-              Go to Stake Section
-            </button>
-          </div>
-        `;
-        const btnGroup = document.querySelector('.btn-group');
-        if (btnGroup) {
-          btnGroup.innerHTML = '';
-        }
-        showNotification("⚠️ Please stake USDC first to access learning!", true);
-        return;
+      // Show optional staking prompt if not staked yet, but don't block learning
+      if (stakedUSDC <= 0 && currentQuestionIndex === 0) {
+        showNotification("💡 Tip: Stake USDC to earn additional rewards while learning!", false);
       }
       
       if (currentQuestionIndex >= questions.length) {
