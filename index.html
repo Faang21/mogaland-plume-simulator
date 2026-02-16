@@ -3523,10 +3523,10 @@
 
               <div class="card" style="flex:2; min-height:580px; padding:20px;">
                 <h3 id="viewTitle" style="color:#60a5fa; text-align:center; margin-bottom:15px;">Select Asset to Trade</h3>
-                <canvas id="priceChart" height="420" style="display:none;"></canvas>
+                <div id="priceChart" style="min-height:420px; display:none;"></div>
                 <div id="clubHistoryView" style="display:none; color:#e2e8f0; font-size:1.05em; line-height:1.6; padding:15px; background:rgba(13,110,253,0.08); border-radius:12px;"></div>
                 <div id="chartFooter" style="text-align:center; margin-top:15px; font-size:0.95em; opacity:0.8; display:none;">
-                  Simulated real-time price • Updates every ~8s
+                  Live price data from TradingView
                 </div>
               </div>
 
@@ -5474,8 +5474,9 @@
       const fromToken = document.getElementById('fromTokenSelect')?.value || 'ETH';
       const toToken = document.getElementById('toTokenSelect')?.value || 'USDC';
 
+      // Use live ETH_TO_USDC_RATE from Uniswap for ETH/USDC swaps
       const exchangeRates = {
-        'ETH': 2500,
+        'ETH': ETH_TO_USDC_RATE,  // Live rate from Uniswap
         'USDC': 1,
         'USDT': 1,
         'LINK': 15,
@@ -5538,9 +5539,9 @@
       const fromToken = document.getElementById('fromTokenSelect')?.value || 'ETH';
       const toToken = document.getElementById('toTokenSelect')?.value || 'USDC';
       
-      // Calculate swap amount (simplified exchange rate)
+      // Use live ETH_TO_USDC_RATE from Uniswap for ETH/USDC swaps
       const exchangeRates = {
-        'ETH': 2500,  // 1 ETH = 2500 USDC
+        'ETH': ETH_TO_USDC_RATE,  // Live rate from Uniswap
         'USDC': 1,
         'USDT': 1,
         'LINK': 15,   // 1 LINK = 15 USDC
