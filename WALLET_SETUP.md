@@ -79,7 +79,7 @@ WalletConnect allows you to connect any mobile wallet that supports WalletConnec
 
 ### Configuration
 The app is configured with a valid WalletConnect project ID from Reown (formerly WalletConnect Cloud).
-- Project ID: `f15f6ddf-6f24-4d78-aad7-6a4b73014d29`
+- Project ID: `51e44cec955a70475db9cc1900283704`
 - Dashboard: https://dashboard.reown.com
 
 This allows unlimited connections and full WalletConnect v2 functionality.
