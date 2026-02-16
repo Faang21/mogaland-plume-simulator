@@ -1525,6 +1525,10 @@
     function showEmailLogin() { toggleSections('emailLogin'); }
     function showXLogin() { toggleSections('xLogin'); }
     
+    // Expose login functions to window for onclick handlers
+    window.showEmailLogin = showEmailLogin;
+    window.showXLogin = showXLogin;
+    
     function toggleSections(showId) {
       ['emailLogin', 'xLogin'].forEach(id => {
         const el = document.getElementById(id);
