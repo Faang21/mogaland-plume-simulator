@@ -1314,7 +1314,8 @@
             qrcode: true
           });
         } catch (e) {
-          showNotification("⚠️ WalletConnect v1 is deprecated. Initialization failed: " + e.message + ". Please use MetaMask, OKX, or Trust Wallet instead.", true);
+          showNotification("⚠️ WalletConnect v1 is deprecated. Initialization failed. Please use MetaMask, OKX, or Trust Wallet instead.", true);
+          console.error("WalletConnect initialization error:", e);
           return;
         }
       }
@@ -1528,30 +1529,22 @@
     // Fetch real token balances from Sepolia
     // Helper function to reset all balance displays
     function resetBalanceDisplay() {
-      const profileTotal = document.querySelector('.profile-slide-total');
-      if (profileTotal) profileTotal.textContent = 'Connect Wallet';
+      // Configuration object for balance elements with their default values
+      const balanceElements = [
+        { id: null, selector: '.profile-slide-total', value: 'Connect Wallet' },
+        { id: 'ethBalance', value: '0.0000' },
+        { id: 'usdcBalance', value: '0.0000' },
+        { id: 'usdcBalanceUSD', value: '$0.00' },
+        { id: 'usdtBalance', value: '0.0000' },
+        { id: 'usdtBalanceUSD', value: '$0.00' },
+        { id: 'mogaBalance', value: '0.0000' }, // Placeholder - update when MOGA token contract is available
+        { id: 'mogaBalanceUSD', value: '$0.00' }
+      ];
       
-      const ethBalanceEl = document.getElementById('ethBalance');
-      if (ethBalanceEl) ethBalanceEl.textContent = '0.0000';
-      
-      const usdcBalanceEl = document.getElementById('usdcBalance');
-      if (usdcBalanceEl) usdcBalanceEl.textContent = '0.0000';
-      
-      const usdcBalanceUSDEl = document.getElementById('usdcBalanceUSD');
-      if (usdcBalanceUSDEl) usdcBalanceUSDEl.textContent = '$0.00';
-      
-      const usdtBalanceEl = document.getElementById('usdtBalance');
-      if (usdtBalanceEl) usdtBalanceEl.textContent = '0.0000';
-      
-      const usdtBalanceUSDEl = document.getElementById('usdtBalanceUSD');
-      if (usdtBalanceUSDEl) usdtBalanceUSDEl.textContent = '$0.00';
-      
-      // Note: MOGA balance is a placeholder - update when MOGA token contract is available
-      const mogaBalanceEl = document.getElementById('mogaBalance');
-      if (mogaBalanceEl) mogaBalanceEl.textContent = '0.0000';
-      
-      const mogaBalanceUSDEl = document.getElementById('mogaBalanceUSD');
-      if (mogaBalanceUSDEl) mogaBalanceUSDEl.textContent = '$0.00';
+      balanceElements.forEach(item => {
+        const el = item.id ? document.getElementById(item.id) : document.querySelector(item.selector);
+        if (el) el.textContent = item.value;
+      });
     }
     
     async function fetchRealBalances() {
