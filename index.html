@@ -3834,6 +3834,8 @@
         let tradeHistoryList = [];
         let liquidationHistory = []; // Track liquidation events
         let liquidationMonitorInterval = null; // Interval for checking liquidations
+        let binanceWebSocket = null; // WebSocket connection to Binance
+        let priceUpdateMethod = 'websocket'; // 'websocket' or 'polling'
         // Note: tradingUSDCBalance is now declared in global scope
         
         // Fetch real USDC balance for trading
@@ -4260,8 +4262,14 @@
 
           initChart(asset);
           
-          // Start real-time price updates from TradingView/CoinGecko
-          startRealTimePriceUpdates();
+          // Use WebSocket for crypto, polling for others
+          if (currentTab === 'crypto' && asset.symbol.includes('USD')) {
+            console.log(`[Price Updates] Using Binance WebSocket for ${asset.symbol}`);
+            connectBinanceWebSocket(asset.symbol);
+          } else {
+            console.log(`[Price Updates] Using CoinGecko polling for ${asset.symbol}`);
+            startRealTimePriceUpdates();
+          }
           
           updateTradingBalance();
         }
@@ -4860,6 +4868,135 @@
             priceUpdateInterval = null;
             console.log('⏹️ Stopped real-time price updates');
           }
+        }
+        
+        // === BINANCE WEBSOCKET INTEGRATION ===
+        
+        /**
+         * Connect to Binance WebSocket for real-time price updates
+         * Much faster than polling - updates arrive every ~100ms
+         */
+        function connectBinanceWebSocket(symbol) {
+          // Close existing connection
+          disconnectBinanceWebSocket();
+          
+          // Map our symbols to Binance format
+          const binanceSymbolMap = {
+            'BTCUSD': 'btcusdt',
+            'ETHUSD': 'ethusdt',
+            'BNBUSD': 'bnbusdt',
+            'SOLUSD': 'solusdt',
+            'XRPUSD': 'xrpusdt',
+            'ADAUSD': 'adausdt',
+            'DOGEUSD': 'dogeusdt',
+            'MATICUSD': 'maticusdt',
+            'DOTUSD': 'dotusdt',
+            'AVAXUSD': 'avaxusdt'
+          };
+          
+          const binanceSymbol = binanceSymbolMap[symbol];
+          if (!binanceSymbol) {
+            console.log(`[Binance WS] Symbol ${symbol} not supported, falling back to polling`);
+            startRealTimePriceUpdates();
+            return;
+          }
+          
+          try {
+            // Connect to Binance WebSocket Stream
+            const wsUrl = `wss://stream.binance.com:9443/ws/${binanceSymbol}@trade`;
+            binanceWebSocket = new WebSocket(wsUrl);
+            
+            binanceWebSocket.onopen = () => {
+              console.log(`🔗 Connected to Binance WebSocket for ${symbol}`);
+              priceUpdateMethod = 'websocket';
+            };
+            
+            binanceWebSocket.onmessage = (event) => {
+              try {
+                const data = JSON.parse(event.data);
+                const price = parseFloat(data.p); // Trade price
+                const timestamp = data.T; // Trade time
+                
+                if (priceHistory.length > 0 && price > 0) {
+                  const last = priceHistory[priceHistory.length - 1];
+                  
+                  // Update if price changed significantly (>0.01%)
+                  if (Math.abs(last.c - price) / last.c > 0.0001) {
+                    priceHistory.push({
+                      x: timestamp,
+                      o: last.c,
+                      h: Math.max(last.c, price),
+                      l: Math.min(last.c, price),
+                      c: price
+                    });
+                    
+                    // Keep history manageable
+                    if (priceHistory.length > 100) priceHistory.shift();
+                    
+                    // Update chart
+                    if (chart) chart.update();
+                    
+                    // Update price display
+                    const priceEl = document.getElementById('currentPrice');
+                    if (priceEl) {
+                      priceEl.textContent = `$${price.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                      const change = price - last.c;
+                      priceEl.style.color = change >= 0 ? '#10b981' : '#ef4444';
+                    }
+                    
+                    // Update positions display
+                    updatePositionsDisplay();
+                  }
+                }
+              } catch (error) {
+                console.error('[Binance WS] Parse error:', error);
+              }
+            };
+            
+            binanceWebSocket.onerror = (error) => {
+              console.error('[Binance WS] Error:', error);
+              // Fallback to polling
+              disconnectBinanceWebSocket();
+              startRealTimePriceUpdates();
+            };
+            
+            binanceWebSocket.onclose = () => {
+              console.log('[Binance WS] Connection closed');
+              binanceWebSocket = null;
+            };
+            
+          } catch (error) {
+            console.error('[Binance WS] Connection error:', error);
+            // Fallback to polling
+            startRealTimePriceUpdates();
+          }
+        }
+        
+        /**
+         * Disconnect from Binance WebSocket
+         */
+        function disconnectBinanceWebSocket() {
+          if (binanceWebSocket) {
+            try {
+              binanceWebSocket.close();
+              console.log('🔌 Disconnected from Binance WebSocket');
+            } catch (error) {
+              console.error('[Binance WS] Disconnect error:', error);
+            }
+            binanceWebSocket = null;
+          }
+          priceUpdateMethod = 'polling';
+        }
+        
+        /**
+         * Connect to OKX WebSocket (alternative exchange)
+         */
+        function connectOKXWebSocket(symbol) {
+          // OKX WebSocket implementation
+          // Similar structure to Binance but uses OKX's format
+          // wss://ws.okx.com:8443/ws/v5/public
+          console.log('[OKX WS] Not implemented yet, using Binance');
+          connectBinanceWebSocket(symbol);
         }
 
         function placeBet(direction) {
