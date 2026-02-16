@@ -44,10 +44,27 @@
       loadEthers();
     })();
   </script>
-  <!-- NOTE: WalletConnect v1 is deprecated. Bridge URL (wss://e.bridge.walletconnect.org) is no longer available.
+  <!-- NOTE: WalletConnect v1 is deprecated. Bridge URL (wss://x.bridge.walletconnect.org) is no longer available.
        This causes WebSocket connection errors but doesn't affect MetaMask, OKX, or Trust Wallet.
        TODO: Upgrade to WalletConnect v2 (requires significant refactoring of wallet connection logic).
        Tracking: WalletConnect v1 will continue to show WebSocket errors but wallet functionality works via other providers. -->
+  <script>
+    // Suppress WalletConnect v1 WebSocket errors in console
+    (function() {
+      const originalError = console.error;
+      console.error = function(...args) {
+        const msg = args.join(' ');
+        // Filter out known WalletConnect v1 bridge errors
+        if (msg.includes('bridge.walletconnect.org') || 
+            msg.includes('x.bridge.walletconnect') ||
+            msg.includes('e.bridge.walletconnect')) {
+          console.warn('⚠️ WalletConnect v1 bridge unavailable (deprecated). Use MetaMask, OKX, or Trust Wallet instead.');
+          return;
+        }
+        originalError.apply(console, args);
+      };
+    })();
+  </script>
   <script src="https://unpkg.com/@walletconnect/web3-provider@1.8.0/dist/umd/index.min.js" onerror="console.warn('⚠️ WalletConnect library failed to load. WalletConnect feature may not work.');"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
@@ -1248,6 +1265,10 @@
     window.connectTrustWallet = connectTrustWallet;
 
     async function connectWalletConnect() {
+      // NOTE: WalletConnect v1 is deprecated and may not work reliably
+      // Show warning to users
+      showNotification("⚠️ WalletConnect v1 is deprecated. Please use MetaMask, OKX, or Trust Wallet for better experience.", true);
+      
       if (typeof ethers === 'undefined') {
         return showNotification("Web3 libraries still loading. Please wait...", true);
       }
@@ -1261,19 +1282,20 @@
             qrcode: true
           });
         } catch (e) {
-          return showNotification("WalletConnect initialization failed: " + e.message, true);
+          return showNotification("WalletConnect initialization failed: " + e.message + ". Please use MetaMask, OKX, or Trust Wallet instead.", true);
         }
       }
       
       if (!walletConnectProvider) {
-        return showNotification("WalletConnect library not loaded", true);
+        return showNotification("WalletConnect library not loaded. Please use MetaMask, OKX, or Trust Wallet instead.", true);
       }
       
       try {
         await walletConnectProvider.enable();
         connectWallet("WalletConnect", () => new ethers.providers.Web3Provider(walletConnectProvider));
       } catch (e) {
-        showNotification("WalletConnect connection cancelled or failed", true);
+        showNotification("WalletConnect connection failed. Please use MetaMask, OKX, or Trust Wallet instead.", true);
+        console.error("WalletConnect error:", e);
       }
     }
     window.connectWalletConnect = connectWalletConnect;
