@@ -1025,7 +1025,7 @@
             <button class="wallet-action-btn" onclick="viewOnExplorer()">
               🔍 View on Explorer
             </button>
-            <button class="wallet-action-btn disconnect" onclick="disconnectWallet()">
+            <button class="wallet-action-btn disconnect" onclick="handleWalletDisconnect()">
               🔌 Disconnect Wallet
             </button>
           </div>
@@ -2777,6 +2777,7 @@
         showNotification('Transaction failed: ' + error.message, true);
       }
     }
+    window.executeSend = executeSend;
 
     // Contribute USDC to Treasury
     window.openContributeToTreasury = function() {
@@ -3090,12 +3091,14 @@
         showNotification('Wallet already connected!', false);
       }
     }
+    window.handleWalletConnect = handleWalletConnect;
 
     function handleWalletDisconnect() {
       if (confirm('Disconnect your wallet?')) {
         logoutUser();
       }
     }
+    window.handleWalletDisconnect = handleWalletDisconnect;
 
     // === MAIN SECTION SWITCHER ===
     let stakedUSDC = 0;
@@ -3150,6 +3153,7 @@
         treasuryETHBalance = 100;
       }
     }
+    window.fetchTreasuryBalances = fetchTreasuryBalances;
 
     function updateTreasuryDisplay() {
       // Update treasury displays if they exist
@@ -3606,6 +3610,7 @@
       `;
       document.body.appendChild(modal);
     }
+    window.openSendETHFromTreasury = openSendETHFromTreasury;
 
     async function executeSendETHFromTreasury() {
       const recipientAddress = document.getElementById('treasuryRecipientAddress').value.trim();
@@ -3647,6 +3652,7 @@
       // Reopen treasury management to show updated balances
       setTimeout(() => openTreasuryManagement(), 500);
     }
+    window.executeSendETHFromTreasury = executeSendETHFromTreasury;
 
     window.swapTreasuryETHtoUSDC = function() {
       const modal = document.createElement('div');
@@ -4791,6 +4797,7 @@
           updateTradeHistory();
           updateTradingBalance();
         }
+        window.closePosition = closePosition;
 
         // DEPRECATED: Old function replaced by generateOHLCFromRealPrice
         // Kept for backward compatibility with initialization that doesn't fetch real price yet
@@ -4989,6 +4996,8 @@
                   console.log(`[TradingView] Real price for ${asset.symbol}: $${price.toFixed(2)} (24h: ${change24h.toFixed(2)}%)`);
                   return;
                 }
+              } catch (innerError) {
+                console.log('CoinGecko API error:', innerError);
               }
             }
             
