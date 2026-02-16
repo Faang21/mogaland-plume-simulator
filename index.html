@@ -44,11 +44,19 @@
       loadEthers();
     })();
   </script>
+  <!-- Polyfill for WalletConnect v2 - provides Node.js globals needed by the library -->
+  <script>
+    // Polyfill for process.env which WalletConnect v2 expects
+    window.process = window.process || { env: {} };
+    window.global = window.global || window;
+    window.Buffer = window.Buffer || { isBuffer: () => false };
+  </script>
   <!-- WalletConnect v2 Ethereum Provider -->
   <script type="module">
     window.WalletConnectV2Available = false;
     import('https://unpkg.com/@walletconnect/ethereum-provider@2.11.0/dist/index.umd.js')
-      .then(() => {
+      .then((module) => {
+        window.EthereumProvider = module.EthereumProvider || module.default;
         window.WalletConnectV2Available = true;
         console.log('✅ WalletConnect v2 loaded successfully');
       })
