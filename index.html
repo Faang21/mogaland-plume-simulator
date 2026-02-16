@@ -1206,13 +1206,18 @@
       console.log(`[Auto-reconnect] Attempting to reconnect ${saved.walletType}...`);
       
       try {
-        if (saved.walletType === 'MetaMask' && window.ethereum) {
-          await connectMetaMask();
-          return true;
-        } else if (saved.walletType === 'OKX' && window.okxwallet) {
+        // Check for OKX wallet first (more specific)
+        if ((saved.walletType === 'OKX') && (window.okxwallet || window.okex)) {
           await connectOKX();
           return true;
-        } else if (saved.walletType === 'Trust' && window.ethereum) {
+        }
+        // Then check for MetaMask
+        else if (saved.walletType === 'MetaMask' && window.ethereum) {
+          await connectMetaMask();
+          return true;
+        }
+        // Trust Wallet (uses ethereum but less specific)
+        else if ((saved.walletType === 'Trust' || saved.walletType === 'Trust Wallet') && window.ethereum) {
           await connectTrustWallet();
           return true;
         }
@@ -1225,9 +1230,12 @@
     
     // Wallet event listeners for account/chain changes
     function setupWalletEventListeners() {
-      if (window.ethereum) {
+      // Get the active wallet provider (window.ethereum for MetaMask/Trust, window.okxwallet for OKX, etc.)
+      const activeProvider = provider?.provider || window.ethereum || window.okxwallet;
+      
+      if (activeProvider && activeProvider.on) {
         // Listen for account changes
-        window.ethereum.on('accountsChanged', async (accounts) => {
+        activeProvider.on('accountsChanged', async (accounts) => {
           if (accounts.length === 0) {
             // User disconnected wallet
             showNotification("Wallet disconnected", true);
@@ -1245,7 +1253,7 @@
         });
         
         // Listen for chain changes
-        window.ethereum.on('chainChanged', (chainId) => {
+        activeProvider.on('chainChanged', (chainId) => {
           const expectedChainId = parseInt(SEPOLIA_CHAIN_HEX, 16);
           if (parseInt(chainId, 16) !== expectedChainId) {
             showNotification("Network changed. Please switch back to Sepolia.", true);
@@ -1259,6 +1267,8 @@
         });
         
         console.log('✅ Wallet event listeners configured');
+      } else {
+        console.warn('⚠️ No compatible wallet provider found for event listeners');
       }
     }
     
@@ -1390,14 +1400,19 @@
       
       try {
         provider = getProvider();
+        
+        // Get the raw provider for network operations
+        const rawProvider = provider.provider;
+        
+        // Request account access
         await provider.send("eth_requestAccounts", []);
         
         // Check current network and auto-switch to Sepolia if needed
         const network = await provider.getNetwork();
         if (network.chainId !== SEPOLIA_CHAIN_ID) {
           try {
-            // Try to switch to Sepolia
-            await window.ethereum.request({
+            // Try to switch to Sepolia using the raw provider
+            await rawProvider.request({
               method: 'wallet_switchEthereumChain',
               params: [{ chainId: SEPOLIA_CHAIN_HEX }],
             });
@@ -1406,7 +1421,7 @@
             // If network doesn't exist, add it
             if (switchError.code === 4902) {
               try {
-                await window.ethereum.request({
+                await rawProvider.request({
                   method: 'wallet_addEthereumChain',
                   params: [{
                     chainId: SEPOLIA_CHAIN_HEX,
@@ -1423,10 +1438,12 @@
                 showNotification("Added and switched to Sepolia", false);
               } catch (addError) {
                 showNotification("Failed to add Sepolia network", true);
+                console.error("Add network error:", addError);
                 return;
               }
             } else {
-              showNotification("Failed to switch to Sepolia", true);
+              showNotification("Failed to switch to Sepolia. Please switch manually.", true);
+              console.error("Switch network error:", switchError);
               return;
             }
           }
