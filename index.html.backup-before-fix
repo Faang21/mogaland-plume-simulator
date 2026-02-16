@@ -1036,6 +1036,55 @@
     let userAddress = null;
     let walletConnectProvider = null;
     
+    // Global navigation and UI functions - will be initialized by startApp()
+    let showSection = null;
+    let showProfile = null;
+    let closeProfileSlide = null;
+    let openBackProfile = null;
+    let closeBackProfile = null;
+    let toggleWalletDropdown = null;
+    let copyWalletAddress = null;
+    let viewOnExplorer = null;
+    let disconnectWallet = null;
+    let openDepositModal = null;
+    let copyToClipboard = null;
+    let openSwapModal = null;
+    let openSendModal = null;
+    let openContributeToTreasury = null;
+    let openTreasuryManagement = null;
+    let executeSendETHFromTreasury = null;
+    let swapTreasuryETHtoUSDC = null;
+    let executeSwapTreasuryETHtoUSDC = null;
+    let executeContributeToTreasury = null;
+    let confirmSwap = null;
+    let confirmBridge = null;
+    let toggleSwapDirection = null;
+    let setSlippage = null;
+    let setBridgeSlippage = null;
+    let swapBridgeChains = null;
+    let submitAnswer = null;
+    let saveProgress = null;
+    let restartQuiz = null;
+    let stakeUSDC = null;
+    let unstakeUSDC = null;
+    let convertPointsToUSDC = null;
+    let convertPoints = null;
+    let confirmStake = null;
+    let unstake = null;
+    let stakeSelectedNFTs = null;
+    let unstakeSelectedNFTs = null;
+    let claimAllRewards = null;
+    let redeemPointsForUSDC = null;
+    let toggleSelectNFT = null;
+    let mintNFTFromLearning = null;
+    let openListNFTModal = null;
+    let viewOpenSeaCollection = null;
+    let viewTreasuryMarketplace = null;
+    let openPosition = null;
+    let closePosition = null;
+    let connectSocial = null;
+    let disconnectSocial = null;
+    
     // Login UI functions - Available immediately (don't need ethers.js)
     function showWalletOptions() { toggleSections('walletOptions'); }
     function showEmailLogin() { toggleSections('emailLogin'); }
@@ -1577,7 +1626,7 @@
     }
 
     // Profile panel functions
-    window.showProfile = function() {
+    showProfile = function() {
       document.getElementById('profileSlidePanel').classList.remove('hidden');
       // Refresh data when profile is opened
       if (userAddress) {
@@ -1586,16 +1635,16 @@
       }
     }
 
-    window.closeProfileSlide = function() {
+    closeProfileSlide = function() {
       document.getElementById('profileSlidePanel').classList.add('hidden');
     }
 
-    window.openBackProfile = function() {
+    openBackProfile = function() {
       document.getElementById('backProfilePanel').classList.remove('hidden');
       closeProfileSlide();
     }
 
-    window.closeBackProfile = function() {
+    closeBackProfile = function() {
       document.getElementById('backProfilePanel').classList.add('hidden');
     }
 
@@ -1634,7 +1683,7 @@
     }
 
     // Wallet dropdown functions
-    window.toggleWalletDropdown = function() {
+    toggleWalletDropdown = function() {
       const dropdown = document.getElementById('walletDropdown');
       if (!dropdown) return;
       
@@ -1653,7 +1702,7 @@
       dropdown.classList.toggle('show');
     }
 
-    window.copyWalletAddress = function() {
+    copyWalletAddress = function() {
       if (!userAddress) return;
       
       navigator.clipboard.writeText(userAddress).then(() => {
@@ -1670,7 +1719,7 @@
       });
     }
 
-    window.viewOnExplorer = function() {
+    viewOnExplorer = function() {
       if (!userAddress) return;
       
       const explorerUrl = `${SEPOLIA_EXPLORER}/address/${userAddress}`;
@@ -1678,7 +1727,7 @@
       showNotification('Opening Sepolia Explorer...', false);
     }
 
-    window.disconnectWallet = function() {
+    disconnectWallet = function() {
       if (confirm('Are you sure you want to disconnect your wallet?')) {
         // Clear wallet connection
         userAddress = null;
@@ -1773,7 +1822,7 @@
       console.log('[Treasury] Deposit modal opened - deposits will be processed through treasury');
     }
 
-    window.copyToClipboard = function(text) {
+    copyToClipboard = function(text) {
       navigator.clipboard.writeText(text).then(() => {
         showNotification('Address copied to clipboard!', false);
       }).catch(() => {
@@ -1781,13 +1830,13 @@
       });
     }
 
-    window.openSwapModal = function() {
+    openSwapModal = function() {
       showNotification("Opening Swap interface...", false);
       closeProfileSlide();
       showSection('swap');
     }
 
-    window.openSendModal = function() {
+    openSendModal = function() {
       if (!userAddress) {
         showNotification("Please connect wallet first", true);
         return;
@@ -1888,7 +1937,7 @@
     }
 
     // Contribute USDC to Treasury
-    window.openContributeToTreasury = function() {
+    openContributeToTreasury = function() {
       if (!userAddress) {
         showNotification("⚠️ Please connect wallet first", true);
         return;
@@ -1980,7 +2029,7 @@
       document.body.appendChild(modal);
     }
 
-    window.executeContributeToTreasury = async function() {
+    executeContributeToTreasury = async function() {
       const amount = parseFloat(document.getElementById('contributeAmount').value);
 
       // Validation
@@ -2092,7 +2141,7 @@
       });
     }
 
-    window.connectSocial = function(platform) {
+    connectSocial = function(platform) {
       const platformNames = {
         x: 'Twitter/X',
         telegram: 'Telegram',
@@ -2123,7 +2172,7 @@
       }, 500);
     }
 
-    window.disconnectSocial = function(platform) {
+    disconnectSocial = function(platform) {
       const platformNames = {
         x: 'Twitter/X',
         telegram: 'Telegram',
@@ -2704,7 +2753,7 @@
       setTimeout(() => openTreasuryManagement(), 500);
     }
 
-    window.swapTreasuryETHtoUSDC = function() {
+    swapTreasuryETHtoUSDC = function() {
       const modal = document.createElement('div');
       modal.className = 'modal';
       modal.innerHTML = `
@@ -2763,7 +2812,7 @@
       document.getElementById('swapUSDCAmount').textContent = `${usdcAmount.toFixed(2)} USDC`;
     }
 
-    window.executeSwapTreasuryETHtoUSDC = function() {
+    executeSwapTreasuryETHtoUSDC = function() {
       const amount = parseFloat(document.getElementById('treasurySwapAmount').value);
 
       // Validation
@@ -2802,7 +2851,7 @@
       setTimeout(() => openTreasuryManagement(), 500);
     }
 
-    window.showSection = function(id, event) {
+    showSection = function(id, event) {
       document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
       if (event && event.target) event.target.classList.add('active');
 
@@ -4264,14 +4313,14 @@
       return html;
     }
 
-    window.toggleSelectNFT = function(id) {
+    toggleSelectNFT = function(id) {
       if (selectedNFTs.has(id)) selectedNFTs.delete(id);
       else selectedNFTs.add(id);
       showSection('nft');
       showNotification(selectedNFTs.has(id) ? `NFT #${id} dipilih` : `NFT #${id} dibatalkan`, false);
     }
 
-    window.stakeSelectedNFTs = function() {
+    stakeSelectedNFTs = function() {
       if (selectedNFTs.size === 0) return showNotification("No NFTs selected!", true);
       
       // Check and process gas fee before staking
@@ -4288,7 +4337,7 @@
       console.log(`[NFT] Staked ${count} NFTs with gas fee`);
     }
 
-    window.unstakeSelectedNFTs = function() {
+    unstakeSelectedNFTs = function() {
       if (selectedNFTs.size === 0) return showNotification("No staked NFTs selected!", true);
       
       // Check and process gas fee before unstaking
@@ -4421,7 +4470,7 @@
       return total;
     }
     
-    async function stakeSelectedNFTs() {
+    stakeSelectedNFTs = async function() {
       if (selectedNFTs.size === 0) return showNotification("No NFTs selected!", true);
       
       if (!walletConnected && loginMethod !== 'wallet') {
@@ -4461,7 +4510,7 @@
       console.log(`[NFT] Staked ${count} NFTs with gas fee`);
     }
     
-    async function unstakeSelectedNFTs() {
+    unstakeSelectedNFTs = async function() {
       if (selectedNFTs.size === 0) return showNotification("No staked NFTs selected!", true);
       
       if (!walletConnected && loginMethod !== 'wallet') {
@@ -4498,7 +4547,7 @@
       console.log(`[NFT] Unstaked ${count} NFTs with gas fee`);
     }
     
-    window.claimAllRewards = async function() {
+    claimAllRewards = async function() {
       if (stakedNFTsData.length === 0) {
         return showNotification("No staked NFTs!", true);
       }
@@ -4532,7 +4581,7 @@
       }
     }
     
-    window.redeemPointsForUSDC = async function() {
+    redeemPointsForUSDC = async function() {
       if (mogalandPoints < 1000) {
         return showNotification("Need at least 1000 points to redeem!", true);
       }
@@ -4559,7 +4608,7 @@
     }
     
     // Enhanced mintNFT with treasury gas fee
-    window.mintNFTFromLearning = async function() {
+    mintNFTFromLearning = async function() {
       if (completedTasks < 100) {
         showNotification("Complete all 100 tasks first!", true);
         return;
@@ -4618,7 +4667,7 @@
     }
 
     // OpenSea Marketplace Integration Functions
-    window.openListNFTModal = function() {
+    openListNFTModal = function() {
       if (!userAddress) {
         showNotification("Please connect wallet to list NFTs", true);
         return;
@@ -4693,13 +4742,13 @@
       console.log(`[OpenSea] Treasury wallet: ${TREASURY_WALLET_ADDRESS}`);
     }
 
-    window.viewOpenSeaCollection = function() {
+    viewOpenSeaCollection = function() {
       const url = `https://testnets.opensea.io/assets/sepolia/${NFT_CONTRACT_ADDRESS}`;
       window.open(url, '_blank');
       showNotification('Opening OpenSea collection...', false);
     }
 
-    window.viewTreasuryMarketplace = function() {
+    viewTreasuryMarketplace = function() {
       const url = `https://testnets.opensea.io/${TREASURY_WALLET_ADDRESS}`;
       window.open(url, '_blank');
       showNotification('Opening treasury marketplace...', false);
@@ -4754,7 +4803,7 @@
       }
     }
 
-    window.setSlippage = function(value) {
+    setSlippage = function(value) {
       const val = parseFloat(value);
       if (isNaN(val) || val < 0 || val > 10) {
         showNotification("Slippage harus 0–10%", true);
@@ -4776,7 +4825,7 @@
       updateSwapEstimate();
     }
 
-    window.confirmSwap = function() {
+    confirmSwap = function() {
       const amt = parseFloat(document.getElementById('fromInput')?.value) || 0;
       if (amt <= 0) return showNotification("Enter amount > 0", true);
       if (!userAddress) return showNotification("Please connect wallet first", true);
@@ -4814,7 +4863,7 @@
       console.log(`[Swap] ${amt} ${fromToken} swapped for ${finalAmount} ${toToken} through treasury`);
     }
 
-    window.toggleSwapDirection = function() {
+    toggleSwapDirection = function() {
       const fromSelect = document.getElementById('fromTokenSelect');
       const toSelect = document.getElementById('toTokenSelect');
       if (fromSelect && toSelect) {
@@ -4877,7 +4926,7 @@
       });
     }
 
-    window.submitAnswer = function() {
+    submitAnswer = function() {
       const selected = document.querySelector('input[name="q"]:checked');
       
       if (!selected) {
@@ -4914,7 +4963,7 @@
       updatePointDisplay();
     }
 
-    window.restartQuiz = function() {
+    restartQuiz = function() {
       currentQuestionIndex = 0;
       loadQuestion();
       updateProgressDisplay();
@@ -4969,7 +5018,7 @@
       }
     }
 
-    window.stakeUSDC = async function() {
+    stakeUSDC = async function() {
       const amount = parseFloat(document.getElementById('stakeAmount').value);
       if (isNaN(amount) || amount <= 0) {
         showNotification("Please enter a valid amount!", true);
@@ -5001,7 +5050,7 @@
       }
     }
 
-    window.unstakeUSDC = async function() {
+    unstakeUSDC = async function() {
       const amount = parseFloat(document.getElementById('unstakeAmount').value);
       if (isNaN(amount) || amount <= 0) {
         showNotification("Please enter a valid amount!", true);
@@ -5038,7 +5087,7 @@
       if (el) el.textContent = `Staked: ${stakedUSDC.toFixed(2)} USDC`;
     }
 
-    window.convertPointsToUSDC = async function() {
+    convertPointsToUSDC = async function() {
       if (mogalandPoints < 1000) {
         showNotification("You need at least 1000 points to convert!", true);
         return;
@@ -5130,11 +5179,11 @@
       unstakeUSDC();
     }
 
-    window.saveProgress = function() {
+    saveProgress = function() {
       showNotification("Progress saved successfully!", false);
     }
 
-    window.convertPoints = function() {
+    convertPoints = function() {
       convertPointsToUSDC();
     }
     
