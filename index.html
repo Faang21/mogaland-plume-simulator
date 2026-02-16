@@ -5557,7 +5557,7 @@
       showNotification(selectedNFTs.has(id) ? `NFT #${id} dipilih` : `NFT #${id} dibatalkan`, false);
     }
 
-    window.stakeSelectedNFTs = function() {
+    window.stakeSelectedNFTs = async function() {
       if (selectedNFTs.size === 0) return showNotification("No NFTs selected!", true);
       
       // Check and process gas fee before staking
@@ -5590,7 +5590,7 @@
       console.log(`[NFT] Unstaked ${count} NFTs with gas fee`);
     }
 
-    function claimNFTRewards() {
+    async function claimNFTRewards() {
       if (nftRewards <= 0) return showNotification("No rewards available", true);
       
       // Check and process gas fee before claiming
