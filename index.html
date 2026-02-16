@@ -1521,6 +1521,15 @@
         setupWalletEventListeners();
         
         showNotification(`Connected via ${walletType} on Sepolia – Balance: ${parseFloat(balanceEth).toFixed(4)} ETH`, false);
+        
+        // Show faucet notification if balance is low
+        const balanceNum = parseFloat(balanceEth);
+        if (balanceNum < 0.01) {
+          setTimeout(() => {
+            showNotification(`💰 Low balance detected. Get free test ETH from: ${SEPOLIA_FAUCET}`, false);
+          }, 3000);
+        }
+        
         enterDashboard(walletType);
         
         // Fetch real balances if function is available (may not be defined yet if startApp() hasn't completed)
@@ -1601,6 +1610,12 @@
       if (!window.WalletConnectV2Available || typeof window.EthereumProvider === 'undefined') {
         showNotification("WalletConnect v2 library still loading. Please wait a moment and try again.", true);
         return;
+      }
+      
+      // Note: For production use, replace WALLETCONNECT_PROJECT_ID with your own from https://cloud.walletconnect.com
+      // The demo project ID has rate limits and may not work in production
+      if (WALLETCONNECT_PROJECT_ID === 'demo-project-id') {
+        console.warn('⚠️ Using demo WalletConnect project ID. Get your own from https://cloud.walletconnect.com');
       }
       
       try {
