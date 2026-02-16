@@ -1196,6 +1196,85 @@
     let provider = null;
     let userAddress = null;
     
+    // Uniswap V3 Contract Addresses on Sepolia
+    const UNISWAP_V3_QUOTER_V2 = "0xEd1f6473345F45b75F8179591dd5bA1888cf2FB3";
+    const WETH9_SEPOLIA = "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14";
+    const USDC_SEPOLIA = "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238";
+    const USDT_SEPOLIA = "0x7169D38820dfd117C3FA1f22a697dBA58d90BA06";
+    const LINK_SEPOLIA = "0x779877A7B0D9E8603169DdbD7836e478b4624789";
+    const WBTC_SEPOLIA = "0x29f2D40B0605204364af54EC677bD022dA425d03";
+    const AAVE_SEPOLIA = "0x88541670E55cC00bEEFD87eB59EDd1b7C511AC9a";
+    const EURO_SEPOLIA = "0x08210F9170F89Ab7658F0B5E3fF39b0E03C594D4";
+    
+    // Aliases for backward compatibility
+    const USDC_SEPOLIA_ADDRESS = USDC_SEPOLIA;
+    const USDT_SEPOLIA_ADDRESS = USDT_SEPOLIA;
+    const LINK_SEPOLIA_ADDRESS = LINK_SEPOLIA;
+    const WBTC_SEPOLIA_ADDRESS = WBTC_SEPOLIA;
+    const AAVE_SEPOLIA_ADDRESS = AAVE_SEPOLIA;
+    const EURO_SEPOLIA_ADDRESS = EURO_SEPOLIA;
+    
+    // Uniswap V3 Quoter ABI (minimal for price quotes)
+    const UNISWAP_V3_QUOTER_ABI = [
+      "function quoteExactInputSingle(tuple(address tokenIn, address tokenOut, uint256 amountIn, uint24 fee, uint160 sqrtPriceLimitX96) params) external returns (uint256 amountOut, uint160 sqrtPriceX96After, uint32 initializedTicksCrossed, uint256 gasEstimate)"
+    ];
+    
+    // Gas and price constants
+    let ETH_TO_USDC_RATE = 2500; // 1 ETH = 2500 USDC (will be updated with real Uniswap price)
+    const GAS_FEE_USDC = 0.01; // 0.01 USDC per action
+    const CHART_HEIGHT = 420; // Standard height for trading charts in pixels
+    
+    // Gas estimation constants for different transaction types
+    const GAS_LIMITS = {
+      LEARNING: 50000,
+      SWAP: 150000,
+      BRIDGE: 200000,
+      STAKE_BASE: 100000,
+      STAKE_PER_NFT: 50000,
+      TRADE: 120000,
+      DEFAULT: 100000
+    };
+    
+    // Function to fetch live ETH/USDC rate from Uniswap V3
+    async function fetchLiveETHtoUSDCRate() {
+      try {
+        if (!provider) {
+          console.log('[Uniswap] Provider not available, using default rate');
+          return ETH_TO_USDC_RATE;
+        }
+        
+        const quoterContract = new ethers.Contract(UNISWAP_V3_QUOTER_V2, UNISWAP_V3_QUOTER_ABI, provider);
+        
+        // Quote 1 ETH to USDC (use 0.3% fee tier - 3000)
+        const amountIn = ethers.utils.parseEther("1"); // 1 ETH
+        const params = {
+          tokenIn: WETH9_SEPOLIA,
+          tokenOut: USDC_SEPOLIA,
+          amountIn: amountIn,
+          fee: 3000, // 0.3% fee tier
+          sqrtPriceLimitX96: 0
+        };
+        
+        const result = await quoterContract.callStatic.quoteExactInputSingle(params);
+        const amountOut = result.amountOut || result[0]; // Handle both tuple and single return
+        
+        // USDC has 6 decimals
+        const rate = parseFloat(ethers.utils.formatUnits(amountOut, 6));
+        
+        if (rate > 0 && rate < 10000) { // Sanity check
+          ETH_TO_USDC_RATE = rate;
+          console.log(`[Uniswap] Live ETH/USDC rate: ${rate.toFixed(2)} USDC per ETH`);
+          return rate;
+        } else {
+          console.log('[Uniswap] Rate out of expected range, using default');
+          return ETH_TO_USDC_RATE;
+        }
+      } catch (error) {
+        console.log('[Uniswap] Error fetching rate:', error.message);
+        return ETH_TO_USDC_RATE;
+      }
+    }
+    
     // Wallet persistence constants
     const WALLET_CONNECTION_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
     const AUTO_RECONNECT_DELAY_MS = 1000; // 1 second
@@ -1946,6 +2025,9 @@
         // Show loading notification
         showNotification("🔄 Updating balances...", false);
         
+        // Fetch live ETH/USDC rate from Uniswap in the background
+        fetchLiveETHtoUSDCRate().catch(err => console.log('[Uniswap] Rate fetch error:', err));
+        
         // Fetch ETH balance
         const ethBalanceWei = await provider.getBalance(userAddress);
         const ethBalance = parseFloat(ethers.utils.formatEther(ethBalanceWei));
@@ -2027,7 +2109,7 @@
           </div>
         `;
         
-        const apiKey = 'YourEtherscanAPIKey'; // Users should add their own key
+        const apiKey = ''; // Free API - basic queries work without key. Add your own Etherscan API key for higher rate limits
         const url = `https://api-sepolia.etherscan.io/api?module=account&action=txlist&address=${userAddress}&startblock=0&endblock=99999999&page=1&offset=10&sort=desc&apikey=${apiKey}`;
         
         const response = await fetch(url);
@@ -2588,6 +2670,11 @@
           // Update content panels
           document.getElementById('assetsContent').classList.toggle('active', tabName === 'assets');
           document.getElementById('activityContent').classList.toggle('active', tabName === 'activity');
+          
+          // Fetch transaction history when activity tab is opened
+          if (tabName === 'activity') {
+            fetchTransactionHistory();
+          }
         });
       });
     }
@@ -2710,32 +2797,11 @@
     let usdcBalance = "0.00";
     let nftMinted = false;
 
-    // Sepolia Token Contract Addresses
-    const USDC_SEPOLIA_ADDRESS = "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238";
-    const USDT_SEPOLIA_ADDRESS = "0x7169D38820dfd117C3FA1f22a697dBA58d90BA06";
-    const LINK_SEPOLIA_ADDRESS = "0x779877A7B0D9E8603169DdbD7836e478b4624789";
-    const WBTC_SEPOLIA_ADDRESS = "0x29f2D40B0605204364af54EC677bD022dA425d03";
-    const AAVE_SEPOLIA_ADDRESS = "0x88541670E55cC00bEEFD87eB59EDd1b7C511AC9a";
-    const EURO_SEPOLIA_ADDRESS = "0x08210F9170F89Ab7658F0B5E3fF39b0E03C594D4"; // EURe token
-    
     // Treasury Wallet Configuration
     const TREASURY_WALLET_ADDRESS = "0xa959f26847211f71A22aDb087EBe50E0743e7D66";
-    const GAS_FEE_USDC = 0.01; // 0.01 USDC per action
     let treasuryUSDCBalance = 0; // Will be fetched from Sepolia
     let treasuryETHBalance = 0; // Will be fetched from Sepolia
     let tradingUSDCBalance = 0; // Will be populated with real wallet balance asynchronously
-    const ETH_TO_USDC_RATE = 2500; // 1 ETH = 2500 USDC (approximate exchange rate - may vary with market)
-    
-    // Gas estimation constants for different transaction types
-    const GAS_LIMITS = {
-      LEARNING: 50000,
-      SWAP: 150000,
-      BRIDGE: 200000,
-      STAKE_BASE: 100000,
-      STAKE_PER_NFT: 50000,
-      TRADE: 120000,
-      DEFAULT: 100000
-    };
     
     // Helper function for consistent address truncation
     function formatAddress(address, startChars = 10, endChars = 8) {
@@ -3458,10 +3524,10 @@
 
               <div class="card" style="flex:2; min-height:580px; padding:20px;">
                 <h3 id="viewTitle" style="color:#60a5fa; text-align:center; margin-bottom:15px;">Select Asset to Trade</h3>
-                <canvas id="priceChart" height="420" style="display:none;"></canvas>
+                <div id="priceChart" style="min-height:420px; display:none;"></div>
                 <div id="clubHistoryView" style="display:none; color:#e2e8f0; font-size:1.05em; line-height:1.6; padding:15px; background:rgba(13,110,253,0.08); border-radius:12px;"></div>
                 <div id="chartFooter" style="text-align:center; margin-top:15px; font-size:0.95em; opacity:0.8; display:none;">
-                  Simulated real-time price • Updates every ~8s
+                  Live price data from TradingView
                 </div>
               </div>
 
@@ -4155,7 +4221,7 @@
               // Create TradingView Advanced Chart Widget
               new TradingView.widget({
                 "width": container.offsetWidth || 700,
-                "height": 420,
+                "height": CHART_HEIGHT,
                 "symbol": asset.tvSymbol,
                 "interval": "15",
                 "timezone": "Etc/UTC",
@@ -4201,10 +4267,10 @@
               const coinId = coinGeckoIds[asset.symbol];
               if (coinId) {
                 container.innerHTML = `
-                  <div style="background: var(--card-bg); border-radius: 12px; padding: 16px; height: 420px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                  <div style="background: var(--card-bg); border-radius: 12px; padding: 16px; height: ${CHART_HEIGHT}px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
                     <iframe 
-                      src="https://www.coingecko.com/en/coins/${coinId}/chart_widget?height=380&width=100%" 
-                      style="border: none; width: 100%; height: 380px; border-radius: 8px;"
+                      src="https://www.coingecko.com/en/coins/${coinId}/chart_widget?height=${CHART_HEIGHT - 40}&width=100%" 
+                      style="border: none; width: 100%; height: ${CHART_HEIGHT - 40}px; border-radius: 8px;"
                       frameborder="0"
                       scrolling="no"
                     ></iframe>
@@ -4224,7 +4290,7 @@
           // Third fallback: Use canvas-based chart
           const canvas = document.createElement('canvas');
           canvas.id = 'priceChart';
-          canvas.height = 420;
+          canvas.height = CHART_HEIGHT;
           container.appendChild(canvas);
           
           const ctx = canvas.getContext('2d');
@@ -4332,7 +4398,7 @@
           
           // Set canvas size
           canvas.width = canvas.offsetWidth;
-          canvas.height = canvas.offsetHeight || 420;
+          canvas.height = canvas.offsetHeight || CHART_HEIGHT;
           
           if (data.length === 0) return;
           
@@ -5409,8 +5475,9 @@
       const fromToken = document.getElementById('fromTokenSelect')?.value || 'ETH';
       const toToken = document.getElementById('toTokenSelect')?.value || 'USDC';
 
+      // Use live ETH_TO_USDC_RATE from Uniswap for ETH/USDC swaps
       const exchangeRates = {
-        'ETH': 2500,
+        'ETH': ETH_TO_USDC_RATE,  // Live rate from Uniswap
         'USDC': 1,
         'USDT': 1,
         'LINK': 15,
@@ -5473,9 +5540,9 @@
       const fromToken = document.getElementById('fromTokenSelect')?.value || 'ETH';
       const toToken = document.getElementById('toTokenSelect')?.value || 'USDC';
       
-      // Calculate swap amount (simplified exchange rate)
+      // Use live ETH_TO_USDC_RATE from Uniswap for ETH/USDC swaps
       const exchangeRates = {
-        'ETH': 2500,  // 1 ETH = 2500 USDC
+        'ETH': ETH_TO_USDC_RATE,  // Live rate from Uniswap
         'USDC': 1,
         'USDT': 1,
         'LINK': 15,   // 1 LINK = 15 USDC
