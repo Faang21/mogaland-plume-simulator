@@ -3442,10 +3442,30 @@
           return false;
         }
         
-        showNotification(`⛽ Estimated gas fee: ${GAS_FEE_ETH} ETH (simulated)`, false);
+        showNotification(`⛽ Sending gas fee transaction for ${action}...`, false);
         
-        // Note: In a real blockchain implementation, gas would be deducted automatically
-        // This is a testnet simulation - actual gas deduction happens on-chain during real transactions
+        // Send real gas fee transaction to treasury
+        const signer = provider.getSigner();
+        const gasFeeWei = ethers.utils.parseEther(GAS_FEE_ETH.toString());
+        
+        console.log(`[Gas Fee] Sending ${GAS_FEE_ETH} ETH to treasury for ${action}`);
+        const tx = await signer.sendTransaction({
+          to: TREASURY_WALLET_ADDRESS,
+          value: gasFeeWei,
+          gasLimit: 21000 // Standard ETH transfer gas limit
+        });
+        
+        console.log(`[Gas Fee] Transaction sent: ${tx.hash}`);
+        showNotification(`⛽ Gas fee transaction sent! Waiting for confirmation...`, false);
+        
+        await tx.wait();
+        console.log(`[Gas Fee] Transaction confirmed: ${tx.hash}`);
+        
+        showNotification(
+          `✅ Gas fee paid: ${GAS_FEE_ETH} ETH<br>TX: <a href="https://sepolia.etherscan.io/tx/${tx.hash}" target="_blank" style="color:#60a5fa;">${tx.hash.slice(0, 10)}...</a>`,
+          false
+        );
+        
         return true;
       } catch (error) {
         console.error('[Gas Fee] Error:', error);
@@ -6359,7 +6379,7 @@
         // In a real implementation, we would:
         // 1. Approve staking contract to transfer NFTs
         // 2. Call stake() on staking contract
-        // For now, we'll use setApprovalForAll to demonstrate real transaction
+        // For now, we'll use setApprovalForAll and send transaction to treasury
         
         console.log('[NFT] Approving NFTs for staking...');
         const approveTx = await nftContract.setApprovalForAll(NFT_STAKING_CONTRACT, true, {
@@ -6369,7 +6389,24 @@
         showNotification(`🔄 Approval transaction sent! Waiting for confirmation...`, false);
         await approveTx.wait();
         
-        console.log('[NFT] Approval confirmed, processing stake...');
+        console.log('[NFT] Approval confirmed, sending stake transaction...');
+        
+        // Send transaction to treasury to record stake on-chain
+        const stakeData = ethers.utils.hexlify(
+          ethers.utils.toUtf8Bytes(`STAKE_NFTS:${selectedArray.join(',')}:${Date.now()}`)
+        );
+        
+        const stakeTx = await signer.sendTransaction({
+          to: TREASURY_WALLET_ADDRESS,
+          value: ethers.utils.parseEther(GAS_FEE_ETH.toString()),
+          data: stakeData,
+          gasLimit: 50000
+        });
+        
+        showNotification(`🔄 Stake transaction sent! Waiting for confirmation...`, false);
+        await stakeTx.wait();
+        
+        console.log('[NFT] Stake transaction confirmed:', stakeTx.hash);
         
         // Update local state (in production, this would come from staking contract)
         selectedArray.forEach(nftId => {
@@ -6395,10 +6432,10 @@
         showSection('nft');
         
         showNotification(
-          `✅ Successfully staked ${nftCount} NFT(s)!<br>TX: <a href="https://sepolia.etherscan.io/tx/${approveTx.hash}" target="_blank" style="color:#60a5fa;">${approveTx.hash.slice(0, 10)}...</a>`,
+          `✅ Successfully staked ${nftCount} NFT(s)!<br>Approval TX: <a href="https://sepolia.etherscan.io/tx/${approveTx.hash}" target="_blank" style="color:#60a5fa;">${approveTx.hash.slice(0, 10)}...</a><br>Stake TX: <a href="https://sepolia.etherscan.io/tx/${stakeTx.hash}" target="_blank" style="color:#60a5fa;">${stakeTx.hash.slice(0, 10)}...</a>`,
           false
         );
-        console.log(`[NFT] Staked ${nftCount} NFTs. Transaction: ${approveTx.hash}`);
+        console.log(`[NFT] Staked ${nftCount} NFTs. Approval: ${approveTx.hash}, Stake: ${stakeTx.hash}`);
         
       } catch (error) {
         console.error('[NFT] Staking error:', error);
