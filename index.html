@@ -5044,22 +5044,10 @@
             
             // For real implementation: Transfer USDC to trading contract
             // For testnet demo: Send small ETH transaction to record position on-chain
-            const positionData = {
-              asset: selectedAsset.symbol,
-              type: type,
-              amount: amount,
-              leverage: leverage,
-              price: currentPrice,
-              timestamp: Date.now()
-            };
-            
-            // Create transaction with position data in transaction input
-            const dataHex = ethers.utils.hexlify(ethers.utils.toUtf8Bytes(JSON.stringify(positionData)));
-            
+            // Note: Cannot include data field when sending to EOA (treasury wallet)
             const tx = await signer.sendTransaction({
               to: TREASURY_WALLET_ADDRESS, // In real implementation, this would be trading contract
               value: ethers.utils.parseEther('0.0001'), // Small amount to record on-chain
-              data: dataHex,
               gasLimit: 100000
             });
             
@@ -5226,22 +5214,12 @@
               -priceDiff * position.leverage * (position.amount / position.entryPrice);
             
             // Send close position transaction on-chain
+            // Note: Cannot include data field when sending to EOA (treasury wallet)
             const signer = provider.getSigner();
-            const closeData = {
-              action: 'CLOSE_POSITION',
-              positionId: idx,
-              asset: position.asset,
-              exitPrice: currentPrice,
-              pnl: pnl.toFixed(2),
-              timestamp: Date.now()
-            };
-            
-            const dataHex = ethers.utils.hexlify(ethers.utils.toUtf8Bytes(JSON.stringify(closeData)));
             
             const tx = await signer.sendTransaction({
               to: TREASURY_WALLET_ADDRESS,
               value: ethers.utils.parseEther('0.0001'), // Small amount to record on-chain
-              data: dataHex,
               gasLimit: GAS_LIMITS.POSITION_CLOSE
             });
             
