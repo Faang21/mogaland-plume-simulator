@@ -3296,6 +3296,56 @@
     ];
     const USDC_ABI = ERC20_ABI;
 
+    // Chainlink Price Feed ABI
+    const CHAINLINK_AGGREGATOR_V3_ABI = [
+      "function latestRoundData() view returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)",
+      "function decimals() view returns (uint8)"
+    ];
+
+    // Chainlink Price Feed Addresses on Sepolia Testnet
+    const CHAINLINK_PRICE_FEEDS = {
+      'BTCUSD': '0x1b44F3514812d835EB1BDB0acB33d3fA3351Ee43',  // BTC/USD
+      'ETHUSD': '0x694AA1769357215DE4FAC081bf1f309aDC325306',  // ETH/USD
+      'LINKUSD': '0xc59E3633BAAC79493d908e63626716e204A45EdF', // LINK/USD
+      'USDCUSD': '0xA2F78ab2355fe2f984D808B5CeE7FD0A93D5270E', // USDC/USD
+      'DAIUSD': '0x14866185B1962B63C3Ea9E03Bc1da838bab34C19',  // DAI/USD
+      // Add more as needed
+    };
+
+    // Function to fetch price from Chainlink
+    async function fetchChainlinkPrice(symbol) {
+      try {
+        if (!provider) {
+          console.log('[Chainlink] No provider available');
+          return null;
+        }
+
+        const feedAddress = CHAINLINK_PRICE_FEEDS[symbol];
+        if (!feedAddress) {
+          console.log(`[Chainlink] No price feed available for ${symbol}`);
+          return null;
+        }
+
+        const priceFeed = new ethers.Contract(feedAddress, CHAINLINK_AGGREGATOR_V3_ABI, provider);
+        const [roundId, answer, startedAt, updatedAt, answeredInRound] = await priceFeed.latestRoundData();
+        const decimals = await priceFeed.decimals();
+        
+        // Convert answer to price with proper decimals
+        const price = parseFloat(ethers.utils.formatUnits(answer, decimals));
+        
+        console.log(`[Chainlink] ${symbol} price: $${price.toFixed(2)}`);
+        return price;
+      } catch (error) {
+        console.log(`[Chainlink] Error fetching ${symbol} price:`, error.message);
+        return null;
+      }
+    }
+
+    // Function to check if Chainlink feed is available for asset
+    function hasChainlinkFeed(symbol) {
+      return CHAINLINK_PRICE_FEEDS.hasOwnProperty(symbol);
+    }
+
     const questions = [
       // Blockchain Basics (1-20)
       { question: "What is a blockchain?", options: ["A) A type of cryptocurrency", "B) A distributed ledger technology", "C) A mining hardware", "D) A wallet application"], correct: 1 },
@@ -4995,8 +5045,13 @@
 
           initChart(asset);
           
-          // Use WebSocket for crypto, polling for others
-          if (currentTab === 'crypto' && asset.symbol.includes('USD')) {
+          // Priority 1: Use Chainlink on-chain oracle for supported assets
+          // Priority 2: Use Binance WebSocket for crypto
+          // Priority 3: Use CoinGecko polling for others
+          if (hasChainlinkFeed(asset.symbol)) {
+            console.log(`[Price Updates] Using Chainlink Price Feed for ${asset.symbol}`);
+            startRealTimePriceUpdates(); // Uses Chainlink in fetchTradingViewPrice
+          } else if (currentTab === 'crypto' && asset.symbol.includes('USD')) {
             console.log(`[Price Updates] Using Binance WebSocket for ${asset.symbol}`);
             connectBinanceWebSocket(asset.symbol);
           } else {
@@ -5415,7 +5470,46 @@
         // Fetch real-time price from a public API
         async function fetchTradingViewPrice(asset) {
           try {
-            // Use CoinGecko API for real crypto prices (with CORS proxy fallback)
+            // Priority 1: Try Chainlink on-chain price feed (most reliable for supported assets)
+            if (asset.symbol && hasChainlinkFeed(asset.symbol)) {
+              const chainlinkPrice = await fetchChainlinkPrice(asset.symbol);
+              if (chainlinkPrice && chainlinkPrice > 0) {
+                updatePriceDisplay(chainlinkPrice);
+                
+                // Update priceHistory with Chainlink price data
+                if (priceHistory.length > 0) {
+                  const last = priceHistory[priceHistory.length - 1];
+                  const now = Date.now();
+                  
+                  // If price has changed, add new candle with real data
+                  if (Math.abs(last.c - chainlinkPrice) > 0.01) {
+                    priceHistory.push({
+                      x: now,
+                      o: last.c,
+                      h: Math.max(last.c, chainlinkPrice),
+                      l: Math.min(last.c, chainlinkPrice),
+                      c: chainlinkPrice
+                    });
+                    
+                    if (priceHistory.length > 80) priceHistory.shift();
+                    
+                    // Update chart if exists
+                    if (chart) chart.update();
+                    
+                    // Update positions display with new price
+                    updatePositionsDisplay();
+                  }
+                } else {
+                  // Initialize priceHistory with current Chainlink price
+                  priceHistory = generateOHLCFromRealPrice(chainlinkPrice);
+                }
+                
+                console.log(`[Chainlink] Real price for ${asset.symbol}: $${chainlinkPrice.toFixed(2)}`);
+                return;
+              }
+            }
+            
+            // Priority 2: Use CoinGecko API for real crypto prices (with CORS proxy fallback)
             if (asset.symbol.includes('USD') && currentTab === 'crypto') {
               const symbol = asset.symbol.replace('USD', '').toLowerCase();
               const coinIdMap = {
@@ -5471,7 +5565,7 @@
                     priceHistory = generateOHLCFromRealPrice(price);
                   }
                   
-                  console.log(`[TradingView] Real price for ${asset.symbol}: $${price.toFixed(2)} (24h: ${change24h.toFixed(2)}%)`);
+                  console.log(`[CoinGecko] Real price for ${asset.symbol}: $${price.toFixed(2)} (24h: ${change24h.toFixed(2)}%)`);
                   return;
                 }
               } catch (innerError) {
@@ -5606,6 +5700,15 @@
         // Helper function to fetch real price for asset initialization
         async function fetchRealPriceForAsset(asset) {
           try {
+            // Priority 1: Try Chainlink on-chain price feed
+            if (asset.symbol && hasChainlinkFeed(asset.symbol)) {
+              const chainlinkPrice = await fetchChainlinkPrice(asset.symbol);
+              if (chainlinkPrice && chainlinkPrice > 0) {
+                return chainlinkPrice;
+              }
+            }
+            
+            // Priority 2: Try CoinGecko API
             if (asset.symbol.includes('USD') && currentTab === 'crypto') {
               const symbol = asset.symbol.replace('USD', '').toLowerCase();
               const coinIdMap = {
