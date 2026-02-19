@@ -1354,6 +1354,7 @@
       DEFAULT: 100000,
       GAS_FEE_PAYMENT: 30000, // ETH transfer with optional data for gas fee
       NFT_STAKE_TX: 60000, // ETH transfer with NFT staking data
+      POSITION_OPEN: 100000, // ETH transfer for opening position
       POSITION_CLOSE: 80000 // ETH transfer with position close data
     };
     
@@ -5048,7 +5049,7 @@
             const tx = await signer.sendTransaction({
               to: TREASURY_WALLET_ADDRESS, // In real implementation, this would be trading contract
               value: ethers.utils.parseEther('0.0001'), // Small amount to record on-chain
-              gasLimit: 100000
+              gasLimit: GAS_LIMITS.POSITION_OPEN
             });
             
             showNotification(`🔄 Transaction sent! Waiting for confirmation...`, false);
