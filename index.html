@@ -5149,7 +5149,8 @@
                 leverage: leverage,
                 openTime: new Date().toLocaleTimeString(),
                 isSportsBet: true,
-                txHash: tx.hash
+                txHash: tx.hash,
+                category: 'sports' // Store category for volume tracking
               };
 
               openPositions.push(position);
@@ -5161,6 +5162,9 @@
                 `🏆 Sports bet placed: ${selectedAsset.symbol} to ${betType}<br>${leverage}x leverage on ${amount.toFixed(2)} USDC<br>TX: <a href="https://sepolia.etherscan.io/tx/${tx.hash}" target="_blank" style="color:#60a5fa;">${tx.hash.slice(0, 10)}...</a>`,
                 false
               );
+              
+              // Track trading volume for leaderboard (opening bet)
+              updateTradingVolume('sports', amount);
               
               document.getElementById('positionAmount').value = '';
               document.getElementById('leverageInfo').style.display = 'none';
@@ -5202,6 +5206,9 @@
                     showNotification(`🏆 Match result: ${selectedAsset.symbol} - You lost $${amount.toFixed(2)} to treasury`, true);
                   }
                   
+                  // Track trading volume for leaderboard (closing bet)
+                  updateTradingVolume('sports', amount);
+                  
                   openPositions.splice(idx, 1);
                   
                   updatePositionsDisplay();
@@ -5222,6 +5229,7 @@
             }
 
             // For regular trading (crypto, stocks, commodities, forex)
+            const category = currentTab || 'crypto'; // Save category for later tracking
             const position = {
               asset: selectedAsset,
               type: type,
@@ -5229,7 +5237,8 @@
               amount: amount,
               leverage: leverage,
               openTime: new Date().toLocaleTimeString(),
-              txHash: tx.hash
+              txHash: tx.hash,
+              category: category // Store category for volume tracking on close
             };
 
             openPositions.push(position);
@@ -5342,7 +5351,7 @@
             });
             
             // Track trading volume for leaderboard (closing trade)
-            const category = position.asset?.category || currentTab || 'crypto';
+            const category = position.category || currentTab || 'crypto';
             updateTradingVolume(category, position.amount);
             
             // Remove from open positions
