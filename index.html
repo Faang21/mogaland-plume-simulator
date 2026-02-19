@@ -7612,25 +7612,7 @@
       convertPointsToUSDC();
     }
     
-    } // End of startApp()
-
-    // Helper function to calculate total claimable rewards
-    function calculateTotalClaimableRewards() {
-      const nftRewards = (typeof calculateTotalRewards === 'function') ? calculateTotalRewards() : 0;
-      const volumeRewards = (typeof volumeRewardsClaimable !== 'undefined') ? volumeRewardsClaimable : 0;
-      const learningRewards = (typeof mogalandPoints !== 'undefined' && typeof LEARNING_POINTS_TO_USDC_RATE !== 'undefined') 
-        ? mogalandPoints * LEARNING_POINTS_TO_USDC_RATE 
-        : 0;
-      
-      return {
-        nft: nftRewards,
-        volume: volumeRewards,
-        learning: learningRewards,
-        total: nftRewards + volumeRewards + learningRewards
-      };
-    }
-
-    // Volume Leaderboard Function (Global - always available)
+    // Volume Leaderboard Function
     window.showVolumeLeaderboard = function() {
       // Create modal
       const modal = document.createElement('div');
@@ -7639,14 +7621,14 @@
       const content = document.createElement('div');
       content.style.cssText = 'background:linear-gradient(135deg,#1e293b 0%,#0f172a 100%); padding:30px; border-radius:20px; max-width:900px; width:100%; border:2px solid #fbbf24; box-shadow:0 20px 60px rgba(251,191,36,0.3); max-height:90vh; overflow-y:auto;';
       
-      // User's volume stats - use global variables that may not be defined yet
-      const userTotalVolume = (typeof userTradingVolume !== 'undefined' && userTradingVolume.total) || 0;
-      const userClaimable = (typeof volumeRewardsClaimable !== 'undefined' && volumeRewardsClaimable) || 0;
-      const cryptoVol = (typeof userTradingVolume !== 'undefined' && userTradingVolume.crypto) || 0;
-      const stocksVol = (typeof userTradingVolume !== 'undefined' && userTradingVolume.stocks) || 0;
-      const commoditiesVol = (typeof userTradingVolume !== 'undefined' && userTradingVolume.commodities) || 0;
-      const forexVol = (typeof userTradingVolume !== 'undefined' && userTradingVolume.forex) || 0;
-      const sportsVol = (typeof userTradingVolume !== 'undefined' && userTradingVolume.sports) || 0;
+      // User's volume stats (with safe access in case variables are undefined)
+      const userTotalVolume = (userTradingVolume?.total) || 0;
+      const userClaimable = volumeRewardsClaimable || 0;
+      const cryptoVol = (userTradingVolume?.crypto) || 0;
+      const stocksVol = (userTradingVolume?.stocks) || 0;
+      const commoditiesVol = (userTradingVolume?.commodities) || 0;
+      const forexVol = (userTradingVolume?.forex) || 0;
+      const sportsVol = (userTradingVolume?.sports) || 0;
       
       content.innerHTML = `
         <div style="text-align:center; margin-bottom:30px;">
@@ -7726,6 +7708,24 @@
       modal.addEventListener('click', (e) => {
         if (e.target === modal) modal.remove();
       });
+    }
+    
+    } // End of startApp()
+
+    // Helper function to calculate total claimable rewards
+    function calculateTotalClaimableRewards() {
+      const nftRewards = (typeof calculateTotalRewards === 'function') ? calculateTotalRewards() : 0;
+      const volumeRewards = (typeof volumeRewardsClaimable !== 'undefined') ? volumeRewardsClaimable : 0;
+      const learningRewards = (typeof mogalandPoints !== 'undefined' && typeof LEARNING_POINTS_TO_USDC_RATE !== 'undefined') 
+        ? mogalandPoints * LEARNING_POINTS_TO_USDC_RATE 
+        : 0;
+      
+      return {
+        nft: nftRewards,
+        volume: volumeRewards,
+        learning: learningRewards,
+        total: nftRewards + volumeRewards + learningRewards
+      };
     }
 
     // Init - Wait for ethers to load, then start app
