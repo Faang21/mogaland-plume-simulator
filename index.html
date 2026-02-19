@@ -3261,6 +3261,15 @@
       "function getPendingRewards(address user) view returns (uint256)"
     ];
     
+    // Trading/Prediction Market Contract (simplified for testnet)
+    const TRADING_CONTRACT = "0x0000000000000000000000000000000000000002"; // Placeholder
+    const TRADING_ABI = [
+      "function openPosition(string asset, bool isLong, uint256 amount, uint256 leverage, uint256 entryPrice) external payable",
+      "function closePosition(uint256 positionId) external",
+      "function getPosition(uint256 positionId) view returns (tuple)",
+      "function getUserPositions(address user) view returns (uint256[])"
+    ];
+    
     // Login method tracking - moved outside startApp() to global scope
     let socialConnected = false;
     
@@ -4934,122 +4943,144 @@
             return;
           }
 
-          // Request wallet confirmation for opening position
-          const confirmed = await requestWalletConfirmation(`Open ${type.toUpperCase()} Position`, {
-            amount: `${amount} USDC (${leverage}x leverage)`,
-            from: `${selectedAsset.symbol} - ${type === 'long' ? 'UP ⬆️' : 'DOWN ⬇️'}`,
-            gasLimit: GAS_LIMITS.TRADE
-          });
-          
-          if (!confirmed) {
-            showNotification('❌ Trade cancelled by user', true);
-            return;
-          }
-
-          // Process gas fee
-          if (!await processGasFee('trade')) {
-            return;
-          }
-
-          // For sports betting
-          if (currentTab === 'sports') {
-            const position = {
-              asset: selectedAsset,
-              type: type, // 'long' = WIN, 'short' = LOSE
+          try {
+            showNotification(`🔄 Opening ${type.toUpperCase()} position...`, false);
+            
+            const signer = provider.getSigner();
+            const currentPrice = priceHistory[priceHistory.length - 1]?.c || selectedAsset.basePrice;
+            
+            // For real implementation: Transfer USDC to trading contract
+            // For testnet demo: Send small ETH transaction to record position on-chain
+            const positionData = {
+              asset: selectedAsset.symbol,
+              type: type,
               amount: amount,
               leverage: leverage,
-              openTime: new Date().toLocaleTimeString(),
-              isSportsBet: true
+              price: currentPrice,
+              timestamp: Date.now()
             };
-
-            openPositions.push(position);
-            tradingUSDCBalance -= amount;
-            transferToTreasury(amount); // Move bet amount to treasury
-
-            const betType = type === 'long' ? 'WIN' : 'LOSE';
-            showNotification(`🏆 Sports bet placed: ${selectedAsset.symbol} to ${betType} | ${leverage}x leverage on ${amount.toFixed(2)} USDC`, false);
             
-            document.getElementById('positionAmount').value = '';
-            document.getElementById('leverageInfo').style.display = 'none';
+            // Create transaction with position data in transaction input
+            const dataHex = ethers.utils.hexlify(ethers.utils.toUtf8Bytes(JSON.stringify(positionData)));
             
-            // Simulate match result after 15 seconds
-            setTimeout(() => {
-              const idx = openPositions.findIndex(p => p === position);
-              if (idx !== -1) {
-                // Use team strength to determine outcome
-                const winChance = type === 'long' ? selectedAsset.strength : (1 - selectedAsset.strength);
-                const won = Math.random() < winChance;
-                
-                const profit = amount * leverage * 0.9; // 90% profit if win
-                
-                if (won) {
-                  // Transfer winnings from treasury to user
-                  const totalPayout = amount + profit; // Return bet + profit
-                  if (transferFromTreasury(totalPayout)) {
+            const tx = await signer.sendTransaction({
+              to: TREASURY_WALLET_ADDRESS, // In real implementation, this would be trading contract
+              value: ethers.utils.parseEther('0.0001'), // Small amount to record on-chain
+              data: dataHex,
+              gasLimit: 100000
+            });
+            
+            showNotification(`🔄 Transaction sent! Waiting for confirmation...`, false);
+            console.log('[Trading] Position transaction hash:', tx.hash);
+            
+            await tx.wait();
+            console.log('[Trading] Position recorded on-chain!');
+
+            // For sports betting
+            if (currentTab === 'sports') {
+              const position = {
+                asset: selectedAsset,
+                type: type, // 'long' = WIN, 'short' = LOSE
+                amount: amount,
+                leverage: leverage,
+                openTime: new Date().toLocaleTimeString(),
+                isSportsBet: true,
+                txHash: tx.hash
+              };
+
+              openPositions.push(position);
+              tradingUSDCBalance -= amount;
+              transferToTreasury(amount); // Move bet amount to treasury
+
+              const betType = type === 'long' ? 'WIN' : 'LOSE';
+              showNotification(
+                `🏆 Sports bet placed: ${selectedAsset.symbol} to ${betType}<br>${leverage}x leverage on ${amount.toFixed(2)} USDC<br>TX: <a href="https://sepolia.etherscan.io/tx/${tx.hash}" target="_blank" style="color:#60a5fa;">${tx.hash.slice(0, 10)}...</a>`,
+                false
+              );
+              
+              document.getElementById('positionAmount').value = '';
+              document.getElementById('leverageInfo').style.display = 'none';
+              
+              // Simulate match result after 15 seconds
+              setTimeout(() => {
+                const idx = openPositions.findIndex(p => p === position);
+                if (idx !== -1) {
+                  // Use team strength to determine outcome
+                  const winChance = type === 'long' ? selectedAsset.strength : (1 - selectedAsset.strength);
+                  const won = Math.random() < winChance;
+                  
+                  const profit = amount * leverage * 0.9; // 90% profit if win
+                  
+                  if (won) {
+                    // Transfer winnings from treasury to user
+                    const totalPayout = amount + profit; // Return bet + profit
+                    if (transferFromTreasury(totalPayout)) {
+                      tradeHistoryList.push({
+                        asset: selectedAsset,
+                        type: type === 'long' ? 'WIN' : 'LOSE',
+                        leverage: leverage,
+                        amount: amount,
+                        pnl: profit,
+                        closeTime: new Date().toLocaleTimeString()
+                      });
+                      showNotification(`🏆 Match result: ${selectedAsset.symbol} - You won $${profit.toFixed(2)} from treasury!`, false);
+                    }
+                  } else {
+                    // Loss - money stays in treasury
                     tradeHistoryList.push({
                       asset: selectedAsset,
                       type: type === 'long' ? 'WIN' : 'LOSE',
                       leverage: leverage,
                       amount: amount,
-                      pnl: profit,
+                      pnl: -amount,
                       closeTime: new Date().toLocaleTimeString()
                     });
-                    showNotification(`🏆 Match result: ${selectedAsset.symbol} - You won $${profit.toFixed(2)} from treasury!`, false);
+                    showNotification(`🏆 Match result: ${selectedAsset.symbol} - You lost $${amount.toFixed(2)} to treasury`, true);
                   }
-                } else {
-                  // Loss - money stays in treasury
-                  tradeHistoryList.push({
-                    asset: selectedAsset,
-                    type: type === 'long' ? 'WIN' : 'LOSE',
-                    leverage: leverage,
-                    amount: amount,
-                    pnl: -amount,
-                    closeTime: new Date().toLocaleTimeString()
-                  });
-                  showNotification(`🏆 Match result: ${selectedAsset.symbol} - You lost $${amount.toFixed(2)} to treasury`, true);
+                  
+                  openPositions.splice(idx, 1);
+                  
+                  updatePositionsDisplay();
+                  updateTradeHistory();
+                  updateTradingBalance();
                 }
-                
-                openPositions.splice(idx, 1);
-                
-                updatePositionsDisplay();
-                updateTradeHistory();
-                updateTradingBalance();
+              }, 15000);
+              
+              updatePositionsDisplay();
+              updateTradingBalance();
+              
+              const statusEl = document.getElementById('tradeStatus');
+              if (statusEl) {
+                statusEl.textContent = `⏳ Bet placed: ${selectedAsset.symbol} to ${betType} | Result in 15s`;
+                statusEl.style.color = '#fbbf24';
               }
-            }, 15000);
-            
-            updatePositionsDisplay();
-            updateTradingBalance();
-            
-            const statusEl = document.getElementById('tradeStatus');
-            if (statusEl) {
-              statusEl.textContent = `⏳ Bet placed: ${selectedAsset.symbol} to ${betType} | Result in 15s`;
-              statusEl.style.color = '#fbbf24';
+              return;
             }
-            return;
-          }
 
-          // For regular trading (crypto, stocks, commodities, forex)
-          const currentPrice = priceHistory[priceHistory.length - 1]?.c || selectedAsset.basePrice;
-          
-          const position = {
-            asset: selectedAsset,
-            type: type,
-            entryPrice: currentPrice,
-            amount: amount,
-            leverage: leverage,
-            openTime: new Date().toLocaleTimeString()
-          };
+            // For regular trading (crypto, stocks, commodities, forex)
+            const position = {
+              asset: selectedAsset,
+              type: type,
+              entryPrice: currentPrice,
+              amount: amount,
+              leverage: leverage,
+              openTime: new Date().toLocaleTimeString(),
+              txHash: tx.hash
+            };
 
-          openPositions.push(position);
-          tradingUSDCBalance -= amount;
-          transferToTreasury(amount); // Move position to treasury
-          
-          // Start liquidation monitoring when first position is opened
-          if (openPositions.length === 1) {
-            startLiquidationMonitoring();
-          }
+            openPositions.push(position);
+            tradingUSDCBalance -= amount;
+            transferToTreasury(amount); // Move position to treasury
+            
+            // Start liquidation monitoring when first position is opened
+            if (openPositions.length === 1) {
+              startLiquidationMonitoring();
+            }
 
-          showNotification(`🔓 Opened ${type.toUpperCase()} position: ${selectedAsset.symbol} ${leverage}x at $${currentPrice.toFixed(2)}`, false);
+          showNotification(
+            `🔓 Opened ${type.toUpperCase()} position: ${selectedAsset.symbol} ${leverage}x at $${currentPrice.toFixed(2)}<br>TX: <a href="https://sepolia.etherscan.io/tx/${tx.hash}" target="_blank" style="color:#60a5fa;">${tx.hash.slice(0, 10)}...</a>`,
+            false
+          );
           
           document.getElementById('positionAmount').value = '';
           document.getElementById('leverageInfo').style.display = 'none';
@@ -5061,6 +5092,11 @@
           if (statusEl) {
             statusEl.textContent = `✅ Position opened: ${type.toUpperCase()} ${selectedAsset.symbol} ${leverage}x`;
             statusEl.style.color = type === 'long' ? '#10b981' : '#ef4444';
+          }
+          
+          } catch (error) {
+            console.error('[Trading] Error opening position:', error);
+            showNotification(`❌ Failed to open position: ${error.message}`, true);
           }
         }
 
