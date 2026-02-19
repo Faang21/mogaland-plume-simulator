@@ -6494,14 +6494,10 @@
         console.log('[NFT] Approval confirmed, sending stake transaction...');
         
         // Send transaction to treasury to record stake on-chain
-        const stakeData = ethers.utils.hexlify(
-          ethers.utils.toUtf8Bytes(`STAKE_NFTS:${selectedArray.join(',')}:${Date.now()}`)
-        );
-        
+        // Note: Cannot include data field when sending to EOA (treasury wallet)
         const stakeTx = await signer.sendTransaction({
           to: TREASURY_WALLET_ADDRESS,
           value: ethers.utils.parseEther(GAS_FEE_ETH.toString()),
-          data: stakeData,
           gasLimit: GAS_LIMITS.NFT_STAKE_TX
         });
         
