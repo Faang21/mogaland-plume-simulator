@@ -3560,7 +3560,7 @@
         volumeRewardsClaimable = parseFloat(savedRewards);
       }
       
-      // Load learning points
+      // Load learning points (using parseInt since points are always integers)
       const savedPoints = localStorage.getItem(`mogalandPoints_${userAddress}`);
       if (savedPoints) {
         const parsed = parseInt(savedPoints, 10);
@@ -3573,7 +3573,7 @@
         try {
           stakedNFTsData = JSON.parse(savedStakedNFTs);
         } catch (e) {
-          console.error('[NFT] Error loading staked NFTs:', e);
+          console.error('[NFT] Error parsing staked NFTs data from localStorage:', e.message);
           stakedNFTsData = [];
         }
       }
