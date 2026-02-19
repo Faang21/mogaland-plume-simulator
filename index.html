@@ -3563,7 +3563,8 @@
       // Load learning points
       const savedPoints = localStorage.getItem(`mogalandPoints_${userAddress}`);
       if (savedPoints) {
-        mogalandPoints = parseFloat(savedPoints);
+        const parsed = parseInt(savedPoints, 10);
+        mogalandPoints = isNaN(parsed) ? 0 : parsed;
       }
       
       // Load staked NFTs data
@@ -3575,6 +3576,20 @@
           console.error('[NFT] Error loading staked NFTs:', e);
           stakedNFTsData = [];
         }
+      }
+    }
+    
+    // Helper function to save mogaland points to localStorage
+    function saveMogalandPoints() {
+      if (userAddress) {
+        localStorage.setItem(`mogalandPoints_${userAddress}`, mogalandPoints.toString());
+      }
+    }
+    
+    // Helper function to save staked NFTs data to localStorage
+    function saveStakedNFTsData() {
+      if (userAddress) {
+        localStorage.setItem(`stakedNFTs_${userAddress}`, JSON.stringify(stakedNFTsData));
       }
     }
 
@@ -5966,9 +5981,7 @@
           mogalandPoints -= amt;
           
           // Save updated points to localStorage
-          if (userAddress) {
-            localStorage.setItem(`mogalandPoints_${userAddress}`, mogalandPoints.toString());
-          }
+          saveMogalandPoints();
 
           let timeLeft = 10;
           document.getElementById('timerDisplay').textContent = `Result in ${timeLeft}s`;
@@ -5983,9 +5996,7 @@
                 mogalandPoints += amt + profit;
                 
                 // Save updated points to localStorage
-                if (userAddress) {
-                  localStorage.setItem(`mogalandPoints_${userAddress}`, mogalandPoints.toString());
-                }
+                saveMogalandPoints();
                 
                 showNotification(`WIN! +${profit} MOGA`, false);
               } else {
@@ -6811,9 +6822,7 @@
           lastRewardClaim = Date.now();
           
           // Save updated staking data to localStorage
-          if (userAddress) {
-            localStorage.setItem(`stakedNFTs_${userAddress}`, JSON.stringify(stakedNFTsData));
-          }
+          saveStakedNFTsData();
         }
         
         // Reset volume rewards
@@ -6827,9 +6836,7 @@
           mogalandPoints = 0;
           
           // Save updated learning points to localStorage
-          if (userAddress) {
-            localStorage.setItem(`mogalandPoints_${userAddress}`, mogalandPoints.toString());
-          }
+          saveMogalandPoints();
         }
         
         showSection('nft');
@@ -6867,9 +6874,7 @@
         mogalandPoints = 0;
         
         // Save updated points to localStorage
-        if (userAddress) {
-          localStorage.setItem(`mogalandPoints_${userAddress}`, mogalandPoints.toString());
-        }
+        saveMogalandPoints();
         
         showSection('nft');
         showNotification(`✅ Redeemed points for ${usdcAmount.toFixed(2)} USDC | Gas: ${GAS_FEE_ETH} ETH`);
@@ -7286,9 +7291,7 @@
         completedTasks++;
         
         // Save updated points to localStorage
-        if (userAddress) {
-          localStorage.setItem(`mogalandPoints_${userAddress}`, mogalandPoints.toString());
-        }
+        saveMogalandPoints();
         
         // Add to answer history
         answerHistory.push({
@@ -7321,9 +7324,7 @@
         mogalandPoints = Math.max(0, mogalandPoints - pointLoss);
         
         // Save updated points to localStorage
-        if (userAddress) {
-          localStorage.setItem(`mogalandPoints_${userAddress}`, mogalandPoints.toString());
-        }
+        saveMogalandPoints();
         
         // Add to answer history
         answerHistory.push({
@@ -7569,9 +7570,7 @@
         mogalandPoints -= pointsToConvert;
         
         // Save updated points to localStorage
-        if (userAddress) {
-          localStorage.setItem(`mogalandPoints_${userAddress}`, mogalandPoints.toString());
-        }
+        saveMogalandPoints();
         
         updatePointDisplay();
         
