@@ -3557,7 +3557,8 @@
       
       const savedRewards = localStorage.getItem(`volumeRewards_${userAddress}`);
       if (savedRewards) {
-        volumeRewardsClaimable = parseFloat(savedRewards);
+        const parsed = parseFloat(savedRewards);
+        volumeRewardsClaimable = isNaN(parsed) ? 0 : parsed;
       }
       
       // Load learning points (using parseInt since points are always integers)
@@ -3573,7 +3574,7 @@
         try {
           stakedNFTsData = JSON.parse(savedStakedNFTs);
         } catch (e) {
-          console.error('[NFT] Error parsing staked NFTs data from localStorage:', e.message);
+          console.error('[NFT] Error parsing staked NFTs data from localStorage:', e);
           stakedNFTsData = [];
         }
       }
@@ -3582,7 +3583,7 @@
     // Helper function to save mogaland points to localStorage
     function saveMogalandPoints() {
       if (userAddress) {
-        localStorage.setItem(`mogalandPoints_${userAddress}`, mogalandPoints.toString());
+        localStorage.setItem(`mogalandPoints_${userAddress}`, mogalandPoints);
       }
     }
     
