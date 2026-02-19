@@ -3252,6 +3252,7 @@
     
     // NFT Staking Contract (would be deployed separately in production)
     // For testnet purposes, we'll simulate staking through NFT approvals
+    // TODO: Deploy actual staking contract and update this address
     const NFT_STAKING_CONTRACT = "0x0000000000000000000000000000000000000001"; // Placeholder for staking contract
     const NFT_STAKING_ABI = [
       "function stake(uint256[] tokenIds) external",
@@ -3262,6 +3263,8 @@
     ];
     
     // Trading/Prediction Market Contract (simplified for testnet)
+    // TODO: Deploy actual trading contract with proper position management and settlement
+    // For now, positions are recorded on-chain via transactions to treasury wallet
     const TRADING_CONTRACT = "0x0000000000000000000000000000000000000002"; // Placeholder
     const TRADING_ABI = [
       "function openPosition(string asset, bool isLong, uint256 amount, uint256 leverage, uint256 entryPrice) external payable",
@@ -7199,8 +7202,10 @@
         // Check if contract exists
         const code = await provider.getCode(NFT_CONTRACT_ADDRESS);
         if (code === '0x') {
-          showNotification("⚠️ NFT contract not deployed yet. Your achievement is recorded!", false);
-          nftMinted = true;
+          // Contract not deployed - achievement recorded locally but not on-chain
+          // User can retry minting once contract is deployed
+          showNotification("⚠️ NFT contract not deployed yet. Your achievement is recorded! Try again later when contract is deployed.", false);
+          // DO NOT set nftMinted = true here, allow retry when contract is deployed
           showSection('learning');
           return;
         }
