@@ -5125,7 +5125,7 @@
         }
 
         // Close a position
-        function closePosition(idx) {
+        async function closePosition(idx) {
           if (idx < 0 || idx >= openPositions.length) return;
           
           const position = openPositions[idx];
@@ -5136,47 +5136,92 @@
             return;
           }
           
-          const currentPrice = priceHistory[priceHistory.length - 1]?.c || position.entryPrice;
-          const priceDiff = currentPrice - position.entryPrice;
-          const pnl = position.type === 'long' ? 
-            priceDiff * position.leverage * (position.amount / position.entryPrice) : 
-            -priceDiff * position.leverage * (position.amount / position.entryPrice);
+          // Check wallet connection
+          if (!provider || !userAddress) {
+            showNotification('⚠️ Please connect your wallet to close position!', true);
+            connectWalletFromApp();
+            return;
+          }
           
-          // Handle treasury transfers based on profit/loss
-          if (pnl >= 0) {
-            // Profit: Return position + profit from treasury
-            const totalPayout = position.amount + pnl;
-            if (transferFromTreasury(totalPayout)) {
-              showNotification(`🔒 Closed position with profit of $${pnl.toFixed(2)} (paid from treasury)`, false);
+          try {
+            showNotification('🔄 Closing position...', false);
+            
+            const currentPrice = priceHistory[priceHistory.length - 1]?.c || position.entryPrice;
+            const priceDiff = currentPrice - position.entryPrice;
+            const pnl = position.type === 'long' ? 
+              priceDiff * position.leverage * (position.amount / position.entryPrice) : 
+              -priceDiff * position.leverage * (position.amount / position.entryPrice);
+            
+            // Send close position transaction on-chain
+            const signer = provider.getSigner();
+            const closeData = {
+              action: 'CLOSE_POSITION',
+              positionId: idx,
+              asset: position.asset,
+              exitPrice: currentPrice,
+              pnl: pnl.toFixed(2),
+              timestamp: Date.now()
+            };
+            
+            const dataHex = ethers.utils.hexlify(ethers.utils.toUtf8Bytes(JSON.stringify(closeData)));
+            
+            const tx = await signer.sendTransaction({
+              to: TREASURY_WALLET_ADDRESS,
+              value: ethers.utils.parseEther('0.0001'), // Small amount to record on-chain
+              data: dataHex,
+              gasLimit: 100000
+            });
+            
+            console.log('[Trading] Close position transaction hash:', tx.hash);
+            await tx.wait();
+            console.log('[Trading] Position close recorded on-chain!');
+            
+            // Handle treasury transfers based on profit/loss
+            if (pnl >= 0) {
+              // Profit: Return position + profit from treasury
+              const totalPayout = position.amount + pnl;
+              if (transferFromTreasury(totalPayout)) {
+                showNotification(
+                  `✅ Position closed with profit: $${pnl.toFixed(2)}<br>TX: <a href="https://sepolia.etherscan.io/tx/${tx.hash}" target="_blank" style="color:#60a5fa;">${tx.hash.slice(0, 10)}...</a>`,
+                  false
+                );
+              }
+            } else {
+              // Loss: User loses position amount (already in treasury), no payout
+              showNotification(
+                `✅ Position closed with loss: $${Math.abs(pnl).toFixed(2)}<br>TX: <a href="https://sepolia.etherscan.io/tx/${tx.hash}" target="_blank" style="color:#60a5fa;">${tx.hash.slice(0, 10)}...</a>`,
+                true
+              );
             }
-          } else {
-            // Loss: User loses position amount (already in treasury), no payout
-            showNotification(`🔒 Closed position with loss of $${Math.abs(pnl).toFixed(2)} (kept by treasury)`, true);
+            
+            // Add to history
+            tradeHistoryList.push({
+              asset: position.asset,
+              type: position.type,
+              leverage: position.leverage,
+              amount: position.amount,
+              entryPrice: position.entryPrice,
+              exitPrice: currentPrice,
+              pnl: pnl,
+              closeTime: new Date().toLocaleTimeString(),
+              txHash: tx.hash
+            });
+            
+            // Remove from open positions
+            openPositions.splice(idx, 1);
+            
+            // Stop liquidation monitoring if no positions remain
+            if (openPositions.length === 0) {
+              stopLiquidationMonitoring();
+            }
+            
+            updatePositionsDisplay();
+            updateTradeHistory();
+            updateTradingBalance();
+          } catch (error) {
+            console.error('[Trading] Error closing position:', error);
+            showNotification(`❌ Failed to close position: ${error.message}`, true);
           }
-          
-          // Add to history
-          tradeHistoryList.push({
-            asset: position.asset,
-            type: position.type,
-            leverage: position.leverage,
-            amount: position.amount,
-            entryPrice: position.entryPrice,
-            exitPrice: currentPrice,
-            pnl: pnl,
-            closeTime: new Date().toLocaleTimeString()
-          });
-          
-          // Remove from open positions
-          openPositions.splice(idx, 1);
-          
-          // Stop liquidation monitoring if no positions remain
-          if (openPositions.length === 0) {
-            stopLiquidationMonitoring();
-          }
-          
-          updatePositionsDisplay();
-          updateTradeHistory();
-          updateTradingBalance();
         }
         window.closePosition = closePosition;
 
