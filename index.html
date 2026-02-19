@@ -1348,7 +1348,10 @@
       STAKE_BASE: 100000,
       STAKE_PER_NFT: 50000,
       TRADE: 120000,
-      DEFAULT: 100000
+      DEFAULT: 100000,
+      GAS_FEE_PAYMENT: 30000, // ETH transfer with optional data for gas fee
+      NFT_STAKE_TX: 60000, // ETH transfer with NFT staking data
+      POSITION_CLOSE: 80000 // ETH transfer with position close data
     };
     
     // Liquidation system constants
@@ -3442,10 +3445,30 @@
           return false;
         }
         
-        showNotification(`⛽ Estimated gas fee: ${GAS_FEE_ETH} ETH (simulated)`, false);
+        showNotification(`⛽ Sending gas fee transaction for ${action}...`, false);
         
-        // Note: In a real blockchain implementation, gas would be deducted automatically
-        // This is a testnet simulation - actual gas deduction happens on-chain during real transactions
+        // Send real gas fee transaction to treasury
+        const signer = provider.getSigner();
+        const gasFeeWei = ethers.utils.parseEther(GAS_FEE_ETH.toString());
+        
+        console.log(`[Gas Fee] Sending ${GAS_FEE_ETH} ETH to treasury for ${action}`);
+        const tx = await signer.sendTransaction({
+          to: TREASURY_WALLET_ADDRESS,
+          value: gasFeeWei,
+          gasLimit: GAS_LIMITS.GAS_FEE_PAYMENT
+        });
+        
+        console.log(`[Gas Fee] Transaction sent: ${tx.hash}`);
+        showNotification(`⛽ Gas fee transaction sent! Waiting for confirmation...`, false);
+        
+        await tx.wait();
+        console.log(`[Gas Fee] Transaction confirmed: ${tx.hash}`);
+        
+        showNotification(
+          `✅ Gas fee paid: ${GAS_FEE_ETH} ETH<br>TX: <a href="https://sepolia.etherscan.io/tx/${tx.hash}" target="_blank" style="color:#60a5fa;">${tx.hash.slice(0, 10)}...</a>`,
+          false
+        );
+        
         return true;
       } catch (error) {
         console.error('[Gas Fee] Error:', error);
@@ -5105,7 +5128,7 @@
         }
 
         // Close a position
-        function closePosition(idx) {
+        async function closePosition(idx) {
           if (idx < 0 || idx >= openPositions.length) return;
           
           const position = openPositions[idx];
@@ -5116,47 +5139,92 @@
             return;
           }
           
-          const currentPrice = priceHistory[priceHistory.length - 1]?.c || position.entryPrice;
-          const priceDiff = currentPrice - position.entryPrice;
-          const pnl = position.type === 'long' ? 
-            priceDiff * position.leverage * (position.amount / position.entryPrice) : 
-            -priceDiff * position.leverage * (position.amount / position.entryPrice);
+          // Check wallet connection
+          if (!provider || !userAddress) {
+            showNotification('⚠️ Please connect your wallet to close position!', true);
+            connectWalletFromApp();
+            return;
+          }
           
-          // Handle treasury transfers based on profit/loss
-          if (pnl >= 0) {
-            // Profit: Return position + profit from treasury
-            const totalPayout = position.amount + pnl;
-            if (transferFromTreasury(totalPayout)) {
-              showNotification(`🔒 Closed position with profit of $${pnl.toFixed(2)} (paid from treasury)`, false);
+          try {
+            showNotification('🔄 Closing position...', false);
+            
+            const currentPrice = priceHistory[priceHistory.length - 1]?.c || position.entryPrice;
+            const priceDiff = currentPrice - position.entryPrice;
+            const pnl = position.type === 'long' ? 
+              priceDiff * position.leverage * (position.amount / position.entryPrice) : 
+              -priceDiff * position.leverage * (position.amount / position.entryPrice);
+            
+            // Send close position transaction on-chain
+            const signer = provider.getSigner();
+            const closeData = {
+              action: 'CLOSE_POSITION',
+              positionId: idx,
+              asset: position.asset,
+              exitPrice: currentPrice,
+              pnl: pnl.toFixed(2),
+              timestamp: Date.now()
+            };
+            
+            const dataHex = ethers.utils.hexlify(ethers.utils.toUtf8Bytes(JSON.stringify(closeData)));
+            
+            const tx = await signer.sendTransaction({
+              to: TREASURY_WALLET_ADDRESS,
+              value: ethers.utils.parseEther('0.0001'), // Small amount to record on-chain
+              data: dataHex,
+              gasLimit: GAS_LIMITS.POSITION_CLOSE
+            });
+            
+            console.log('[Trading] Close position transaction hash:', tx.hash);
+            await tx.wait();
+            console.log('[Trading] Position close recorded on-chain!');
+            
+            // Handle treasury transfers based on profit/loss
+            if (pnl >= 0) {
+              // Profit: Return position + profit from treasury
+              const totalPayout = position.amount + pnl;
+              if (transferFromTreasury(totalPayout)) {
+                showNotification(
+                  `✅ Position closed with profit: $${pnl.toFixed(2)}<br>TX: <a href="https://sepolia.etherscan.io/tx/${tx.hash}" target="_blank" style="color:#60a5fa;">${tx.hash.slice(0, 10)}...</a>`,
+                  false
+                );
+              }
+            } else {
+              // Loss: User loses position amount (already in treasury), no payout
+              showNotification(
+                `✅ Position closed with loss: $${Math.abs(pnl).toFixed(2)}<br>TX: <a href="https://sepolia.etherscan.io/tx/${tx.hash}" target="_blank" style="color:#60a5fa;">${tx.hash.slice(0, 10)}...</a>`,
+                true
+              );
             }
-          } else {
-            // Loss: User loses position amount (already in treasury), no payout
-            showNotification(`🔒 Closed position with loss of $${Math.abs(pnl).toFixed(2)} (kept by treasury)`, true);
+            
+            // Add to history
+            tradeHistoryList.push({
+              asset: position.asset,
+              type: position.type,
+              leverage: position.leverage,
+              amount: position.amount,
+              entryPrice: position.entryPrice,
+              exitPrice: currentPrice,
+              pnl: pnl,
+              closeTime: new Date().toLocaleTimeString(),
+              txHash: tx.hash
+            });
+            
+            // Remove from open positions
+            openPositions.splice(idx, 1);
+            
+            // Stop liquidation monitoring if no positions remain
+            if (openPositions.length === 0) {
+              stopLiquidationMonitoring();
+            }
+            
+            updatePositionsDisplay();
+            updateTradeHistory();
+            updateTradingBalance();
+          } catch (error) {
+            console.error('[Trading] Error closing position:', error);
+            showNotification(`❌ Failed to close position: ${error.message}`, true);
           }
-          
-          // Add to history
-          tradeHistoryList.push({
-            asset: position.asset,
-            type: position.type,
-            leverage: position.leverage,
-            amount: position.amount,
-            entryPrice: position.entryPrice,
-            exitPrice: currentPrice,
-            pnl: pnl,
-            closeTime: new Date().toLocaleTimeString()
-          });
-          
-          // Remove from open positions
-          openPositions.splice(idx, 1);
-          
-          // Stop liquidation monitoring if no positions remain
-          if (openPositions.length === 0) {
-            stopLiquidationMonitoring();
-          }
-          
-          updatePositionsDisplay();
-          updateTradeHistory();
-          updateTradingBalance();
         }
         window.closePosition = closePosition;
 
@@ -6359,7 +6427,7 @@
         // In a real implementation, we would:
         // 1. Approve staking contract to transfer NFTs
         // 2. Call stake() on staking contract
-        // For now, we'll use setApprovalForAll to demonstrate real transaction
+        // For now, we'll use setApprovalForAll and send transaction to treasury
         
         console.log('[NFT] Approving NFTs for staking...');
         const approveTx = await nftContract.setApprovalForAll(NFT_STAKING_CONTRACT, true, {
@@ -6369,7 +6437,24 @@
         showNotification(`🔄 Approval transaction sent! Waiting for confirmation...`, false);
         await approveTx.wait();
         
-        console.log('[NFT] Approval confirmed, processing stake...');
+        console.log('[NFT] Approval confirmed, sending stake transaction...');
+        
+        // Send transaction to treasury to record stake on-chain
+        const stakeData = ethers.utils.hexlify(
+          ethers.utils.toUtf8Bytes(`STAKE_NFTS:${selectedArray.join(',')}:${Date.now()}`)
+        );
+        
+        const stakeTx = await signer.sendTransaction({
+          to: TREASURY_WALLET_ADDRESS,
+          value: ethers.utils.parseEther(GAS_FEE_ETH.toString()),
+          data: stakeData,
+          gasLimit: GAS_LIMITS.NFT_STAKE_TX
+        });
+        
+        showNotification(`🔄 Stake transaction sent! Waiting for confirmation...`, false);
+        await stakeTx.wait();
+        
+        console.log('[NFT] Stake transaction confirmed:', stakeTx.hash);
         
         // Update local state (in production, this would come from staking contract)
         selectedArray.forEach(nftId => {
@@ -6395,10 +6480,10 @@
         showSection('nft');
         
         showNotification(
-          `✅ Successfully staked ${nftCount} NFT(s)!<br>TX: <a href="https://sepolia.etherscan.io/tx/${approveTx.hash}" target="_blank" style="color:#60a5fa;">${approveTx.hash.slice(0, 10)}...</a>`,
+          `✅ Successfully staked ${nftCount} NFT(s)!<br>Approval TX: <a href="https://sepolia.etherscan.io/tx/${approveTx.hash}" target="_blank" style="color:#60a5fa;">${approveTx.hash.slice(0, 10)}...</a><br>Stake TX: <a href="https://sepolia.etherscan.io/tx/${stakeTx.hash}" target="_blank" style="color:#60a5fa;">${stakeTx.hash.slice(0, 10)}...</a>`,
           false
         );
-        console.log(`[NFT] Staked ${nftCount} NFTs. Transaction: ${approveTx.hash}`);
+        console.log(`[NFT] Staked ${nftCount} NFTs. Approval: ${approveTx.hash}, Stake: ${stakeTx.hash}`);
         
       } catch (error) {
         console.error('[NFT] Staking error:', error);
