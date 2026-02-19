@@ -3769,9 +3769,6 @@
           showNotification(`🔄 Bridge transaction sent! Waiting for confirmation...`, false);
           console.log('[Bridge] Transaction hash:', tx.hash);
           
-          showNotification(`🔄 Bridge transaction sent! Waiting for confirmation...`, false);
-          console.log('[Bridge] Transaction hash:', tx.hash);
-          
           const receipt = await tx.wait();
           console.log('[Bridge] Transaction confirmed!', receipt);
           
