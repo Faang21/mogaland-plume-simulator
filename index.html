@@ -7621,14 +7621,14 @@
       const content = document.createElement('div');
       content.style.cssText = 'background:linear-gradient(135deg,#1e293b 0%,#0f172a 100%); padding:30px; border-radius:20px; max-width:900px; width:100%; border:2px solid #fbbf24; box-shadow:0 20px 60px rgba(251,191,36,0.3); max-height:90vh; overflow-y:auto;';
       
-      // User's volume stats
-      const userTotalVolume = userTradingVolume.total || 0;
+      // User's volume stats (with safe access in case variables are undefined)
+      const userTotalVolume = (userTradingVolume?.total) || 0;
       const userClaimable = volumeRewardsClaimable || 0;
-      const cryptoVol = userTradingVolume.crypto || 0;
-      const stocksVol = userTradingVolume.stocks || 0;
-      const commoditiesVol = userTradingVolume.commodities || 0;
-      const forexVol = userTradingVolume.forex || 0;
-      const sportsVol = userTradingVolume.sports || 0;
+      const cryptoVol = (userTradingVolume?.crypto) || 0;
+      const stocksVol = (userTradingVolume?.stocks) || 0;
+      const commoditiesVol = (userTradingVolume?.commodities) || 0;
+      const forexVol = (userTradingVolume?.forex) || 0;
+      const sportsVol = (userTradingVolume?.sports) || 0;
       
       content.innerHTML = `
         <div style="text-align:center; margin-bottom:30px;">
