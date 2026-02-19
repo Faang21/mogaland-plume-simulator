@@ -1031,6 +1031,9 @@
           </div>
         </div>
       </div>
+      <button class="top-btn" onclick="showVolumeLeaderboard()" style="background:linear-gradient(90deg,#fbbf24,#f59e0b); margin-left:8px;">
+        🏆 Leaderboard
+      </button>
       <button class="top-btn" onclick="showProfile()">Profile</button>
     </header>
 
@@ -1780,6 +1783,9 @@
         }
         
         enterDashboard(walletType);
+        
+        // Load user trading volume data
+        loadUserTradingVolume();
         
         // Fetch real balances if function is available (may not be defined yet if startApp() hasn't completed)
         if (typeof fetchRealBalances === 'function') {
@@ -3420,6 +3426,63 @@
     let stakedNFTsData = []; // [{nftId, apy, stakedTime, rewards}]
     let lastRewardClaim = Date.now();
 
+    // Trading Volume Tracking for Leaderboard
+    let userTradingVolume = {
+      crypto: 0,
+      stocks: 0,
+      commodities: 0,
+      forex: 0,
+      sports: 0,
+      total: 0 // Total volume in USDC
+    };
+    let volumeRewardsClaimable = 0; // Accumulated USDC rewards from trading volume
+    let leaderboardData = []; // Global leaderboard data
+    const VOLUME_TO_REWARD_RATE = 0.001; // 0.1% of trading volume converted to claimable USDC
+    const LEARNING_POINTS_TO_USDC_RATE = 0.001; // 1 point = 0.001 USDC (1000 points = 1 USDC)
+
+    function updateTradingVolume(category, volumeUSDC) {
+      if (!userAddress) return;
+      
+      // Validate category
+      const validCategories = ['crypto', 'stocks', 'commodities', 'forex', 'sports'];
+      if (!validCategories.includes(category)) {
+        console.warn(`[Volume] Invalid category: ${category}, defaulting to crypto`);
+        category = 'crypto';
+      }
+      
+      userTradingVolume[category] += volumeUSDC;
+      userTradingVolume.total += volumeUSDC;
+      
+      // Convert volume to claimable rewards
+      const rewardAmount = volumeUSDC * VOLUME_TO_REWARD_RATE;
+      volumeRewardsClaimable += rewardAmount;
+      
+      // Save to localStorage
+      saveUserTradingVolume();
+      
+      console.log(`[Volume] ${category}: +${volumeUSDC.toFixed(2)} USDC | Total: ${userTradingVolume.total.toFixed(2)} USDC | Claimable: ${volumeRewardsClaimable.toFixed(4)} USDC`);
+    }
+
+    function saveUserTradingVolume() {
+      if (!userAddress) return;
+      localStorage.setItem(`tradingVolume_${userAddress}`, JSON.stringify(userTradingVolume));
+      localStorage.setItem(`volumeRewards_${userAddress}`, volumeRewardsClaimable.toString());
+    }
+
+    function loadUserTradingVolume() {
+      if (!userAddress) return;
+      
+      const savedVolume = localStorage.getItem(`tradingVolume_${userAddress}`);
+      if (savedVolume) {
+        userTradingVolume = JSON.parse(savedVolume);
+      }
+      
+      const savedRewards = localStorage.getItem(`volumeRewards_${userAddress}`);
+      if (savedRewards) {
+        volumeRewardsClaimable = parseFloat(savedRewards);
+      }
+    }
+
     function updateTreasuryDisplay() {
       const el = document.getElementById('treasuryDisplay');
       if (el) el.textContent = `${tokenTreasury.toLocaleString()} MOGA`;
@@ -4198,12 +4261,15 @@
             <h2 style="text-align:center; margin-bottom:10px; color:#60a5fa;">Mogaland-Plume Market Prediction</h2>
             <p style="text-align:center; opacity:0.8; margin-bottom:20px;">Live Trading Demo — Trade with leverage using Sepolia USDC!</p>
 
-            <div style="display:flex; justify-content:center; gap:8px; margin-bottom:25px; flex-wrap:wrap;">
+            <div style="display:flex; justify-content:center; align-items:center; gap:8px; margin-bottom:25px; flex-wrap:wrap;">
               <button class="nav-btn active" data-tab="crypto">Crypto</button>
               <button class="nav-btn" data-tab="stocks">Stocks</button>
               <button class="nav-btn" data-tab="commodities">Commodities</button>
               <button class="nav-btn" data-tab="forex">Forex</button>
               <button class="nav-btn" data-tab="sports">Sports</button>
+              <button class="btn-primary" onclick="showVolumeLeaderboard()" style="margin-left:16px; background:linear-gradient(90deg,#fbbf24,#f59e0b); padding:10px 20px;">
+                🏆 Volume Leaderboard
+              </button>
             </div>
 
             <div class="flex-container" style="gap:25px; align-items:stretch;">
@@ -5109,6 +5175,10 @@
             false
           );
           
+          // Track trading volume for leaderboard
+          const category = currentTab || 'crypto'; // Get current market category with fallback
+          updateTradingVolume(category, amount);
+          
           document.getElementById('positionAmount').value = '';
           document.getElementById('leverageInfo').style.display = 'none';
           
@@ -5815,7 +5885,7 @@
 
             <div style="padding: 20px; border-radius: 16px; background: var(--card-bg); border: 1px solid var(--border); box-shadow: 0 4px 16px rgba(0,0,0,0.3); margin-bottom: 20px;">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                <select id="fromTokenSelect" onchange="updateSwapEstimate()" style="padding: 8px; background: var(--darker); border: 1px solid var(--border); border-radius: 8px; color: white; font-size: 1em;">
+                <select id="fromTokenSelect" onchange="updateSwapEstimate(); updateSelectedTokenBalance();" style="padding: 8px; background: var(--darker); border: 1px solid var(--border); border-radius: 8px; color: white; font-size: 1em;">
                   <option value="ETH">ETH Sepolia</option>
                   <option value="USDC">USDC Sepolia</option>
                   <option value="USDT">USDT Sepolia</option>
@@ -5884,7 +5954,10 @@
         `;
 
         setTimeout(() => {
-          if (userAddress) updateTokenBalances();
+          if (userAddress) {
+            updateTokenBalances();
+            updateSelectedTokenBalance();
+          }
           updateSwapEstimate();
           setSlippage(0.5);
         }, 100);
@@ -6127,12 +6200,15 @@
               <div class="stats-value" style="color:#10b981;">${stakedNFTsData.length}</div>
             </div>
             <div class="stats-card">
-              <h4>Claimable Rewards</h4>
-              <div class="stats-value" style="color:#fbbf24;">${calculateTotalRewards().toFixed(4)} USDC</div>
+              <h4>Total Claimable</h4>
+              <div class="stats-value" style="color:#fbbf24;">${(calculateTotalRewards() + (volumeRewardsClaimable || 0) + (mogalandPoints * LEARNING_POINTS_TO_USDC_RATE)).toFixed(4)} USDC</div>
+              <div style="font-size:0.75em; color:#94a3b8; margin-top:4px;">
+                ${calculateTotalRewards().toFixed(4)} NFT + ${(volumeRewardsClaimable || 0).toFixed(4)} Volume + ${(mogalandPoints * LEARNING_POINTS_TO_USDC_RATE).toFixed(4)} Points
+              </div>
             </div>
             <div class="stats-card">
-              <h4>Learning Points</h4>
-              <div class="stats-value" style="color:#c084fc;">${mogalandPoints}</div>
+              <h4>Trading Volume</h4>
+              <div class="stats-value" style="color:#c084fc;">${(userTradingVolume.total || 0).toFixed(2)} USDC</div>
             </div>
           </div>
 
@@ -6533,13 +6609,14 @@
     window.unstakeSelectedNFTs = unstakeSelectedNFTs;
     
     window.claimAllRewards = async function() {
-      if (stakedNFTsData.length === 0) {
-        return showNotification("No staked NFTs!", true);
-      }
+      // Calculate all claimable rewards
+      const nftRewards = calculateTotalRewards();
+      const volumeRewards = volumeRewardsClaimable || 0;
+      const learningPointsRewards = mogalandPoints * LEARNING_POINTS_TO_USDC_RATE;
+      const totalRewards = nftRewards + volumeRewards + learningPointsRewards;
       
-      const totalRewards = calculateTotalRewards();
       if (totalRewards <= 0) {
-        return showNotification("No rewards available yet!", true);
+        return showNotification("No rewards available to claim!", true);
       }
       
       // Proper wallet validation
@@ -6549,22 +6626,46 @@
         return;
       }
       
+      // Show detailed breakdown before claiming
+      const breakdown = [];
+      if (nftRewards > 0) breakdown.push(`NFT Staking: ${nftRewards.toFixed(4)} USDC`);
+      if (volumeRewards > 0) breakdown.push(`Trading Volume: ${volumeRewards.toFixed(4)} USDC`);
+      if (learningPointsRewards > 0) breakdown.push(`Learning Points (${mogalandPoints}): ${learningPointsRewards.toFixed(4)} USDC`);
+      
       // Check and process gas fee
-      if (!await processGasFee('NFT rewards claim')) {
+      if (!await processGasFee('rewards claim')) {
         return;
       }
       
       // Transfer rewards from treasury
       if (transferFromTreasury(totalRewards)) {
         // Reset staking times after claim
-        stakedNFTsData.forEach(nft => {
-          nft.stakedTime = Date.now();
-        });
+        if (nftRewards > 0) {
+          stakedNFTsData.forEach(nft => {
+            nft.stakedTime = Date.now();
+          });
+          lastRewardClaim = Date.now();
+        }
         
-        lastRewardClaim = Date.now();
+        // Reset volume rewards
+        if (volumeRewards > 0) {
+          volumeRewardsClaimable = 0;
+          saveUserTradingVolume();
+        }
+        
+        // Reset learning points
+        if (learningPointsRewards > 0) {
+          mogalandPoints = 0;
+        }
+        
         showSection('nft');
-        showNotification(`✅ Claimed ${totalRewards.toFixed(4)} USDC rewards | Gas: ${GAS_FEE_ETH} ETH`);
-        console.log(`[NFT] Claimed ${totalRewards.toFixed(4)} USDC rewards`);
+        showNotification(
+          `✅ Claimed ${totalRewards.toFixed(4)} USDC total!<br>` + 
+          breakdown.join('<br>') + 
+          `<br>Gas: ${GAS_FEE_ETH} ETH`,
+          false
+        );
+        console.log(`[Rewards] Total claimed: ${totalRewards.toFixed(4)} USDC (${breakdown.join(', ')})`);
       }
     }
     
@@ -6762,6 +6863,62 @@
 
       document.querySelectorAll('#plumeBalance').forEach(el => el.textContent = parseFloat(plumeBalance).toFixed(4));
     }
+
+    async function updateSelectedTokenBalance() {
+      const fromToken = document.getElementById('fromTokenSelect')?.value || 'ETH';
+      const balanceEl = document.getElementById('plumeBalance');
+      
+      if (!balanceEl) return;
+      
+      if (!provider || !userAddress) {
+        balanceEl.textContent = '0.0000';
+        return;
+      }
+      
+      try {
+        let balance = 0;
+        
+        if (fromToken === 'ETH') {
+          const balanceWei = await provider.getBalance(userAddress);
+          balance = parseFloat(ethers.utils.formatEther(balanceWei));
+        } else {
+          // Get token contract address
+          const tokenAddresses = {
+            'USDC': USDC_SEPOLIA,
+            'USDT': USDT_SEPOLIA,
+            'LINK': LINK_SEPOLIA,
+            'WBTC': WBTC_SEPOLIA,
+            'AAVE': AAVE_SEPOLIA,
+            'EURO': EURO_SEPOLIA
+          };
+          
+          // Get token decimals
+          const tokenDecimals = {
+            'USDC': 6,
+            'USDT': 6,
+            'LINK': 18,
+            'WBTC': 8,
+            'AAVE': 18,
+            'EURO': 6
+          };
+          
+          const tokenAddress = tokenAddresses[fromToken];
+          const decimals = tokenDecimals[fromToken] || 18;
+          
+          if (tokenAddress) {
+            const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
+            const balanceRaw = await tokenContract.balanceOf(userAddress);
+            balance = parseFloat(ethers.utils.formatUnits(balanceRaw, decimals));
+          }
+        }
+        
+        balanceEl.textContent = balance.toFixed(4);
+      } catch (err) {
+        console.error('[Swap] Error fetching token balance:', err);
+        balanceEl.textContent = 'Error';
+      }
+    }
+    window.updateSelectedTokenBalance = updateSelectedTokenBalance;
 
     function updateSwapEstimate() {
       const fromAmt = parseFloat(document.getElementById('fromInput')?.value) || 0;
@@ -7345,6 +7502,120 @@
     }
     
     } // End of startApp()
+
+    // Helper function to calculate total claimable rewards
+    function calculateTotalClaimableRewards() {
+      const nftRewards = (typeof calculateTotalRewards === 'function') ? calculateTotalRewards() : 0;
+      const volumeRewards = (typeof volumeRewardsClaimable !== 'undefined') ? volumeRewardsClaimable : 0;
+      const learningRewards = (typeof mogalandPoints !== 'undefined' && typeof LEARNING_POINTS_TO_USDC_RATE !== 'undefined') 
+        ? mogalandPoints * LEARNING_POINTS_TO_USDC_RATE 
+        : 0;
+      
+      return {
+        nft: nftRewards,
+        volume: volumeRewards,
+        learning: learningRewards,
+        total: nftRewards + volumeRewards + learningRewards
+      };
+    }
+
+    // Volume Leaderboard Function (Global - always available)
+    window.showVolumeLeaderboard = function() {
+      // Create modal
+      const modal = document.createElement('div');
+      modal.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); display:flex; justify-content:center; align-items:center; z-index:10000; padding:20px; overflow-y:auto;';
+      
+      const content = document.createElement('div');
+      content.style.cssText = 'background:linear-gradient(135deg,#1e293b 0%,#0f172a 100%); padding:30px; border-radius:20px; max-width:900px; width:100%; border:2px solid #fbbf24; box-shadow:0 20px 60px rgba(251,191,36,0.3); max-height:90vh; overflow-y:auto;';
+      
+      // User's volume stats - use global variables that may not be defined yet
+      const userTotalVolume = (typeof userTradingVolume !== 'undefined' && userTradingVolume.total) || 0;
+      const userClaimable = (typeof volumeRewardsClaimable !== 'undefined' && volumeRewardsClaimable) || 0;
+      const cryptoVol = (typeof userTradingVolume !== 'undefined' && userTradingVolume.crypto) || 0;
+      const stocksVol = (typeof userTradingVolume !== 'undefined' && userTradingVolume.stocks) || 0;
+      const commoditiesVol = (typeof userTradingVolume !== 'undefined' && userTradingVolume.commodities) || 0;
+      const forexVol = (typeof userTradingVolume !== 'undefined' && userTradingVolume.forex) || 0;
+      const sportsVol = (typeof userTradingVolume !== 'undefined' && userTradingVolume.sports) || 0;
+      
+      content.innerHTML = `
+        <div style="text-align:center; margin-bottom:30px;">
+          <h2 style="color:#fbbf24; font-size:2em; margin-bottom:10px;">🏆 Trading Volume Leaderboard</h2>
+          <p style="color:#94a3b8; font-size:1.1em;">Top traders by total trading volume across all markets</p>
+        </div>
+        
+        <!-- Your Stats Card -->
+        <div style="background:linear-gradient(135deg,rgba(251,191,36,0.15),rgba(245,158,11,0.1)); border:2px solid #fbbf24; border-radius:16px; padding:24px; margin-bottom:30px;">
+          <h3 style="color:#fbbf24; text-align:center; margin-bottom:20px;">📊 Your Trading Statistics</h3>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:16px; margin-bottom:20px;">
+            <div style="text-align:center;">
+              <div style="color:#94a3b8; font-size:0.9em; margin-bottom:4px;">Crypto</div>
+              <div style="color:#60a5fa; font-size:1.3em; font-weight:bold;">${cryptoVol.toFixed(2)}</div>
+            </div>
+            <div style="text-align:center;">
+              <div style="color:#94a3b8; font-size:0.9em; margin-bottom:4px;">Stocks</div>
+              <div style="color:#10b981; font-size:1.3em; font-weight:bold;">${stocksVol.toFixed(2)}</div>
+            </div>
+            <div style="text-align:center;">
+              <div style="color:#94a3b8; font-size:0.9em; margin-bottom:4px;">Commodities</div>
+              <div style="color:#f59e0b; font-size:1.3em; font-weight:bold;">${commoditiesVol.toFixed(2)}</div>
+            </div>
+            <div style="text-align:center;">
+              <div style="color:#94a3b8; font-size:0.9em; margin-bottom:4px;">Forex</div>
+              <div style="color:#8b5cf6; font-size:1.3em; font-weight:bold;">${forexVol.toFixed(2)}</div>
+            </div>
+            <div style="text-align:center;">
+              <div style="color:#94a3b8; font-size:0.9em; margin-bottom:4px;">Sports</div>
+              <div style="color:#ec4899; font-size:1.3em; font-weight:bold;">${sportsVol.toFixed(2)}</div>
+            </div>
+          </div>
+          <div style="border-top:1px solid rgba(251,191,36,0.3); padding-top:16px; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <div style="color:#94a3b8; font-size:0.9em;">Total Volume</div>
+              <div style="color:#fbbf24; font-size:1.8em; font-weight:bold;">${userTotalVolume.toFixed(2)} USDC</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="color:#94a3b8; font-size:0.9em;">Claimable Rewards</div>
+              <div style="color:#10b981; font-size:1.8em; font-weight:bold;">${userClaimable.toFixed(4)} USDC</div>
+            </div>
+          </div>
+          <div style="margin-top:16px; padding:12px; background:rgba(16,185,129,0.1); border-radius:8px; text-align:center;">
+            <p style="color:#10b981; font-size:0.95em; margin:0;">
+              💡 <strong>Earn 0.1%</strong> of your trading volume as claimable USDC rewards!<br>
+              <span style="font-size:0.85em; opacity:0.9;">Claim your rewards in the NFT Staking section</span>
+            </p>
+          </div>
+        </div>
+        
+        <!-- Global Leaderboard -->
+        <div style="background:rgba(15,23,42,0.6); border:1px solid #334155; border-radius:12px; padding:20px;">
+          <h3 style="color:#60a5fa; margin-bottom:16px; text-align:center;">🌐 Global Top Traders</h3>
+          <div style="color:#94a3b8; text-align:center; padding:40px; font-size:1.1em;">
+            <div style="font-size:3em; margin-bottom:16px;">🏗️</div>
+            <p>Global leaderboard coming soon!</p>
+            <p style="font-size:0.9em; margin-top:12px; opacity:0.8;">
+              Keep trading to build your volume stats.<br>
+              Rankings will be displayed when competitive mode launches.
+            </p>
+          </div>
+        </div>
+        
+        <button id="closeLeaderboardBtn" 
+                style="width:100%; margin-top:24px; padding:16px; background:linear-gradient(90deg,#ef4444,#dc2626); color:white; border:none; border-radius:12px; font-size:1.1em; font-weight:600; cursor:pointer; transition:all 0.3s;">
+          Close
+        </button>
+      `;
+      
+      modal.appendChild(content);
+      document.body.appendChild(modal);
+      
+      // Close button click handler
+      document.getElementById('closeLeaderboardBtn').addEventListener('click', () => modal.remove());
+      
+      // Click outside to close
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) modal.remove();
+      });
+    }
 
     // Init - Wait for ethers to load, then start app
     if (document.readyState === 'loading') {
