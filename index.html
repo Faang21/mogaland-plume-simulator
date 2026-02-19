@@ -1369,8 +1369,9 @@
     
     // Price update constants
     const PRICE_UPDATE_CONFIG = {
-      MIN_CHANGE_THRESHOLD_PERCENT: 0.001, // 0.1% minimum price change to update (dynamic)
-      UPDATE_INTERVAL_MS: 5000 // Update prices every 5 seconds
+      MIN_CHANGE_THRESHOLD_RATIO: 0.001, // 0.1% minimum price change to update (as decimal)
+      UPDATE_INTERVAL_MS: 5000, // Update prices every 5 seconds
+      CHAINLINK_STALENESS_THRESHOLD_SECONDS: 3600 // Reject Chainlink data older than 1 hour
     };
     
     // Price simulation constants
@@ -3318,6 +3319,11 @@
       // Add more as needed
     };
 
+    // Helper function to calculate dynamic price change threshold
+    function calculatePriceChangeThreshold(currentPrice) {
+      return currentPrice * PRICE_UPDATE_CONFIG.MIN_CHANGE_THRESHOLD_RATIO;
+    }
+
     // Function to fetch price from Chainlink
     async function fetchChainlinkPrice(symbol) {
       try {
@@ -3333,13 +3339,20 @@
         }
 
         const priceFeed = new ethers.Contract(feedAddress, CHAINLINK_AGGREGATOR_V3_ABI, provider);
-        const [, answer, , updatedAt] = await priceFeed.latestRoundData();
+        const [roundId, answer, , updatedAt, answeredInRound] = await priceFeed.latestRoundData();
         const decimals = await priceFeed.decimals();
         
-        // Check if data is stale (older than 1 hour)
+        // Check if data is stale (older than configured threshold)
         const currentTime = Math.floor(Date.now() / 1000);
-        if (currentTime - updatedAt > 3600) {
-          console.log(`[Chainlink] Price data for ${symbol} is stale (${currentTime - updatedAt}s old)`);
+        const dataAge = currentTime - updatedAt;
+        if (dataAge > PRICE_UPDATE_CONFIG.CHAINLINK_STALENESS_THRESHOLD_SECONDS) {
+          console.log(`[Chainlink] Price data for ${symbol} is stale (${dataAge}s old)`);
+          return null;
+        }
+        
+        // Additional staleness check: answeredInRound should be >= roundId
+        if (answeredInRound < roundId) {
+          console.log(`[Chainlink] Price data for ${symbol} may be stale (answeredInRound < roundId)`);
           return null;
         }
         
@@ -5495,7 +5508,7 @@
                   const now = Date.now();
                   
                   // Dynamic threshold: 0.1% of current price
-                  const changeThreshold = last.c * PRICE_UPDATE_CONFIG.MIN_CHANGE_THRESHOLD_PERCENT;
+                  const changeThreshold = calculatePriceChangeThreshold(last.c);
                   
                   // If price has changed significantly, add new candle with real data
                   if (Math.abs(last.c - chainlinkPrice) > changeThreshold) {
@@ -5559,7 +5572,7 @@
                     const now = Date.now();
                     
                     // Dynamic threshold: 0.1% of current price
-                    const changeThreshold = last.c * PRICE_UPDATE_CONFIG.MIN_CHANGE_THRESHOLD_PERCENT;
+                    const changeThreshold = calculatePriceChangeThreshold(last.c);
                     
                     // If price has changed significantly, add new candle with real data
                     if (Math.abs(last.c - price) > changeThreshold) {
