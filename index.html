@@ -3438,10 +3438,17 @@
     let volumeRewardsClaimable = 0; // Accumulated USDC rewards from trading volume
     let leaderboardData = []; // Global leaderboard data
     const VOLUME_TO_REWARD_RATE = 0.001; // 0.1% of trading volume converted to claimable USDC
-    const LEARNING_POINTS_TO_USDC_RATE = 0.001; // 1000 points = 1 USDC
+    const LEARNING_POINTS_TO_USDC_RATE = 0.001; // 1 point = 0.001 USDC (1000 points = 1 USDC)
 
     function updateTradingVolume(category, volumeUSDC) {
       if (!userAddress) return;
+      
+      // Validate category
+      const validCategories = ['crypto', 'stocks', 'commodities', 'forex', 'sports'];
+      if (!validCategories.includes(category)) {
+        console.warn(`[Volume] Invalid category: ${category}, defaulting to crypto`);
+        category = 'crypto';
+      }
       
       userTradingVolume[category] += volumeUSDC;
       userTradingVolume.total += volumeUSDC;
@@ -5169,7 +5176,7 @@
           );
           
           // Track trading volume for leaderboard
-          const category = currentTab || 'crypto'; // Get current market category
+          const category = currentTab || 'crypto'; // Get current market category with fallback
           updateTradingVolume(category, amount);
           
           document.getElementById('positionAmount').value = '';
@@ -7496,6 +7503,22 @@
     
     } // End of startApp()
 
+    // Helper function to calculate total claimable rewards
+    function calculateTotalClaimableRewards() {
+      const nftRewards = (typeof calculateTotalRewards === 'function') ? calculateTotalRewards() : 0;
+      const volumeRewards = (typeof volumeRewardsClaimable !== 'undefined') ? volumeRewardsClaimable : 0;
+      const learningRewards = (typeof mogalandPoints !== 'undefined' && typeof LEARNING_POINTS_TO_USDC_RATE !== 'undefined') 
+        ? mogalandPoints * LEARNING_POINTS_TO_USDC_RATE 
+        : 0;
+      
+      return {
+        nft: nftRewards,
+        volume: volumeRewards,
+        learning: learningRewards,
+        total: nftRewards + volumeRewards + learningRewards
+      };
+    }
+
     // Volume Leaderboard Function (Global - always available)
     window.showVolumeLeaderboard = function() {
       // Create modal
@@ -7576,7 +7599,7 @@
           </div>
         </div>
         
-        <button onclick="this.closest('div[style*=\\\"position:fixed\\\"]').remove()" 
+        <button id="closeLeaderboardBtn" 
                 style="width:100%; margin-top:24px; padding:16px; background:linear-gradient(90deg,#ef4444,#dc2626); color:white; border:none; border-radius:12px; font-size:1.1em; font-weight:600; cursor:pointer; transition:all 0.3s;">
           Close
         </button>
@@ -7584,6 +7607,9 @@
       
       modal.appendChild(content);
       document.body.appendChild(modal);
+      
+      // Close button click handler
+      document.getElementById('closeLeaderboardBtn').addEventListener('click', () => modal.remove());
       
       // Click outside to close
       modal.addEventListener('click', (e) => {
