@@ -1369,7 +1369,7 @@
     
     // Price update constants
     const PRICE_UPDATE_CONFIG = {
-      MIN_CHANGE_THRESHOLD_RATIO: 0.001, // 0.1% minimum price change to update (as decimal)
+      MIN_CHANGE_THRESHOLD_RATIO: 0.001, // 0.1% minimum price change to update (as decimal ratio: 0.001 = 0.1%)
       UPDATE_INTERVAL_MS: 5000, // Update prices every 5 seconds
       CHAINLINK_STALENESS_THRESHOLD_SECONDS: 3600 // Reject Chainlink data older than 1 hour
     };
@@ -3350,7 +3350,8 @@
           return null;
         }
         
-        // Additional staleness check: answeredInRound should be >= roundId
+        // Additional staleness check: if answeredInRound < roundId, 
+        // the price feed has not been updated in the current round, indicating stale data
         if (answeredInRound < roundId) {
           console.log(`[Chainlink] Price data for ${symbol} may be stale (answeredInRound < roundId)`);
           return null;
@@ -3369,7 +3370,7 @@
 
     // Function to check if Chainlink feed is available for asset
     function hasChainlinkFeed(symbol) {
-      return CHAINLINK_PRICE_FEEDS.hasOwnProperty(symbol);
+      return symbol in CHAINLINK_PRICE_FEEDS;
     }
 
     const questions = [
