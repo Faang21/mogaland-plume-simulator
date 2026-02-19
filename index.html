@@ -5341,6 +5341,10 @@
               txHash: tx.hash
             });
             
+            // Track trading volume for leaderboard (closing trade)
+            const category = position.asset?.category || currentTab || 'crypto';
+            updateTradingVolume(category, position.amount);
+            
             // Remove from open positions
             openPositions.splice(idx, 1);
             
@@ -6447,9 +6451,21 @@
       
       const claimed = nftRewards;
       nftRewards = 0;
+      
+      // Reset staking times for all staked NFTs to prevent reward recalculation
+      const now = Date.now();
+      stakedNFTsData.forEach(nft => {
+        nft.stakedTime = now;
+      });
+      
+      // Save updated staking data to localStorage
+      if (userAddress) {
+        localStorage.setItem(`stakedNFTs_${userAddress}`, JSON.stringify(stakedNFTsData));
+      }
+      
       showSection('nft');
       showNotification(`✅ Claimed ${claimed.toFixed(2)} PLUME rewards | Gas: ${GAS_FEE_ETH} ETH`);
-      console.log(`[NFT] Claimed ${claimed.toFixed(2)} PLUME rewards with gas fee`);
+      console.log(`[NFT] Claimed ${claimed.toFixed(2)} PLUME rewards with gas fee. Reset staking times for ${stakedNFTsData.length} NFTs.`);
     }
 
     // === NFT Web3 Integration Functions ===
