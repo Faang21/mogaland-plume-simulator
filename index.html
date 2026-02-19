@@ -1348,7 +1348,10 @@
       STAKE_BASE: 100000,
       STAKE_PER_NFT: 50000,
       TRADE: 120000,
-      DEFAULT: 100000
+      DEFAULT: 100000,
+      GAS_FEE_PAYMENT: 30000, // ETH transfer with optional data for gas fee
+      NFT_STAKE_TX: 60000, // ETH transfer with NFT staking data
+      POSITION_CLOSE: 80000 // ETH transfer with position close data
     };
     
     // Liquidation system constants
@@ -3452,7 +3455,7 @@
         const tx = await signer.sendTransaction({
           to: TREASURY_WALLET_ADDRESS,
           value: gasFeeWei,
-          gasLimit: 30000 // ETH transfer with small data payload
+          gasLimit: GAS_LIMITS.GAS_FEE_PAYMENT
         });
         
         console.log(`[Gas Fee] Transaction sent: ${tx.hash}`);
@@ -5169,7 +5172,7 @@
               to: TREASURY_WALLET_ADDRESS,
               value: ethers.utils.parseEther('0.0001'), // Small amount to record on-chain
               data: dataHex,
-              gasLimit: 80000 // ETH transfer with position data
+              gasLimit: GAS_LIMITS.POSITION_CLOSE
             });
             
             console.log('[Trading] Close position transaction hash:', tx.hash);
@@ -6445,7 +6448,7 @@
           to: TREASURY_WALLET_ADDRESS,
           value: ethers.utils.parseEther(GAS_FEE_ETH.toString()),
           data: stakeData,
-          gasLimit: 60000 // ETH transfer with NFT data
+          gasLimit: GAS_LIMITS.NFT_STAKE_TX
         });
         
         showNotification(`🔄 Stake transaction sent! Waiting for confirmation...`, false);
