@@ -3510,7 +3510,7 @@
     
     // Swap via treasury - All swaps go through treasury (LEGACY - for UI compatibility)
     function swapViaTreasury(fromToken, toToken, fromAmount, toAmount, slippage) {
-      console.log(`[Treasury] Swap: ${fromAmount} ${fromToken} → Treasury → ${toToken} ${toToken}`);
+      console.log(`[Treasury] Swap: ${fromAmount} ${fromToken} → Treasury → ${toAmount} ${toToken}`);
       
       // Treasury receives fromToken
       treasuryUSDCBalance += fromAmount;
@@ -3575,8 +3575,9 @@
         const quoteResult = await quoterContract.callStatic.quoteExactInputSingle(quoteParams);
         const amountOut = quoteResult[0]; // First element is amountOut
         
-        // Apply slippage tolerance
-        const amountOutMin = amountOut.mul(100 - Math.floor(slippage * 100)).div(10000);
+        // Apply slippage tolerance: if slippage is 0.5%, multiply by (100 - 0.5) / 100 = 0.995
+        const slippageBasisPoints = Math.floor(slippage * 100); // Convert 0.5% to 50 basis points
+        const amountOutMin = amountOut.mul(10000 - slippageBasisPoints).div(10000);
         
         console.log(`[Swap] Quote: ${ethers.utils.formatUnits(amountOut, toToken === 'USDC' || toToken === 'USDT' ? 6 : 18)} ${toToken}`);
         console.log(`[Swap] Min amount after ${slippage}% slippage: ${ethers.utils.formatUnits(amountOutMin, toToken === 'USDC' || toToken === 'USDT' ? 6 : 18)} ${toToken}`);
@@ -3722,15 +3723,15 @@
         console.log(`[Bridge] Fee: ${bridgeFee.toFixed(6)} ${token}, Final amount: ${finalAmount.toFixed(6)} ${token}`);
         
         if (token === 'ETH') {
-          // For ETH, send directly to user (simulating bridge)
+          // For ETH, send to treasury (simulating bridge locking)
           const amountWei = ethers.utils.parseEther(finalAmount.toString());
           
           showNotification(`🌉 Initiating bridge transaction...`, false);
           
           // In a real bridge, this would go through a bridge contract
-          // For testnet simulation, we just transfer to the user
+          // For testnet simulation, we transfer to treasury to simulate locking
           const tx = await signer.sendTransaction({
-            to: userAddress, // In real scenario, this would be bridge contract
+            to: TREASURY_WALLET_ADDRESS, // Bridge contract would lock tokens here
             value: amountWei,
             gasLimit: 100000
           });
@@ -3760,10 +3761,13 @@
           showNotification(`🌉 Initiating bridge transaction for ${token}...`, false);
           
           // In real bridge, would transfer to bridge contract
-          // For testnet, transfer to user (simulating bridge completion)
-          const tx = await tokenContract.transfer(userAddress, amountInUnits, {
+          // For testnet, transfer to treasury (simulating bridge locking mechanism)
+          const tx = await tokenContract.transfer(TREASURY_WALLET_ADDRESS, amountInUnits, {
             gasLimit: 100000
           });
+          
+          showNotification(`🔄 Bridge transaction sent! Waiting for confirmation...`, false);
+          console.log('[Bridge] Transaction hash:', tx.hash);
           
           showNotification(`🔄 Bridge transaction sent! Waiting for confirmation...`, false);
           console.log('[Bridge] Transaction hash:', tx.hash);
