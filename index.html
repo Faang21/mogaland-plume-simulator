@@ -1367,6 +1367,12 @@
       CHECK_INTERVAL_MS: 5000 // Check for liquidations every 5 seconds
     };
     
+    // Price update constants
+    const PRICE_UPDATE_CONFIG = {
+      MIN_CHANGE_THRESHOLD_PERCENT: 0.001, // 0.1% minimum price change to update (dynamic)
+      UPDATE_INTERVAL_MS: 5000 // Update prices every 5 seconds
+    };
+    
     // Price simulation constants
     const SIMULATED_PRICE_VARIATION = 0.02; // 2% price variation for fallback when API unavailable
     
@@ -3327,8 +3333,15 @@
         }
 
         const priceFeed = new ethers.Contract(feedAddress, CHAINLINK_AGGREGATOR_V3_ABI, provider);
-        const [roundId, answer, startedAt, updatedAt, answeredInRound] = await priceFeed.latestRoundData();
+        const [, answer, , updatedAt] = await priceFeed.latestRoundData();
         const decimals = await priceFeed.decimals();
+        
+        // Check if data is stale (older than 1 hour)
+        const currentTime = Math.floor(Date.now() / 1000);
+        if (currentTime - updatedAt > 3600) {
+          console.log(`[Chainlink] Price data for ${symbol} is stale (${currentTime - updatedAt}s old)`);
+          return null;
+        }
         
         // Convert answer to price with proper decimals
         const price = parseFloat(ethers.utils.formatUnits(answer, decimals));
@@ -5481,8 +5494,11 @@
                   const last = priceHistory[priceHistory.length - 1];
                   const now = Date.now();
                   
-                  // If price has changed, add new candle with real data
-                  if (Math.abs(last.c - chainlinkPrice) > 0.01) {
+                  // Dynamic threshold: 0.1% of current price
+                  const changeThreshold = last.c * PRICE_UPDATE_CONFIG.MIN_CHANGE_THRESHOLD_PERCENT;
+                  
+                  // If price has changed significantly, add new candle with real data
+                  if (Math.abs(last.c - chainlinkPrice) > changeThreshold) {
                     priceHistory.push({
                       x: now,
                       o: last.c,
@@ -5542,8 +5558,11 @@
                     const last = priceHistory[priceHistory.length - 1];
                     const now = Date.now();
                     
-                    // If price has changed, add new candle with real data
-                    if (Math.abs(last.c - price) > 0.01) {
+                    // Dynamic threshold: 0.1% of current price
+                    const changeThreshold = last.c * PRICE_UPDATE_CONFIG.MIN_CHANGE_THRESHOLD_PERCENT;
+                    
+                    // If price has changed significantly, add new candle with real data
+                    if (Math.abs(last.c - price) > changeThreshold) {
                       priceHistory.push({
                         x: now,
                         o: last.c,
