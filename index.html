@@ -2507,6 +2507,96 @@
       document.getElementById('backProfilePanel').classList.add('hidden');
     }
 
+    // Volume Leaderboard Function (Global)
+    window.showVolumeLeaderboard = function() {
+      // Create modal
+      const modal = document.createElement('div');
+      modal.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); display:flex; justify-content:center; align-items:center; z-index:10000; padding:20px; overflow-y:auto;';
+      
+      const content = document.createElement('div');
+      content.style.cssText = 'background:linear-gradient(135deg,#1e293b 0%,#0f172a 100%); padding:30px; border-radius:20px; max-width:900px; width:100%; border:2px solid #fbbf24; box-shadow:0 20px 60px rgba(251,191,36,0.3); max-height:90vh; overflow-y:auto;';
+      
+      // User's volume stats
+      const userTotalVolume = userTradingVolume.total || 0;
+      const userClaimable = volumeRewardsClaimable || 0;
+      
+      content.innerHTML = `
+        <div style="text-align:center; margin-bottom:30px;">
+          <h2 style="color:#fbbf24; font-size:2em; margin-bottom:10px;">🏆 Trading Volume Leaderboard</h2>
+          <p style="color:#94a3b8; font-size:1.1em;">Top traders by total trading volume across all markets</p>
+        </div>
+        
+        <!-- Your Stats Card -->
+        <div style="background:linear-gradient(135deg,rgba(251,191,36,0.15),rgba(245,158,11,0.1)); border:2px solid #fbbf24; border-radius:16px; padding:24px; margin-bottom:30px;">
+          <h3 style="color:#fbbf24; text-align:center; margin-bottom:20px;">📊 Your Trading Statistics</h3>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:16px; margin-bottom:20px;">
+            <div style="text-align:center;">
+              <div style="color:#94a3b8; font-size:0.9em; margin-bottom:4px;">Crypto</div>
+              <div style="color:#60a5fa; font-size:1.3em; font-weight:bold;">${(userTradingVolume.crypto || 0).toFixed(2)}</div>
+            </div>
+            <div style="text-align:center;">
+              <div style="color:#94a3b8; font-size:0.9em; margin-bottom:4px;">Stocks</div>
+              <div style="color:#10b981; font-size:1.3em; font-weight:bold;">${(userTradingVolume.stocks || 0).toFixed(2)}</div>
+            </div>
+            <div style="text-align:center;">
+              <div style="color:#94a3b8; font-size:0.9em; margin-bottom:4px;">Commodities</div>
+              <div style="color:#f59e0b; font-size:1.3em; font-weight:bold;">${(userTradingVolume.commodities || 0).toFixed(2)}</div>
+            </div>
+            <div style="text-align:center;">
+              <div style="color:#94a3b8; font-size:0.9em; margin-bottom:4px;">Forex</div>
+              <div style="color:#8b5cf6; font-size:1.3em; font-weight:bold;">${(userTradingVolume.forex || 0).toFixed(2)}</div>
+            </div>
+            <div style="text-align:center;">
+              <div style="color:#94a3b8; font-size:0.9em; margin-bottom:4px;">Sports</div>
+              <div style="color:#ec4899; font-size:1.3em; font-weight:bold;">${(userTradingVolume.sports || 0).toFixed(2)}</div>
+            </div>
+          </div>
+          <div style="border-top:1px solid rgba(251,191,36,0.3); padding-top:16px; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <div style="color:#94a3b8; font-size:0.9em;">Total Volume</div>
+              <div style="color:#fbbf24; font-size:1.8em; font-weight:bold;">${userTotalVolume.toFixed(2)} USDC</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="color:#94a3b8; font-size:0.9em;">Claimable Rewards</div>
+              <div style="color:#10b981; font-size:1.8em; font-weight:bold;">${userClaimable.toFixed(4)} USDC</div>
+            </div>
+          </div>
+          <div style="margin-top:16px; padding:12px; background:rgba(16,185,129,0.1); border-radius:8px; text-align:center;">
+            <p style="color:#10b981; font-size:0.95em; margin:0;">
+              💡 <strong>Earn 0.1%</strong> of your trading volume as claimable USDC rewards!<br>
+              <span style="font-size:0.85em; opacity:0.9;">Claim your rewards in the NFT Staking section</span>
+            </p>
+          </div>
+        </div>
+        
+        <!-- Global Leaderboard -->
+        <div style="background:rgba(15,23,42,0.6); border:1px solid #334155; border-radius:12px; padding:20px;">
+          <h3 style="color:#60a5fa; margin-bottom:16px; text-align:center;">🌐 Global Top Traders</h3>
+          <div style="color:#94a3b8; text-align:center; padding:40px; font-size:1.1em;">
+            <div style="font-size:3em; margin-bottom:16px;">🏗️</div>
+            <p>Global leaderboard coming soon!</p>
+            <p style="font-size:0.9em; margin-top:12px; opacity:0.8;">
+              Keep trading to build your volume stats.<br>
+              Rankings will be displayed when competitive mode launches.
+            </p>
+          </div>
+        </div>
+        
+        <button onclick="this.closest('div[style*=\\\"position:fixed\\\"]').remove()" 
+                style="width:100%; margin-top:24px; padding:16px; background:linear-gradient(90deg,#ef4444,#dc2626); color:white; border:none; border-radius:12px; font-size:1.1em; font-weight:600; cursor:pointer; transition:all 0.3s;">
+          Close
+        </button>
+      `;
+      
+      modal.appendChild(content);
+      document.body.appendChild(modal);
+      
+      // Click outside to close
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) modal.remove();
+      });
+    }
+
     function logoutUser() {
       // Clear wallet connection and persistence
       userAddress = null;
@@ -5290,97 +5380,6 @@
           }
         }
         window.closePosition = closePosition;
-
-        // Volume Leaderboard Function
-        function showVolumeLeaderboard() {
-          // Create modal
-          const modal = document.createElement('div');
-          modal.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); display:flex; justify-content:center; align-items:center; z-index:10000; padding:20px; overflow-y:auto;';
-          
-          const content = document.createElement('div');
-          content.style.cssText = 'background:linear-gradient(135deg,#1e293b 0%,#0f172a 100%); padding:30px; border-radius:20px; max-width:900px; width:100%; border:2px solid #fbbf24; box-shadow:0 20px 60px rgba(251,191,36,0.3); max-height:90vh; overflow-y:auto;';
-          
-          // User's volume stats
-          const userTotalVolume = userTradingVolume.total || 0;
-          const userClaimable = volumeRewardsClaimable || 0;
-          
-          content.innerHTML = `
-            <div style="text-align:center; margin-bottom:30px;">
-              <h2 style="color:#fbbf24; font-size:2em; margin-bottom:10px;">🏆 Trading Volume Leaderboard</h2>
-              <p style="color:#94a3b8; font-size:1.1em;">Top traders by total trading volume across all markets</p>
-            </div>
-            
-            <!-- Your Stats Card -->
-            <div style="background:linear-gradient(135deg,rgba(251,191,36,0.15),rgba(245,158,11,0.1)); border:2px solid #fbbf24; border-radius:16px; padding:24px; margin-bottom:30px;">
-              <h3 style="color:#fbbf24; text-align:center; margin-bottom:20px;">📊 Your Trading Statistics</h3>
-              <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:16px; margin-bottom:20px;">
-                <div style="text-align:center;">
-                  <div style="color:#94a3b8; font-size:0.9em; margin-bottom:4px;">Crypto</div>
-                  <div style="color:#60a5fa; font-size:1.3em; font-weight:bold;">${(userTradingVolume.crypto || 0).toFixed(2)}</div>
-                </div>
-                <div style="text-align:center;">
-                  <div style="color:#94a3b8; font-size:0.9em; margin-bottom:4px;">Stocks</div>
-                  <div style="color:#10b981; font-size:1.3em; font-weight:bold;">${(userTradingVolume.stocks || 0).toFixed(2)}</div>
-                </div>
-                <div style="text-align:center;">
-                  <div style="color:#94a3b8; font-size:0.9em; margin-bottom:4px;">Commodities</div>
-                  <div style="color:#f59e0b; font-size:1.3em; font-weight:bold;">${(userTradingVolume.commodities || 0).toFixed(2)}</div>
-                </div>
-                <div style="text-align:center;">
-                  <div style="color:#94a3b8; font-size:0.9em; margin-bottom:4px;">Forex</div>
-                  <div style="color:#8b5cf6; font-size:1.3em; font-weight:bold;">${(userTradingVolume.forex || 0).toFixed(2)}</div>
-                </div>
-                <div style="text-align:center;">
-                  <div style="color:#94a3b8; font-size:0.9em; margin-bottom:4px;">Sports</div>
-                  <div style="color:#ec4899; font-size:1.3em; font-weight:bold;">${(userTradingVolume.sports || 0).toFixed(2)}</div>
-                </div>
-              </div>
-              <div style="border-top:1px solid rgba(251,191,36,0.3); padding-top:16px; display:flex; justify-content:space-between; align-items:center;">
-                <div>
-                  <div style="color:#94a3b8; font-size:0.9em;">Total Volume</div>
-                  <div style="color:#fbbf24; font-size:1.8em; font-weight:bold;">${userTotalVolume.toFixed(2)} USDC</div>
-                </div>
-                <div style="text-align:right;">
-                  <div style="color:#94a3b8; font-size:0.9em;">Claimable Rewards</div>
-                  <div style="color:#10b981; font-size:1.8em; font-weight:bold;">${userClaimable.toFixed(4)} USDC</div>
-                </div>
-              </div>
-              <div style="margin-top:16px; padding:12px; background:rgba(16,185,129,0.1); border-radius:8px; text-align:center;">
-                <p style="color:#10b981; font-size:0.95em; margin:0;">
-                  💡 <strong>Earn 0.1%</strong> of your trading volume as claimable USDC rewards!<br>
-                  <span style="font-size:0.85em; opacity:0.9;">Claim your rewards in the NFT Staking section</span>
-                </p>
-              </div>
-            </div>
-            
-            <!-- Global Leaderboard -->
-            <div style="background:rgba(15,23,42,0.6); border:1px solid #334155; border-radius:12px; padding:20px;">
-              <h3 style="color:#60a5fa; margin-bottom:16px; text-align:center;">🌐 Global Top Traders</h3>
-              <div style="color:#94a3b8; text-align:center; padding:40px; font-size:1.1em;">
-                <div style="font-size:3em; margin-bottom:16px;">🏗️</div>
-                <p>Global leaderboard coming soon!</p>
-                <p style="font-size:0.9em; margin-top:12px; opacity:0.8;">
-                  Keep trading to build your volume stats.<br>
-                  Rankings will be displayed when competitive mode launches.
-                </p>
-              </div>
-            </div>
-            
-            <button onclick="this.closest('div[style*=\\\"position:fixed\\\"]').remove()" 
-                    style="width:100%; margin-top:24px; padding:16px; background:linear-gradient(90deg,#ef4444,#dc2626); color:white; border:none; border-radius:12px; font-size:1.1em; font-weight:600; cursor:pointer; transition:all 0.3s;">
-              Close
-            </button>
-          `;
-          
-          modal.appendChild(content);
-          document.body.appendChild(modal);
-          
-          // Click outside to close
-          modal.addEventListener('click', (e) => {
-            if (e.target === modal) modal.remove();
-          });
-        }
-        window.showVolumeLeaderboard = showVolumeLeaderboard;
 
         // DEPRECATED: Old function replaced by generateOHLCFromRealPrice
         // Kept for backward compatibility with initialization that doesn't fetch real price yet
