@@ -5207,7 +5207,8 @@
                   }
                   
                   // Track trading volume for leaderboard (closing bet)
-                  updateTradingVolume('sports', amount);
+                  const category = position.category || 'sports';
+                  updateTradingVolume(category, amount);
                   
                   openPositions.splice(idx, 1);
                   
