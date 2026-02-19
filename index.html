@@ -5149,7 +5149,8 @@
                 leverage: leverage,
                 openTime: new Date().toLocaleTimeString(),
                 isSportsBet: true,
-                txHash: tx.hash
+                txHash: tx.hash,
+                category: 'sports' // Store category for volume tracking
               };
 
               openPositions.push(position);
@@ -5161,6 +5162,9 @@
                 `🏆 Sports bet placed: ${selectedAsset.symbol} to ${betType}<br>${leverage}x leverage on ${amount.toFixed(2)} USDC<br>TX: <a href="https://sepolia.etherscan.io/tx/${tx.hash}" target="_blank" style="color:#60a5fa;">${tx.hash.slice(0, 10)}...</a>`,
                 false
               );
+              
+              // Track trading volume for leaderboard (opening bet)
+              updateTradingVolume('sports', amount);
               
               document.getElementById('positionAmount').value = '';
               document.getElementById('leverageInfo').style.display = 'none';
@@ -5202,6 +5206,10 @@
                     showNotification(`🏆 Match result: ${selectedAsset.symbol} - You lost $${amount.toFixed(2)} to treasury`, true);
                   }
                   
+                  // Track trading volume for leaderboard (closing bet)
+                  const category = position.category || 'sports';
+                  updateTradingVolume(category, amount);
+                  
                   openPositions.splice(idx, 1);
                   
                   updatePositionsDisplay();
@@ -5222,6 +5230,7 @@
             }
 
             // For regular trading (crypto, stocks, commodities, forex)
+            const category = currentTab || 'crypto'; // Save category for later tracking
             const position = {
               asset: selectedAsset,
               type: type,
@@ -5229,7 +5238,8 @@
               amount: amount,
               leverage: leverage,
               openTime: new Date().toLocaleTimeString(),
-              txHash: tx.hash
+              txHash: tx.hash,
+              category: category // Store category for volume tracking on close
             };
 
             openPositions.push(position);
@@ -5340,6 +5350,10 @@
               closeTime: new Date().toLocaleTimeString(),
               txHash: tx.hash
             });
+            
+            // Track trading volume for leaderboard (closing trade)
+            const category = position.category || currentTab || 'crypto';
+            updateTradingVolume(category, position.amount);
             
             // Remove from open positions
             openPositions.splice(idx, 1);
@@ -6447,9 +6461,21 @@
       
       const claimed = nftRewards;
       nftRewards = 0;
+      
+      // Reset staking times for all staked NFTs to prevent reward recalculation
+      const now = Date.now();
+      stakedNFTsData.forEach(nft => {
+        nft.stakedTime = now;
+      });
+      
+      // Save updated staking data to localStorage
+      if (userAddress) {
+        localStorage.setItem(`stakedNFTs_${userAddress}`, JSON.stringify(stakedNFTsData));
+      }
+      
       showSection('nft');
       showNotification(`✅ Claimed ${claimed.toFixed(2)} PLUME rewards | Gas: ${GAS_FEE_ETH} ETH`);
-      console.log(`[NFT] Claimed ${claimed.toFixed(2)} PLUME rewards with gas fee`);
+      console.log(`[NFT] Claimed ${claimed.toFixed(2)} PLUME rewards with gas fee. Reset staking times for ${stakedNFTsData.length} NFTs.`);
     }
 
     // === NFT Web3 Integration Functions ===
