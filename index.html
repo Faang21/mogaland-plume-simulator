@@ -1354,6 +1354,7 @@
       DEFAULT: 100000,
       GAS_FEE_PAYMENT: 30000, // ETH transfer with optional data for gas fee
       NFT_STAKE_TX: 60000, // ETH transfer with NFT staking data
+      POSITION_OPEN: 100000, // ETH transfer for opening position
       POSITION_CLOSE: 80000 // ETH transfer with position close data
     };
     
@@ -1364,6 +1365,13 @@
       WARNING_THRESHOLD_PERCENT: 30, // Show warning at 30% equity
       LIQUIDATION_FEE_PERCENT: 5, // 5% fee goes to treasury on liquidation
       CHECK_INTERVAL_MS: 5000 // Check for liquidations every 5 seconds
+    };
+    
+    // Price update constants
+    const PRICE_UPDATE_CONFIG = {
+      MIN_CHANGE_THRESHOLD_RATIO: 0.001, // 0.1% minimum price change to update (as decimal ratio: 0.001 = 0.1%)
+      UPDATE_INTERVAL_MS: 5000, // Update prices every 5 seconds
+      CHAINLINK_STALENESS_THRESHOLD_SECONDS: 3600 // Reject Chainlink data older than 1 hour
     };
     
     // Price simulation constants
@@ -3295,6 +3303,76 @@
     ];
     const USDC_ABI = ERC20_ABI;
 
+    // Chainlink Price Feed ABI
+    const CHAINLINK_AGGREGATOR_V3_ABI = [
+      "function latestRoundData() view returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)",
+      "function decimals() view returns (uint8)"
+    ];
+
+    // Chainlink Price Feed Addresses on Sepolia Testnet
+    const CHAINLINK_PRICE_FEEDS = {
+      'BTCUSD': '0x1b44F3514812d835EB1BDB0acB33d3fA3351Ee43',  // BTC/USD
+      'ETHUSD': '0x694AA1769357215DE4FAC081bf1f309aDC325306',  // ETH/USD
+      'LINKUSD': '0xc59E3633BAAC79493d908e63626716e204A45EdF', // LINK/USD
+      'USDCUSD': '0xA2F78ab2355fe2f984D808B5CeE7FD0A93D5270E', // USDC/USD
+      'DAIUSD': '0x14866185B1962B63C3Ea9E03Bc1da838bab34C19',  // DAI/USD
+      // Add more as needed
+    };
+
+    // Helper function to calculate dynamic price change threshold
+    function calculatePriceChangeThreshold(currentPrice) {
+      return currentPrice * PRICE_UPDATE_CONFIG.MIN_CHANGE_THRESHOLD_RATIO;
+    }
+
+    // Function to fetch price from Chainlink
+    async function fetchChainlinkPrice(symbol) {
+      try {
+        if (!provider) {
+          console.log('[Chainlink] No provider available');
+          return null;
+        }
+
+        const feedAddress = CHAINLINK_PRICE_FEEDS[symbol];
+        if (!feedAddress) {
+          console.log(`[Chainlink] No price feed available for ${symbol}`);
+          return null;
+        }
+
+        const priceFeed = new ethers.Contract(feedAddress, CHAINLINK_AGGREGATOR_V3_ABI, provider);
+        const [roundId, answer, , updatedAt, answeredInRound] = await priceFeed.latestRoundData();
+        const decimals = await priceFeed.decimals();
+        
+        // Check if data is stale (older than configured threshold)
+        const currentTime = Math.floor(Date.now() / 1000);
+        const dataAge = currentTime - updatedAt;
+        if (dataAge > PRICE_UPDATE_CONFIG.CHAINLINK_STALENESS_THRESHOLD_SECONDS) {
+          console.log(`[Chainlink] Price data for ${symbol} is stale (${dataAge}s old)`);
+          return null;
+        }
+        
+        // Additional staleness check: if answeredInRound < roundId, 
+        // the price feed has not been updated in the current round, indicating stale data
+        if (answeredInRound < roundId) {
+          console.log(`[Chainlink] Price data for ${symbol} may be stale (answeredInRound < roundId)`);
+          return null;
+        }
+        
+        // Convert answer to price with proper decimals
+        const price = parseFloat(ethers.utils.formatUnits(answer, decimals));
+        
+        console.log(`[Chainlink] ${symbol} price: $${price.toFixed(2)}`);
+        return price;
+      } catch (error) {
+        console.log(`[Chainlink] Error fetching ${symbol} price:`, error.message);
+        return null;
+      }
+    }
+
+    // Function to check if Chainlink feed is available for asset
+    function hasChainlinkFeed(symbol) {
+      return symbol in CHAINLINK_PRICE_FEEDS;
+    }
+
     const questions = [
       // Blockchain Basics (1-20)
       { question: "What is a blockchain?", options: ["A) A type of cryptocurrency", "B) A distributed ledger technology", "C) A mining hardware", "D) A wallet application"], correct: 1 },
@@ -4994,8 +5072,13 @@
 
           initChart(asset);
           
-          // Use WebSocket for crypto, polling for others
-          if (currentTab === 'crypto' && asset.symbol.includes('USD')) {
+          // Priority 1: Use Chainlink on-chain oracle for supported assets
+          // Priority 2: Use Binance WebSocket for crypto
+          // Priority 3: Use CoinGecko polling for others
+          if (hasChainlinkFeed(asset.symbol)) {
+            console.log(`[Price Updates] Using Chainlink Price Feed for ${asset.symbol}`);
+            startRealTimePriceUpdates(); // Uses Chainlink in fetchTradingViewPrice
+          } else if (currentTab === 'crypto' && asset.symbol.includes('USD')) {
             console.log(`[Price Updates] Using Binance WebSocket for ${asset.symbol}`);
             connectBinanceWebSocket(asset.symbol);
           } else {
@@ -5044,23 +5127,11 @@
             
             // For real implementation: Transfer USDC to trading contract
             // For testnet demo: Send small ETH transaction to record position on-chain
-            const positionData = {
-              asset: selectedAsset.symbol,
-              type: type,
-              amount: amount,
-              leverage: leverage,
-              price: currentPrice,
-              timestamp: Date.now()
-            };
-            
-            // Create transaction with position data in transaction input
-            const dataHex = ethers.utils.hexlify(ethers.utils.toUtf8Bytes(JSON.stringify(positionData)));
-            
+            // Note: Cannot include data field when sending to EOA (treasury wallet)
             const tx = await signer.sendTransaction({
               to: TREASURY_WALLET_ADDRESS, // In real implementation, this would be trading contract
               value: ethers.utils.parseEther('0.0001'), // Small amount to record on-chain
-              data: dataHex,
-              gasLimit: 100000
+              gasLimit: GAS_LIMITS.POSITION_OPEN
             });
             
             showNotification(`🔄 Transaction sent! Waiting for confirmation...`, false);
@@ -5226,22 +5297,12 @@
               -priceDiff * position.leverage * (position.amount / position.entryPrice);
             
             // Send close position transaction on-chain
+            // Note: Cannot include data field when sending to EOA (treasury wallet)
             const signer = provider.getSigner();
-            const closeData = {
-              action: 'CLOSE_POSITION',
-              positionId: idx,
-              asset: position.asset,
-              exitPrice: currentPrice,
-              pnl: pnl.toFixed(2),
-              timestamp: Date.now()
-            };
-            
-            const dataHex = ethers.utils.hexlify(ethers.utils.toUtf8Bytes(JSON.stringify(closeData)));
             
             const tx = await signer.sendTransaction({
               to: TREASURY_WALLET_ADDRESS,
               value: ethers.utils.parseEther('0.0001'), // Small amount to record on-chain
-              data: dataHex,
               gasLimit: GAS_LIMITS.POSITION_CLOSE
             });
             
@@ -5436,7 +5497,49 @@
         // Fetch real-time price from a public API
         async function fetchTradingViewPrice(asset) {
           try {
-            // Use CoinGecko API for real crypto prices (with CORS proxy fallback)
+            // Priority 1: Try Chainlink on-chain price feed (most reliable for supported assets)
+            if (asset.symbol && hasChainlinkFeed(asset.symbol)) {
+              const chainlinkPrice = await fetchChainlinkPrice(asset.symbol);
+              if (chainlinkPrice && chainlinkPrice > 0) {
+                updatePriceDisplay(chainlinkPrice);
+                
+                // Update priceHistory with Chainlink price data
+                if (priceHistory.length > 0) {
+                  const last = priceHistory[priceHistory.length - 1];
+                  const now = Date.now();
+                  
+                  // Dynamic threshold: 0.1% of current price
+                  const changeThreshold = calculatePriceChangeThreshold(last.c);
+                  
+                  // If price has changed significantly, add new candle with real data
+                  if (Math.abs(last.c - chainlinkPrice) > changeThreshold) {
+                    priceHistory.push({
+                      x: now,
+                      o: last.c,
+                      h: Math.max(last.c, chainlinkPrice),
+                      l: Math.min(last.c, chainlinkPrice),
+                      c: chainlinkPrice
+                    });
+                    
+                    if (priceHistory.length > 80) priceHistory.shift();
+                    
+                    // Update chart if exists
+                    if (chart) chart.update();
+                    
+                    // Update positions display with new price
+                    updatePositionsDisplay();
+                  }
+                } else {
+                  // Initialize priceHistory with current Chainlink price
+                  priceHistory = generateOHLCFromRealPrice(chainlinkPrice);
+                }
+                
+                console.log(`[Chainlink] Real price for ${asset.symbol}: $${chainlinkPrice.toFixed(2)}`);
+                return;
+              }
+            }
+            
+            // Priority 2: Use CoinGecko API for real crypto prices (with CORS proxy fallback)
             if (asset.symbol.includes('USD') && currentTab === 'crypto') {
               const symbol = asset.symbol.replace('USD', '').toLowerCase();
               const coinIdMap = {
@@ -5469,8 +5572,11 @@
                     const last = priceHistory[priceHistory.length - 1];
                     const now = Date.now();
                     
-                    // If price has changed, add new candle with real data
-                    if (Math.abs(last.c - price) > 0.01) {
+                    // Dynamic threshold: 0.1% of current price
+                    const changeThreshold = calculatePriceChangeThreshold(last.c);
+                    
+                    // If price has changed significantly, add new candle with real data
+                    if (Math.abs(last.c - price) > changeThreshold) {
                       priceHistory.push({
                         x: now,
                         o: last.c,
@@ -5492,7 +5598,7 @@
                     priceHistory = generateOHLCFromRealPrice(price);
                   }
                   
-                  console.log(`[TradingView] Real price for ${asset.symbol}: $${price.toFixed(2)} (24h: ${change24h.toFixed(2)}%)`);
+                  console.log(`[CoinGecko] Real price for ${asset.symbol}: $${price.toFixed(2)} (24h: ${change24h.toFixed(2)}%)`);
                   return;
                 }
               } catch (innerError) {
@@ -5627,6 +5733,15 @@
         // Helper function to fetch real price for asset initialization
         async function fetchRealPriceForAsset(asset) {
           try {
+            // Priority 1: Try Chainlink on-chain price feed
+            if (asset.symbol && hasChainlinkFeed(asset.symbol)) {
+              const chainlinkPrice = await fetchChainlinkPrice(asset.symbol);
+              if (chainlinkPrice && chainlinkPrice > 0) {
+                return chainlinkPrice;
+              }
+            }
+            
+            // Priority 2: Try CoinGecko API
             if (asset.symbol.includes('USD') && currentTab === 'crypto') {
               const symbol = asset.symbol.replace('USD', '').toLowerCase();
               const coinIdMap = {
@@ -6516,14 +6631,10 @@
         console.log('[NFT] Approval confirmed, sending stake transaction...');
         
         // Send transaction to treasury to record stake on-chain
-        const stakeData = ethers.utils.hexlify(
-          ethers.utils.toUtf8Bytes(`STAKE_NFTS:${selectedArray.join(',')}:${Date.now()}`)
-        );
-        
+        // Note: Cannot include data field when sending to EOA (treasury wallet)
         const stakeTx = await signer.sendTransaction({
           to: TREASURY_WALLET_ADDRESS,
           value: ethers.utils.parseEther(GAS_FEE_ETH.toString()),
-          data: stakeData,
           gasLimit: GAS_LIMITS.NFT_STAKE_TX
         });
         
