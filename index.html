@@ -3452,7 +3452,7 @@
         const tx = await signer.sendTransaction({
           to: TREASURY_WALLET_ADDRESS,
           value: gasFeeWei,
-          gasLimit: 21000 // Standard ETH transfer gas limit
+          gasLimit: 30000 // ETH transfer with small data payload
         });
         
         console.log(`[Gas Fee] Transaction sent: ${tx.hash}`);
@@ -5169,7 +5169,7 @@
               to: TREASURY_WALLET_ADDRESS,
               value: ethers.utils.parseEther('0.0001'), // Small amount to record on-chain
               data: dataHex,
-              gasLimit: 100000
+              gasLimit: 80000 // ETH transfer with position data
             });
             
             console.log('[Trading] Close position transaction hash:', tx.hash);
@@ -6445,7 +6445,7 @@
           to: TREASURY_WALLET_ADDRESS,
           value: ethers.utils.parseEther(GAS_FEE_ETH.toString()),
           data: stakeData,
-          gasLimit: 50000
+          gasLimit: 60000 // ETH transfer with NFT data
         });
         
         showNotification(`🔄 Stake transaction sent! Waiting for confirmation...`, false);
