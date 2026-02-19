@@ -3559,6 +3559,23 @@
       if (savedRewards) {
         volumeRewardsClaimable = parseFloat(savedRewards);
       }
+      
+      // Load learning points
+      const savedPoints = localStorage.getItem(`mogalandPoints_${userAddress}`);
+      if (savedPoints) {
+        mogalandPoints = parseFloat(savedPoints);
+      }
+      
+      // Load staked NFTs data
+      const savedStakedNFTs = localStorage.getItem(`stakedNFTs_${userAddress}`);
+      if (savedStakedNFTs) {
+        try {
+          stakedNFTsData = JSON.parse(savedStakedNFTs);
+        } catch (e) {
+          console.error('[NFT] Error loading staked NFTs:', e);
+          stakedNFTsData = [];
+        }
+      }
     }
 
     function updateTreasuryDisplay() {
@@ -5947,6 +5964,11 @@
           if (amt > mogalandPoints) return showNotification("Not enough!", true);
 
           mogalandPoints -= amt;
+          
+          // Save updated points to localStorage
+          if (userAddress) {
+            localStorage.setItem(`mogalandPoints_${userAddress}`, mogalandPoints.toString());
+          }
 
           let timeLeft = 10;
           document.getElementById('timerDisplay').textContent = `Result in ${timeLeft}s`;
@@ -5959,6 +5981,12 @@
               if (win) {
                 const profit = Math.round(amt * (currentBet.odds - 1));
                 mogalandPoints += amt + profit;
+                
+                // Save updated points to localStorage
+                if (userAddress) {
+                  localStorage.setItem(`mogalandPoints_${userAddress}`, mogalandPoints.toString());
+                }
+                
                 showNotification(`WIN! +${profit} MOGA`, false);
               } else {
                 showNotification(`LOSE -${amt} MOGA`, true);
@@ -6781,6 +6809,11 @@
             nft.stakedTime = Date.now();
           });
           lastRewardClaim = Date.now();
+          
+          // Save updated staking data to localStorage
+          if (userAddress) {
+            localStorage.setItem(`stakedNFTs_${userAddress}`, JSON.stringify(stakedNFTsData));
+          }
         }
         
         // Reset volume rewards
@@ -6792,6 +6825,11 @@
         // Reset learning points
         if (learningPointsRewards > 0) {
           mogalandPoints = 0;
+          
+          // Save updated learning points to localStorage
+          if (userAddress) {
+            localStorage.setItem(`mogalandPoints_${userAddress}`, mogalandPoints.toString());
+          }
         }
         
         showSection('nft');
@@ -6827,6 +6865,12 @@
       // Transfer USDC from treasury
       if (transferFromTreasury(usdcAmount)) {
         mogalandPoints = 0;
+        
+        // Save updated points to localStorage
+        if (userAddress) {
+          localStorage.setItem(`mogalandPoints_${userAddress}`, mogalandPoints.toString());
+        }
+        
         showSection('nft');
         showNotification(`✅ Redeemed points for ${usdcAmount.toFixed(2)} USDC | Gas: ${GAS_FEE_ETH} ETH`);
         console.log(`[NFT] Redeemed points for ${usdcAmount.toFixed(2)} USDC`);
@@ -7241,6 +7285,11 @@
         mogalandPoints += 100;
         completedTasks++;
         
+        // Save updated points to localStorage
+        if (userAddress) {
+          localStorage.setItem(`mogalandPoints_${userAddress}`, mogalandPoints.toString());
+        }
+        
         // Add to answer history
         answerHistory.push({
           question: questionText,
@@ -7270,6 +7319,11 @@
       } else {
         const pointLoss = 100;
         mogalandPoints = Math.max(0, mogalandPoints - pointLoss);
+        
+        // Save updated points to localStorage
+        if (userAddress) {
+          localStorage.setItem(`mogalandPoints_${userAddress}`, mogalandPoints.toString());
+        }
         
         // Add to answer history
         answerHistory.push({
@@ -7513,6 +7567,12 @@
         
         // Deduct points immediately
         mogalandPoints -= pointsToConvert;
+        
+        // Save updated points to localStorage
+        if (userAddress) {
+          localStorage.setItem(`mogalandPoints_${userAddress}`, mogalandPoints.toString());
+        }
+        
         updatePointDisplay();
         
         // Check treasury balance and transfer USDC
