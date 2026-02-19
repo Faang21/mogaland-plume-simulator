@@ -5256,8 +5256,7 @@
             false
           );
           
-          // Track trading volume for leaderboard
-          const category = currentTab || 'crypto'; // Get current market category with fallback
+          // Track trading volume for leaderboard (use category already defined at line 5233)
           updateTradingVolume(category, amount);
           
           document.getElementById('positionAmount').value = '';
