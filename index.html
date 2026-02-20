@@ -1025,8 +1025,8 @@
     <div style="margin-bottom: 30px;">
       <h3 style="margin-bottom: 10px; color: #60a5fa; font-size: 1.2rem;">Select Network</h3>
       <div class="network-switcher" id="loginNetworkSwitcher" style="justify-content:center; margin-bottom:16px;">
-        <button class="network-switcher-btn active" id="loginNetBtn_sepolia"    onclick="selectLoginNetwork('sepolia')">🔵 ETH Sepolia</button>
-        <button class="network-switcher-btn"        id="loginNetBtn_educhain"   onclick="selectLoginNetwork('educhain')">🎓 EDU Chain</button>
+        <button class="network-switcher-btn active" id="loginNetBtn_sepolia"     onclick="selectLoginNetwork('sepolia')">🔵 ETH Sepolia</button>
+        <button class="network-switcher-btn"        id="loginNetBtn_educhain"    onclick="selectLoginNetwork('educhain')">🎓 EDU Testnet</button>
         <button class="network-switcher-btn"        id="loginNetBtn_basesepolia" onclick="selectLoginNetwork('basesepolia')">🔷 Base Sepolia</button>
       </div>
       <h3 style="margin-bottom: 15px; color: #60a5fa; font-size: 1.2rem;">Connect Wallet</h3>
@@ -1105,9 +1105,9 @@
       </div>
       <!-- Network Switcher (3 chains) -->
       <div class="network-switcher" id="networkSwitcher">
-        <button class="network-switcher-btn active" id="netBtn_sepolia"    onclick="switchNetwork('sepolia')">🔵 Sepolia</button>
-        <button class="network-switcher-btn"        id="netBtn_educhain"   onclick="switchNetwork('educhain')">🎓 EDU Chain</button>
-        <button class="network-switcher-btn"        id="netBtn_basesepolia" onclick="switchNetwork('basesepolia')">🔷 Base</button>
+        <button class="network-switcher-btn active" id="netBtn_sepolia"     onclick="switchNetwork('sepolia')">🔵 ETH Sepolia</button>
+        <button class="network-switcher-btn"        id="netBtn_educhain"    onclick="switchNetwork('educhain')">🎓 EDU Testnet</button>
+        <button class="network-switcher-btn"        id="netBtn_basesepolia" onclick="switchNetwork('basesepolia')">🔷 Base Sepolia</button>
       </div>
       <button class="top-btn" onclick="showVolumeLeaderboard()" style="background:linear-gradient(90deg,#fbbf24,#f59e0b); margin-left:8px;">
         🏆 Leaderboard
@@ -2797,7 +2797,8 @@
               showNotification(`⚠️ Could not auto-switch: ${switchError.message}`, true);
             }
           }
-          if (typeof fetchRealBalances === 'function') setTimeout(() => fetchRealBalances(), 800);
+          // Delay to allow the provider to settle after chain switch before re-fetching balances
+          if (typeof fetchRealBalances === 'function') setTimeout(() => fetchRealBalances(), BALANCE_REFRESH_DELAY_MS);
         }
       } else {
         showNotification(`🌐 Network set to ${net.name}. Connect your wallet to use it.`, false);
@@ -2858,8 +2859,8 @@
       const input = document.getElementById('ocidInput');
       if (!input) return;
       const value = input.value.trim();
-      // Basic validation: allow empty (to clear) or an Ethereum address / numeric ID
-      if (value && !/^(0x[0-9a-fA-F]{40}|\d+)$/.test(value)) {
+      // Basic validation: allow empty (to clear), Ethereum address, or numeric ID (max 20 digits)
+      if (value && !/^(0x[0-9a-fA-F]{40}|\d{1,20})$/.test(value)) {
         showNotification('⚠️ Please enter a valid OCID (Ethereum address or numeric ID)', true);
         return;
       }
