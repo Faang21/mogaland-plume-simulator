@@ -920,6 +920,9 @@
       background: #f8f9fa;
       color: #333;
     }
+    /* Transaction row hover effect (CSS instead of inline onmouseover/onmouseout) */
+    .tx-row { transition: background 0.15s; }
+    .tx-row:hover { background: rgba(59, 130, 246, 0.08); }
     
     /* Responsive Design Improvements */
     @media (max-width: 768px) {
@@ -2598,6 +2601,10 @@
           'Treasury': '🏛️', 'NFT Mint': '🎨', 'Stake': '🔒', 'Unstake': '🔓', 'Redeem': '💱', 'Default': '🔗'
         };
 
+        // Build a map of hash → tx entry for safe lookup (hash is unique per blockchain)
+        const txByHash = {};
+        txHistory.forEach(t => { if (t.hash) txByHash[t.hash] = t; });
+
         let html = `
           <div id="txFilterBar" style="display:flex;gap:6px;padding:10px 10px 0;flex-wrap:wrap;">
             ${networks.map(n => `
@@ -2611,17 +2618,16 @@
         if (filtered.length === 0) {
           html += `<div style="padding:30px;text-align:center;color:#64748b;font-size:0.9em;">No transactions for this network yet</div>`;
         } else {
-          filtered.slice(0, 50).forEach((tx, idx) => {
+          filtered.slice(0, MAX_TX_DISPLAY_ENTRIES).forEach(tx => {
             const icon = typeIcons[tx.type] || typeIcons['Default'];
             const date = new Date(tx.timestamp).toLocaleDateString('en-US', {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'});
             const netBadgeColor = tx.networkId === 'sepolia' ? '#3b82f6' : tx.networkId === 'educhain' ? '#a78bfa' : '#34d399';
-            // Use timestamp as a safe lookup key to avoid embedding JSON in HTML attributes
-            const tsKey = tx.timestamp;
+            // Use hex TX hash (sanitised: only hex chars) as the safe data attribute for lookup
+            const safeHash = tx.hash ? tx.hash.replace(/[^0-9a-fA-Fx]/g, '') : '';
             html += `
-              <div class="activity-item" 
-                   data-tx-ts="${tsKey}"
-                   style="display:flex;align-items:center;gap:12px;padding:12px;border-bottom:1px solid rgba(255,255,255,0.06);cursor:pointer;transition:background 0.15s;"
-                   onmouseover="this.style.background='rgba(59,130,246,0.08)'" onmouseout="this.style.background=''">
+              <div class="activity-item tx-row"
+                   data-tx-hash="${safeHash}"
+                   style="display:flex;align-items:center;gap:12px;padding:12px;border-bottom:1px solid rgba(255,255,255,0.06);cursor:pointer;transition:background 0.15s;">
                 <div style="width:36px;height:36px;border-radius:50%;background:rgba(59,130,246,0.15);display:flex;align-items:center;justify-content:center;font-size:1.1em;flex-shrink:0;">${icon}</div>
                 <div style="flex:1;min-width:0;">
                   <div style="font-weight:600;font-size:0.95em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${tx.type}</div>
@@ -2643,10 +2649,10 @@
         activityContainer.querySelectorAll('#txFilterBar button[data-net]').forEach(btn => {
           btn.addEventListener('click', () => renderList(btn.dataset.net));
         });
-        // Attach tx item click handlers safely to avoid inline JSON in HTML attributes
-        activityContainer.querySelectorAll('.activity-item[data-tx-ts]').forEach(el => {
-          const ts = parseInt(el.dataset.txTs);
-          const found = txHistory.find(t => t.timestamp === ts);
+        // Attach tx item click handlers using hash as unique key (no inline JSON)
+        activityContainer.querySelectorAll('.tx-row[data-tx-hash]').forEach(el => {
+          const hash = el.dataset.txHash;
+          const found = txByHash[hash];
           if (found) el.addEventListener('click', () => window.showTxDetail(found));
         });
       }
@@ -2683,7 +2689,7 @@
               <span style="color:#94a3b8;flex-shrink:0;">TX Hash</span>
               <div style="display:flex;align-items:center;gap:6px;min-width:0;">
                 <span style="font-family:monospace;color:#60a5fa;font-size:0.85em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${tx.hash ? tx.hash.slice(0,18)+'...' : 'N/A'}</span>
-                ${tx.hash ? `<button onclick="navigator.clipboard.writeText('${tx.hash}')" style="background:none;border:1px solid #334155;color:#94a3b8;padding:2px 6px;border-radius:4px;cursor:pointer;font-size:0.75em;flex-shrink:0;">Copy</button>` : ''}
+                ${tx.hash ? `<button id="txCopyHashBtn" data-copy-hash style="background:none;border:1px solid #334155;color:#94a3b8;padding:2px 6px;border-radius:4px;cursor:pointer;font-size:0.75em;flex-shrink:0;">Copy</button>` : ''}
               </div>
             </div>
             <div style="display:flex;justify-content:space-between;padding:10px;background:#0f172a;border-radius:8px;">
@@ -2720,6 +2726,17 @@
       document.body.appendChild(modal);
       document.getElementById('closeTxModal').addEventListener('click', () => modal.remove());
       modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+      // Attach copy button handler safely (avoids inline onclick with hash interpolation)
+      const copyBtn = modal.querySelector('#txCopyHashBtn');
+      if (copyBtn && tx.hash) {
+        copyBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          navigator.clipboard.writeText(tx.hash).then(() => {
+            copyBtn.textContent = '✓ Copied';
+            setTimeout(() => { copyBtn.textContent = 'Copy'; }, 1500);
+          }).catch(() => {});
+        });
+      }
     };
 
     // Profile panel functions
@@ -3648,21 +3665,26 @@
     ];
     
     // ── Transaction History Store (multi-network, persisted per user) ──────
+    const MAX_TX_HISTORY_ENTRIES = 200; // Max entries stored in localStorage
+    const MAX_TX_DISPLAY_ENTRIES = 50;  // Max entries shown at once in activity panel
     let txHistory = []; // Array of {hash, type, description, networkId, networkName, networkExplorer, amount, token, timestamp, from, to, status}
 
     function loadTxHistory() {
       if (!userAddress) return;
       try {
         const raw = localStorage.getItem(`txHistory_${userAddress}`);
-        txHistory = raw ? JSON.parse(raw) : [];
+        if (!raw) { txHistory = []; return; }
+        const parsed = JSON.parse(raw);
+        // Validate: must be an array of objects with at minimum a hash and timestamp
+        if (!Array.isArray(parsed)) { txHistory = []; return; }
+        txHistory = parsed.filter(t => t && typeof t === 'object' && typeof t.hash === 'string' && typeof t.timestamp === 'number');
       } catch(e) { console.error('[txHistory] Failed to parse stored history:', e); txHistory = []; }
     }
 
     function saveTxHistory() {
       if (!userAddress) return;
       try {
-        // Keep most recent 200 entries
-        if (txHistory.length > 200) txHistory = txHistory.slice(0, 200);
+        if (txHistory.length > MAX_TX_HISTORY_ENTRIES) txHistory = txHistory.slice(0, MAX_TX_HISTORY_ENTRIES);
         localStorage.setItem(`txHistory_${userAddress}`, JSON.stringify(txHistory));
       } catch(e) {}
     }
