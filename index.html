@@ -1031,12 +1031,6 @@
     <p class="subtitle">Connect your wallet to get started</p>
 
     <div style="margin-bottom: 30px;">
-      <h3 style="margin-bottom: 10px; color: #60a5fa; font-size: 1.2rem;">Select Network</h3>
-      <div class="network-switcher" id="loginNetworkSwitcher" style="justify-content:center; margin-bottom:16px;">
-        <button class="network-switcher-btn active" id="loginNetBtn_sepolia"     onclick="selectLoginNetwork('sepolia')">🔵 ETH Sepolia</button>
-        <button class="network-switcher-btn"        id="loginNetBtn_educhain"    onclick="selectLoginNetwork('educhain')">🎓 EDU Testnet</button>
-        <button class="network-switcher-btn"        id="loginNetBtn_basesepolia" onclick="selectLoginNetwork('basesepolia')">🔷 Base Sepolia</button>
-      </div>
       <h3 style="margin-bottom: 15px; color: #60a5fa; font-size: 1.2rem;">Connect Wallet</h3>
       <button class="wallet-choice primary-wallet" onclick="connectMetaMask()">
         <span style="font-size: 1.5rem; margin-right: 10px;">🦊</span>
@@ -1056,7 +1050,7 @@
       </button>
       <p style="margin-top: 15px; font-size: 0.85rem; color: #94a3b8;" id="networkInfoText">
         <strong>Testnet Required</strong><br>
-        Select a network above then connect your wallet<br>
+        Connect your wallet to get started<br>
         <span id="faucetLinkText">Need test tokens? <a href="https://sepoliafaucet.com" id="faucetLink" target="_blank" style="color: #60a5fa;">Get faucet tokens</a></span>
       </p>
     </div>
@@ -1945,7 +1939,7 @@
         
         // Save wallet connection for auto-reconnect
         saveWalletConnection(walletType, userAddress);
-        loadTxHistory();
+        if (typeof loadTxHistory === 'function') loadTxHistory();
         
         // Setup wallet event listeners
         setupWalletEventListeners();
