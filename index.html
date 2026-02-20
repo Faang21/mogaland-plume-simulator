@@ -923,48 +923,70 @@
     
     /* Responsive Design Improvements */
     @media (max-width: 768px) {
-      /* Profile panel full width on mobile */
-      .profile-slide-panel {
-        width: 100%;
-        max-width: 100vw;
+      /* Login container – smaller margins on mobile */
+      .login-container {
+        padding: 40px 20px;
+        margin: 20px auto;
+        border-radius: 16px;
       }
-      
-      /* Swap section adjustments */
-      .flex-container > div {
-        min-width: 100%;
-      }
-      
-      /* Learning section cards stack properly */
-      .question-box, .progress-box {
-        min-width: 100%;
-      }
-      
-      /* Market charts don't overlap */
-      .chart-container {
-        width: 100% !important;
-        height: 300px !important;
-      }
-      
-      /* NFT cards responsive grid */
-      .nft-grid {
-        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important;
-      }
-      
-      /* Input fields full width on mobile */
-      input[type="number"], input[type="text"], select {
-        width: 100% !important;
-        max-width: 100%;
-      }
-      
-      /* Buttons stack on mobile */
-      .btn-group {
-        flex-direction: column;
+      h1 { font-size: 2.2rem; }
+      .subtitle { font-size: 1rem; }
+
+      /* Header stacks on mobile */
+      header {
+        flex-wrap: wrap;
         gap: 8px;
+        padding: 12px 16px;
+        justify-content: flex-start;
       }
-      
-      .btn-group button {
+      .network-switcher { order: -1; width: 100%; justify-content: flex-start; overflow-x: auto; flex-wrap: nowrap; }
+      .network-switcher-btn { white-space: nowrap; padding: 6px 10px; font-size: 0.78em; }
+
+      /* Nav bar scrolls horizontally on mobile */
+      .nav-bar {
+        left: 0;
+        right: 0;
+        bottom: 0;
+        transform: none;
         width: 100%;
+        border-radius: 0;
+        padding: 10px 8px;
+        gap: 6px;
+        overflow-x: auto;
+        justify-content: flex-start;
       }
+      .nav-btn { padding: 10px 14px; font-size: 0.85em; white-space: nowrap; }
+      .content { padding-bottom: 70px; }
+
+      /* Profile panel full width on mobile */
+      .profile-slide-panel { width: 100%; max-width: 100vw; }
+
+      /* Cards – no fixed min-height on mobile */
+      .progress-box, .card { min-height: 0 !important; }
+      .question-card { min-height: 0 !important; max-width: 100%; }
+      .question-box { min-width: 0; width: 100%; }
+
+      /* Flex containers stack on mobile */
+      .flex-container > div { min-width: 100%; }
+
+      /* Chart containers */
+      .chart-container { width: 100% !important; height: 280px !important; }
+
+      /* NFT cards */
+      .nft-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)) !important; }
+
+      /* Inputs full width */
+      input[type="number"], input[type="text"], select { width: 100% !important; max-width: 100%; }
+
+      /* Buttons stack */
+      .btn-group { flex-direction: column; gap: 8px; }
+      .btn-group button { width: 100%; }
+
+      /* Wallet dropdown width on mobile */
+      .wallet-dropdown { min-width: 240px; right: -10px; }
+
+      /* Top buttons smaller on mobile */
+      .top-btn { padding: 8px 12px; font-size: 0.85em; }
     }
     
     @media (min-width: 769px) and (max-width: 1024px) {
@@ -981,30 +1003,13 @@
     }
     
     @media (max-width: 480px) {
-      /* Extra small screens */
-      h1 { font-size: 2.2rem; }
-      .subtitle { font-size: 1rem; }
-      
-      /* Smaller padding on mobile */
-      .card {
-        padding: 16px;
-      }
-      
-      /* Wallet button text shorter */
-      #walletBtn {
-        font-size: 0.9em;
-        padding: 8px 12px;
-      }
-      
-      /* Navigation adjustments */
-      nav {
-        padding: 12px 16px;
-      }
-      
-      .nav-btn {
-        padding: 8px 12px;
-        font-size: 0.9em;
-      }
+      h1 { font-size: 1.9rem; }
+      .subtitle { font-size: 0.9rem; }
+      .card { padding: 14px; }
+      #walletBtn { font-size: 0.8em; padding: 7px 10px; }
+      nav { padding: 10px 14px; }
+      .nav-btn { padding: 8px 10px; font-size: 0.82em; }
+      .login-container { padding: 30px 16px; }
     }
   </style>
 </head>
@@ -1402,6 +1407,16 @@
     // Active network – persisted in localStorage
     let currentNetworkId = localStorage.getItem('currentNetworkId') || 'sepolia';
     function getActiveNetwork() { return NETWORKS[currentNetworkId] || NETWORKS.sepolia; }
+    // Helper: returns the block explorer API base URL for the active network
+    function getExplorerApiUrl() {
+      const net = getActiveNetwork();
+      if (net.id === 'sepolia') return 'https://api-sepolia.etherscan.io/api';
+      if (net.id === 'basesepolia') return 'https://api-sepolia.basescan.org/api';
+      if (net.id === 'educhain') return 'https://edu-chain-testnet.blockscout.com/api';
+      return null;
+    }
+    // Helper: native currency symbol for the active network
+    function getNetworkCurrency() { return getActiveNetwork().currency; }
 
     // WalletConnect v2 Project ID from https://cloud.reown.com (formerly WalletConnect Cloud)
     const WALLETCONNECT_PROJECT_ID = "51e44cec955a70475db9cc1900283704";
@@ -1927,6 +1942,7 @@
         
         // Save wallet connection for auto-reconnect
         saveWalletConnection(walletType, userAddress);
+        loadTxHistory();
         
         // Setup wallet event listeners
         setupWalletEventListeners();
@@ -2503,10 +2519,11 @@
       if (!userAddress) return;
       
       try {
-        const apiKey = ''; // TODO: Add Etherscan API key for production use to avoid rate limits
-        // Free tier: 5 calls/second, 100k calls/day
+        const apiKey = ''; // Free tier: 5 calls/second, 100k calls/day
         // Sign up at: https://etherscan.io/apis
-        const url = `https://api-sepolia.etherscan.io/api?module=account&action=tokentx&address=${userAddress}&startblock=0&endblock=99999999&page=1&offset=100&sort=desc&apikey=${apiKey}`;
+        const apiBase = getExplorerApiUrl();
+        if (!apiBase) return; // unsupported network - skip
+        const url = `${apiBase}?module=account&action=tokentx&address=${userAddress}&startblock=0&endblock=99999999&page=1&offset=100&sort=desc&apikey=${apiKey}`;
         
         const response = await fetch(url);
         const data = await response.json();
@@ -2534,116 +2551,176 @@
       }
     }
 
-    // Fetch transaction history from Sepolia Etherscan API
+    // Render local transaction history in the activity panel
     async function fetchTransactionHistory() {
       const activityContainer = document.getElementById('activityList');
-      
-      if (!userAddress || !provider) {
-        // Not connected - show prompt to connect
+      if (!activityContainer) return;
+
+      if (!userAddress) {
         activityContainer.innerHTML = `
-          <div style="height: 300px; display: flex; align-items: center; justify-content: center; text-align: center; color: #94a3b8; font-size: 1.1em; padding: 20px;">
-            <div>
-              <div style="font-size: 2.8em; margin-bottom: 12px;">🔌</div>
-              <div style="margin-bottom: 16px;">Connect your wallet to view activity</div>
-              <button onclick="connectWalletFromApp()" style="background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; padding: 12px 24px; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer;">
-                Connect Wallet
-              </button>
-            </div>
-          </div>
-        `;
+          <div style="padding:40px 20px; text-align:center; color:#94a3b8;">
+            <div style="font-size:2.8em;margin-bottom:12px;">🔌</div>
+            <div style="margin-bottom:16px;">Connect your wallet to view activity</div>
+            <button onclick="connectWalletFromApp()" style="background:linear-gradient(135deg,#3b82f6,#2563eb);color:white;padding:12px 24px;border:none;border-radius:8px;font-size:16px;font-weight:600;cursor:pointer;">Connect Wallet</button>
+          </div>`;
         return;
       }
-      
-      try {
-        // Show loading state
+
+      loadTxHistory();
+
+      if (txHistory.length === 0) {
+        const net = getActiveNetwork();
         activityContainer.innerHTML = `
-          <div style="height: 300px; display: flex; align-items: center; justify-content: center; text-align: center; color: #94a3b8; font-size: 1.1em; padding: 20px;">
-            <div>
-              <div style="font-size: 2.8em; margin-bottom: 12px;">🔄</div>
-              <div>Loading activity...</div>
-            </div>
-          </div>
-        `;
-        
-        const apiKey = ''; // Free API - basic queries work without key. Add your own Etherscan API key for higher rate limits
-        const url = `https://api-sepolia.etherscan.io/api?module=account&action=txlist&address=${userAddress}&startblock=0&endblock=99999999&page=1&offset=10&sort=desc&apikey=${apiKey}`;
-        
-        const response = await fetch(url);
-        const data = await response.json();
-        
-        if (data.status === '1' && data.result && data.result.length > 0) {
-          activityContainer.innerHTML = '';
-          
-          data.result.slice(0, 10).forEach(tx => {
-            const isReceive = tx.to.toLowerCase() === userAddress.toLowerCase();
-            const value = ethers.utils.formatEther(tx.value);
-            const date = new Date(parseInt(tx.timeStamp) * 1000).toLocaleDateString();
-            
-            const txDiv = document.createElement('div');
-            txDiv.className = 'activity-item';
-            txDiv.style.padding = '12px';
-            txDiv.style.borderBottom = '1px solid rgba(255,255,255,0.1)';
-            txDiv.innerHTML = `
-              <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                  <div style="font-weight: 600; color: ${isReceive ? '#10b981' : '#ef4444'};">
-                    ${isReceive ? '↓ Received' : '↑ Sent'}
-                  </div>
-                  <div style="font-size: 0.85em; opacity: 0.7;">${date}</div>
-                </div>
-                <div style="text-align: right;">
-                  <div style="font-weight: 600;">${parseFloat(value).toFixed(4)} ETH</div>
-                  <a href="${SEPOLIA_EXPLORER}/tx/${tx.hash}" target="_blank" style="font-size: 0.85em; color: #60a5fa;">View</a>
-                </div>
-              </div>
-            `;
-            activityContainer.appendChild(txDiv);
-          });
-        } else {
-          // If no transactions or API error, show wallet info and link to explorer
-          activityContainer.innerHTML = `
-            <div style="height: 300px; display: flex; align-items: center; justify-content: center; text-align: center; color: #94a3b8; font-size: 1.1em; padding: 20px;">
-              <div>
-                <div style="font-size: 2.8em; margin-bottom: 12px;">📭</div>
-                <div style="margin-bottom: 8px;">No recent transactions found</div>
-                <div style="font-size: 0.9em; margin-top: 8px; opacity: 0.7;">
-                  Wallet: <span style="color: #60a5fa; font-family: monospace;">${formatAddress(userAddress)}</span>
-                </div>
-                <div style="margin-top: 16px;">
-                  <a href="${SEPOLIA_EXPLORER}/address/${userAddress}" target="_blank" 
-                     style="background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-size: 0.9em; display: inline-block;">
-                    View on Sepolia Explorer
-                  </a>
-                </div>
-              </div>
-            </div>
-          `;
-        }
-      } catch (error) {
-        console.error('Error fetching transaction history:', error);
-        // Show fallback with wallet info and explorer link
-        activityContainer.innerHTML = `
-          <div style="height: 300px; display: flex; align-items: center; justify-content: center; text-align: center; color: #94a3b8; font-size: 1.1em; padding: 20px;">
-            <div>
-              <div style="font-size: 2.8em; margin-bottom: 12px;">🔗</div>
-              <div style="margin-bottom: 8px;">Connected Wallet</div>
-              <div style="font-size: 0.9em; margin-top: 8px; opacity: 0.7;">
-                <span style="color: #60a5fa; font-family: monospace;">${formatAddress(userAddress)}</span>
-              </div>
-              <div style="font-size: 0.85em; margin-top: 12px; opacity: 0.6; max-width: 300px; margin-left: auto; margin-right: auto;">
-                Transaction history loading failed. View your activity on the explorer:
-              </div>
-              <div style="margin-top: 16px;">
-                <a href="${SEPOLIA_EXPLORER}/address/${userAddress}" target="_blank" 
-                   style="background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-size: 0.9em; display: inline-block;">
-                  View on Sepolia Explorer
-                </a>
-              </div>
-            </div>
-          </div>
-        `;
+          <div style="padding:40px 20px; text-align:center; color:#94a3b8;">
+            <div style="font-size:2.8em;margin-bottom:12px;">📭</div>
+            <div style="margin-bottom:8px;">No transactions recorded yet</div>
+            <div style="font-size:0.85em;margin-bottom:16px;opacity:0.7;">Transactions will appear here after you swap, stake, learn, or trade.</div>
+            <a href="${getActiveNetwork().explorer}/address/${userAddress}" target="_blank"
+               style="background:linear-gradient(135deg,#3b82f6,#2563eb);color:white;padding:10px 20px;border-radius:8px;text-decoration:none;font-size:0.9em;display:inline-block;">
+              View on ${getActiveNetwork().name} Explorer
+            </a>
+          </div>`;
+        return;
       }
+
+      // Network filter tabs
+      const networks = ['all', 'sepolia', 'educhain', 'basesepolia'];
+      const netLabels = { all: 'All', sepolia: '🔵 Sepolia', educhain: '🎓 EDU', basesepolia: '🔷 Base' };
+      let activeFilter = activityContainer.dataset.filter || 'all';
+
+      function renderList(filter) {
+        activityContainer.dataset.filter = filter;
+        const filtered = filter === 'all' ? txHistory : txHistory.filter(t => t.networkId === filter);
+
+        const typeIcons = {
+          'Swap': '🔄', 'Bridge': '🌉', 'NFT Stake': '🏦', 'NFT Unstake': '↩️', 'NFT Claim': '🎁',
+          'Learning': '🎓', 'Market': '📈', 'Sports Bet': '🏆', 'Send': '↑', 'Gas Fee': '⛽',
+          'Treasury': '🏛️', 'NFT Mint': '🎨', 'Stake': '🔒', 'Unstake': '🔓', 'Redeem': '💱', 'Default': '🔗'
+        };
+
+        let html = `
+          <div id="txFilterBar" style="display:flex;gap:6px;padding:10px 10px 0;flex-wrap:wrap;">
+            ${networks.map(n => `
+              <button data-net="${n}"
+                style="padding:5px 12px;border-radius:20px;border:1px solid ${n===filter?'#3b82f6':'#334155'};background:${n===filter?'#1e40af':'transparent'};color:${n===filter?'white':'#94a3b8'};cursor:pointer;font-size:0.8em;transition:all 0.2s;">
+                ${netLabels[n]}
+              </button>`).join('')}
+          </div>
+          <div id="txItemList" style="padding:0 0 10px;">`;
+
+        if (filtered.length === 0) {
+          html += `<div style="padding:30px;text-align:center;color:#64748b;font-size:0.9em;">No transactions for this network yet</div>`;
+        } else {
+          filtered.slice(0, 50).forEach((tx, idx) => {
+            const icon = typeIcons[tx.type] || typeIcons['Default'];
+            const date = new Date(tx.timestamp).toLocaleDateString('en-US', {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'});
+            const netBadgeColor = tx.networkId === 'sepolia' ? '#3b82f6' : tx.networkId === 'educhain' ? '#a78bfa' : '#34d399';
+            // Use timestamp as a safe lookup key to avoid embedding JSON in HTML attributes
+            const tsKey = tx.timestamp;
+            html += `
+              <div class="activity-item" 
+                   data-tx-ts="${tsKey}"
+                   style="display:flex;align-items:center;gap:12px;padding:12px;border-bottom:1px solid rgba(255,255,255,0.06);cursor:pointer;transition:background 0.15s;"
+                   onmouseover="this.style.background='rgba(59,130,246,0.08)'" onmouseout="this.style.background=''">
+                <div style="width:36px;height:36px;border-radius:50%;background:rgba(59,130,246,0.15);display:flex;align-items:center;justify-content:center;font-size:1.1em;flex-shrink:0;">${icon}</div>
+                <div style="flex:1;min-width:0;">
+                  <div style="font-weight:600;font-size:0.95em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${tx.type}</div>
+                  <div style="font-size:0.78em;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${tx.description}</div>
+                  <div style="margin-top:3px;">
+                    <span style="font-size:0.7em;padding:2px 7px;border-radius:10px;background:${netBadgeColor}22;color:${netBadgeColor};border:1px solid ${netBadgeColor}44;">${tx.networkName}</span>
+                  </div>
+                </div>
+                <div style="text-align:right;flex-shrink:0;">
+                  <div style="font-size:0.8em;color:#94a3b8;">${date}</div>
+                  <div style="font-size:0.75em;color:#60a5fa;font-family:monospace;">${tx.hash ? tx.hash.slice(0,8)+'...' : ''}</div>
+                </div>
+              </div>`;
+          });
+        }
+        html += `</div>`;
+        activityContainer.innerHTML = html;
+        // Attach filter button click handlers
+        activityContainer.querySelectorAll('#txFilterBar button[data-net]').forEach(btn => {
+          btn.addEventListener('click', () => renderList(btn.dataset.net));
+        });
+        // Attach tx item click handlers safely to avoid inline JSON in HTML attributes
+        activityContainer.querySelectorAll('.activity-item[data-tx-ts]').forEach(el => {
+          const ts = parseInt(el.dataset.txTs);
+          const found = txHistory.find(t => t.timestamp === ts);
+          if (found) el.addEventListener('click', () => window.showTxDetail(found));
+        });
+      }
+
+      renderList(activeFilter);
     }
+
+    window.showTxDetail = function(tx) {
+      if (!tx || typeof tx !== 'object') return;
+      const date = new Date(tx.timestamp).toLocaleString();
+      const explorerTxUrl = `${tx.networkExplorer}/tx/${tx.hash}`;
+      const explorerFromUrl = `${tx.networkExplorer}/address/${tx.from}`;
+      const explorerToUrl = tx.to ? `${tx.networkExplorer}/address/${tx.to}` : null;
+      const netBadgeColor = tx.networkId === 'sepolia' ? '#3b82f6' : tx.networkId === 'educhain' ? '#a78bfa' : '#34d399';
+
+      const modal = document.createElement('div');
+      modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:20000;padding:16px;';
+      modal.innerHTML = `
+        <div style="background:#1e293b;border-radius:20px;padding:28px;max-width:480px;width:100%;border:1px solid #334155;box-shadow:0 20px 60px rgba(0,0,0,0.7);max-height:90vh;overflow-y:auto;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+            <h3 style="color:#60a5fa;font-size:1.2em;">Transaction Detail</h3>
+            <button id="closeTxModal" style="background:none;border:none;color:#94a3b8;font-size:1.5em;cursor:pointer;line-height:1;">×</button>
+          </div>
+          
+          <div style="background:rgba(59,130,246,0.08);border-radius:12px;padding:16px;margin-bottom:16px;text-align:center;">
+            <div style="font-size:2em;margin-bottom:8px;">✅</div>
+            <div style="font-weight:700;font-size:1.1em;color:white;">${tx.type}</div>
+            <div style="color:#94a3b8;font-size:0.9em;margin-top:4px;">${tx.description}</div>
+            <div style="margin-top:8px;"><span style="font-size:0.78em;padding:3px 10px;border-radius:12px;background:${netBadgeColor}22;color:${netBadgeColor};border:1px solid ${netBadgeColor}44;">${tx.networkName}</span></div>
+          </div>
+          
+          <div style="display:flex;flex-direction:column;gap:10px;font-size:0.9em;">
+            <div style="display:flex;justify-content:space-between;padding:10px;background:#0f172a;border-radius:8px;gap:8px;">
+              <span style="color:#94a3b8;flex-shrink:0;">TX Hash</span>
+              <div style="display:flex;align-items:center;gap:6px;min-width:0;">
+                <span style="font-family:monospace;color:#60a5fa;font-size:0.85em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${tx.hash ? tx.hash.slice(0,18)+'...' : 'N/A'}</span>
+                ${tx.hash ? `<button onclick="navigator.clipboard.writeText('${tx.hash}')" style="background:none;border:1px solid #334155;color:#94a3b8;padding:2px 6px;border-radius:4px;cursor:pointer;font-size:0.75em;flex-shrink:0;">Copy</button>` : ''}
+              </div>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:10px;background:#0f172a;border-radius:8px;">
+              <span style="color:#94a3b8;">Status</span>
+              <span style="color:#10b981;font-weight:600;">✅ Confirmed</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:10px;background:#0f172a;border-radius:8px;">
+              <span style="color:#94a3b8;">Timestamp</span>
+              <span style="color:white;font-size:0.85em;">${date}</span>
+            </div>
+            ${tx.amount ? `<div style="display:flex;justify-content:space-between;padding:10px;background:#0f172a;border-radius:8px;">
+              <span style="color:#94a3b8;">Amount</span>
+              <span style="color:white;font-weight:600;">${tx.amount} ${tx.token || ''}</span>
+            </div>` : ''}
+            <div style="display:flex;justify-content:space-between;padding:10px;background:#0f172a;border-radius:8px;gap:8px;">
+              <span style="color:#94a3b8;flex-shrink:0;">From</span>
+              <span style="font-family:monospace;color:#60a5fa;font-size:0.82em;overflow:hidden;text-overflow:ellipsis;">${tx.from ? tx.from.slice(0,10)+'...'+tx.from.slice(-8) : 'N/A'}</span>
+            </div>
+            ${tx.to ? `<div style="display:flex;justify-content:space-between;padding:10px;background:#0f172a;border-radius:8px;gap:8px;">
+              <span style="color:#94a3b8;flex-shrink:0;">To</span>
+              <span style="font-family:monospace;color:#60a5fa;font-size:0.82em;overflow:hidden;text-overflow:ellipsis;">${tx.to.slice(0,10)+'...'+tx.to.slice(-8)}</span>
+            </div>` : ''}
+            <div style="display:flex;justify-content:space-between;padding:10px;background:#0f172a;border-radius:8px;">
+              <span style="color:#94a3b8;">Network</span>
+              <span style="color:white;">${tx.networkName}</span>
+            </div>
+          </div>
+          
+          ${tx.hash ? `<a href="${explorerTxUrl}" target="_blank" rel="noopener noreferrer"
+             style="display:block;margin-top:16px;padding:12px;background:linear-gradient(135deg,#3b82f6,#2563eb);color:white;text-align:center;border-radius:10px;text-decoration:none;font-weight:600;font-size:0.95em;">
+            🔍 View on ${tx.networkName} Explorer
+          </a>` : ''}
+        </div>`;
+      document.body.appendChild(modal);
+      document.getElementById('closeTxModal').addEventListener('click', () => modal.remove());
+      modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+    };
 
     // Profile panel functions
     window.showProfile = function() {
@@ -3069,8 +3146,9 @@
           const receipt = await tx.wait();
           console.log('[Send] Transaction confirmed!', receipt);
           
+          recordTransaction(tx.hash, 'Send', `Sent ${amountFloat} ${getNetworkCurrency()} to ${toAddress.slice(0,8)}...`, {amount: amountFloat, token: getNetworkCurrency(), to: toAddress});
           showNotification(
-            `✅ Sent ${amountFloat} ETH to ${toAddress.slice(0,6)}...${toAddress.slice(-4)}<br>TX: <a href="https://sepolia.etherscan.io/tx/${tx.hash}" target="_blank" style="color:#60a5fa;">${tx.hash.slice(0, 10)}...</a>`,
+            `✅ Sent ${amountFloat} ETH to ${toAddress.slice(0,6)}...${toAddress.slice(-4)}<br>TX: <a href="${getActiveNetwork().explorer}/tx/${tx.hash}" target="_blank" style="color:#60a5fa;">${tx.hash.slice(0, 10)}...</a>`,
             false
           );
         } else {
@@ -3108,8 +3186,9 @@
           const receipt = await tx.wait();
           console.log('[Send] Transaction confirmed!', receipt);
           
+          recordTransaction(tx.hash, 'Send', `Sent ${amountFloat} ${token} to ${toAddress.slice(0,8)}...`, {amount: amountFloat, token: token, to: toAddress});
           showNotification(
-            `✅ Sent ${amountFloat} ${token} to ${toAddress.slice(0,6)}...${toAddress.slice(-4)}<br>TX: <a href="https://sepolia.etherscan.io/tx/${tx.hash}" target="_blank" style="color:#60a5fa;">${tx.hash.slice(0, 10)}...</a>`,
+            `✅ Sent ${amountFloat} ${token} to ${toAddress.slice(0,6)}...${toAddress.slice(-4)}<br>TX: <a href="${getActiveNetwork().explorer}/tx/${tx.hash}" target="_blank" style="color:#60a5fa;">${tx.hash.slice(0, 10)}...</a>`,
             false
           );
         }
@@ -3173,7 +3252,7 @@
               • Your contribution will increase the treasury's USDC balance<br>
               • Treasury manages all platform liquidity and rewards<br>
               • Treasury Owner: ${TREASURY_WALLET_ADDRESS.slice(0,10)}...${TREASURY_WALLET_ADDRESS.slice(-8)}<br>
-              • <a href="https://sepolia.etherscan.io/address/${TREASURY_WALLET_ADDRESS}" target="_blank" style="color: #10b981;">View Treasury on Explorer</a>
+              • <a href="${getActiveNetwork().explorer}/address/${TREASURY_WALLET_ADDRESS}" target="_blank" style="color: #10b981;">View Treasury on Explorer</a>
             </div>
           </div>
 
@@ -3267,8 +3346,9 @@
         const receipt = await tx.wait();
         console.log('[Treasury] Transaction confirmed!', receipt);
         
+        recordTransaction(tx.hash, 'Treasury', `Contributed ${amount} USDC to treasury`, {amount: amount, token: 'USDC', to: TREASURY_WALLET_ADDRESS});
         showNotification(
-          `✅ Successfully contributed ${amount} USDC to treasury!<br>TX: <a href="https://sepolia.etherscan.io/tx/${tx.hash}" target="_blank" style="color:#60a5fa;">${tx.hash.slice(0, 10)}...</a>`,
+          `✅ Successfully contributed ${amount} USDC to treasury!<br>TX: <a href="${getActiveNetwork().explorer}/tx/${tx.hash}" target="_blank" style="color:#60a5fa;">${tx.hash.slice(0, 10)}...</a>`,
           false
         );
         
@@ -3567,6 +3647,49 @@
       "function getUserPositions(address user) view returns (uint256[])"
     ];
     
+    // ── Transaction History Store (multi-network, persisted per user) ──────
+    let txHistory = []; // Array of {hash, type, description, networkId, networkName, networkExplorer, amount, token, timestamp, from, to, status}
+
+    function loadTxHistory() {
+      if (!userAddress) return;
+      try {
+        const raw = localStorage.getItem(`txHistory_${userAddress}`);
+        txHistory = raw ? JSON.parse(raw) : [];
+      } catch(e) { console.error('[txHistory] Failed to parse stored history:', e); txHistory = []; }
+    }
+
+    function saveTxHistory() {
+      if (!userAddress) return;
+      try {
+        // Keep most recent 200 entries
+        if (txHistory.length > 200) txHistory = txHistory.slice(0, 200);
+        localStorage.setItem(`txHistory_${userAddress}`, JSON.stringify(txHistory));
+      } catch(e) {}
+    }
+
+    function recordTransaction(hash, type, description, details = {}) {
+      if (!hash) return;
+      const net = getActiveNetwork();
+      const entry = {
+        hash,
+        type,
+        description,
+        networkId: net.id,
+        networkName: net.name,
+        networkExplorer: net.explorer,
+        networkCurrency: net.currency,
+        amount: details.amount || '',
+        token: details.token || net.currency,
+        from: details.from || userAddress || '',
+        to: details.to || '',
+        timestamp: Date.now(),
+        status: 'confirmed'
+      };
+      txHistory.unshift(entry); // newest first
+      saveTxHistory();
+    }
+    window.recordTransaction = recordTransaction;
+
     // Login method tracking - moved outside startApp() to global scope
     let socialConnected = false;
     
@@ -3915,8 +4038,9 @@
         await tx.wait();
         console.log(`[Gas Fee] Transaction confirmed: ${tx.hash}`);
         
+        recordTransaction(tx.hash, 'Gas Fee', `Gas fee for: ${action}`, {amount: GAS_FEE_ETH, token: getNetworkCurrency(), to: TREASURY_WALLET_ADDRESS});
         showNotification(
-          `✅ Gas fee paid: ${GAS_FEE_ETH} ETH<br>TX: <a href="https://sepolia.etherscan.io/tx/${tx.hash}" target="_blank" style="color:#60a5fa;">${tx.hash.slice(0, 10)}...</a>`,
+          `✅ Gas fee paid: ${GAS_FEE_ETH} ${getNetworkCurrency()}<br>TX: <a href="${getActiveNetwork().explorer}/tx/${tx.hash}" target="_blank" style="color:#60a5fa;">${tx.hash.slice(0, 10)}...</a>`,
           false
         );
         
@@ -4322,8 +4446,8 @@
           <div style="background: linear-gradient(135deg, rgba(16,185,129,0.1), rgba(59,130,246,0.1)); 
                       padding: 20px; border-radius: 12px; margin-bottom: 20px;">
             <div style="text-align: center; margin-bottom: 15px; color: #60a5fa; font-size: 0.9em;">
-              Treasury Wallet (Sepolia): ${TREASURY_WALLET_ADDRESS.slice(0,8)}...${TREASURY_WALLET_ADDRESS.slice(-6)}
-              <br><a href="https://sepolia.etherscan.io/address/${TREASURY_WALLET_ADDRESS}" target="_blank" 
+              Treasury Wallet (${getActiveNetwork().name}): ${TREASURY_WALLET_ADDRESS.slice(0,8)}...${TREASURY_WALLET_ADDRESS.slice(-6)}
+              <br><a href="${getActiveNetwork().explorer}/address/${TREASURY_WALLET_ADDRESS}" target="_blank" 
                      style="color: #10b981; font-size: 0.85em;">View on Explorer</a>
             </div>
             <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; text-align: center;">
@@ -4603,7 +4727,7 @@
 
             <div style="flex:1; min-width:320px;">
               <div class="card">
-                <h3>💰 Stake USDC (Sepolia)</h3>
+                <h3>💰 Stake USDC (${getActiveNetwork().name})</h3>
                 <p style="margin-bottom:8px; font-size:0.9em;">Your Balance: <span id="usdcBalanceDisplay">0.00</span> USDC</p>
                 <p style="margin-bottom:12px; font-size:0.9em;">Stake to participate in learning rewards</p>
                 <input type="number" id="stakeAmount" placeholder="Enter USDC amount" step="0.01" style="width:100%; padding:12px; background:#0f172a; border:1px solid var(--border); border-radius:8px; color:white; margin-bottom:16px;"/>
@@ -4625,7 +4749,7 @@
                   <div class="progress-fill" id="pointProgress" style="width:0%;"></div>
                 </div>
                 <p style="margin-top:8px; font-size:0.9em; color:#94a3b8;">Conversion Rate: 1000 points = 1 USDC</p>
-                <p style="margin-top:4px; font-size:0.85em; color:#f59e0b;">⛽ Gas Fee: ${GAS_FEE_ETH} ETH per answer</p>
+                <p style="margin-top:4px; font-size:0.85em; color:#f59e0b;">⛽ Gas Fee: ${GAS_FEE_ETH} ${getNetworkCurrency()} per answer</p>
                 <button class="btn-primary btn-success" style="margin-top:16px;" onclick="convertPointsToUSDC()" ${mogalandPoints < 1000 ? 'disabled' : ''}>Convert to USDC</button>
                 <div class="history" id="historyLog" style="margin-top:16px;">
                   <strong>Answer History (Recent 5):</strong><br>
@@ -4711,7 +4835,7 @@
 
                 <p id="tradeStatus" style="margin-top:15px; font-weight:bold; min-height:40px; font-size:0.9em;"></p>
                 
-                <p style="font-size:0.85em; color:#f59e0b; margin-top:8px;">⛽ Gas Fee: ${GAS_FEE_ETH} ETH per trade</p>
+                <p style="font-size:0.85em; color:#f59e0b; margin-top:8px;">⛽ Gas Fee: ${GAS_FEE_ETH} ${getNetworkCurrency()} per trade</p>
 
                 <div style="margin-top:20px;">
                   <h4 style="color:#60a5fa; margin-bottom:8px;">Open Positions</h4>
@@ -5468,8 +5592,9 @@
               transferToTreasury(amount); // Move bet amount to treasury
 
               const betType = type === 'long' ? 'WIN' : 'LOSE';
+              recordTransaction(tx.hash, 'Sports Bet', `${selectedAsset.symbol} ${betType} ${leverage}x on ${amount.toFixed(2)} USDC`, {amount: amount, token: 'USDC', to: TREASURY_WALLET_ADDRESS});
               showNotification(
-                `🏆 Sports bet placed: ${selectedAsset.symbol} to ${betType}<br>${leverage}x leverage on ${amount.toFixed(2)} USDC<br>TX: <a href="https://sepolia.etherscan.io/tx/${tx.hash}" target="_blank" style="color:#60a5fa;">${tx.hash.slice(0, 10)}...</a>`,
+                `🏆 Sports bet placed: ${selectedAsset.symbol} to ${betType}<br>${leverage}x leverage on ${amount.toFixed(2)} USDC<br>TX: <a href="${getActiveNetwork().explorer}/tx/${tx.hash}" target="_blank" style="color:#60a5fa;">${tx.hash.slice(0, 10)}...</a>`,
                 false
               );
               
@@ -5561,8 +5686,9 @@
               startLiquidationMonitoring();
             }
 
+          recordTransaction(tx.hash, 'Market', `Opened ${type.toUpperCase()} ${selectedAsset.symbol} ${leverage}x at $${currentPrice.toFixed(2)}`, {amount: amount, token: 'USDC', to: TREASURY_WALLET_ADDRESS});
           showNotification(
-            `🔓 Opened ${type.toUpperCase()} position: ${selectedAsset.symbol} ${leverage}x at $${currentPrice.toFixed(2)}<br>TX: <a href="https://sepolia.etherscan.io/tx/${tx.hash}" target="_blank" style="color:#60a5fa;">${tx.hash.slice(0, 10)}...</a>`,
+            `🔓 Opened ${type.toUpperCase()} position: ${selectedAsset.symbol} ${leverage}x at $${currentPrice.toFixed(2)}<br>TX: <a href="${getActiveNetwork().explorer}/tx/${tx.hash}" target="_blank" style="color:#60a5fa;">${tx.hash.slice(0, 10)}...</a>`,
             false
           );
           
@@ -5634,15 +5760,17 @@
               // Profit: Return position + profit from treasury
               const totalPayout = position.amount + pnl;
               if (transferFromTreasury(totalPayout)) {
+                recordTransaction(tx.hash, 'Market', `Closed ${position.type.toUpperCase()} ${position.asset} with profit $${pnl.toFixed(2)}`, {amount: pnl, token: 'USDC', to: userAddress});
                 showNotification(
-                  `✅ Position closed with profit: $${pnl.toFixed(2)}<br>TX: <a href="https://sepolia.etherscan.io/tx/${tx.hash}" target="_blank" style="color:#60a5fa;">${tx.hash.slice(0, 10)}...</a>`,
+                  `✅ Position closed with profit: $${pnl.toFixed(2)}<br>TX: <a href="${getActiveNetwork().explorer}/tx/${tx.hash}" target="_blank" style="color:#60a5fa;">${tx.hash.slice(0, 10)}...</a>`,
                   false
                 );
               }
             } else {
               // Loss: User loses position amount (already in treasury), no payout
+              recordTransaction(tx.hash, 'Market', `Closed ${position.type.toUpperCase()} ${position.asset} with loss $${Math.abs(pnl).toFixed(2)}`, {amount: Math.abs(pnl), token: 'USDC', to: TREASURY_WALLET_ADDRESS});
               showNotification(
-                `✅ Position closed with loss: $${Math.abs(pnl).toFixed(2)}<br>TX: <a href="https://sepolia.etherscan.io/tx/${tx.hash}" target="_blank" style="color:#60a5fa;">${tx.hash.slice(0, 10)}...</a>`,
+                `✅ Position closed with loss: $${Math.abs(pnl).toFixed(2)}<br>TX: <a href="${getActiveNetwork().explorer}/tx/${tx.hash}" target="_blank" style="color:#60a5fa;">${tx.hash.slice(0, 10)}...</a>`,
                 true
               );
             }
@@ -6389,11 +6517,11 @@
             </button>
             
             <p style="text-align: center; margin-top: 12px; color: #f59e0b; font-size: 0.85em;">
-              ⛽ Gas Fee: ${GAS_FEE_ETH} ETH per swap
+              ⛽ Gas Fee: ${GAS_FEE_ETH} ${getNetworkCurrency()} per swap
             </p>
 
             <p style="text-align: center; margin-top: 12px; color: #94a3b8; font-size: 0.9em;">
-              Sepolia Testnet • ETH ↔ USDC/USDT/LINK/WBTC/AAVE/EURO • Demo Mode
+              ${getActiveNetwork().name} • ${getNetworkCurrency()} ↔ USDC/USDT/LINK/WBTC/AAVE/EURO • Demo Mode
             </p>
           </div>
         `;
@@ -6502,7 +6630,7 @@
               </button>
               
               <p style="text-align: center; margin-top: 12px; color: #f59e0b; font-size: 0.9em;">
-                ⛽ Gas Fee: ${GAS_FEE_ETH} ETH per bridge transaction
+                ⛽ Gas Fee: ${GAS_FEE_ETH} ${getNetworkCurrency()} per bridge transaction
               </p>
 
               <p style="text-align: center; margin-top: 12px; color: #94a3b8; font-size: 0.95em;">
@@ -6558,17 +6686,18 @@
           
           try {
             // Execute real bridge transaction
-            showNotification(`🌉 Preparing bridge: ${amount} ${token} from ${fromChain} to Sepolia...`, false);
+            showNotification(`🌉 Preparing bridge: ${amount} ${token} from ${fromChain} to ${getActiveNetwork().name}...`, false);
             
-            const result = await executeRealBridge(fromChain, 'Sepolia', token, amount, slippage);
+            const result = await executeRealBridge(fromChain, getActiveNetwork().name, token, amount, slippage);
             
             if (result.success) {
+              recordTransaction(result.txHash, 'Bridge', `Bridged ${amount.toFixed(6)} ${token} from ${fromChain} to ${getActiveNetwork().name}`, {amount: amount, token: token});
               showNotification(
-                `✅ Bridge successful!<br>${amount.toFixed(6)} ${token} from ${fromChain} to Sepolia<br>Received: ${result.finalAmount.toFixed(6)} ${token}<br>TX: <a href="https://sepolia.etherscan.io/tx/${result.txHash}" target="_blank" style="color:#60a5fa;">${result.txHash.slice(0, 10)}...</a>`,
+                `✅ Bridge successful!<br>${amount.toFixed(6)} ${token} from ${fromChain} to ${getActiveNetwork().name}<br>Received: ${result.finalAmount.toFixed(6)} ${token}<br>TX: <a href="${getActiveNetwork().explorer}/tx/${result.txHash}" target="_blank" style="color:#60a5fa;">${result.txHash.slice(0, 10)}...</a>`,
                 false
               );
               
-              console.log(`[Bridge] Real transaction completed: ${amount} ${token} from ${fromChain} to Sepolia`);
+              console.log(`[Bridge] Real transaction completed: ${amount} ${token} from ${fromChain} to ${getActiveNetwork().name}`);
               console.log(`[Bridge] Transaction hash: ${result.txHash}`);
               
               // Refresh balances
@@ -6589,15 +6718,15 @@
         content.innerHTML = `
           <h2 style="text-align:center; margin:40px 0; color:#60a5fa;">NFT Staking</h2>
           <p style="text-align:center; font-size:1.2em; color:#94a3b8; margin-bottom:16px;">
-            Stake your Mogaland NFTs and earn USDC Sepolia rewards
+            Stake your Mogaland NFTs and earn rewards on ${getActiveNetwork().name}
           </p>
           <p style="text-align:center; font-size:0.9em; color:#64748b; margin-bottom:8px;">
-            NFT Contract (Sepolia): <span style="color:#60a5fa; font-family:monospace;">${NFT_CONTRACT_ADDRESS}</span> | 
-            <a href="${SEPOLIA_EXPLORER}/address/${NFT_CONTRACT_ADDRESS}" target="_blank" style="color:#60a5fa;">View on Explorer</a>
+            NFT Contract (${getActiveNetwork().name}): <span style="color:#60a5fa; font-family:monospace;">${NFT_CONTRACT_ADDRESS}</span> | 
+            <a href="${getActiveNetwork().explorer}/address/${NFT_CONTRACT_ADDRESS}" target="_blank" style="color:#60a5fa;">View on Explorer</a>
           </p>
           <p style="text-align:center; font-size:0.9em; color:#64748b; margin-bottom:8px;">
             Collection Owner: <span style="color:#10b981; font-family:monospace;">${TREASURY_WALLET_ADDRESS.slice(0,8)}...${TREASURY_WALLET_ADDRESS.slice(-6)}</span> | 
-            <a href="${SEPOLIA_EXPLORER}/address/${TREASURY_WALLET_ADDRESS}" target="_blank" style="color:#60a5fa;">View Treasury</a>
+            <a href="${getActiveNetwork().explorer}/address/${TREASURY_WALLET_ADDRESS}" target="_blank" style="color:#60a5fa;">View Treasury</a>
           </p>
 
           <!-- OpenSea Marketplace Integration -->
@@ -6626,7 +6755,7 @@
                   <span style="color:#60a5fa;">Collection:</span> Mogaland NFTs
                 </div>
                 <div>
-                  <span style="color:#60a5fa;">Network:</span> Sepolia Testnet
+                  <span style="color:#60a5fa;">Network:</span> ${getActiveNetwork().name}
                 </div>
                 <div>
                   <span style="color:#60a5fa;">Royalty:</span> 5% to Treasury
@@ -6692,7 +6821,7 @@
           </div>
           
           <p style="text-align:center; margin-top:40px; color:#64748b; font-size:0.9em;">
-            ⛽ Gas Fee: ${GAS_FEE_ETH} ETH per transaction | APY varies by NFT rarity
+            ⛽ Gas Fee: ${GAS_FEE_ETH} ${getNetworkCurrency()} per transaction | APY varies by NFT rarity
           </p>
         `;} else {
         content.innerHTML = `
@@ -7008,8 +7137,9 @@
         selectedNFTs.clear();
         showSection('nft');
         
+        recordTransaction(stakeTx.hash, 'NFT Stake', `Staked ${nftCount} NFT(s)`, {to: NFT_CONTRACT_ADDRESS});
         showNotification(
-          `✅ Successfully staked ${nftCount} NFT(s)!<br>Approval TX: <a href="https://sepolia.etherscan.io/tx/${approveTx.hash}" target="_blank" style="color:#60a5fa;">${approveTx.hash.slice(0, 10)}...</a><br>Stake TX: <a href="https://sepolia.etherscan.io/tx/${stakeTx.hash}" target="_blank" style="color:#60a5fa;">${stakeTx.hash.slice(0, 10)}...</a>`,
+          `✅ Successfully staked ${nftCount} NFT(s)!<br>Approval TX: <a href="${getActiveNetwork().explorer}/tx/${approveTx.hash}" target="_blank" style="color:#60a5fa;">${approveTx.hash.slice(0, 10)}...</a><br>Stake TX: <a href="${getActiveNetwork().explorer}/tx/${stakeTx.hash}" target="_blank" style="color:#60a5fa;">${stakeTx.hash.slice(0, 10)}...</a>`,
           false
         );
         console.log(`[NFT] Staked ${nftCount} NFTs. Approval: ${approveTx.hash}, Stake: ${stakeTx.hash}`);
@@ -7465,8 +7595,9 @@
         const result = await executeRealSwap(fromToken, toToken, amt, currentSlippageTolerance);
         
         if (result.success) {
+          recordTransaction(result.txHash, 'Swap', `${amt.toFixed(6)} ${fromToken} → ${parseFloat(result.amountOut).toFixed(6)} ${toToken}`, {amount: amt, token: fromToken});
           showNotification(
-            `✅ Swap successful!<br>${amt.toFixed(6)} ${fromToken} → ${parseFloat(result.amountOut).toFixed(6)} ${toToken}<br>TX: <a href="https://sepolia.etherscan.io/tx/${result.txHash}" target="_blank" style="color:#60a5fa;">${result.txHash.slice(0, 10)}...</a>`,
+            `✅ Swap successful!<br>${amt.toFixed(6)} ${fromToken} → ${parseFloat(result.amountOut).toFixed(6)} ${toToken}<br>TX: <a href="${getActiveNetwork().explorer}/tx/${result.txHash}" target="_blank" style="color:#60a5fa;">${result.txHash.slice(0, 10)}...</a>`,
             false
           );
           
@@ -7940,8 +8071,9 @@
         
         nftMinted = true;
         
+        recordTransaction(tx.hash, 'NFT Mint', 'Minted Learning Achievement NFT', {to: NFT_CONTRACT_ADDRESS});
         showNotification(
-          `🎉 Congratulations! Your Learning Achievement NFT has been minted!<br>TX: <a href="https://sepolia.etherscan.io/tx/${tx.hash}" target="_blank" style="color:#60a5fa;">${tx.hash.slice(0, 10)}...</a>`,
+          `🎉 Congratulations! Your Learning Achievement NFT has been minted!<br>TX: <a href="${getActiveNetwork().explorer}/tx/${tx.hash}" target="_blank" style="color:#60a5fa;">${tx.hash.slice(0, 10)}...</a>`,
           false
         );
         
