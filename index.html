@@ -782,6 +782,72 @@
       cursor: pointer;
       margin-top: 20px;
     }
+
+    /* Network Switcher */
+    .network-switcher {
+      display: flex;
+      gap: 4px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 10px;
+      padding: 3px;
+      margin: 0 8px;
+    }
+    .network-switcher-btn {
+      padding: 5px 10px;
+      border: none;
+      border-radius: 8px;
+      background: transparent;
+      color: #94a3b8;
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .network-switcher-btn:hover { color: #e2e8f0; background: rgba(255,255,255,0.08); }
+    .network-switcher-btn.active {
+      background: linear-gradient(135deg, #0d6efd, #8b5cf6);
+      color: white;
+      box-shadow: 0 2px 8px rgba(13,110,253,0.4);
+    }
+
+    /* OCID section in back-profile panel */
+    .ocid-section {
+      margin-top: 20px;
+      padding: 14px;
+      background: linear-gradient(135deg, rgba(139,92,246,0.1), rgba(59,130,246,0.1));
+      border-radius: 10px;
+      border-left: 3px solid #8b5cf6;
+    }
+    .ocid-section .section-title { color: #c084fc; margin-bottom: 10px; }
+    .ocid-input-wrap { display: flex; gap: 8px; }
+    .ocid-input {
+      flex: 1;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid #2e3650;
+      color: #e2e8f0;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 0.9rem;
+    }
+    .ocid-input:focus { outline: none; border-color: #8b5cf6; }
+    .ocid-save-btn {
+      background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+    .ocid-save-btn:hover { opacity: 0.9; }
+    .ocid-badge {
+      margin-top: 8px;
+      font-size: 0.82rem;
+      color: #94a3b8;
+    }
+    .ocid-badge.verified { color: #34d399; }
     
     /* Ethers Loading Indicator */
     #ethersLoadingIndicator {
@@ -957,6 +1023,12 @@
     <p class="subtitle">Connect your wallet to get started</p>
 
     <div style="margin-bottom: 30px;">
+      <h3 style="margin-bottom: 10px; color: #60a5fa; font-size: 1.2rem;">Select Network</h3>
+      <div class="network-switcher" id="loginNetworkSwitcher" style="justify-content:center; margin-bottom:16px;">
+        <button class="network-switcher-btn active" id="loginNetBtn_sepolia"     onclick="selectLoginNetwork('sepolia')">🔵 ETH Sepolia</button>
+        <button class="network-switcher-btn"        id="loginNetBtn_educhain"    onclick="selectLoginNetwork('educhain')">🎓 EDU Testnet</button>
+        <button class="network-switcher-btn"        id="loginNetBtn_basesepolia" onclick="selectLoginNetwork('basesepolia')">🔷 Base Sepolia</button>
+      </div>
       <h3 style="margin-bottom: 15px; color: #60a5fa; font-size: 1.2rem;">Connect Wallet</h3>
       <button class="wallet-choice primary-wallet" onclick="connectMetaMask()">
         <span style="font-size: 1.5rem; margin-right: 10px;">🦊</span>
@@ -974,10 +1046,10 @@
         <span style="font-size: 1.5rem; margin-right: 10px;">🔗</span>
         WalletConnect
       </button>
-      <p style="margin-top: 15px; font-size: 0.85rem; color: #94a3b8;">
-        <strong>Sepolia Testnet Required</strong><br>
-        Network: Sepolia | Chain ID: 11155111<br>
-        Need test ETH? Visit <a href="https://sepoliafaucet.com" target="_blank" style="color: #60a5fa;">Sepolia Faucet</a>
+      <p style="margin-top: 15px; font-size: 0.85rem; color: #94a3b8;" id="networkInfoText">
+        <strong>Testnet Required</strong><br>
+        Select a network above then connect your wallet<br>
+        <span id="faucetLinkText">Need test tokens? <a href="https://sepoliafaucet.com" id="faucetLink" target="_blank" style="color: #60a5fa;">Get faucet tokens</a></span>
       </p>
     </div>
 
@@ -1030,6 +1102,12 @@
             </button>
           </div>
         </div>
+      </div>
+      <!-- Network Switcher (3 chains) -->
+      <div class="network-switcher" id="networkSwitcher">
+        <button class="network-switcher-btn active" id="netBtn_sepolia"     onclick="switchNetwork('sepolia')">🔵 ETH Sepolia</button>
+        <button class="network-switcher-btn"        id="netBtn_educhain"    onclick="switchNetwork('educhain')">🎓 EDU Testnet</button>
+        <button class="network-switcher-btn"        id="netBtn_basesepolia" onclick="switchNetwork('basesepolia')">🔷 Base Sepolia</button>
       </div>
       <button class="top-btn" onclick="showVolumeLeaderboard()" style="background:linear-gradient(90deg,#fbbf24,#f59e0b); margin-left:8px;">
         🏆 Leaderboard
@@ -1089,7 +1167,7 @@
               <img src="https://cryptologos.cc/logos/ethereum-eth-logo.png?v=035" alt="ETH" class="profile-slide-asset-icon">
               <div class="profile-slide-asset-details">
                 <div class="profile-slide-asset-name">ETH</div>
-                <div class="profile-slide-asset-subtitle">Sepolia Testnet • View on Explorer →</div>
+                <div class="profile-slide-asset-subtitle" id="ethNetworkSubtitle">Sepolia Testnet • View on Explorer →</div>
               </div>
               <div class="profile-slide-asset-amounts">
                 <div class="profile-slide-token-amount" id="ethBalance">0.0000</div>
@@ -1232,6 +1310,16 @@
           </div>
         </div>
 
+        <!-- OCID (Open Campus ID) -->
+        <div class="ocid-section">
+          <div class="section-title">🎓 Open Campus ID (OCID)</div>
+          <div class="ocid-input-wrap">
+            <input type="text" id="ocidInput" class="ocid-input" placeholder="Enter your OCID (e.g. 0x123...)" maxlength="42" />
+            <button class="ocid-save-btn" onclick="saveOCID()">Save</button>
+          </div>
+          <div class="ocid-badge" id="ocidBadge">No OCID connected</div>
+        </div>
+
         <button class="logout-btn" onclick="logoutUser()">Log Out</button>
       </div>
     </div>
@@ -1259,7 +1347,62 @@
     const SEPOLIA_RPC = SEPOLIA_RPC_URLS[0]; // Primary RPC
     const SEPOLIA_EXPLORER = "https://sepolia.etherscan.io";
     const SEPOLIA_FAUCET = "https://sepoliafaucet.com";
-    
+
+    // EDU Chain Testnet constants
+    const EDU_CHAIN_ID = 656476;
+    const EDU_CHAIN_HEX = "0xa045c";
+    const EDU_RPC_URL = "https://rpc.open-campus-codex.gelato.digital";
+    const EDU_EXPLORER = "https://edu-chain-testnet.blockscout.com";
+    const EDU_FAUCET = "https://educhain-community-faucet.vercel.app/";
+
+    // Base Sepolia constants
+    const BASE_SEPOLIA_CHAIN_ID = 84532;
+    const BASE_SEPOLIA_CHAIN_HEX = "0x14a34";
+    const BASE_SEPOLIA_RPC_URL = "https://sepolia.base.org";
+    const BASE_SEPOLIA_EXPLORER = "https://sepolia.basescan.org";
+    const BASE_SEPOLIA_FAUCET = "https://www.coinbase.com/faucets/base-ethereum-sepolia-faucet";
+
+    // Network configurations map
+    const NETWORKS = {
+      sepolia: {
+        id: 'sepolia',
+        name: 'ETH Sepolia',
+        chainId: SEPOLIA_CHAIN_ID,
+        chainHex: SEPOLIA_CHAIN_HEX,
+        rpcUrls: SEPOLIA_RPC_URLS,
+        explorer: SEPOLIA_EXPLORER,
+        faucet: SEPOLIA_FAUCET,
+        currency: 'ETH',
+        label: '🔵 ETH Sepolia'
+      },
+      educhain: {
+        id: 'educhain',
+        name: 'EDU Chain Testnet',
+        chainId: EDU_CHAIN_ID,
+        chainHex: EDU_CHAIN_HEX,
+        rpcUrls: [EDU_RPC_URL],
+        explorer: EDU_EXPLORER,
+        faucet: EDU_FAUCET,
+        currency: 'EDU',
+        label: '🎓 EDU Chain Testnet'
+      },
+      basesepolia: {
+        id: 'basesepolia',
+        name: 'Base Sepolia',
+        chainId: BASE_SEPOLIA_CHAIN_ID,
+        chainHex: BASE_SEPOLIA_CHAIN_HEX,
+        rpcUrls: [BASE_SEPOLIA_RPC_URL],
+        explorer: BASE_SEPOLIA_EXPLORER,
+        faucet: BASE_SEPOLIA_FAUCET,
+        currency: 'ETH',
+        label: '🔷 Base Sepolia'
+      }
+    };
+
+    // Active network – persisted in localStorage
+    let currentNetworkId = localStorage.getItem('currentNetworkId') || 'sepolia';
+    function getActiveNetwork() { return NETWORKS[currentNetworkId] || NETWORKS.sepolia; }
+
     // WalletConnect v2 Project ID from https://cloud.reown.com (formerly WalletConnect Cloud)
     const WALLETCONNECT_PROJECT_ID = "51e44cec955a70475db9cc1900283704";
     
@@ -1511,11 +1654,12 @@
         
         // Listen for chain changes
         activeProvider.on('chainChanged', (chainId) => {
-          const expectedChainId = parseInt(SEPOLIA_CHAIN_HEX, 16);
-          if (parseInt(chainId, 16) !== expectedChainId) {
-            showNotification("Network changed. Please switch back to Sepolia.", true);
+          const incomingId = parseInt(chainId, 16);
+          const net = getActiveNetwork();
+          if (incomingId !== net.chainId) {
+            showNotification(`⚠️ Network changed. Please switch back to ${net.name} or use the network switcher.`, true);
           } else {
-            showNotification("Switched to Sepolia testnet", false);
+            showNotification(`✅ Switched to ${net.name}`, false);
           }
           // Reload balances on chain change
           if (typeof fetchRealBalances === 'function') {
@@ -1648,6 +1792,12 @@
       document.getElementById('loginPage').classList.add('hidden');
       document.getElementById('mainApp').classList.remove('hidden');
       
+      // Initialize network switcher UI
+      updateNetworkSwitcherUI();
+
+      // Load OCID
+      loadOCID();
+
       // Initialize profile tabs if startApp has loaded
       if (typeof initProfileTabs === 'function') {
         initProfileTabs();
@@ -1701,18 +1851,19 @@
         // Request account access
         await provider.send("eth_requestAccounts", []);
         
-        // Check current network and auto-switch to Sepolia if needed
+        // Check current network and auto-switch to the selected network if needed
         showNotification(`🔄 Checking network...`, false);
+        const net = getActiveNetwork();
         const network = await provider.getNetwork();
-        if (network.chainId !== SEPOLIA_CHAIN_ID) {
-          showNotification(`🔄 Switching to Sepolia network...`, false);
+        if (network.chainId !== net.chainId) {
+          showNotification(`🔄 Switching to ${net.name}...`, false);
           try {
-            // Try to switch to Sepolia using the raw provider
+            // Try to switch to the selected network using the raw provider
             await rawProvider.request({
               method: 'wallet_switchEthereumChain',
-              params: [{ chainId: SEPOLIA_CHAIN_HEX }],
+              params: [{ chainId: net.chainHex }],
             });
-            showNotification("Switched to Sepolia testnet", false);
+            showNotification(`✅ Switched to ${net.name}`, false);
           } catch (switchError) {
             // If network doesn't exist, add it
             if (switchError.code === 4902) {
@@ -1720,25 +1871,25 @@
                 await rawProvider.request({
                   method: 'wallet_addEthereumChain',
                   params: [{
-                    chainId: SEPOLIA_CHAIN_HEX,
-                    chainName: 'Sepolia Testnet',
+                    chainId: net.chainHex,
+                    chainName: net.name,
                     nativeCurrency: {
-                      name: 'Sepolia ETH',
-                      symbol: 'ETH',
+                      name: net.currency,
+                      symbol: net.currency,
                       decimals: 18
                     },
-                    rpcUrls: SEPOLIA_RPC_URLS,
-                    blockExplorerUrls: [SEPOLIA_EXPLORER]
+                    rpcUrls: net.rpcUrls,
+                    blockExplorerUrls: [net.explorer]
                   }],
                 });
-                showNotification("Added and switched to Sepolia testnet ✅", false);
+                showNotification(`✅ Added and switched to ${net.name}`, false);
               } catch (addError) {
-                showNotification("Failed to add Sepolia network", true);
+                showNotification(`Failed to add ${net.name}`, true);
                 console.error("Add network error:", addError);
                 return;
               }
             } else {
-              showNotification("Failed to switch to Sepolia. Please switch manually.", true);
+              showNotification(`Failed to switch to ${net.name}. Please switch manually.`, true);
               console.error("Switch network error:", switchError);
               return;
             }
@@ -1997,6 +2148,11 @@
     window.connectWalletFromApp = connectWalletFromApp;
     
     function initializeApp() {
+      // Initialize network switcher UI immediately (doesn't require ethers)
+      if (ethersLoadAttempts === 0) {
+        updateNetworkSwitcherUI();
+      }
+
       // Cache loading indicator reference to avoid redundant DOM queries
       const loadingIndicator = document.getElementById('ethersLoadingIndicator');
       const loadingText = document.getElementById('loadingText');
@@ -2509,6 +2665,7 @@
     window.openBackProfile = function() {
       document.getElementById('backProfilePanel').classList.remove('hidden');
       closeProfileSlide();
+      loadOCID();
     }
 
     window.closeBackProfile = function() {
@@ -2596,10 +2753,121 @@
     window.viewOnExplorer = function() {
       if (!userAddress) return;
       
-      const explorerUrl = `${SEPOLIA_EXPLORER}/address/${userAddress}`;
+      const net = getActiveNetwork();
+      const explorerUrl = `${net.explorer}/address/${userAddress}`;
       window.open(explorerUrl, '_blank');
-      showNotification('Opening Sepolia Explorer...', false);
+      showNotification(`Opening ${net.name} Explorer...`, false);
     }
+
+    // ── Network Switcher ──────────────────────────────────────────
+    window.switchNetwork = async function(networkId) {
+      if (!NETWORKS[networkId]) return;
+      const net = NETWORKS[networkId];
+
+      // Update UI immediately
+      currentNetworkId = networkId;
+      localStorage.setItem('currentNetworkId', networkId);
+      updateNetworkSwitcherUI();
+
+      // If a wallet is connected, attempt to switch the wallet to this network
+      if (provider && userAddress) {
+        const rawProvider = provider.provider || window.ethereum || window.okxwallet;
+        if (rawProvider && rawProvider.request) {
+          try {
+            await rawProvider.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: net.chainHex }] });
+            showNotification(`✅ Switched to ${net.name}`, false);
+          } catch (switchError) {
+            if (switchError.code === 4902) {
+              try {
+                await rawProvider.request({
+                  method: 'wallet_addEthereumChain',
+                  params: [{
+                    chainId: net.chainHex,
+                    chainName: net.name,
+                    nativeCurrency: { name: net.currency, symbol: net.currency, decimals: 18 },
+                    rpcUrls: net.rpcUrls,
+                    blockExplorerUrls: [net.explorer]
+                  }]
+                });
+                showNotification(`✅ Added and switched to ${net.name}`, false);
+              } catch (addError) {
+                showNotification(`Could not add ${net.name}: ${addError.message}`, true);
+              }
+            } else {
+              showNotification(`⚠️ Could not auto-switch: ${switchError.message}`, true);
+            }
+          }
+          // Delay to allow the provider to settle after chain switch before re-fetching balances
+          if (typeof fetchRealBalances === 'function') setTimeout(() => fetchRealBalances(), BALANCE_REFRESH_DELAY_MS);
+        }
+      } else {
+        showNotification(`🌐 Network set to ${net.name}. Connect your wallet to use it.`, false);
+      }
+
+      // Refresh asset explorer links
+      updateAssetLinks();
+    };
+
+    function updateNetworkSwitcherUI() {
+      Object.keys(NETWORKS).forEach(id => {
+        // Main app switcher
+        const btn = document.getElementById(`netBtn_${id}`);
+        if (btn) btn.classList.toggle('active', id === currentNetworkId);
+        // Login page switcher
+        const loginBtn = document.getElementById(`loginNetBtn_${id}`);
+        if (loginBtn) loginBtn.classList.toggle('active', id === currentNetworkId);
+      });
+      // Update ETH asset subtitle in profile panel
+      const net = getActiveNetwork();
+      const ethSubtitle = document.getElementById('ethNetworkSubtitle');
+      if (ethSubtitle) ethSubtitle.textContent = `${net.name} • View on Explorer →`;
+      // Update faucet link on login page
+      const faucetLink = document.getElementById('faucetLink');
+      if (faucetLink) {
+        faucetLink.href = net.faucet;
+        faucetLink.textContent = `${net.name} Faucet`;
+      }
+    }
+
+    window.selectLoginNetwork = function(networkId) {
+      if (!NETWORKS[networkId]) return;
+      currentNetworkId = networkId;
+      localStorage.setItem('currentNetworkId', networkId);
+      updateNetworkSwitcherUI();
+      const net = getActiveNetwork();
+      showNotification(`🌐 Network set to ${net.name}`, false);
+    };
+
+    // ── OCID (Open Campus ID) ─────────────────────────────────────
+    function loadOCID() {
+      const ocid = localStorage.getItem('mogaland_ocid') || '';
+      const input = document.getElementById('ocidInput');
+      const badge = document.getElementById('ocidBadge');
+      if (input) input.value = ocid;
+      if (badge) {
+        if (ocid) {
+          badge.textContent = `✅ OCID: ${ocid.slice(0,8)}...${ocid.slice(-4)}`;
+          badge.className = 'ocid-badge verified';
+        } else {
+          badge.textContent = 'No OCID connected';
+          badge.className = 'ocid-badge';
+        }
+      }
+    }
+
+    window.saveOCID = function() {
+      const input = document.getElementById('ocidInput');
+      if (!input) return;
+      const value = input.value.trim();
+      // Basic validation: allow empty (to clear), Ethereum address, or numeric ID (max 20 digits)
+      if (value && !/^(0x[0-9a-fA-F]{40}|\d{1,20})$/.test(value)) {
+        showNotification('⚠️ Please enter a valid OCID (Ethereum address or numeric ID)', true);
+        return;
+      }
+      localStorage.setItem('mogaland_ocid', value);
+      loadOCID();
+      showNotification(value ? '✅ OCID saved successfully!' : '✅ OCID cleared', false);
+    };
 
     window.disconnectWallet = function() {
       if (confirm('Are you sure you want to disconnect your wallet?')) {
@@ -3051,28 +3319,37 @@
     function updateAssetLinks() {
       if (!userAddress) return;
       
+      const net = getActiveNetwork();
+      const explorer = net.explorer;
+
       // Update ETH link
       const ethLink = document.getElementById('ethExplorerLink');
       if (ethLink) {
-        ethLink.href = `https://sepolia.etherscan.io/address/${userAddress}`;
+        ethLink.href = `${explorer}/address/${userAddress}`;
       }
       
-      // Update WBTC link
+      // Update WBTC link (token address only meaningful on Sepolia)
       const wbtcLink = document.getElementById('wbtcExplorerLink');
       if (wbtcLink) {
-        wbtcLink.href = `https://sepolia.etherscan.io/token/${WBTC_SEPOLIA}?a=${userAddress}`;
+        wbtcLink.href = currentNetworkId === 'sepolia'
+          ? `${explorer}/token/${WBTC_SEPOLIA}?a=${userAddress}`
+          : `${explorer}/address/${userAddress}`;
       }
       
       // Update USDC link
       const usdcLink = document.getElementById('usdcExplorerLink');
       if (usdcLink) {
-        usdcLink.href = `https://sepolia.etherscan.io/token/${USDC_SEPOLIA_ADDRESS}?a=${userAddress}`;
+        usdcLink.href = currentNetworkId === 'sepolia'
+          ? `${explorer}/token/${USDC_SEPOLIA_ADDRESS}?a=${userAddress}`
+          : `${explorer}/address/${userAddress}`;
       }
       
       // Update USDT link
       const usdtLink = document.getElementById('usdtExplorerLink');
       if (usdtLink) {
-        usdtLink.href = `https://sepolia.etherscan.io/token/${USDT_SEPOLIA_ADDRESS}?a=${userAddress}`;
+        usdtLink.href = currentNetworkId === 'sepolia'
+          ? `${explorer}/token/${USDT_SEPOLIA_ADDRESS}?a=${userAddress}`
+          : `${explorer}/address/${userAddress}`;
       }
     }
 
