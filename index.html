@@ -2373,6 +2373,47 @@
     }
     window.requestWalletConfirmation = requestWalletConfirmation;
     
+    // ── Network Switcher UI ──────────────────────────────────────────
+    // Defined at global scope so it can be called from initializeApp() and enterDashboard()
+    function updateNetworkSwitcherUI() {
+      Object.keys(NETWORKS).forEach(id => {
+        // Main app switcher
+        const btn = document.getElementById(`netBtn_${id}`);
+        if (btn) btn.classList.toggle('active', id === currentNetworkId);
+        // Login page switcher
+        const loginBtn = document.getElementById(`loginNetBtn_${id}`);
+        if (loginBtn) loginBtn.classList.toggle('active', id === currentNetworkId);
+      });
+      // Update ETH asset subtitle in profile panel
+      const net = getActiveNetwork();
+      const ethSubtitle = document.getElementById('ethNetworkSubtitle');
+      if (ethSubtitle) ethSubtitle.textContent = `${net.name} • View on Explorer →`;
+      // Update faucet link on login page
+      const faucetLink = document.getElementById('faucetLink');
+      if (faucetLink) {
+        faucetLink.href = net.faucet;
+        faucetLink.textContent = `${net.name} Faucet`;
+      }
+    }
+
+    // ── OCID (Open Campus ID) ─────────────────────────────────────
+    // Defined at global scope so it can be called from enterDashboard()
+    function loadOCID() {
+      const ocid = localStorage.getItem('mogaland_ocid') || '';
+      const input = document.getElementById('ocidInput');
+      const badge = document.getElementById('ocidBadge');
+      if (input) input.value = ocid;
+      if (badge) {
+        if (ocid) {
+          badge.textContent = `✅ OCID: ${ocid.slice(0,8)}...${ocid.slice(-4)}`;
+          badge.className = 'ocid-badge verified';
+        } else {
+          badge.textContent = 'No OCID connected';
+          badge.className = 'ocid-badge';
+        }
+      }
+    }
+
     function startApp() {
     // Note: SEPOLIA constants, provider, and userAddress are now in global scope
     // WalletConnect v1 has been removed due to deprecation
@@ -2896,27 +2937,6 @@
       updateAssetLinks();
     };
 
-    function updateNetworkSwitcherUI() {
-      Object.keys(NETWORKS).forEach(id => {
-        // Main app switcher
-        const btn = document.getElementById(`netBtn_${id}`);
-        if (btn) btn.classList.toggle('active', id === currentNetworkId);
-        // Login page switcher
-        const loginBtn = document.getElementById(`loginNetBtn_${id}`);
-        if (loginBtn) loginBtn.classList.toggle('active', id === currentNetworkId);
-      });
-      // Update ETH asset subtitle in profile panel
-      const net = getActiveNetwork();
-      const ethSubtitle = document.getElementById('ethNetworkSubtitle');
-      if (ethSubtitle) ethSubtitle.textContent = `${net.name} • View on Explorer →`;
-      // Update faucet link on login page
-      const faucetLink = document.getElementById('faucetLink');
-      if (faucetLink) {
-        faucetLink.href = net.faucet;
-        faucetLink.textContent = `${net.name} Faucet`;
-      }
-    }
-
     window.selectLoginNetwork = function(networkId) {
       if (!NETWORKS[networkId]) return;
       currentNetworkId = networkId;
@@ -2925,23 +2945,6 @@
       const net = getActiveNetwork();
       showNotification(`🌐 Network set to ${net.name}`, false);
     };
-
-    // ── OCID (Open Campus ID) ─────────────────────────────────────
-    function loadOCID() {
-      const ocid = localStorage.getItem('mogaland_ocid') || '';
-      const input = document.getElementById('ocidInput');
-      const badge = document.getElementById('ocidBadge');
-      if (input) input.value = ocid;
-      if (badge) {
-        if (ocid) {
-          badge.textContent = `✅ OCID: ${ocid.slice(0,8)}...${ocid.slice(-4)}`;
-          badge.className = 'ocid-badge verified';
-        } else {
-          badge.textContent = 'No OCID connected';
-          badge.className = 'ocid-badge';
-        }
-      }
-    }
 
     window.saveOCID = function() {
       const input = document.getElementById('ocidInput');
