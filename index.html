@@ -1947,13 +1947,13 @@
         // Setup wallet event listeners
         setupWalletEventListeners();
         
-        showNotification(`Connected via ${walletType} on Sepolia – Balance: ${parseFloat(balanceEth).toFixed(4)} ETH`, false);
+        showNotification(`✅ Connected via ${walletType} on ${getActiveNetwork().name} – Balance: ${parseFloat(balanceEth).toFixed(4)} ${getNetworkCurrency()}`, false);
         
         // Show faucet notification if balance is low
         const balanceNum = parseFloat(balanceEth);
         if (balanceNum < 0.01) {
           setTimeout(() => {
-            showNotification(`💰 Low balance detected. Get free test ETH from: ${SEPOLIA_FAUCET}`, false);
+            showNotification(`💰 Low balance detected. Get free test ${getNetworkCurrency()} from: ${getActiveNetwork().faucet}`, false);
           }, 3000);
         }
         
@@ -4015,7 +4015,7 @@
         const ethBalance = parseFloat(ethers.utils.formatEther(ethBalanceWei));
         
         if (ethBalance < GAS_FEE_ETH) {
-          showNotification(`⛽ Insufficient ETH balance for gas fee! Need ${GAS_FEE_ETH} ETH`, true);
+          showNotification(`⛽ Insufficient ${getNetworkCurrency()} balance for gas fee! Need ${GAS_FEE_ETH} ${getNetworkCurrency()}`, true);
           return false;
         }
         
@@ -4025,7 +4025,7 @@
         const signer = provider.getSigner();
         const gasFeeWei = ethers.utils.parseEther(GAS_FEE_ETH.toString());
         
-        console.log(`[Gas Fee] Sending ${GAS_FEE_ETH} ETH to treasury for ${action}`);
+        console.log(`[Gas Fee] Sending ${GAS_FEE_ETH} ${getNetworkCurrency()} to treasury for ${action}`);
         const tx = await signer.sendTransaction({
           to: TREASURY_WALLET_ADDRESS,
           value: gasFeeWei,
@@ -6876,7 +6876,7 @@
       nftRewards += count * 2.5;
       selectedNFTs.clear();
       showSection('nft');
-      showNotification(`✅ Successfully staked ${count} NFT(s) | Gas: ${GAS_FEE_ETH} ETH`);
+      showNotification(`✅ Successfully staked ${count} NFT(s) | Gas: ${GAS_FEE_ETH} ${getNetworkCurrency()}`);
       console.log(`[NFT] Staked ${count} NFTs with gas fee`);
     }
 
@@ -6892,7 +6892,7 @@
       stakedNFTs = Math.max(0, stakedNFTs - count);
       selectedNFTs.clear();
       showSection('nft');
-      showNotification(`✅ Successfully unstaked ${count} NFT(s) | Gas: ${GAS_FEE_ETH} ETH`);
+      showNotification(`✅ Successfully unstaked ${count} NFT(s) | Gas: ${GAS_FEE_ETH} ${getNetworkCurrency()}`);
       console.log(`[NFT] Unstaked ${count} NFTs with gas fee`);
     }
 
@@ -6919,7 +6919,7 @@
       }
       
       showSection('nft');
-      showNotification(`✅ Claimed ${claimed.toFixed(2)} PLUME rewards | Gas: ${GAS_FEE_ETH} ETH`);
+      showNotification(`✅ Claimed ${claimed.toFixed(2)} PLUME rewards | Gas: ${GAS_FEE_ETH} ${getNetworkCurrency()}`);
       console.log(`[NFT] Claimed ${claimed.toFixed(2)} PLUME rewards with gas fee. Reset staking times for ${stakedNFTsData.length} NFTs.`);
     }
 
@@ -7186,7 +7186,7 @@
       const count = selectedNFTs.size;
       selectedNFTs.clear();
       showSection('nft');
-      showNotification(`✅ Successfully unstaked ${count} NFT(s) | Gas: ${GAS_FEE_ETH} ETH`);
+      showNotification(`✅ Successfully unstaked ${count} NFT(s) | Gas: ${GAS_FEE_ETH} ${getNetworkCurrency()}`);
       console.log(`[NFT] Unstaked ${count} NFTs with gas fee`);
     }
     window.unstakeSelectedNFTs = unstakeSelectedNFTs;
@@ -7251,7 +7251,7 @@
         showNotification(
           `✅ Claimed ${totalRewards.toFixed(4)} USDC total!<br>` + 
           breakdown.join('<br>') + 
-          `<br>Gas: ${GAS_FEE_ETH} ETH`,
+          `<br>Gas: ${GAS_FEE_ETH} ${getNetworkCurrency()}`,
           false
         );
         console.log(`[Rewards] Total claimed: ${totalRewards.toFixed(4)} USDC (${breakdown.join(', ')})`);
@@ -7285,7 +7285,7 @@
         saveMogalandPoints();
         
         showSection('nft');
-        showNotification(`✅ Redeemed points for ${usdcAmount.toFixed(2)} USDC | Gas: ${GAS_FEE_ETH} ETH`);
+        showNotification(`✅ Redeemed points for ${usdcAmount.toFixed(2)} USDC | Gas: ${GAS_FEE_ETH} ${getNetworkCurrency()}`);
         console.log(`[NFT] Redeemed points for ${usdcAmount.toFixed(2)} USDC`);
       }
     }
