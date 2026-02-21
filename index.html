@@ -2460,39 +2460,44 @@
         // Fetch live ETH/USDC rate from Uniswap in the background
         fetchLiveETHtoUSDCRate().catch(err => console.log('[Uniswap] Rate fetch error:', err));
         
-        // Fetch ETH balance
+        // Fetch native token balance (works on all networks)
         const ethBalanceWei = await provider.getBalance(userAddress);
         const ethBalance = parseFloat(ethers.utils.formatEther(ethBalanceWei));
         
-        // Fetch USDC balance
-        const usdcContract = new ethers.Contract(USDC_SEPOLIA_ADDRESS, ERC20_ABI, provider);
-        const usdcBalanceRaw = await usdcContract.balanceOf(userAddress);
-        const usdcBalance = parseFloat(ethers.utils.formatUnits(usdcBalanceRaw, 6)); // USDC has 6 decimals
-        
-        // Fetch USDT balance
-        const usdtContract = new ethers.Contract(USDT_SEPOLIA_ADDRESS, ERC20_ABI, provider);
-        const usdtBalanceRaw = await usdtContract.balanceOf(userAddress);
-        const usdtBalance = parseFloat(ethers.utils.formatUnits(usdtBalanceRaw, 6)); // USDT has 6 decimals
-        
-        // Fetch GHO balance
-        const ghoContract = new ethers.Contract(GHO_SEPOLIA_ADDRESS, ERC20_ABI, provider);
-        const ghoBalanceRaw = await ghoContract.balanceOf(userAddress);
-        const ghoBalance = parseFloat(ethers.utils.formatUnits(ghoBalanceRaw, 18)); // GHO has 18 decimals
-        
-        // Fetch WBTC balance
-        const wbtcContract = new ethers.Contract(WBTC_SEPOLIA_ADDRESS, ERC20_ABI, provider);
-        const wbtcBalanceRaw = await wbtcContract.balanceOf(userAddress);
-        const wbtcBalance = parseFloat(ethers.utils.formatUnits(wbtcBalanceRaw, 8)); // WBTC has 8 decimals
-        
-        // Fetch all token balances from Etherscan API
-        await fetchAllTokenBalancesFromEtherscan();
+        // Fetch token balances only on Sepolia (tokens may not exist on other networks)
+        const activeNet = getActiveNetwork();
+        let usdcBalance = 0, usdtBalance = 0, ghoBalance = 0, wbtcBalance = 0;
+        if (activeNet.chainId === SEPOLIA_CHAIN_ID) {
+          // Fetch USDC balance
+          const usdcContract = new ethers.Contract(USDC_SEPOLIA_ADDRESS, ERC20_ABI, provider);
+          const usdcBalanceRaw = await usdcContract.balanceOf(userAddress);
+          usdcBalance = parseFloat(ethers.utils.formatUnits(usdcBalanceRaw, 6)); // USDC has 6 decimals
+          
+          // Fetch USDT balance
+          const usdtContract = new ethers.Contract(USDT_SEPOLIA_ADDRESS, ERC20_ABI, provider);
+          const usdtBalanceRaw = await usdtContract.balanceOf(userAddress);
+          usdtBalance = parseFloat(ethers.utils.formatUnits(usdtBalanceRaw, 6)); // USDT has 6 decimals
+          
+          // Fetch GHO balance
+          const ghoContract = new ethers.Contract(GHO_SEPOLIA_ADDRESS, ERC20_ABI, provider);
+          const ghoBalanceRaw = await ghoContract.balanceOf(userAddress);
+          ghoBalance = parseFloat(ethers.utils.formatUnits(ghoBalanceRaw, 18)); // GHO has 18 decimals
+          
+          // Fetch WBTC balance
+          const wbtcContract = new ethers.Contract(WBTC_SEPOLIA_ADDRESS, ERC20_ABI, provider);
+          const wbtcBalanceRaw = await wbtcContract.balanceOf(userAddress);
+          wbtcBalance = parseFloat(ethers.utils.formatUnits(wbtcBalanceRaw, 8)); // WBTC has 8 decimals
+          
+          // Fetch all token balances from Etherscan API
+          await fetchAllTokenBalancesFromEtherscan();
+        }
         
         // Update UI with real balances
         const ethBalanceEl = document.getElementById('ethBalance');
         if (ethBalanceEl) ethBalanceEl.textContent = ethBalance.toFixed(4);
         
         const profileTotal = document.querySelector('.profile-slide-total');
-        if (profileTotal) profileTotal.textContent = `${ethBalance.toFixed(4)} ETH`;
+        if (profileTotal) profileTotal.textContent = `${ethBalance.toFixed(4)} ${getNetworkCurrency()}`;
         
         // Update USDC display using IDs
         const usdcBalanceEl = document.getElementById('usdcBalance');
@@ -2551,6 +2556,9 @@
         showNotification("⚠️ Failed to fetch balances: " + (error.message || "Unknown error"), true);
       }
     }
+
+    // Alias for fetchRealBalances used in various sections
+    function fetchAndDisplayBalances() { return fetchRealBalances(); }
 
     // Fetch all token balances from Etherscan API
     async function fetchAllTokenBalancesFromEtherscan() {
@@ -2926,6 +2934,8 @@
               showNotification(`⚠️ Could not auto-switch: ${switchError.message}`, true);
             }
           }
+          // Re-initialize ethers provider after chain switch to prevent NETWORK_ERROR
+          provider = new ethers.providers.Web3Provider(rawProvider);
           // Delay to allow the provider to settle after chain switch before re-fetching balances
           if (typeof fetchRealBalances === 'function') setTimeout(() => fetchRealBalances(), BALANCE_REFRESH_DELAY_MS);
         }
@@ -6561,7 +6571,7 @@
               Bridge Assets
             </h2>
             <p style="text-align: center; color: #94a3b8; margin-bottom: 32px; font-size: 1.1em;">
-              Transfer tokens between Ethereum Testnets to Sepolia
+              Transfer tokens between EDU Chain, ETH Sepolia and Base Sepolia
             </p>
 
             <div style="background: #13151f; border: 1px solid #1e2130; border-radius: 24px; padding: 32px 24px; box-shadow: 0 12px 48px rgba(0,0,0,0.7);">
@@ -6570,10 +6580,17 @@
                 <div style="background: #1e2130; border-radius: 16px; padding: 20px;">
                   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
                     <select id="fromChain" onchange="updateBridgeEstimate()" style="background: #2a2f45; color: white; font-size: 1.2em; border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; min-width: 180px; cursor: pointer;">
-                      <option value="goerli">Goerli Testnet</option>
-                      <option value="holesky">Holesky Testnet</option>
-                      <option value="mumbai">Mumbai (Polygon)</option>
-                      <option value="bsc-testnet">BSC Testnet</option>
+                      <optgroup label="Supported Networks">
+                        <option value="educhain">EDU Chain Testnet</option>
+                        <option value="sepolia">ETH Sepolia</option>
+                        <option value="basesepolia">Base Sepolia</option>
+                      </optgroup>
+                      <optgroup label="Legacy Testnets">
+                        <option value="goerli">Goerli Testnet</option>
+                        <option value="holesky">Holesky Testnet</option>
+                        <option value="mumbai">Mumbai (Polygon)</option>
+                        <option value="bsc-testnet">BSC Testnet</option>
+                      </optgroup>
                     </select>
                     <span style="color: #94a3b8; font-size: 0.95em;">Balance: <span id="fromBalance">0.00</span></span>
                   </div>
@@ -6602,7 +6619,9 @@
                 <div style="background: #1e2130; border-radius: 16px; padding: 20px;">
                   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
                     <select id="toChain" onchange="updateBridgeEstimate()" style="background: #2a2f45; color: white; font-size: 1.2em; border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; min-width: 180px; cursor: pointer;">
-                      <option value="sepolia" selected>Sepolia Testnet</option>
+                      <option value="sepolia" selected>ETH Sepolia</option>
+                      <option value="educhain">EDU Chain Testnet</option>
+                      <option value="basesepolia">Base Sepolia</option>
                     </select>
                     <span style="color: #94a3b8; font-size: 0.95em;">Balance: <span id="toBalance">0.00</span></span>
                   </div>
@@ -6674,7 +6693,20 @@
         };
 
         window.swapBridgeChains = function() {
-          showNotification("Destination is always Sepolia for this bridge", false);
+          const fromChainEl = document.getElementById('fromChain');
+          const toChainEl = document.getElementById('toChain');
+          if (!fromChainEl || !toChainEl) return;
+          // Only allow swapping between the networks supported by toChain
+          const toOptions = Array.from(toChainEl.options).map(o => o.value);
+          if (!toOptions.includes(fromChainEl.value)) {
+            const toNames = Array.from(toChainEl.options).map(o => o.text).join(', ');
+            showNotification(`⚠️ Can only swap between: ${toNames}`, true);
+            return;
+          }
+          const fromVal = fromChainEl.value;
+          fromChainEl.value = toChainEl.value;
+          toChainEl.value = fromVal;
+          updateBridgeEstimate();
         };
 
         window.setBridgeSlippage = function(value) {
@@ -6694,7 +6726,10 @@
           
           const amount = parseFloat(document.getElementById('bridgeAmount')?.value || 0);
           const fromChainSelect = document.getElementById('fromChain');
-          const fromChain = fromChainSelect?.options[fromChainSelect?.selectedIndex]?.text || 'Goerli';
+          const fromChain = fromChainSelect?.options[fromChainSelect?.selectedIndex]?.text || 'EDU Chain Testnet';
+          const toChainSelect = document.getElementById('toChain');
+          const toChainText = toChainSelect?.options[toChainSelect?.selectedIndex]?.text || 'ETH Sepolia';
+          const toChainId = toChainSelect?.value || 'sepolia';
           const token = document.getElementById('bridgeToken')?.value || 'USDT';
           const slippage = parseFloat(document.getElementById('bridgeSlippage')?.textContent || '0.5');
           
@@ -6705,18 +6740,19 @@
           
           try {
             // Execute real bridge transaction
-            showNotification(`🌉 Preparing bridge: ${amount} ${token} from ${fromChain} to ${getActiveNetwork().name}...`, false);
+            showNotification(`🌉 Preparing bridge: ${amount} ${token} from ${fromChain} to ${toChainText}...`, false);
             
-            const result = await executeRealBridge(fromChain, getActiveNetwork().name, token, amount, slippage);
+            const result = await executeRealBridge(fromChain, toChainText, token, amount, slippage);
+            const explorerNet = NETWORKS[toChainId] || NETWORKS.sepolia;
             
             if (result.success) {
-              recordTransaction(result.txHash, 'Bridge', `Bridged ${amount.toFixed(6)} ${token} from ${fromChain} to ${getActiveNetwork().name}`, {amount: amount, token: token});
+              recordTransaction(result.txHash, 'Bridge', `Bridged ${amount.toFixed(6)} ${token} from ${fromChain} to ${toChainText}`, {amount: amount, token: token});
               showNotification(
-                `✅ Bridge successful!<br>${amount.toFixed(6)} ${token} from ${fromChain} to ${getActiveNetwork().name}<br>Received: ${result.finalAmount.toFixed(6)} ${token}<br>TX: <a href="${getActiveNetwork().explorer}/tx/${result.txHash}" target="_blank" style="color:#60a5fa;">${result.txHash.slice(0, 10)}...</a>`,
+                `✅ Bridge successful!<br>${amount.toFixed(6)} ${token} from ${fromChain} to ${toChainText}<br>Received: ${result.finalAmount.toFixed(6)} ${token}<br>TX: <a href="${explorerNet.explorer}/tx/${result.txHash}" target="_blank" style="color:#60a5fa;">${result.txHash.slice(0, 10)}...</a>`,
                 false
               );
               
-              console.log(`[Bridge] Real transaction completed: ${amount} ${token} from ${fromChain} to ${getActiveNetwork().name}`);
+              console.log(`[Bridge] Real transaction completed: ${amount} ${token} from ${fromChain} to ${toChainText}`);
               console.log(`[Bridge] Transaction hash: ${result.txHash}`);
               
               // Refresh balances
