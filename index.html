@@ -153,23 +153,33 @@
       50%  { background-position: 100% 50%; }
       100% { background-position: 0% 50%; }
     }
+    @keyframes catBgFloat {
+      0%   { transform: translate(0, 0) scale(1.0); }
+      25%  { transform: translate(-2%, 1%) scale(1.06); }
+      50%  { transform: translate(2%, -1%) scale(1.1); }
+      75%  { transform: translate(-1%, 2%) scale(1.06); }
+      100% { transform: translate(0, 0) scale(1.0); }
+    }
     * { margin:0; padding:0; box-sizing:border-box; }
     body {
       font-family: 'Segoe UI', Arial, sans-serif;
-      background: linear-gradient(-45deg, var(--bg-grad-1), var(--bg-grad-2), var(--bg-grad-3), var(--bg-grad-4));
-      background-size: 400% 400%;
-      animation: gradientBG 18s ease infinite;
+      background: var(--darker);
       color: var(--text-color);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
     }
-    /* Cute cat background for login page */
-    #loginPage {
+    body::before {
+      content: '';
+      position: fixed;
+      top: -10%; left: -10%;
+      width: 120%; height: 120%;
+      background-color: #0d1117;
       background-image: url('https://images.unsplash.com/photo-1518791841217-8f162f1912da?w=1920&q=80');
       background-size: cover;
       background-position: center;
-      background-attachment: fixed;
+      z-index: -1;
+      animation: catBgFloat 20s ease-in-out infinite;
     }
     /* Theme toggle button */
     .theme-toggle {
@@ -191,12 +201,15 @@
       box-shadow: 0 2px 10px rgba(0,0,0,0.25);
     }
     .theme-toggle:hover { opacity: 0.85; transform: scale(1.05); }
-    /* Mogaland X/Twitter link */
+    /* Mogaland X/Twitter link — fixed bottom-left, login page only */
     .mogaland-x-link {
+      position: fixed;
+      bottom: 16px;
+      left: 16px;
+      z-index: 9999;
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      margin-bottom: 24px;
       padding: 8px 18px;
       background: rgba(0,0,0,0.6);
       border: 1px solid rgba(255,255,255,0.15);
@@ -1233,10 +1246,6 @@
   <div class="login-container" id="loginPage">
     <h1>Mogaland Academy</h1>
     <p class="subtitle">Playing, Learning, Earning</p>
-    <a href="https://x.com/Mogaland_io?s=20" target="_blank" rel="noopener noreferrer" class="mogaland-x-link">
-      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.741l7.73-8.835L1.254 2.25H8.08l4.253 5.622 5.911-5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-      @Mogaland_io
-    </a>
 
     <div style="margin-bottom: 30px;">
       <h3 style="margin-bottom: 15px; color: #60a5fa; font-size: 1.2rem;">Connect Wallet</h3>
@@ -1292,6 +1301,12 @@
 
     <div id="notification-area"></div>
   </div>
+
+  <!-- X/Twitter link — fixed bottom-left, shown only on login page -->
+  <a href="https://x.com/Mogaland_io?s=20" target="_blank" rel="noopener noreferrer" class="mogaland-x-link" id="xBottomLink">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.741l7.73-8.835L1.254 2.25H8.08l4.253 5.622 5.911-5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+    @Mogaland_io
+  </a>
 
   <!-- Dashboard animated background -->
   <div class="dashboard-bg hidden" id="dashboardBg"></div>
@@ -2155,6 +2170,9 @@
       showNotification(`Entered via ${method}`, false);
       document.getElementById('loginPage').classList.add('hidden');
       document.getElementById('mainApp').classList.remove('hidden');
+      // Hide X bottom link when entering main app
+      const xLink = document.getElementById('xBottomLink');
+      if (xLink) xLink.classList.add('hidden');
       // Show dashboard background and cat
       document.getElementById('dashboardBg').classList.remove('hidden');
       document.getElementById('dashboardCat').classList.remove('hidden');
@@ -3182,6 +3200,9 @@
       // Hide main app and show login page
       document.getElementById('mainApp').classList.add('hidden');
       document.getElementById('loginPage').classList.remove('hidden');
+      // Show X bottom link on login page
+      const xLink = document.getElementById('xBottomLink');
+      if (xLink) xLink.classList.remove('hidden');
       // Hide dashboard background and cat
       document.getElementById('dashboardBg').classList.add('hidden');
       document.getElementById('dashboardCat').classList.add('hidden');
