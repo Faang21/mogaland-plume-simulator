@@ -125,6 +125,50 @@
       --progress: #3b82f6;
       --progress-end: #60a5fa;
     }
+    /* Light theme overrides */
+    body.light-theme {
+      --dark: #dbeafe;
+      --darker: #f0f8ff;
+      --light: #1e293b;
+      --card-bg: #ffffff;
+      --border: #cbd5e0;
+      background: #f0f8ff;
+      color: #1e293b;
+    }
+    body.light-theme .main-app {
+      background: radial-gradient(ellipse at 20% 50%, rgba(13,110,253,0.08) 0%, transparent 60%),
+                  radial-gradient(ellipse at 80% 20%, rgba(139,92,246,0.07) 0%, transparent 50%),
+                  radial-gradient(ellipse at 60% 80%, rgba(16,185,129,0.05) 0%, transparent 50%),
+                  #f0f8ff;
+    }
+    body.light-theme header { background: rgba(255,255,255,0.85); backdrop-filter: blur(8px); border-bottom: 1px solid #e2e8f0; }
+    body.light-theme .top-btn { color: #1e293b; border-color: var(--primary); }
+    body.light-theme .nav-bar { background: rgba(255,255,255,0.9); border-top: 1px solid #e2e8f0; }
+    body.light-theme .nav-btn { color: #1e293b; }
+    body.light-theme .nav-btn:hover, body.light-theme .nav-btn.active { color: #fff; }
+    body.light-theme .card { background: #ffffff; border: 1px solid #e2e8f0; color: #1e293b; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    body.light-theme .question-card { background: #ffffff; border: 1px solid #e2e8f0; color: #1e293b; }
+    body.light-theme .progress-box { background: #ffffff; border: 1px solid #e2e8f0; color: #1e293b; }
+    body.light-theme .question-number { color: #0d6efd; }
+    body.light-theme .question-title { color: #1e293b; }
+    body.light-theme input[type="number"], body.light-theme input[type="text"], body.light-theme select { background: #f8fafc; border-color: #cbd5e0; color: #1e293b; }
+    body.light-theme .wallet-dropdown { background: #ffffff; border-color: #e2e8f0; color: #1e293b; }
+    body.light-theme .wallet-address { color: #0d6efd; background: rgba(13,110,253,0.08); }
+    body.light-theme h1 { color: #0d6efd; }
+    body.light-theme .subtitle { color: #475569; }
+    body.light-theme .notification { background: rgba(255,255,255,0.95); color: #1e293b; border: 1px solid #e2e8f0; }
+    body.light-theme .network-switcher { background: rgba(0,0,0,0.06); }
+    body.light-theme .network-switcher-btn { color: #475569; }
+    body.light-theme .network-switcher-btn:hover { color: #1e293b; background: rgba(0,0,0,0.08); }
+    body.light-theme .profile-slide-panel { background: #ffffff; color: #1e293b; }
+    body.light-theme .profile-slide-header { background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+    body.light-theme .profile-slide-asset-row { border-bottom: 1px solid #f1f5f9; }
+    body.light-theme .profile-slide-asset-name { color: #1e293b; }
+    body.light-theme .profile-slide-asset-subtitle { color: #64748b; }
+    body.light-theme .profile-slide-token-amount { color: #1e293b; }
+    body.light-theme .back-profile-panel { background: #ffffff; color: #1e293b; }
+    body.light-theme .modal-box { background: #ffffff; color: #1e293b; border: 1px solid #e2e8f0; }
+    body.light-theme .dashboard-bg .star { background: #94a3b8; }
     * { margin:0; padding:0; box-sizing:border-box; }
     body {
       font-family: 'Segoe UI', Arial, sans-serif;
@@ -133,6 +177,7 @@
       min-height: 100vh;
       display: flex;
       flex-direction: column;
+      transition: background 0.3s, color 0.3s;
     }
     .login-container {
       background: rgba(0,0,0,0.5);
@@ -229,6 +274,24 @@
     @keyframes twinkle {
       0%, 100% { opacity: 0; transform: scale(0.5); }
       50% { opacity: var(--max-opacity, 0.6); transform: scale(1); }
+    }
+    /* Cat background tiles */
+    .dashboard-bg .cat-tile {
+      position: absolute;
+      pointer-events: none;
+      opacity: 0;
+      animation: catFloat var(--cat-dur, 8s) var(--cat-delay, 0s) infinite ease-in-out;
+      user-select: none;
+    }
+    @keyframes catFloat {
+      0%, 100% { opacity: 0; transform: translateY(0) rotate(-5deg) scale(0.9); }
+      30%, 70% { opacity: var(--cat-opacity, 0.12); transform: translateY(-12px) rotate(5deg) scale(1); }
+    }
+    /* Theme toggle button */
+    #themeToggleBtn {
+      font-size: 1.2rem;
+      padding: 8px 12px;
+      min-width: 44px;
     }
     /* Interactive cat */
     #dashboardCat {
@@ -1180,6 +1243,7 @@
         <button class="network-switcher-btn"        id="netBtn_educhain"    onclick="switchNetwork('educhain')">🎓 EDU Testnet</button>
         <button class="network-switcher-btn"        id="netBtn_basesepolia" onclick="switchNetwork('basesepolia')">🔷 Base Sepolia</button>
       </div>
+      <button class="top-btn" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle Light/Dark Theme">🌙</button>
       <button class="top-btn" onclick="showVolumeLeaderboard()" style="background:linear-gradient(90deg,#fbbf24,#f59e0b); margin-left:8px;">
         🏆 Leaderboard
       </button>
@@ -1794,7 +1858,7 @@
       });
     }
     
-    // Dashboard background star particles
+    // Dashboard background star particles + cat tiles
     function initDashboardBg() {
       const bg = document.getElementById('dashboardBg');
       if (!bg || bg.dataset.initialized) return;
@@ -1812,6 +1876,22 @@
           --max-opacity:${(Math.random()*0.5+0.2).toFixed(2)};
         `;
         bg.appendChild(star);
+      }
+      // Cute cat tiles scattered in background
+      const CAT_BG_FACES = ['🐱','🐈','😺','😸','😻','🐾','🐈‍⬛','🙀','😼'];
+      for (let i = 0; i < 35; i++) {
+        const tile = document.createElement('div');
+        tile.className = 'cat-tile';
+        tile.textContent = CAT_BG_FACES[Math.floor(Math.random() * CAT_BG_FACES.length)];
+        tile.style.cssText = `
+          left:${Math.random()*95}%;
+          top:${Math.random()*95}%;
+          font-size:${(Math.random()*2.0+1.2).toFixed(1)}rem;
+          --cat-dur:${(Math.random()*9+5).toFixed(1)}s;
+          --cat-delay:${(Math.random()*12).toFixed(1)}s;
+          --cat-opacity:${(Math.random()*0.13+0.05).toFixed(2)};
+        `;
+        bg.appendChild(tile);
       }
     }
 
@@ -1854,6 +1934,26 @@
       setTimeout(() => { tooltip.style.opacity = '0'; }, CAT_TOOLTIP_MS);
     }
     window.moveCat = moveCat;
+
+    // Theme toggle (light / dark)
+    function toggleTheme() {
+      const isLight = document.body.classList.toggle('light-theme');
+      const btn = document.getElementById('themeToggleBtn');
+      if (btn) btn.textContent = isLight ? '☀️' : '🌙';
+      localStorage.setItem('mogalandTheme', isLight ? 'light' : 'dark');
+    }
+    window.toggleTheme = toggleTheme;
+    // Apply saved theme immediately on page load
+    (function() {
+      if (localStorage.getItem('mogalandTheme') === 'light') {
+        document.body.classList.add('light-theme');
+        // Button text is set after DOM ready since element may not exist yet
+        document.addEventListener('DOMContentLoaded', function() {
+          const btn = document.getElementById('themeToggleBtn');
+          if (btn) btn.textContent = '☀️';
+        });
+      }
+    })();
 
     // Notification system - available before ethers loads
     function showNotification(msg, error = false) {
@@ -4888,7 +4988,7 @@
 
             <div class="question-box">
               <div class="question-card">
-                <div class="question-number" id="qNumber">Question ${currentQuestionIndex + 1}/100</div>
+                <div class="question-number" id="qNumber">Question ${currentQuestionIndex + 1}/${questions.length}</div>
                 <p class="question-title" id="qTitle"></p>
                 <div style="margin:20px 0;" id="optionsContainer"></div>
                 <div class="btn-group">
@@ -7887,7 +7987,7 @@
       }
       
       if (currentQuestionIndex >= questions.length) {
-        document.getElementById('qTitle').textContent = "🎉 Congratulations! All 100 questions completed!";
+        document.getElementById('qTitle').textContent = `🎉 Congratulations! All ${questions.length} questions completed!`;
         document.getElementById('optionsContainer').innerHTML = '';
         const btnGroup = document.querySelector('.btn-group');
         if (btnGroup) {
@@ -7897,7 +7997,7 @@
       }
 
       const q = questions[currentQuestionIndex];
-      document.getElementById('qNumber').textContent = `Question ${currentQuestionIndex + 1}/100`;
+      document.getElementById('qNumber').textContent = `Question ${currentQuestionIndex + 1}/${questions.length}`;
       document.getElementById('qTitle').textContent = q.question;
 
       const container = document.getElementById('optionsContainer');
