@@ -57,6 +57,9 @@ kbd{padding:1px 4px;border-radius:4px;border:1px solid rgba(255,255,255,.22);bac
 .btn-indigo{background:linear-gradient(90deg,#4338ca,#6366f1);}
 .sitem{border:1px solid rgba(255,255,255,.1);border-radius:7px;padding:7px;margin:5px 0;background:rgba(255,255,255,.03);}
 .sitem.learned{border-color:rgba(34,197,94,.3);background:rgba(34,197,94,.05);}
+.btn-brown{background:linear-gradient(90deg,#78350f,#b45309);color:#fef3c7;}
+.btn-teal{background:linear-gradient(90deg,#0f766e,#14b8a6);}
+.lock-notice{background:rgba(239,68,68,.13);border:1px solid rgba(239,68,68,.28);border-radius:7px;padding:7px 9px;margin:5px 0;font-size:11px;color:#f87171;text-align:center;}
 </style>
 </head>
 <body>
@@ -114,15 +117,28 @@ kbd{padding:1px 4px;border-radius:4px;border:1px solid rgba(255,255,255,.22);bac
 
     <div class="card">
       <strong>Inventory</strong>
-      <div class="row" style="margin-top:6px;">
+      <div id="elSkillBadges" style="margin-top:4px;font-size:11px;color:#22c55e;display:none;"></div>
+      <div class="row" style="margin-top:6px;flex-wrap:wrap;gap:4px;">
         <div class="pill">🍎 <span id="elApple">1</span></div>
         <div class="pill">🥤 <span id="elSoda">0</span></div>
         <div class="pill">🥪 <span id="elSand">0</span></div>
+        <div class="pill" id="pillFish" style="display:none;">🐟 <span id="elFish">0</span></div>
+        <div class="pill" id="pillFruit" style="display:none;">🍇 <span id="elFruit">0</span></div>
+        <div class="pill" id="pillRod" style="display:none;">🎣 Rod ✓</div>
+        <div class="pill" id="pillBait" style="display:none;">🪱 Bait <span id="elBait">0</span></div>
+        <div class="pill" id="pillCan" style="display:none;">🪣 Can <span id="elCanState"></span></div>
+        <div class="pill" id="pillHoe" style="display:none;">🪓 Hoe ✓</div>
+        <div class="pill" id="pillSeeds" style="display:none;">🌱 Seeds <span id="elSeeds">0</span></div>
       </div>
-      <div class="row" style="margin-top:6px;">
+      <div class="row" style="margin-top:6px;flex-wrap:wrap;">
         <button onclick="useItem('apple')">🍎 Eat</button>
         <button onclick="useItem('soda')">🥤 Drink</button>
         <button onclick="useItem('sandwich')">🥪 Eat</button>
+        <button id="btnEatFish" onclick="useItem('fish')" style="display:none;">🐟 Eat</button>
+        <button id="btnEatFruit" onclick="useItem('fruit')" style="display:none;">🍇 Eat</button>
+      </div>
+      <div style="margin-top:5px;">
+        <button id="btnHoe" onclick="hoeGround()" style="display:none;width:100%;padding:6px;border-radius:7px;border:none;font-size:11px;cursor:pointer;" class="btn-brown">🪓 Hoe This Ground</button>
       </div>
     </div>
 
@@ -405,13 +421,44 @@ const SKILLS=[
 ];
 const workCDs={};
 const COINS_TO_USDC=1; // 1 coin = 1 USD (game economy)
+/* ── New feature constants ── */
+const WORK_SESSION_MS=30000;     // 30s in-room lock after working
+const FISHING_ROD_COST=15;       // fishing rod (one-time tool)
+const BAIT_COST=3;               // bait pack (×5 baits per purchase)
+const WATERING_CAN_COST=8;       // watering can (one-time tool)
+const HOE_COST=10;               // hoe/cangkul (one-time tool)
+const SEED_COST=5;               // seeds ×3 per purchase
+const SEED_GROW_MS=120000;       // 2 min from watering to harvest
+const FISH_ENERGY=25;            // energy restored by eating fish
+const FRUIT_ENERGY=35;           // energy restored by eating fruit
+const FISH_SELL_PRICE=5;         // coins per fish sold
+const FRUIT_SELL_PRICE=4;        // coins per fruit sold
+const HOE_ENERGY_COST=8;         // energy cost to hoe ground
+const FISH_ENERGY_COST=5;        // energy cost per fishing attempt
+const FISH_MISS_RATE=0.15;       // 15% chance of catching nothing
+const NPC_FARM_MSG_MS=45000;     // ms interval for NPC farming chat messages
+const NPC_FARM_MSG_CHANCE=0.5;   // probability of NPC farm message firing each interval
+/* NPC farm zones (visual only – other players' plots, not interactable) */
+const _npcPlots=[
+  {tx:34,ty:50,state:'watered',owner:'MogaCat42',readyAt:Date.now()+90000},
+  {tx:35,ty:50,state:'seeded', owner:'MogaCat42',readyAt:0},
+  {tx:34,ty:51,state:'hoed',   owner:'MogaCat42',readyAt:0},
+  {tx:50,ty:52,state:'ready',  owner:'PlumeWolf17',readyAt:0},
+  {tx:51,ty:52,state:'watered',owner:'PlumeWolf17',readyAt:Date.now()+60000},
+  {tx:20,ty:52,state:'seeded', owner:'StarBear99',readyAt:0},
+  {tx:21,ty:52,state:'ready',  owner:'StarBear99',readyAt:0},
+  {tx:22,ty:52,state:'hoed',   owner:'StarBear99',readyAt:0},
+];
 
 /* ── Player state ── */
 const S={
-  coins:100, learnedSkills:[], learningId:null,
+  coins:100, learnedSkills:[], learningId:null, learningEndTime:0,
+  workLockId:null, workLockEnd:0,
   job:'Unemployed', energy:100, energyMax:100,
   house:1, sleeping:false,
-  inv:{apple:1,soda:0,sandwich:0},
+  inv:{apple:1,soda:0,sandwich:0,fishingRod:0,bait:0,wateringCan:0,hoe:0,seeds:0,fish:0,fruit:0},
+  waterFull:false,
+  plots:[], // [{tx,ty,state:'hoed'|'seeded'|'watered'|'ready',plantedAt,readyAt}]
 };
 
 /* ── World state ── */
@@ -437,6 +484,25 @@ function updateHUD(){
   document.getElementById('modePill').textContent=lbl;
   document.getElementById('mmLoc').textContent=lbl;
   document.getElementById('mulCard').style.display=(WS.zone==='INTERIOR'&&WS.key==='Casino')?'block':'none';
+  /* new inventory items */
+  const setVis=(id,show)=>{const e=document.getElementById(id);if(e)e.style.display=show?'':'none';};
+  setVis('pillFish',S.inv.fish>0);if(S.inv.fish>0)document.getElementById('elFish').textContent=S.inv.fish;
+  setVis('pillFruit',S.inv.fruit>0);if(S.inv.fruit>0)document.getElementById('elFruit').textContent=S.inv.fruit;
+  setVis('pillRod',S.inv.fishingRod>0);
+  setVis('pillBait',S.inv.fishingRod>0);if(S.inv.fishingRod>0)document.getElementById('elBait').textContent=S.inv.bait;
+  setVis('pillCan',S.inv.wateringCan>0);if(S.inv.wateringCan>0)document.getElementById('elCanState').textContent=S.waterFull?'💧':'∅';
+  setVis('pillHoe',S.inv.hoe>0);
+  setVis('pillSeeds',S.inv.seeds>0);if(S.inv.seeds>0)document.getElementById('elSeeds').textContent=S.inv.seeds;
+  setVis('btnEatFish',S.inv.fish>0);
+  setVis('btnEatFruit',S.inv.fruit>0);
+  /* skill badges */
+  const sb=document.getElementById('elSkillBadges');
+  if(sb){
+    if(S.learnedSkills.length){
+      sb.innerHTML='✅ Skills: '+S.learnedSkills.map(id=>{const sk=SKILLS.find(s=>s.id===id);return sk?sk.icon+' '+sk.name:'';}).join(' · ');
+      sb.style.display='block';
+    }else{sb.innerHTML='';sb.style.display='none';}
+  }
   updateOnlineCount();
 }
 
@@ -458,6 +524,9 @@ function logChat(text,isMe=false,color=''){
 /* ── Building panel renderers ── */
 function renderBuildingPanel(){
   const panel=document.getElementById('buildPanel');
+  if(WS.outdoor==='Vending'){panel.style.display='block';panel.innerHTML=renderVending();return;}
+  if(WS.outdoor==='River'){panel.style.display='block';panel.innerHTML=renderRiver();return;}
+  if(WS.outdoor==='Farm'){panel.style.display='block';panel.innerHTML=renderFarm();return;}
   if(WS.outdoor){panel.style.display='block';panel.innerHTML=renderVending();return;}
   if(WS.zone!=='INTERIOR'){panel.style.display='none';return;}
   panel.style.display='block';
@@ -487,24 +556,26 @@ function renderHome(){
 
 function renderSchool(){
   let h=`<strong>🏫 Skill Shop</strong><div style="font-size:10px;color:#94a3b8;margin:4px 0;">Pay $30 game-USD on-chain → gain skill (2h) → work 3h → earn $2 game-USD</div>`;
+  const lockRem=S.learningEndTime>Date.now()?S.learningEndTime-Date.now():0;
+  if(lockRem>0)h+=`<div class="lock-notice">⚠️ Learning in progress — cannot leave! ⏳ ${fmtCountdown(lockRem)} remaining</div>`;
   for(const sk of SKILLS){
-    const l=S.learnedSkills.includes(sk.id);
-    const a=S.coins>=sk.cost;
-    const li=S.learningId===sk.id;
+    const l=S.learnedSkills.includes(sk.id),a=S.coins>=sk.cost,li=S.learningId===sk.id;
+    let action;
+    if(l){action='<div style="font-size:10px;color:#22c55e;margin-top:3px;text-align:center;">✅ Skill acquired</div>';}
+    else if(li){action=`<div style="background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.25);border-radius:6px;padding:6px;margin-top:5px;font-size:11px;text-align:center;color:#fbbf24;">📖 Learning… ⏳ ${fmtCountdown(S.learningEndTime-Date.now())}<br><span style="font-size:10px;color:#f87171;">Cannot leave building!</span></div>`;}
+    else{action=`<button onclick="learnSkill('${sk.id}')" ${!a?'disabled':''} class="ibtn btn-purple" style="width:100%;margin-top:5px;">${!a?'Need $'+(sk.cost-S.coins)+' more':'Enroll ($'+sk.cost+' USD on-chain)'}</button>`;}
     h+=`<div class="sitem${l?' learned':''}">
 <div style="display:flex;justify-content:space-between;"><strong style="font-size:12px;">${sk.icon} ${sk.name}</strong>
 <span style="font-size:10px;color:${l?'#22c55e':a?'#fbbf24':'#ef4444'};">${l?'✅':'$'+sk.cost+' USD'}</span></div>
 <div style="font-size:10px;color:#64748b;">👨‍🏫 ${sk.teacher} · ${sk.job}: $${sk.wMin} USD/shift</div>
-${!l?`<button onclick="learnSkill('${sk.id}')" ${!a||li?'disabled':''} class="ibtn btn-purple" style="width:100%;margin-top:5px;">
-  ${li?'📖 Learning…':!a?'Need $'+(sk.cost-S.coins)+' more':'Enroll ($'+sk.cost+' USD on-chain)'}
-</button>`:'<div style="font-size:10px;color:#22c55e;margin-top:3px;text-align:center;">✅ Skill acquired</div>'}
-</div>`;
+${action}</div>`;
   }
   return h;
 }
 
 function renderJobBoard(){
   let h=`<strong>💼 Job Board</strong>`;
+  if(S.workLockEnd>Date.now()){const rem=Math.ceil((S.workLockEnd-Date.now())/1000);h+=`<div class="lock-notice">⚠️ Work session active — cannot leave! ⏳ ${rem}s remaining</div>`;}
   if(!S.learnedSkills.length)return h+`<div style="color:#94a3b8;font-size:11px;margin:10px 0;text-align:center;">No skills. Visit School first.</div>`;
   const now=Date.now();
   for(const id of S.learnedSkills){
@@ -544,10 +615,39 @@ function renderCafe(){
 }
 
 function renderMarket(){
-  const items=[{id:'apple',n:'Apple 🍎',c:3,e:30,inv:'apple'},{id:'sand',n:'Sandwich 🥪',c:6,e:45,inv:'sandwich'},{id:'drink',n:'Energy Drink ⚡',c:5,e:40,inv:'soda'}];
-  let h=`<strong>🛒 Market</strong><div style="font-size:10px;color:#94a3b8;margin:3px 0;">Buy food to inventory</div>`;
-  for(const it of items)h+=`<div class="irow"><div class="ileft"><div class="iname">${it.n}</div><div class="idesc">+1 inventory · ${it.c} coins</div></div>
+  let h=`<strong>🛒 Market</strong>`;
+  /* Food */
+  h+=`<div style="font-size:10px;color:#fbbf24;font-weight:bold;margin:5px 0 3px;">🍱 Food</div>`;
+  const food=[{id:'apple',n:'Apple 🍎',c:3,inv:'apple'},{id:'sand',n:'Sandwich 🥪',c:6,inv:'sandwich'},{id:'drink',n:'Energy Drink ⚡',c:5,inv:'soda'}];
+  for(const it of food)h+=`<div class="irow"><div class="ileft"><div class="iname">${it.n}</div><div class="idesc">+1 inventory · ${it.c} coins</div></div>
 <button onclick="buyFood('market','${it.id}',${it.c},0,'${it.inv}')" ${S.coins<it.c?'disabled':''} class="ibtn btn-red" style="background:linear-gradient(90deg,#be185d,#f472b6);">Buy</button></div>`;
+  /* Tools & Supplies */
+  h+=`<div style="font-size:10px;color:#38bdf8;font-weight:bold;margin:7px 0 3px;">🛠️ Tools &amp; Supplies</div>`;
+  h+=`<div class="irow"><div class="ileft"><div class="iname">🎣 Fishing Rod</div>
+<div class="idesc">${S.inv.fishingRod?'✅ Owned':'One-time · $'+FISHING_ROD_COST+' USD on-chain'}</div></div>
+<button onclick="buyTool('fishingRod',${FISHING_ROD_COST})" ${S.coins<FISHING_ROD_COST||S.inv.fishingRod?'disabled':''} class="ibtn btn-blue">${S.inv.fishingRod?'Owned':'Buy'}</button></div>`;
+  h+=`<div class="irow"><div class="ileft"><div class="iname">🪱 Bait ×5</div>
+<div class="idesc">Consumable · $${BAIT_COST} USD on-chain · ${S.inv.bait} in stock</div></div>
+<button onclick="buyTool('bait',${BAIT_COST})" ${S.coins<BAIT_COST?'disabled':''} class="ibtn btn-blue">Buy ×5</button></div>`;
+  h+=`<div class="irow"><div class="ileft"><div class="iname">🪣 Watering Can</div>
+<div class="idesc">${S.inv.wateringCan?'✅ Owned':'One-time · $'+WATERING_CAN_COST+' USD on-chain'}</div></div>
+<button onclick="buyTool('wateringCan',${WATERING_CAN_COST})" ${S.coins<WATERING_CAN_COST||S.inv.wateringCan?'disabled':''} class="ibtn btn-teal">${S.inv.wateringCan?'Owned':'Buy'}</button></div>`;
+  h+=`<div class="irow"><div class="ileft"><div class="iname">🪓 Hoe (Cangkul)</div>
+<div class="idesc">${S.inv.hoe?'✅ Owned':'One-time · $'+HOE_COST+' USD on-chain'}</div></div>
+<button onclick="buyTool('hoe',${HOE_COST})" ${S.coins<HOE_COST||S.inv.hoe?'disabled':''} class="ibtn btn-brown">${S.inv.hoe?'Owned':'Buy'}</button></div>`;
+  h+=`<div class="irow"><div class="ileft"><div class="iname">🌱 Seeds ×3</div>
+<div class="idesc">Plant on hoed ground · $${SEED_COST} USD on-chain · ${S.inv.seeds} in stock</div></div>
+<button onclick="buyTool('seeds',${SEED_COST})" ${S.coins<SEED_COST?'disabled':''} class="ibtn btn-green">Buy ×3</button></div>`;
+  /* Sell */
+  if(S.inv.fish>0||S.inv.fruit>0){
+    h+=`<div style="font-size:10px;color:#4ade80;font-weight:bold;margin:7px 0 3px;">💰 Sell (on-chain)</div>`;
+    if(S.inv.fish>0)h+=`<div class="irow"><div class="ileft"><div class="iname">🐟 Sell Fish</div>
+<div class="idesc">×${S.inv.fish} available · +$${FISH_SELL_PRICE} USD each</div></div>
+<button onclick="sellItem('fish')" class="ibtn btn-green">Sell 1</button></div>`;
+    if(S.inv.fruit>0)h+=`<div class="irow"><div class="ileft"><div class="iname">🍇 Sell Fruit</div>
+<div class="idesc">×${S.inv.fruit} available · +$${FRUIT_SELL_PRICE} USD each</div></div>
+<button onclick="sellItem('fruit')" class="ibtn btn-green">Sell 1</button></div>`;
+  }
   return h;
 }
 
@@ -569,14 +669,19 @@ function renderHospital(){
 
 function renderLibrary(){
   let h=`<strong>📚 Library</strong><div style="font-size:10px;color:#94a3b8;margin:3px 0;">Fast-track (1.5× cost, 1h instead of 2h)</div>`;
+  const lockRem=S.learningEndTime>Date.now()?S.learningEndTime-Date.now():0;
+  if(lockRem>0)h+=`<div class="lock-notice">⚠️ Learning in progress — cannot leave! ⏳ ${fmtCountdown(lockRem)} remaining</div>`;
   for(const sk of SKILLS){
-    const l=S.learnedSkills.includes(sk.id),fc=Math.ceil(sk.cost*1.5),a=S.coins>=fc;
+    const l=S.learnedSkills.includes(sk.id),fc=Math.ceil(sk.cost*1.5),a=S.coins>=fc,li=S.learningId===sk.id;
+    let action;
+    if(l){action='';}
+    else if(li){action=`<div style="background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.25);border-radius:6px;padding:6px;margin-top:4px;font-size:11px;text-align:center;color:#fbbf24;">📖 Fast-track… ⏳ ${fmtCountdown(S.learningEndTime-Date.now())}<br><span style="font-size:10px;color:#f87171;">Cannot leave building!</span></div>`;}
+    else{action=`<button onclick="learnSkillFast('${sk.id}')" ${!a?'disabled':''} class="ibtn btn-indigo" style="width:100%;margin-top:4px;">Fast-track ($${fc} USD on-chain)</button>`;}
     h+=`<div class="sitem${l?' learned':''}">
 <div style="display:flex;justify-content:space-between;"><span style="font-size:12px;font-weight:bold;">${sk.icon} ${sk.name}</span>
 <span style="font-size:10px;color:${l?'#22c55e':'#fbbf24'};">${l?'✅':'$'+fc+' USD'}</span></div>
-<div style="font-size:10px;color:#64748b;">${sk.job} · ${sk.time/3600000}h learning</div>
-${!l?`<button onclick="learnSkillFast('${sk.id}')" ${!a?'disabled':''} class="ibtn btn-indigo" style="width:100%;margin-top:4px;">Fast-track ($${fc} USD)</button>`:''}
-</div>`;
+<div style="font-size:10px;color:#64748b;">${sk.job} · ${sk.time/3600000}h → 1h fast</div>
+${action}</div>`;
   }
   return h;
 }
@@ -584,6 +689,7 @@ ${!l?`<button onclick="learnSkillFast('${sk.id}')" ${!a?'disabled':''} class="ib
 function renderOffice(){
   const now=Date.now();
   let h=`<strong>🏢 Office</strong><div style="font-size:10px;color:#94a3b8;margin:3px 0;">Freelance work available — 3-hour shifts</div>`;
+  if(S.workLockEnd>Date.now()){const rem=Math.ceil((S.workLockEnd-Date.now())/1000);h+=`<div class="lock-notice">⚠️ Work session active — cannot leave! ⏳ ${rem}s remaining</div>`;}
   if(!S.learnedSkills.length)return h+`<div style="color:#94a3b8;font-size:11px;margin:10px 0;text-align:center;">No skills. Visit School first.</div>`;
   for(const id of S.learnedSkills){
     const sk=SKILLS.find(s=>s.id===id);if(!sk)continue;
@@ -616,12 +722,12 @@ function learnSkill(id){
   const sk=SKILLS.find(s=>s.id===id);if(!sk)return;
   if(S.learnedSkills.includes(id))return logChat('[School] Already know '+sk.name+'.');
   if(S.coins<sk.cost)return logChat('[School] Need $'+sk.cost+' USD for '+sk.name+'.');
-  S.coins-=sk.cost;S.learningId=id;updateHUD();renderBuildingPanel();
+  S.coins-=sk.cost;S.learningId=id;S.learningEndTime=Date.now()+sk.time;updateHUD();renderBuildingPanel();
   logChat('[School] 📚 Enrolling in '+sk.name+'… ($'+sk.cost+' USD → Treasury)',false,'#a78bfa');
   treasuryPay('SCHOOL:'+id,sk.cost);
   saveProgress();
   setTimeout(()=>{
-    S.learnedSkills.push(id);S.learningId=null;S.job=sk.job;
+    S.learnedSkills.push(id);S.learningId=null;S.learningEndTime=0;S.job=sk.job;
     updateHUD();renderBuildingPanel();
     logChat('[School] ✅ Graduated: '+sk.name+'! '+sk.job+' job unlocked.',false,'#22c55e');
     saveProgress();
@@ -634,12 +740,12 @@ function learnSkillFast(id){
   if(S.learnedSkills.includes(id))return logChat('[Library] Already know '+sk.name+'.');
   const fc=Math.ceil(sk.cost*1.5);
   if(S.coins<fc)return logChat('[Library] Need $'+fc+' USD.');
-  S.coins-=fc;S.learningId=id;updateHUD();renderBuildingPanel();
+  S.coins-=fc;S.learningId=id;S.learningEndTime=Date.now()+sk.time/2;updateHUD();renderBuildingPanel();
   logChat('[Library] 📚 Fast-track '+sk.name+'… ($'+fc+' USD → Treasury)',false,'#818cf8');
   treasuryPay('LIB:'+id,fc);
   saveProgress();
   setTimeout(()=>{
-    S.learnedSkills.push(id);S.learningId=null;S.job=sk.job;
+    S.learnedSkills.push(id);S.learningId=null;S.learningEndTime=0;S.job=sk.job;
     updateHUD();renderBuildingPanel();
     logChat('[Library] ✅ Graduated fast: '+sk.name+'!',false,'#22c55e');
     saveProgress();
@@ -650,13 +756,14 @@ window.learnSkillFast=learnSkillFast;
 function workJob(id){
   const sk=SKILLS.find(s=>s.id===id);if(!sk)return;
   const now=Date.now(),lw=workCDs[id]||0,cd=sk.cd||WORK_CD_MS;
-  if(now-lw<cd){const rem=Math.ceil((cd-(now-lw))/1000);return logChat('[Job] On cooldown: '+( rem>3600?Math.ceil(rem/3600)+'h':rem>60?Math.ceil(rem/60)+'m':rem+'s')+' left (3h shift)');}
+  if(now-lw<cd){const rem=Math.ceil((cd-(now-lw))/1000);return logChat('[Job] On cooldown: '+(rem>3600?Math.ceil(rem/3600)+'h':rem>60?Math.ceil(rem/60)+'m':rem+'s')+' left (3h shift)');}
   if(S.energy<ENERGY_LOW_THRESHOLD)return logChat('[Job] Need '+ENERGY_LOW_THRESHOLD+' energy to work a 3-hour shift.');
   S.energy=clamp(S.energy-ENERGY_LOW_THRESHOLD,0,S.energyMax);
-  workCDs[id]=now;
-  S.coins+=sk.wMin; // 2 USD per 3h shift
+  workCDs[id]=now;S.workLockId=id;S.workLockEnd=now+WORK_SESSION_MS;
+  S.coins+=sk.wMin;
   updateHUD();renderBuildingPanel();
-  logChat('[Job] 💰 Completed 3h shift as '+sk.job+': +$'+sk.wMin+' USD!',false,'#fbbf24');
+  logChat('[Job] 💰 Started 3h shift as '+sk.job+': +$'+sk.wMin+' USD! Stay for '+Math.round(WORK_SESSION_MS/1000)+'s.',false,'#fbbf24');
+  setTimeout(()=>{S.workLockId=null;S.workLockEnd=0;renderBuildingPanel();logChat('[Job] ✅ Work session done. You may leave.',false,'#22c55e');saveProgress();},WORK_SESSION_MS);
   treasurySalary(sk.job,sk.wMin);
   saveProgress();
 }
@@ -674,10 +781,11 @@ function buyFood(bld,id,cost,energy,inv){
 window.buyFood=buyFood;
 
 function useItem(type){
-  const en={apple:30,soda:20,sandwich:45};
+  const en={apple:30,soda:20,sandwich:45,fish:FISH_ENERGY,fruit:FRUIT_ENERGY};
   if(!S.inv[type]||S.inv[type]<=0)return logChat('[Inventory] No '+type+'.');
   S.inv[type]--;S.energy=clamp(S.energy+en[type],0,S.energyMax);
   updateHUD();logChat('[Inventory] Used '+type+': +'+en[type]+' energy.',false,'#34d399');
+  saveProgress();
 }
 window.useItem=useItem;
 
@@ -1070,6 +1178,7 @@ const BLDGS=[
 const IACTS=[
   {key:'Vending',tex:'vend',ts:1.6,x:52*TILE,y:30*TILE,w:2*TILE,h:2*TILE},
   {key:'Vendor', tex:'vendor',ts:1.7,x:22*TILE,y:32*TILE,w:2*TILE,h:2*TILE},
+  {key:'River',  tex:'vend', ts:1.4,x:68*TILE,y:14*TILE,w:2*TILE,h:2*TILE},
 ];
 
 /* ── City tiles ── */
@@ -1229,6 +1338,7 @@ function addFurniture(scene,intr,cont){
 
 /* ── Day/night, world render, minimap, Phaser ── */
 let nightOv=null,lampGlows=[],cityTiles=null,interior=null,worldCont=null;
+let _nearPlotIdx=null,_farmGfx=null; // farm plot state
 function clearWorld(scene){if(worldCont)worldCont.destroy(true);worldCont=scene.add.container(0,0);lampGlows=[];}
 
 function updateDN(dtS){
@@ -1283,12 +1393,14 @@ function drawCity(scene){
     worldCont.add(scene.add.text(cx,i.y-8,i.key,{fontSize:'12px',color:'#e2e8f0',backgroundColor:'rgba(0,0,0,.35)',padding:{x:5,y:2}}).setOrigin(.5,1).setDepth(4));
   }
   scene.cameras.main.setBounds(0,0,CW*TILE,CH*TILE);drawMM._k=null;
+  redrawFarmPlots();
 }
 
 function drawInterior(scene,bk){
   clearWorld(scene);interior=makeInterior(bk);
   drawInteriorTiles(scene,interior,worldCont);addFurniture(scene,interior,worldCont);
   scene.cameras.main.setBounds(0,0,IW*TILE,IH*TILE);drawMM._k=null;
+  if(_farmGfx)_farmGfx.setVisible(false);
 }
 
 function enterBuilding(scene,bk){
@@ -1302,6 +1414,14 @@ function enterBuilding(scene,bk){
   if(bk==='Bank')setTimeout(refreshUSDCBalance,500);
 }
 function exitCity(scene){
+  if(S.learningEndTime>Date.now()){
+    const rem=S.learningEndTime-Date.now();
+    return logChat('[⚠️] Still learning! '+fmtCountdown(rem)+' left. Cannot leave building!',false,'#f87171');
+  }
+  if(S.workLockEnd>Date.now()){
+    const rem=Math.ceil((S.workLockEnd-Date.now())/1000);
+    return logChat('[⚠️] Work session active! '+rem+'s left. Cannot leave building!',false,'#f87171');
+  }
   WS.zone='CITY';WS.key='';interior=null;stopMulGame();
   drawCity(scene);scene.me.x=WS.savedPos.x;scene.me.y=WS.savedPos.y;
   updateHUD();renderBuildingPanel();logChat('[←] Back to CITY.',false,'#93c5fd');
@@ -1341,6 +1461,11 @@ function doIAct(action){
       WS.outdoor='Vending';
       renderBuildingPanel();
       logChat('[Vending] 🍫 Choose your energy item! ($1 USD each)',false,'#fbbf24');
+      break;
+    case 'river':
+      WS.outdoor='River';
+      renderBuildingPanel();
+      logChat('[River] 🏞️ River bank — fill watering can or go fishing!',false,'#38bdf8');
       break;
     case 'vendor':if(S.coins<4)return logChat('[Vendor] Need 4 USD.');S.coins-=4;if(Math.random()<.55)S.inv.soda++;else S.inv.sandwich++;updateHUD();logChat('[Vendor] Got random item!');break;
     default:logChat('[info] Tap to enter '+action+' building.');
@@ -1383,12 +1508,32 @@ function triggerInteract(sceneRef){
   const scene=sceneRef||_phaserScene;if(!scene)return;
   if(WS.zone==='CITY'){
     const{poi,d}=nearPOI(scene.me.x,scene.me.y);
-    if(!poi||d>=IDIST){
+    /* Check player's own farm plots */
+    let plotIdx=null,plotDist=Infinity;
+    for(let i=0;i<S.plots.length;i++){
+      const p=S.plots[i];
+      const d2=Math.hypot(scene.me.x-(p.tx+.5)*TILE,scene.me.y-(p.ty+.5)*TILE);
+      if(d2<IDIST&&d2<plotDist){plotDist=d2;plotIdx=i;}
+    }
+    /* Check NPC plots */
+    for(const np of _npcPlots){
+      const d2=Math.hypot(scene.me.x-(np.tx+.5)*TILE,scene.me.y-(np.ty+.5)*TILE);
+      if(d2<IDIST&&d2<plotDist){
+        logChat('[Farm] 🔒 This plot belongs to '+np.owner+' — cannot interact.',false,'#f87171');
+        return;
+      }
+    }
+    /* Priority: building/IACT > own plot > nothing */
+    if(poi&&d<IDIST){
+      if(BLDGS.find(b=>b.key===poi.key))enterBuilding(scene,poi.key);
+      else doIAct(poi.key.toLowerCase());
+    }else if(plotIdx!==null){
+      _nearPlotIdx=plotIdx;WS.outdoor='Farm';renderBuildingPanel();
+      logChat('[Farm] 🌱 Your farm plot. Check status & manage.',false,'#4ade80');
+    }else{
       if(WS.outdoor){WS.outdoor=null;renderBuildingPanel();}
       else logChat('[info] Nothing nearby. Walk closer to a building then tap.',false,'#94a3b8');
     }
-    else if(BLDGS.find(b=>b.key===poi.key))enterBuilding(scene,poi.key);
-    else doIAct(poi.key.toLowerCase());
   }else{
     const ex=(interior.exitX+.5)*TILE,ey=(interior.exitY+.5)*TILE;
     if(Math.hypot(scene.me.x-ex,scene.me.y-ey)<120)exitCity(scene);
@@ -1417,12 +1562,206 @@ function openPM(name){
 window.openPM=openPM;
 function getSaveKey(){return'mogaWorld_'+(walletAddress||'guest');}
 
+/* ── Helpers ── */
+function fmtCountdown(ms){
+  const s=Math.max(0,Math.ceil(ms/1000));
+  return s>3600?Math.ceil(s/3600)+'h '+Math.floor((s%3600)/60)+'m':s>60?Math.ceil(s/60)+'m '+(s%60)+'s':s+'s';
+}
+
+/* ── Farm plot graphics ── */
+function redrawFarmPlots(){
+  if(!_phaserScene)return;
+  if(!_farmGfx||!_farmGfx.active){_farmGfx=_phaserScene.add.graphics().setDepth(2);}
+  _farmGfx.clear();
+  if(WS.zone!=='CITY'){_farmGfx.setVisible(false);return;}
+  _farmGfx.setVisible(true);
+  const cols={hoed:0x78350f,seeded:0xfbbf24,watered:0x38bdf8,ready:0x4ade80};
+  /* Player's own plots */
+  for(const p of S.plots){
+    _farmGfx.fillStyle(cols[p.state]||0x78350f,0.8);
+    _farmGfx.fillRect(p.tx*TILE,p.ty*TILE,TILE,TILE);
+    _farmGfx.lineStyle(1,0xffffff,0.35);
+    _farmGfx.strokeRect(p.tx*TILE,p.ty*TILE,TILE,TILE);
+  }
+  /* NPC plots – dimmer, different tint to show other players' areas */
+  for(const np of _npcPlots){
+    _farmGfx.fillStyle(cols[np.state]||0x78350f,0.35);
+    _farmGfx.fillRect(np.tx*TILE,np.ty*TILE,TILE,TILE);
+    _farmGfx.lineStyle(1,0x94a3b8,0.5);
+    _farmGfx.strokeRect(np.tx*TILE,np.ty*TILE,TILE,TILE);
+  }
+}
+
+/* ── River panel ── */
+function renderRiver(){
+  let h=`<strong>🏞️ River</strong><div style="font-size:10px;color:#94a3b8;margin:3px 0;">Fill watering can · Go fishing</div>`;
+  /* Watering can */
+  if(S.inv.wateringCan){
+    const full=S.waterFull;
+    h+=`<div class="irow"><div class="ileft"><div class="iname">💧 Fill Watering Can</div>
+<div class="idesc">${full?'🟦 Already full':'🔲 Empty — fill from river'}</div></div>
+<button onclick="fillWateringCan()" ${full?'disabled':''} class="ibtn btn-blue">Fill</button></div>`;
+  }else{
+    h+=`<div style="font-size:10px;color:#64748b;margin:5px 0;">🪣 Need a Watering Can (buy at Market).</div>`;
+  }
+  /* Fishing */
+  if(S.inv.fishingRod){
+    h+=`<div class="irow"><div class="ileft"><div class="iname">🎣 Go Fishing</div>
+<div class="idesc">−${FISH_ENERGY_COST} energy · 1 bait · ${S.inv.bait} bait remaining</div></div>
+<button onclick="goFish()" ${S.energy<FISH_ENERGY_COST||!S.inv.bait?'disabled':''} class="ibtn btn-teal">Fish</button></div>`;
+    if(!S.inv.bait)h+=`<div style="font-size:10px;color:#f87171;margin:3px 0;">🪱 No bait! Buy at Market.</div>`;
+  }else{
+    h+=`<div style="font-size:10px;color:#64748b;margin:5px 0;">🎣 Need a Fishing Rod + Bait (buy at Market).</div>`;
+  }
+  h+=`<button onclick="closeOutdoor()" style="width:100%;margin-top:8px;padding:6px;border-radius:6px;background:rgba(100,116,139,.3);color:#94a3b8;border:1px solid rgba(255,255,255,.1);font-size:11px;">Close ✕</button>`;
+  return h;
+}
+
+/* ── Farm panel ── */
+function renderFarm(){
+  let h=`<strong>🌱 Your Farm Plot</strong><div style="font-size:10px;color:#94a3b8;margin:3px 0;">Plant · Water · Harvest · Land resets after harvest</div>`;
+  if(_nearPlotIdx===null||!S.plots[_nearPlotIdx]){
+    h+=`<div style="font-size:11px;color:#64748b;margin:8px 0;">No plot data — walk near a plot and tap again.</div>`;
+    h+=`<button onclick="closeOutdoor()" style="width:100%;margin-top:6px;padding:6px;border-radius:6px;background:rgba(100,116,139,.3);color:#94a3b8;border:1px solid rgba(255,255,255,.1);font-size:11px;">Close ✕</button>`;
+    return h;
+  }
+  const p=S.plots[_nearPlotIdx],now=Date.now();
+  const stateInfo={
+    hoed:{label:'🟫 Hoed — ready for seeds',color:'#b45309'},
+    seeded:{label:'🌱 Seeds planted — needs water',color:'#4ade80'},
+    watered:{label:'💧 Growing…',color:'#38bdf8'},
+    ready:{label:'🍇 Ready to harvest!',color:'#a78bfa'},
+  }[p.state]||{label:p.state,color:'#94a3b8'};
+  h+=`<div style="font-size:11px;margin:5px 0;padding:7px;border:1px solid rgba(255,255,255,.1);border-radius:7px;background:rgba(255,255,255,.03);color:${stateInfo.color};">${stateInfo.label}`;
+  if(p.state==='watered'&&p.readyAt>now)h+=`<br><span style="font-size:10px;color:#38bdf8;">⏳ Ready in: ${fmtCountdown(p.readyAt-now)}</span>`;
+  h+=`</div>`;
+  if(p.state==='hoed')h+=`<div class="irow"><div class="ileft"><div class="iname">🌱 Plant Seeds</div>
+<div class="idesc">${S.inv.seeds} seeds in inventory</div></div>
+<button onclick="plantSeed(${_nearPlotIdx})" ${!S.inv.seeds?'disabled':''} class="ibtn btn-green">Plant</button></div>`;
+  if(p.state==='seeded')h+=`<div class="irow"><div class="ileft"><div class="iname">💧 Water Plant</div>
+<div class="idesc">Can: ${S.inv.wateringCan?(S.waterFull?'💧 Full':'🔲 Empty — fill at River'):'Need watering can'}</div></div>
+<button onclick="waterSeed(${_nearPlotIdx})" ${!S.inv.wateringCan||!S.waterFull?'disabled':''} class="ibtn btn-blue">Water</button></div>`;
+  if(p.state==='ready')h+=`<div class="irow"><div class="ileft"><div class="iname">🍇 Harvest Fruit</div>
+<div class="idesc">+1 fruit · Land resets after harvest</div></div>
+<button onclick="harvestFruit(${_nearPlotIdx})" class="ibtn btn-green">Harvest 🍇</button></div>`;
+  h+=`<button onclick="closeOutdoor()" style="width:100%;margin-top:8px;padding:6px;border-radius:6px;background:rgba(100,116,139,.3);color:#94a3b8;border:1px solid rgba(255,255,255,.1);font-size:11px;">Close ✕</button>`;
+  return h;
+}
+
+/* ── Fishing ── */
+function goFish(){
+  if(!S.inv.fishingRod)return logChat('[River] Need a 🎣 Fishing Rod. Buy at Market.');
+  if(!S.inv.bait)return logChat('[River] Need 🪱 Bait. Buy at Market.');
+  if(!reqEnergy(FISH_ENERGY_COST,'[River] Too tired to fish. Need '+FISH_ENERGY_COST+' energy.'))return;
+  S.inv.bait--;
+  const catches=['🐟 Tilapia','🐠 Clownfish','🐡 Pufferfish','🦐 Shrimp','🦑 Squid','🦞 Lobster','🐙 Octopus'];
+  const fail=Math.random()<FISH_MISS_RATE;
+  if(fail){logChat('[River] 🎣 Nothing biting… bait used.',false,'#64748b');}
+  else{S.inv.fish++;logChat('[River] 🎣 Caught: '+catches[Math.floor(Math.random()*catches.length)]+'! (+1 fish)',false,'#34d399');}
+  updateHUD();renderBuildingPanel();saveProgress();
+}
+window.goFish=goFish;
+
+/* ── Watering can ── */
+function fillWateringCan(){
+  if(!S.inv.wateringCan)return logChat('[River] Need a 🪣 Watering Can. Buy at Market.');
+  if(S.waterFull)return logChat('[River] Watering can already full!');
+  S.waterFull=true;renderBuildingPanel();
+  logChat('[River] 💧 Watering can filled!',false,'#38bdf8');
+  saveProgress();
+}
+window.fillWateringCan=fillWateringCan;
+
+/* ── Hoe ground ── */
+function hoeGround(){
+  if(!_phaserScene||WS.zone!=='CITY')return logChat('[Farm] Must be in CITY to hoe ground.');
+  if(!S.inv.hoe)return logChat('[Farm] Need a 🪓 Hoe (Cangkul). Buy at Market.');
+  if(!reqEnergy(HOE_ENERGY_COST,'[Farm] Need '+HOE_ENERGY_COST+' energy to hoe.'))return;
+  const tx=Math.floor(_phaserScene.me.x/TILE),ty=Math.floor(_phaserScene.me.y/TILE);
+  if(!cityTiles||cityTiles[ty]?.[tx]!==TT.G)return logChat('[Farm] Must stand on grass (not road/water) to hoe.',false,'#f87171');
+  if(S.plots.find(p=>p.tx===tx&&p.ty===ty))return logChat('[Farm] Already a plot here!',false,'#f87171');
+  if(_npcPlots.find(p=>p.tx===tx&&p.ty===ty))return logChat('[Farm] 🔒 This area belongs to another player.',false,'#f87171');
+  S.plots.push({tx,ty,state:'hoed',plantedAt:0,readyAt:0});
+  updateHUD();redrawFarmPlots();
+  logChat('[Farm] 🪓 Hoed the ground! Now plant seeds here.',false,'#b45309');
+  saveProgress();
+}
+window.hoeGround=hoeGround;
+
+/* ── Farming ── */
+function plantSeed(idx){
+  const p=S.plots[idx];if(!p||p.state!=='hoed')return logChat('[Farm] Plot not ready for planting.');
+  if(!S.inv.seeds)return logChat('[Farm] No seeds. Buy at Market.');
+  S.inv.seeds--;p.state='seeded';p.plantedAt=Date.now();
+  updateHUD();renderBuildingPanel();redrawFarmPlots();
+  logChat('[Farm] 🌱 Seeds planted! Water them to start growing.',false,'#4ade80');
+  saveProgress();
+}
+window.plantSeed=plantSeed;
+
+function waterSeed(idx){
+  const p=S.plots[idx];if(!p||p.state!=='seeded')return logChat('[Farm] Nothing to water here.');
+  if(!S.inv.wateringCan)return logChat('[Farm] Need a 🪣 Watering Can.');
+  if(!S.waterFull)return logChat('[Farm] Watering can empty! Fill at 🏞️ River.',false,'#f87171');
+  p.state='watered';p.readyAt=Date.now()+SEED_GROW_MS;S.waterFull=false;
+  updateHUD();renderBuildingPanel();redrawFarmPlots();
+  logChat('[Farm] 💧 Watered! Fruit ready in ~'+Math.ceil(SEED_GROW_MS/60000)+'m.',false,'#38bdf8');
+  saveProgress();
+}
+window.waterSeed=waterSeed;
+
+function harvestFruit(idx){
+  const p=S.plots[idx];if(!p||p.state!=='ready')return logChat('[Farm] Not ready yet.');
+  S.inv.fruit++;
+  S.plots.splice(idx,1); // remove plot → land resets
+  _nearPlotIdx=null;WS.outdoor=null;
+  updateHUD();renderBuildingPanel();redrawFarmPlots();
+  logChat('[Farm] 🍇 Harvested! +1 fruit. Land returned to normal.',false,'#a78bfa');
+  saveProgress();
+}
+window.harvestFruit=harvestFruit;
+
+/* ── Market: buy tools & supplies (all on-chain) ── */
+function buyTool(type,cost){
+  if(S.coins<cost)return logChat('[Market] Need $'+cost+' USD.');
+  const unique=['fishingRod','wateringCan','hoe'];
+  if(unique.includes(type)&&S.inv[type]>0)return logChat('[Market] Already own that item.');
+  S.coins-=cost;
+  if(type==='seeds')S.inv.seeds+=3;
+  else if(type==='bait')S.inv.bait+=5;
+  else S.inv[type]++;
+  const names={fishingRod:'🎣 Fishing Rod',bait:'🪱 Bait ×5',wateringCan:'🪣 Watering Can',hoe:'🪓 Hoe (Cangkul)',seeds:'🌱 Seeds ×3'};
+  onChainTx('BUY:market:'+type+':$'+cost+'USD',0.00001);
+  updateHUD();renderBuildingPanel();
+  logChat('[Market] 🛒 Bought: '+(names[type]||type)+'! (on-chain tx sent)',false,'#34d399');
+  saveProgress();
+}
+window.buyTool=buyTool;
+
+/* ── Market: sell fish / fruit (on-chain) ── */
+function sellItem(type){
+  if(!S.inv[type]||S.inv[type]<=0)return logChat('[Market] No '+type+' to sell.');
+  const prices={fish:FISH_SELL_PRICE,fruit:FRUIT_SELL_PRICE};
+  const price=prices[type];if(!price)return;
+  S.inv[type]--;S.coins+=price;
+  onChainTx('SELL:market:'+type+':+$'+price+'USD',0.00001);
+  updateHUD();renderBuildingPanel();
+  logChat('[Market] 💰 Sold 1 '+type+': +$'+price+' USD! (on-chain tx sent)',false,'#fbbf24');
+  saveProgress();
+}
+window.sellItem=sellItem;
+
+function closeOutdoor(){WS.outdoor=null;renderBuildingPanel();}
+window.closeOutdoor=closeOutdoor;
+
 function saveProgress(){
   try{
     const data={
-      coins:S.coins,learnedSkills:S.learnedSkills,job:S.job,
-      energy:S.energy,energyMax:S.energyMax,house:S.house,inv:{...S.inv},
-      workCDs:{...workCDs},savedAt:Date.now(),
+      coins:S.coins,learnedSkills:S.learnedSkills,learningId:S.learningId,learningEndTime:S.learningEndTime,
+      job:S.job,energy:S.energy,energyMax:S.energyMax,house:S.house,
+      inv:{...S.inv},workCDs:{...workCDs},
+      waterFull:S.waterFull,plots:S.plots.map(p=>({...p})),
+      savedAt:Date.now(),
     };
     localStorage.setItem(getSaveKey(),JSON.stringify(data));
   }catch(e){console.log('[Save] Error:',e.message);}
@@ -1435,14 +1774,34 @@ function loadProgress(){
     const d=JSON.parse(raw);
     S.coins=typeof d.coins==='number'?d.coins:100;
     S.learnedSkills=Array.isArray(d.learnedSkills)?d.learnedSkills:[];
+    S.learningId=d.learningId||null;
+    S.learningEndTime=typeof d.learningEndTime==='number'?d.learningEndTime:0;
     S.job=d.job||'Unemployed';
     S.energy=typeof d.energy==='number'?d.energy:100;
     S.energyMax=typeof d.energyMax==='number'?d.energyMax:100;
     S.house=typeof d.house==='number'?d.house:1;
-    S.inv=d.inv?{apple:d.inv.apple||0,soda:d.inv.soda||0,sandwich:d.inv.sandwich||0}:{apple:1,soda:0,sandwich:0};
+    S.inv=d.inv?{
+      apple:d.inv.apple||0,soda:d.inv.soda||0,sandwich:d.inv.sandwich||0,
+      fishingRod:d.inv.fishingRod||0,bait:d.inv.bait||0,wateringCan:d.inv.wateringCan||0,
+      hoe:d.inv.hoe||0,seeds:d.inv.seeds||0,fish:d.inv.fish||0,fruit:d.inv.fruit||0,
+    }:{apple:1,soda:0,sandwich:0,fishingRod:0,bait:0,wateringCan:0,hoe:0,seeds:0,fish:0,fruit:0};
     if(d.workCDs&&typeof d.workCDs==='object')Object.assign(workCDs,d.workCDs);
+    S.waterFull=d.waterFull||false;
+    S.plots=Array.isArray(d.plots)?d.plots.filter(p=>p&&p.state):[];
+    /* Restore in-progress learning timeout */
+    if(S.learningEndTime>Date.now()&&S.learningId){
+      const remMs=S.learningEndTime-Date.now(),lid=S.learningId;
+      setTimeout(()=>{
+        const sk=SKILLS.find(s=>s.id===lid);if(!sk)return;
+        if(!S.learnedSkills.includes(lid))S.learnedSkills.push(lid);
+        S.learningId=null;S.learningEndTime=0;S.job=sk.job;
+        updateHUD();renderBuildingPanel();
+        logChat('[School] ✅ Graduated: '+sk.name+'!',false,'#22c55e');
+        saveProgress();
+      },remMs);
+    }else{S.learningId=null;S.learningEndTime=0;}
     const ago=d.savedAt?Math.round((Date.now()-d.savedAt)/1000):0;
-    logChat('[Save] ✅ Progress loaded! (saved '+( ago<60?ago+'s':Math.round(ago/60)+'m')+' ago)',false,'#34d399');
+    logChat('[Save] ✅ Progress loaded! (saved '+(ago<60?ago+'s':Math.round(ago/60)+'m')+' ago)',false,'#34d399');
   }catch(e){console.log('[Save] Load failed:',e.message);}
 }
 
@@ -1506,22 +1865,60 @@ const phaserCfg={
       logChat('[system] 🎮 Welcome to Moga World! Skills cost $30 USD · Work earns $2 USD/3h shift',false,'#fbbf24');
       logChat('[system] 🏫 Visit School to learn skills · 🥤 Vending machine: $1 USD/item · 🛏️ Bed restores energy',false,'#a78bfa');
       logChat('[system] Tap/click near a building to enter · Enter Casino for 100-player game 🎰',false,'#34d399');
+      logChat('[system] 🎣 Buy Fishing Rod + Bait at Market · 🪓 Buy Hoe to farm grass tiles · 🏞️ River to fill can & fish',false,'#4ade80');
       this.time.addEvent({delay:200,loop:true,callback:()=>{
         const btn=document.getElementById('btnInteract');
         if(WS.zone==='CITY'){
           const{poi,d}=nearPOI(this.me.x,this.me.y);
-          const near=poi&&d<IDIST;
-          document.getElementById('elNear').textContent=near?poi.key+' (tap)':'—';
-          if(btn){btn.style.display=near?'block':'none';btn.textContent='👆 Enter '+( near?poi.key:'');}
+          /* Hoe button visibility: player on grass, not on a plot, owns hoe */
+          const tx=Math.floor(this.me.x/TILE),ty=Math.floor(this.me.y/TILE);
+          const onGrass=cityTiles&&ty>=0&&ty<CH&&tx>=0&&tx<CW&&cityTiles[ty]&&cityTiles[ty][tx]===TT.G;
+          const noPlot=!S.plots.find(p=>p.tx===tx&&p.ty===ty)&&!_npcPlots.find(p=>p.tx===tx&&p.ty===ty);
+          const btnHoe=document.getElementById('btnHoe');
+          if(btnHoe)btnHoe.style.display=(S.inv.hoe>0&&onGrass&&noPlot&&WS.zone==='CITY')?'block':'none';
+          /* Nearest label (building, IACT, or own farm plot) */
+          let plotIdx=null,plotDist=Infinity;
+          for(let i=0;i<S.plots.length;i++){
+            const p=S.plots[i];
+            const d2=Math.hypot(this.me.x-(p.tx+.5)*TILE,this.me.y-(p.ty+.5)*TILE);
+            if(d2<IDIST&&d2<plotDist){plotDist=d2;plotIdx=i;}
+          }
+          const nearBldg=poi&&d<IDIST;
+          const nearLabel=nearBldg?poi.key:plotIdx!==null?'Farm Plot':'—';
+          document.getElementById('elNear').textContent=nearLabel+(nearLabel!=='—'?' (tap)':'');
+          if(btn){btn.style.display=(nearBldg||plotIdx!==null)?'block':'none';btn.textContent='👆 Enter '+(nearLabel!=='—'?nearLabel:'');}
         }else{
           const ex=(interior.exitX+.5)*TILE,ey=(interior.exitY+.5)*TILE;
           const dd=Math.hypot(this.me.x-ex,this.me.y-ey);
           document.getElementById('elNear').textContent=dd<120?'EXIT (tap)':WS.key+' (tap)';
           if(btn){btn.style.display='block';btn.textContent=dd<120?'👆 Exit Building':'👆 Open Panel';}
+          const btnHoe=document.getElementById('btnHoe');if(btnHoe)btnHoe.style.display='none';
         }
       }});
-      /* job cooldown refresh timer */
-      this.time.addEvent({delay:1000,loop:true,callback:()=>{if(WS.zone==='INTERIOR'&&WS.key==='Job Center')renderBuildingPanel();}});
+      /* 1-second refresh: panel countdowns + farm growth check */
+      this.time.addEvent({delay:1000,loop:true,callback:()=>{
+        /* Refresh building panel only when live countdowns / outdoor panels are active */
+        const needsRefresh=(WS.zone==='INTERIOR'&&(S.learningEndTime>Date.now()||S.workLockEnd>Date.now()))||
+                           (WS.zone==='CITY'&&WS.outdoor)||(WS.zone==='INTERIOR');
+        if(needsRefresh)renderBuildingPanel();
+        /* Check if any watered plots are ready */
+        let changed=false;
+        for(const p of S.plots){
+          if(p.state==='watered'&&p.readyAt>0&&Date.now()>=p.readyAt){
+            p.state='ready';changed=true;
+            logChat('[Farm] 🍇 A fruit is ready to harvest! Visit your plot.',false,'#4ade80');
+          }
+        }
+        if(changed){redrawFarmPlots();saveProgress();}
+      }});
+      /* NPC farm activity messages */
+      this.time.addEvent({delay:NPC_FARM_MSG_MS,loop:true,callback:()=>{
+        if(Math.random()<NPC_FARM_MSG_CHANCE){
+          const np=_npcPlots[Math.floor(Math.random()*_npcPlots.length)];
+          const msgs=['just watered crops 💧','harvested fruit 🍇','planted new seeds 🌱','caught 2 fish at the river 🎣'];
+          logChat('['+np.owner+'] '+msgs[Math.floor(Math.random()*msgs.length)],false,'#86efac');
+        }
+      }});
       /* auto-save every 30 seconds */
       this.time.addEvent({delay:30000,loop:true,callback:()=>saveProgress()});
       /* low-energy warning every 5 seconds */
