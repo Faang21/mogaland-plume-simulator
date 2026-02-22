@@ -1,84 +1,87 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Moga World</title>
-  <style>
-    html, body { margin:0; padding:0; height:100%; background:#0b1020; font-family:Arial,sans-serif; color:#e8e8e8; overflow:hidden; }
-    #wrap { display:flex; height:100%; }
-    #game { flex:1; position:relative; background:#0b1020; }
-
-    #ui {
-      width:340px; border-left:1px solid rgba(255,255,255,.15);
-      padding:12px; box-sizing:border-box; background:rgba(0,0,0,.45);
-      overflow-y:auto; display:flex; flex-direction:column; gap:10px;
-    }
-    .card { border:1px solid rgba(255,255,255,.18); border-radius:12px; padding:12px; background:rgba(255,255,255,.06); }
-    .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-    button, input, select {
-      border-radius:10px; border:1px solid rgba(255,255,255,.22); background:rgba(255,255,255,.08);
-      color:#fff; padding:8px 12px; font-size:13px;
-    }
-    button { cursor:pointer; }
-    button:hover { background:rgba(255,255,255,.18); }
-    button:disabled { opacity:.4; cursor:not-allowed; }
-    #log { height:120px; overflow:auto; font-size:12px; line-height:1.4; padding:8px; background:rgba(0,0,0,.35); border-radius:10px; border:1px solid rgba(255,255,255,.15); }
-    #log div { margin:2px 0; }
-    .muted { opacity:.7; font-size:12px; }
-    .stat { display:grid; grid-template-columns:1fr auto; gap:4px; font-size:13px; }
-    .pill { font-size:11px; padding:2px 8px; border-radius:999px; border:1px solid rgba(255,255,255,.2); background:rgba(255,255,255,.05); }
-    kbd { padding:1px 5px; border-radius:5px; border:1px solid rgba(255,255,255,.25); background:rgba(255,255,255,.08); font-size:11px; }
-    .bar { height:10px; border-radius:999px; border:1px solid rgba(255,255,255,.2); background:rgba(255,255,255,.06); overflow:hidden; margin:3px 0; }
-    .bar > div { height:100%; width:100%; background:rgba(34,197,94,.8); transition:width 0.2s; }
-
-    #loading { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:20px; color:#fbbf24; z-index:100; text-align:center; }
-    #errOverlay { position:absolute; left:8px; bottom:8px; z-index:200; background:rgba(0,0,0,.7); border:1px solid rgba(255,255,255,.18); border-radius:10px; padding:8px 10px; max-width:600px; display:none; white-space:pre-wrap; font-size:11px; color:#fecaca; }
-
-    #minimap { position:absolute; right:8px; top:8px; width:180px; height:200px; background:rgba(0,0,0,.5); border:1px solid rgba(255,255,255,.18); border-radius:12px; z-index:50; padding:8px; box-sizing:border-box; user-select:none; pointer-events:none; }
-    #minimap .title { font-size:11px; opacity:.9; display:flex; justify-content:space-between; margin-bottom:6px; }
-    #minimap canvas { width:100%; height:calc(100% - 36px); border-radius:8px; background:rgba(15,23,42,.35); border:1px solid rgba(255,255,255,.10); image-rendering:pixelated; }
-    #clock { margin-top:6px; font-size:11px; opacity:.85; display:flex; justify-content:space-between; }
-
-    /* Wallet info bar */
-    #walletBar { background:linear-gradient(90deg,rgba(16,185,129,.15),rgba(96,165,250,.15)); border:1px solid rgba(16,185,129,.3); border-radius:10px; padding:8px 12px; font-size:12px; display:flex; align-items:center; justify-content:space-between; gap:8px; }
-    #walletBar .addr { font-family:monospace; color:#34d399; }
-
-    /* Multiplier game */
-    #mulPanel { display:none; }
-    #mulPanel.active { display:block; }
-    #mulGraph { width:100%; height:80px; border-radius:8px; border:1px solid rgba(255,255,255,.15); background:#0f172a; }
-    .mul-num { font-size:32px; font-weight:bold; text-align:center; padding:8px 0; }
-    .mul-green { color:#22c55e; }
-    .mul-red { color:#ef4444; }
-    .mul-yellow { color:#fbbf24; }
-    #mulPlayers { max-height:90px; overflow-y:auto; font-size:11px; }
-    #mulPlayers .p-row { display:flex; justify-content:space-between; padding:2px 4px; border-bottom:1px solid rgba(255,255,255,.06); }
-    .p-cashed { color:#22c55e; }
-    .p-playing { color:#fbbf24; }
-    .p-lost { color:#ef4444; opacity:.6; }
-  </style>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Moga World</title>
+<style>
+html,body{margin:0;padding:0;height:100%;background:#0b1020;font-family:Arial,sans-serif;color:#e8e8e8;overflow:hidden;}
+#wrap{display:flex;height:100%;}
+#game{flex:1;position:relative;background:#0b1020;}
+#ui{width:320px;border-left:1px solid rgba(255,255,255,.15);padding:10px;box-sizing:border-box;background:rgba(0,0,0,.5);overflow-y:auto;display:flex;flex-direction:column;gap:8px;}
+.card{border:1px solid rgba(255,255,255,.18);border-radius:10px;padding:10px;background:rgba(255,255,255,.05);}
+.row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+button,input,select{border-radius:8px;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.08);color:#fff;padding:7px 10px;font-size:12px;}
+button{cursor:pointer;}
+button:hover{background:rgba(255,255,255,.16);}
+button:disabled{opacity:.35;cursor:not-allowed;}
+input{outline:none;}
+#walletBar{background:linear-gradient(90deg,rgba(16,185,129,.12),rgba(96,165,250,.12));border:1px solid rgba(16,185,129,.28);border-radius:10px;padding:8px 10px;font-size:11px;display:flex;align-items:center;justify-content:space-between;gap:6px;}
+#walletBar .waddr{font-family:monospace;color:#34d399;font-size:11px;}
+#networkBadge{font-size:10px;padding:2px 8px;border-radius:999px;background:rgba(96,165,250,.2);border:1px solid rgba(96,165,250,.3);color:#93c5fd;white-space:nowrap;}
+.stat{display:grid;grid-template-columns:1fr auto;gap:3px;font-size:12px;}
+.pill{font-size:10px;padding:2px 7px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.05);}
+kbd{padding:1px 4px;border-radius:4px;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.07);font-size:10px;}
+.ebar{height:9px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.05);overflow:hidden;margin:2px 0;}
+.ebar>div{height:100%;width:100%;background:rgba(34,197,94,.8);transition:width .2s;}
+#log{height:110px;overflow:auto;font-size:11px;line-height:1.4;padding:7px;background:rgba(0,0,0,.3);border-radius:8px;border:1px solid rgba(255,255,255,.12);}
+#log div{margin:2px 0;word-break:break-word;}
+#loading{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:20px;color:#fbbf24;z-index:100;text-align:center;}
+#errOv{position:absolute;left:6px;bottom:6px;z-index:200;background:rgba(0,0,0,.75);border:1px solid rgba(255,100,100,.3);border-radius:8px;padding:8px 10px;max-width:600px;display:none;white-space:pre-wrap;font-size:11px;color:#fecaca;}
+#minimap{position:absolute;right:6px;top:6px;width:170px;height:188px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.16);border-radius:10px;z-index:50;padding:7px;box-sizing:border-box;user-select:none;pointer-events:none;}
+#minimap .mmtitle{font-size:10px;opacity:.9;display:flex;justify-content:space-between;margin-bottom:5px;}
+#minimap canvas{width:100%;height:calc(100% - 34px);border-radius:7px;background:rgba(15,23,42,.35);border:1px solid rgba(255,255,255,.08);image-rendering:pixelated;}
+#mmclock{margin-top:5px;font-size:10px;opacity:.82;display:flex;justify-content:space-between;}
+#onlineBar{position:absolute;left:6px;top:6px;z-index:51;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.16);border-radius:8px;padding:5px 10px;font-size:11px;pointer-events:none;}
+#sleepOv{position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(2,6,23,.9);z-index:500;display:none;align-items:center;justify-content:center;flex-direction:column;}
+#sleepOv .zz{font-size:56px;}
+#sleepOv .stxt{font-size:18px;color:#fbbf24;margin-top:12px;}
+#sleepOv .spct{font-size:13px;color:#94a3b8;margin-top:6px;}
+#buildPanel{display:none;}
+/* Multiplier game */
+#mulGraph{width:100%;height:72px;border-radius:7px;border:1px solid rgba(255,255,255,.12);background:#0f172a;}
+.mulnum{font-size:28px;font-weight:bold;text-align:center;padding:5px 0;}
+.mg{color:#22c55e;}.mr{color:#ef4444;}.my{color:#fbbf24;}
+#mulPList{max-height:80px;overflow-y:auto;font-size:11px;}
+.prow{display:flex;justify-content:space-between;padding:2px 3px;border-bottom:1px solid rgba(255,255,255,.05);}
+.pc{color:#22c55e;}.pp{color:#fbbf24;}.pl{color:#ef4444;opacity:.6;}
+/* item rows in building panels */
+.irow{display:flex;justify-content:space-between;align-items:center;padding:6px 7px;border:1px solid rgba(255,255,255,.08);border-radius:7px;margin:4px 0;background:rgba(255,255,255,.03);}
+.irow .ileft .iname{font-size:12px;font-weight:bold;}
+.irow .ileft .idesc{font-size:10px;color:#94a3b8;}
+.ibtn{padding:5px 9px;border-radius:6px;border:none;font-size:11px;cursor:pointer;white-space:nowrap;}
+.btn-green{background:linear-gradient(90deg,#059669,#10b981);}
+.btn-blue{background:linear-gradient(90deg,#0284c7,#0369a1);}
+.btn-purple{background:linear-gradient(90deg,#7c3aed,#6d28d9);}
+.btn-red{background:linear-gradient(90deg,#9f1239,#ef4444);}
+.btn-yellow{background:rgba(251,191,36,.2);border:1px solid rgba(251,191,36,.3);color:#fbbf24;}
+.btn-indigo{background:linear-gradient(90deg,#4338ca,#6366f1);}
+.sitem{border:1px solid rgba(255,255,255,.1);border-radius:7px;padding:7px;margin:5px 0;background:rgba(255,255,255,.03);}
+.sitem.learned{border-color:rgba(34,197,94,.3);background:rgba(34,197,94,.05);}
+</style>
 </head>
 <body>
 <div id="wrap">
   <div id="game">
     <div id="loading">Loading Moga World...</div>
-    <div id="errOverlay"></div>
+    <div id="errOv"></div>
+    <div id="onlineBar">👥 Online: <span id="onlineCnt">0</span>/100</div>
     <div id="minimap">
-      <div class="title">
-        <span id="mmLoc">CITY</span>
-        <span id="mmTarget" style="opacity:.8;">Target: -</span>
-      </div>
-      <canvas id="mmCanvas" width="128" height="128"></canvas>
-      <div id="clock"><span id="tod">Day</span><span id="timeTxt">06:00</span></div>
+      <div class="mmtitle"><span id="mmLoc">CITY</span><span id="mmTgt" style="opacity:.8;">—</span></div>
+      <canvas id="mmC" width="128" height="128"></canvas>
+      <div id="mmclock"><span id="tod">Day</span><span id="timeTxt">06:00</span></div>
+    </div>
+    <div id="sleepOv">
+      <div class="zz">😴</div>
+      <div class="stxt">Sleeping... zZz</div>
+      <div class="spct" id="sleepPct">Energy: 0%</div>
     </div>
   </div>
 
   <aside id="ui">
-    <!-- Wallet bar -->
     <div id="walletBar">
-      <span>🔗 Wallet</span>
-      <span class="addr" id="walletAddr">Not connected</span>
+      <span>🔗</span>
+      <span class="waddr" id="wAddr">Not connected</span>
+      <span id="networkBadge">—</span>
     </div>
 
     <div class="card">
@@ -86,882 +89,1119 @@
         <strong>Moga World</strong>
         <span class="pill" id="modePill">CITY</span>
       </div>
-      <small class="muted" style="display:block;margin-top:5px;">
-        Move: <kbd>WASD</kbd>/<kbd>↑↓←→</kbd> · Sprint: <kbd>Shift</kbd> · Interact: <kbd>E</kbd>
+      <small style="display:block;margin-top:5px;opacity:.7;font-size:10px;">
+        Move: <kbd>WASD</kbd>/<kbd>↑↓←→</kbd> · Sprint: <kbd>Shift</kbd> · Enter/Exit: <kbd>E</kbd>
       </small>
     </div>
 
     <div class="card stat">
-      <div>Coins</div><div id="coins">0</div>
-      <div>Education</div><div id="edu">None</div>
-      <div>Job</div><div id="job">Locked</div>
-      <div>House Lv</div><div id="house">1</div>
-      <div>Stamina Max</div><div id="stMax">100</div>
-      <div>Nearest</div><div id="near" class="muted">-</div>
+      <div>Coins</div><div id="elCoins">100</div>
+      <div>Job</div><div id="elJob">Unemployed</div>
+      <div>House Lv</div><div id="elHouse">1</div>
+      <div>Energy Max</div><div id="elEMax">100</div>
+      <div>Nearest</div><div id="elNear" style="opacity:.7;">—</div>
     </div>
 
     <div class="card">
-      <div class="row" style="justify-content:space-between;"><strong>Stamina</strong><span id="stTxt">100/100</span></div>
-      <div class="bar"><div id="stBar"></div></div>
+      <div class="row" style="justify-content:space-between;"><strong>Energy</strong><span id="elETxt">100/100</span></div>
+      <div class="ebar"><div id="elEBar"></div></div>
     </div>
 
     <div class="card">
       <strong>Inventory</strong>
-      <div class="row" style="margin-top:8px;">
-        <div class="pill">Apple: <span id="apple">1</span></div>
-        <div class="pill">Soda: <span id="soda">0</span></div>
-        <div class="pill">Sand: <span id="sandwich">0</span></div>
+      <div class="row" style="margin-top:6px;">
+        <div class="pill">🍎 <span id="elApple">1</span></div>
+        <div class="pill">🥤 <span id="elSoda">0</span></div>
+        <div class="pill">🥪 <span id="elSand">0</span></div>
       </div>
-      <div class="row" style="margin-top:8px;">
-        <button id="eatApple">🍎</button>
-        <button id="drinkSoda">🥤</button>
-        <button id="eatSandwich">🥪</button>
-      </div>
-    </div>
-
-    <div class="card">
-      <strong>Navigate (CITY)</strong>
-      <div class="row" style="margin-top:8px;">
-        <select id="navTarget" style="flex:1;"><option value="">Choose target...</option></select>
-        <button id="setTarget">Go</button>
-        <button id="clearTarget">✕</button>
+      <div class="row" style="margin-top:6px;">
+        <button onclick="useItem('apple')">🍎 Eat</button>
+        <button onclick="useItem('soda')">🥤 Drink</button>
+        <button onclick="useItem('sandwich')">🥪 Eat</button>
       </div>
     </div>
 
-    <!-- Multiplier Game Panel (shows when inside Casino) -->
-    <div class="card" id="mulPanel">
-      <div class="row" style="justify-content:space-between;margin-bottom:8px;">
+    <!-- Building-specific panel -->
+    <div id="buildPanel" class="card"></div>
+
+    <!-- Multiplier game panel (Casino) -->
+    <div class="card" id="mulCard" style="display:none;">
+      <div class="row" style="justify-content:space-between;margin-bottom:6px;">
         <strong>🎰 Multiplier Game</strong>
         <span class="pill" id="mulRound">Round 1</span>
       </div>
       <canvas id="mulGraph"></canvas>
-      <div class="mul-num" id="mulNum">1.00x</div>
-
-      <div id="mulState" style="font-size:12px;text-align:center;margin-bottom:8px;color:#94a3b8;">
-        Waiting for next round...
+      <div class="mulnum mg" id="mulNum">1.00x</div>
+      <div id="mulStatus" style="font-size:11px;text-align:center;color:#94a3b8;margin-bottom:6px;">Waiting...</div>
+      <div class="row" style="margin-bottom:6px;">
+        <input type="number" id="mulBetIn" value="10" min="5" style="flex:1;"/>
+        <button id="btnJoin" onclick="mulJoin()" style="background:linear-gradient(90deg,#f59e0b,#d97706);border:none;">Join</button>
+        <button id="btnCash" onclick="mulCashOut()" style="background:linear-gradient(90deg,#10b981,#059669);border:none;" disabled>Cash Out</button>
       </div>
-
-      <div class="row" style="margin-bottom:8px;">
-        <input type="number" id="mulBet" placeholder="Bet (coins)" min="5" value="10" style="flex:1;"/>
-        <button id="mulJoin" style="background:linear-gradient(90deg,#f59e0b,#d97706);border:none;">Join</button>
-        <button id="mulCash" style="background:linear-gradient(90deg,#10b981,#059669);border:none;" disabled>Cash Out</button>
-      </div>
-
-      <div style="font-size:12px;color:#94a3b8;margin-bottom:6px;">Players this round:</div>
-      <div id="mulPlayers"></div>
+      <div style="font-size:11px;color:#64748b;margin-bottom:4px;">Players this round:</div>
+      <div id="mulPList"></div>
     </div>
 
     <div class="card">
-      <strong>Chat</strong>
-      <div id="log"></div>
-      <div class="row" style="margin-top:8px;">
-        <input id="chat" placeholder="Message..." style="flex:1;"/>
-        <button id="send">Send</button>
+      <strong>Navigate (CITY)</strong>
+      <div class="row" style="margin-top:7px;">
+        <select id="navSel" style="flex:1;"><option value="">Choose...</option></select>
+        <button id="btnGo">Go</button>
+        <button id="btnClear">✕</button>
       </div>
-      <small class="muted">cmd: <code>buy soda</code>, <code>buy sandwich</code></small>
+    </div>
+
+    <div class="card">
+      <div class="row" style="justify-content:space-between;margin-bottom:6px;">
+        <strong>💬 World Chat</strong>
+        <span class="pill">👥 <span id="onlineCnt2">0</span></span>
+      </div>
+      <div id="log"></div>
+      <div class="row" style="margin-top:6px;">
+        <input id="chatIn" placeholder="Message... (buy soda, buy sandwich)" style="flex:1;"/>
+        <button id="btnSend">Send</button>
+      </div>
     </div>
   </aside>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.55.2/phaser.min.js"></script>
 <script>
 (() => {
-  /* ── Error overlay ── */
-  const errOverlay = document.getElementById('errOverlay');
-  function showError(e) { errOverlay.style.display='block'; errOverlay.textContent=(e&&(e.stack||e.message))?(e.stack||e.message):String(e); }
-  window.addEventListener('error', e=>showError(e.error||e.message));
-  window.addEventListener('unhandledrejection', e=>showError(e.reason));
+'use strict';
+/* ── Error overlay ── */
+const errOv=document.getElementById('errOv');
+function showError(e){errOv.style.display='block';errOv.textContent=(e&&(e.stack||e.message))?e.stack||e.message:String(e);}
+window.addEventListener('error',e=>showError(e.error||e.message));
+window.addEventListener('unhandledrejection',e=>showError(e.reason));
 
-  /* ── Wallet from URL / parent ── */
-  const params = new URLSearchParams(window.location.search);
-  let walletAddress = params.get('wallet') || '';
-  const elWalletAddr = document.getElementById('walletAddr');
-  function setWalletDisplay() {
-    if (walletAddress) {
-      elWalletAddr.textContent = walletAddress.slice(0,6)+'...'+walletAddress.slice(-4);
-    } else {
-      elWalletAddr.textContent = 'Not connected';
-    }
+/* ── Constants ── */
+const TREASURY='0xa959f26847211f71A22aDb087EBe50E0743e7D66';
+const USDC_BY_CHAIN={
+  11155111:'0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8', // Sepolia
+  84532:'0x036CbD53842c5426634e7929541eC2318f3dCF7e',    // Base Sepolia
+};
+const USDC_ABI=['function balanceOf(address) view returns (uint256)','function transfer(address,uint256) returns (bool)'];
+const TILE=32,CW=96,CH=60,IW=34,IH=22,IDIST=135;
+
+/* ── Network & wallet ── */
+let walletAddress='';
+let networkConfig={name:'Unknown',chainId:0,currency:'ETH',explorer:'https://etherscan.io'};
+const params=new URLSearchParams(window.location.search);
+walletAddress=params.get('wallet')||'';
+
+function usdcAddress(){return USDC_BY_CHAIN[networkConfig.chainId]||null;}
+function explorerTx(hash){return `${networkConfig.explorer}/tx/${hash}`;}
+
+async function initChain(){
+  if(!window.ethereum){
+    logChat('[Wallet] No Web3 provider found. Install MetaMask to enable on-chain features.',false,'#f87171');
+    return;
   }
-  setWalletDisplay();
-  // Also accept wallet updates from parent iframe
-  window.addEventListener('message', (ev) => {
-    if (ev.data && ev.data.type === 'walletUpdate') {
-      walletAddress = ev.data.address || '';
-      setWalletDisplay();
-    }
+  try{
+    const prov=new ethers.providers.Web3Provider(window.ethereum);
+    const net=await prov.getNetwork();
+    networkConfig.chainId=net.chainId;
+    const names={11155111:'ETH Sepolia',84532:'Base Sepolia',656476:'EDU Chain'};
+    const curs={11155111:'ETH',84532:'ETH',656476:'EDU'};
+    const exps={11155111:'https://sepolia.etherscan.io',84532:'https://sepolia.basescan.org',656476:'https://edu-chain-testnet.blockscout.com'};
+    networkConfig.name=names[net.chainId]||`Chain ${net.chainId}`;
+    networkConfig.currency=curs[net.chainId]||'ETH';
+    networkConfig.explorer=exps[net.chainId]||'https://etherscan.io';
+    if(!walletAddress){const accs=await prov.listAccounts();if(accs[0])walletAddress=accs[0].toLowerCase();}
+    document.getElementById('networkBadge').textContent=networkConfig.name;
+    document.getElementById('wAddr').textContent=walletAddress?walletAddress.slice(0,6)+'...'+walletAddress.slice(-4):'Not connected';
+    window.ethereum.on('chainChanged',()=>initChain());
+    window.ethereum.on('accountsChanged',a=>{walletAddress=a[0]?a[0].toLowerCase():'';initChain();});
+  }catch(e){console.log('[chain]',e.message);}
+}
+
+window.addEventListener('message',ev=>{
+  if(ev.data&&ev.data.type==='walletUpdate'){
+    walletAddress=ev.data.address||'';
+    document.getElementById('wAddr').textContent=walletAddress?walletAddress.slice(0,6)+'...'+walletAddress.slice(-4):'Not connected';
+  }
+  if(ev.data&&ev.data.type==='networkConfig')Object.assign(networkConfig,ev.data.config);
+});
+
+async function onChainTx(label,ethVal=0.00001){
+  if(!window.ethereum||!walletAddress)return null;
+  try{
+    const signer=new ethers.providers.Web3Provider(window.ethereum).getSigner();
+    const tx=await signer.sendTransaction({to:TREASURY,value:ethers.utils.parseEther(String(ethVal))});
+    logChat('[TX] '+label+' confirmed: '+tx.hash.slice(0,12)+'…',false,'#34d399');
+    return tx;
+  }catch(e){logChat('[TX] '+e.message.slice(0,60),false,'#f87171');return null;}
+}
+
+async function sendUSDCOnChain(to,amount){
+  if(!window.ethereum||!walletAddress){logChat('[Bank] Connect wallet first.',false,'#f87171');return;}
+  const addr=usdcAddress();
+  if(!addr){logChat('[Bank] USDC not on this network.',false,'#f87171');return;}
+  if(!ethers.utils.isAddress(to)){logChat('[Bank] Invalid address.',false,'#f87171');return;}
+  const a=parseFloat(amount);if(isNaN(a)||a<=0){logChat('[Bank] Invalid amount.',false,'#f87171');return;}
+  try{
+    const signer=new ethers.providers.Web3Provider(window.ethereum).getSigner();
+    const usdc=new ethers.Contract(addr,USDC_ABI,signer);
+    const amtW=ethers.utils.parseUnits(String(a),6);
+    logChat('[Bank] Sending '+a+' USDC…',false,'#fbbf24');
+    const tx=await usdc.transfer(to,amtW);
+    logChat('[Bank] ✅ Sent '+a+' USDC! TX: '+tx.hash.slice(0,12)+'…',false,'#34d399');
+    await refreshUSDCBalance();
+  }catch(e){logChat('[Bank] '+e.message.slice(0,60),false,'#f87171');}
+}
+window.sendUSDCOnChain=sendUSDCOnChain;
+
+async function refreshUSDCBalance(){
+  const el=document.getElementById('usdcBal');if(!el)return;
+  if(!window.ethereum||!walletAddress||!usdcAddress()){el.textContent='N/A';return;}
+  try{
+    const prov=new ethers.providers.Web3Provider(window.ethereum);
+    const usdc=new ethers.Contract(usdcAddress(),USDC_ABI,prov);
+    const b=await usdc.balanceOf(walletAddress);
+    el.textContent=parseFloat(ethers.utils.formatUnits(b,6)).toFixed(4)+' USDC';
+  }catch{el.textContent='Error';}
+}
+window.refreshUSDCBalance=refreshUSDCBalance;
+
+/* ── Skills ── */
+const SKILLS=[
+  {id:'basic',   name:'Basic Labor',   icon:'🔨',cost:10,time:2000,teacher:'Ms. Ana',    job:'Laborer',  wMin:8, wMax:15,cd:15000},
+  {id:'prog',    name:'Programming',   icon:'💻',cost:30,time:4000,teacher:'Mr. Budi',   job:'Developer',wMin:22,wMax:38,cd:22000},
+  {id:'biz',     name:'Business Mgmt', icon:'📊',cost:25,time:3500,teacher:'Mr. Candra', job:'Manager',  wMin:18,wMax:32,cd:18000},
+  {id:'med',     name:'Medicine',      icon:'🏥',cost:40,time:5000,teacher:'Dr. Dewi',   job:'Doctor',   wMin:28,wMax:45,cd:25000},
+  {id:'eng',     name:'Engineering',   icon:'⚙️',cost:35,time:4500,teacher:'Mr. Eko',    job:'Engineer', wMin:20,wMax:36,cd:22000},
+];
+const workCDs={};
+const COINS_TO_USDC=0.0001; // 1 coin = 0.0001 USDC (10,000 coins = 1 USDC); simulated exchange rate for display
+
+/* ── Player state ── */
+const S={
+  coins:100, learnedSkills:[], learningId:null,
+  job:'Unemployed', energy:100, energyMax:100,
+  house:1, sleeping:false,
+  inv:{apple:1,soda:0,sandwich:0},
+};
+
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const reqEnergy=(n,msg)=>{if(S.energy<n){logChat(msg||'[info] Low energy.',false,'#f87171');return false;}S.energy-=n;return true;};
+
+function updateHUD(){
+  document.getElementById('elCoins').textContent=S.coins;
+  document.getElementById('elJob').textContent=S.job;
+  document.getElementById('elHouse').textContent=S.house;
+  document.getElementById('elEMax').textContent=S.energyMax;
+  document.getElementById('elApple').textContent=S.inv.apple;
+  document.getElementById('elSoda').textContent=S.inv.soda;
+  document.getElementById('elSand').textContent=S.inv.sandwich;
+  S.energy=clamp(S.energy,0,S.energyMax);
+  const pct=(S.energy/S.energyMax)*100;
+  document.getElementById('elETxt').textContent=`${Math.round(S.energy)}/${S.energyMax}`;
+  document.getElementById('elEBar').style.width=pct+'%';
+  document.getElementById('elEBar').style.background=pct>50?'rgba(34,197,94,.8)':pct>20?'rgba(251,191,36,.85)':'rgba(239,68,68,.9)';
+  const lbl=WS.zone==='CITY'?'CITY':WS.key.toUpperCase();
+  document.getElementById('modePill').textContent=lbl;
+  document.getElementById('mmLoc').textContent=lbl;
+  document.getElementById('mulCard').style.display=(WS.zone==='INTERIOR'&&WS.key==='Casino')?'block':'none';
+  updateOnlineCount();
+}
+
+/* ── World state ── */
+const WS={zone:'CITY',key:'',savedPos:{x:32*TILE,y:32*TILE}};
+const NAV={key:'',pos:null};
+const CLK={min:6*60,speed:10};
+function fmtTime(m){const h=Math.floor(m/60)%24,mm=Math.floor(m%60);return String(h).padStart(2,'0')+':'+String(mm).padStart(2,'0');}
+
+/* ── Log / Chat ── */
+function logChat(text,isMe=false,color=''){
+  const el=document.getElementById('log');
+  const d=document.createElement('div');
+  const esc=text.replace(/[<>&"']/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c]));
+  d.innerHTML=color?`<span style="color:${color}">${esc}</span>`:esc;
+  el.appendChild(d);el.scrollTop=el.scrollHeight;
+  while(el.children.length>100)el.removeChild(el.firstChild);
+}
+
+/* ── Building panel renderers ── */
+function renderBuildingPanel(){
+  const panel=document.getElementById('buildPanel');
+  if(WS.zone!=='INTERIOR'){panel.style.display='none';return;}
+  panel.style.display='block';
+  const r={House:renderHome,School:renderSchool,'Job Center':renderJobBoard,Bank:renderBank,Cafe:renderCafe,Market:renderMarket,Gym:renderGym,Hospital:renderHospital,Library:renderLibrary};
+  if(r[WS.key])panel.innerHTML=r[WS.key]();
+  else panel.style.display='none';
+}
+
+function renderHome(){
+  const uc=25*S.house;
+  return`<strong>🏠 Home</strong>
+<div style="font-size:11px;color:#94a3b8;margin:5px 0;">Energy: ${Math.round(S.energy)}/${S.energyMax}</div>
+<button onclick="sleepAtHome()" ${S.sleeping||S.energy>=S.energyMax?'disabled':''} style="width:100%;padding:8px;border-radius:7px;border:none;background:linear-gradient(90deg,#1d4ed8,#3b82f6);color:white;font-size:12px;cursor:pointer;">
+  ${S.sleeping?'😴 Sleeping…':S.energy>=S.energyMax?'✅ Fully Rested':'😴 Sleep (Restore Full Energy)'}
+</button>
+<div style="border-top:1px solid rgba(255,255,255,.1);margin-top:9px;padding-top:9px;">
+  <div style="font-size:11px;color:#64748b;">House Lv ${S.house} · Upgrade: +5 max energy</div>
+  <button onclick="upgradeHouse()" ${S.coins<uc?'disabled':''} class="btn-yellow" style="width:100%;margin-top:5px;padding:7px;border-radius:7px;font-size:11px;cursor:pointer;">
+    Upgrade (${uc} coins)
+  </button>
+</div>`;
+}
+
+function renderSchool(){
+  let h=`<strong>🏫 Skill Shop</strong><div style="font-size:10px;color:#94a3b8;margin:4px 0;">Pay tuition → gain job skill → work → earn USDC</div>`;
+  for(const sk of SKILLS){
+    const l=S.learnedSkills.includes(sk.id);
+    const a=S.coins>=sk.cost;
+    const li=S.learningId===sk.id;
+    h+=`<div class="sitem${l?' learned':''}">
+<div style="display:flex;justify-content:space-between;"><strong style="font-size:12px;">${sk.icon} ${sk.name}</strong>
+<span style="font-size:10px;color:${l?'#22c55e':a?'#fbbf24':'#ef4444'};">${l?'✅':sk.cost+'c'}</span></div>
+<div style="font-size:10px;color:#64748b;">👨‍🏫 ${sk.teacher} · ${sk.job}: ${sk.wMin}–${sk.wMax}c/work</div>
+${!l?`<button onclick="learnSkill('${sk.id}')" ${!a||li?'disabled':''} class="ibtn btn-purple" style="width:100%;margin-top:5px;">
+  ${li?'📖 Learning…':!a?'Need '+(sk.cost-S.coins)+' more coins':'Enroll (−'+sk.cost+' coins)'}
+</button>`:'<div style="font-size:10px;color:#22c55e;margin-top:3px;text-align:center;">✅ Skill acquired</div>'}
+</div>`;
+  }
+  return h;
+}
+
+function renderJobBoard(){
+  let h=`<strong>💼 Job Board</strong>`;
+  if(!S.learnedSkills.length)return h+`<div style="color:#94a3b8;font-size:11px;margin:10px 0;text-align:center;">No skills. Visit School first.</div>`;
+  const now=Date.now();
+  for(const id of S.learnedSkills){
+    const sk=SKILLS.find(s=>s.id===id);if(!sk)continue;
+    const cd=sk.cd||20000,lw=workCDs[id]||0,oc=(now-lw)<cd,cl=oc?Math.ceil((cd-(now-lw))/1000):0;
+    h+=`<div class="irow"><div class="ileft"><div class="iname">${sk.icon} ${sk.job}</div>
+<div class="idesc">Wage: ${sk.wMin}–${sk.wMax}c · −15 energy${oc?' · ⏳'+cl+'s':''}</div></div>
+<button onclick="workJob('${id}')" ${S.energy<15||oc?'disabled':''} class="ibtn btn-blue">
+  ${oc?cl+'s':S.energy<15?'⚡':' Work'}
+</button></div>`;
+  }
+  return h;
+}
+
+function renderBank(){
+  return`<strong>🏦 Bank</strong>
+<div style="font-size:11px;color:#94a3b8;margin:5px 0;">On-chain USDC: <span id="usdcBal" style="color:#22c55e;">—</span>
+ <button onclick="refreshUSDCBalance()" style="font-size:9px;padding:2px 5px;margin-left:4px;">↺</button></div>
+<div style="border-top:1px solid rgba(255,255,255,.1);margin-top:6px;padding-top:8px;">
+<div style="font-size:11px;color:#fbbf24;margin-bottom:5px;">💸 Send USDC to player</div>
+<input id="bkTo" placeholder="Recipient address (0x…)" style="width:100%;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,.15);background:#0f172a;color:white;font-size:11px;margin-bottom:5px;box-sizing:border-box;"/>
+<input id="bkAmt" type="number" placeholder="Amount USDC" min="0.01" step="0.01" style="width:100%;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,.15);background:#0f172a;color:white;font-size:11px;margin-bottom:7px;box-sizing:border-box;"/>
+<button onclick="sendUSDCOnChain(document.getElementById('bkTo').value,document.getElementById('bkAmt').value)" class="ibtn btn-green" style="width:100%;padding:8px;">Send USDC 🚀</button>
+</div>
+<div style="border-top:1px solid rgba(255,255,255,.1);margin-top:8px;padding-top:8px;font-size:10px;color:#64748b;">
+${S.coins} coins ≈ ${(S.coins*COINS_TO_USDC).toFixed(4)} USDC
+<button onclick="convertCoins()" ${S.coins<100?'disabled':''} class="btn-yellow" style="width:100%;margin-top:5px;padding:6px;border-radius:6px;font-size:11px;cursor:pointer;">
+  Convert ${S.coins}c → ${(S.coins*COINS_TO_USDC).toFixed(4)} USDC (Simulated)
+</button></div>`;
+}
+
+function renderCafe(){
+  const items=[{id:'coffee',n:'Espresso ☕',c:5,e:40},{id:'cake',n:'Cake Slice 🍰',c:8,e:35},{id:'meal',n:'Full Meal 🍱',c:12,e:55}];
+  let h=`<strong>☕ Cafe Menu</strong><div style="font-size:10px;color:#94a3b8;margin:3px 0;">Restore energy</div>`;
+  for(const it of items)h+=`<div class="irow"><div class="ileft"><div class="iname">${it.n}</div><div class="idesc">+${it.e} energy · ${it.c} coins</div></div>
+<button onclick="buyFood('cafe','${it.id}',${it.c},${it.e},0)" ${S.coins<it.c?'disabled':''} class="ibtn btn-green">Buy</button></div>`;
+  return h;
+}
+
+function renderMarket(){
+  const items=[{id:'apple',n:'Apple 🍎',c:3,e:30,inv:'apple'},{id:'sand',n:'Sandwich 🥪',c:6,e:45,inv:'sandwich'},{id:'drink',n:'Energy Drink ⚡',c:5,e:40,inv:'soda'}];
+  let h=`<strong>🛒 Market</strong><div style="font-size:10px;color:#94a3b8;margin:3px 0;">Buy food to inventory</div>`;
+  for(const it of items)h+=`<div class="irow"><div class="ileft"><div class="iname">${it.n}</div><div class="idesc">+1 inventory · ${it.c} coins</div></div>
+<button onclick="buyFood('market','${it.id}',${it.c},0,'${it.inv}')" ${S.coins<it.c?'disabled':''} class="ibtn btn-red" style="background:linear-gradient(90deg,#be185d,#f472b6);">Buy</button></div>`;
+  return h;
+}
+
+function renderGym(){
+  return`<strong>🏋️ Gym</strong>
+<div class="irow"><div class="ileft"><div class="iname">Workout 💪</div><div class="idesc">+5 energy max · −20 energy · 12 coins</div></div>
+<button onclick="gymTrain()" ${S.energy<20||S.coins<12?'disabled':''} class="ibtn btn-red">Train</button></div>
+<div class="irow"><div class="ileft"><div class="iname">Protein Shake 🥤</div><div class="idesc">+35 energy · 10 coins</div></div>
+<button onclick="buyFood('gym','shake',10,35,0)" ${S.coins<10?'disabled':''} class="ibtn btn-red">Buy</button></div>`;
+}
+
+function renderHospital(){
+  return`<strong>🏥 Hospital</strong>
+<div class="irow"><div class="ileft"><div class="iname">Basic Care 💊</div><div class="idesc">Full energy restore · 10 coins</div></div>
+<button onclick="heal('basic')" ${S.coins<10?'disabled':''} class="ibtn btn-red">Treat</button></div>
+<div class="irow"><div class="ileft"><div class="iname">Premium Care ⚕️</div><div class="idesc">Full energy + max+5 · 20 coins</div></div>
+<button onclick="heal('premium')" ${S.coins<20?'disabled':''} class="ibtn btn-red">Premium</button></div>`;
+}
+
+function renderLibrary(){
+  let h=`<strong>📚 Library</strong><div style="font-size:10px;color:#94a3b8;margin:3px 0;">Fast-track (1.5× cost, half time)</div>`;
+  for(const sk of SKILLS){
+    const l=S.learnedSkills.includes(sk.id),fc=Math.ceil(sk.cost*1.5),a=S.coins>=fc;
+    h+=`<div class="sitem${l?' learned':''}">
+<div style="display:flex;justify-content:space-between;"><span style="font-size:12px;font-weight:bold;">${sk.icon} ${sk.name}</span>
+<span style="font-size:10px;color:${l?'#22c55e':'#fbbf24'};">${l?'✅':fc+'c'}</span></div>
+<div style="font-size:10px;color:#64748b;">${sk.job} · ${sk.time/2000}s</div>
+${!l?`<button onclick="learnSkillFast('${sk.id}')" ${!a?'disabled':''} class="ibtn btn-indigo" style="width:100%;margin-top:4px;">Fast-track (${fc}c)</button>`:''}
+</div>`;
+  }
+  return h;
+}
+
+/* ── Economy actions ── */
+function learnSkill(id){
+  const sk=SKILLS.find(s=>s.id===id);if(!sk)return;
+  if(S.learnedSkills.includes(id))return logChat('[School] Already know '+sk.name+'.');
+  if(S.coins<sk.cost)return logChat('[School] Need '+sk.cost+' coins for '+sk.name+'.');
+  S.coins-=sk.cost;S.learningId=id;updateHUD();renderBuildingPanel();
+  logChat('[School] 📚 Enrolling in '+sk.name+' ('+sk.time/1000+'s)…',false,'#a78bfa');
+  onChainTx('SCHOOL:'+id,0.00001);
+  setTimeout(()=>{
+    S.learnedSkills.push(id);S.learningId=null;S.job=sk.job;
+    updateHUD();renderBuildingPanel();
+    logChat('[School] ✅ Graduated: '+sk.name+'! '+sk.job+' job unlocked.',false,'#22c55e');
+  },sk.time);
+}
+window.learnSkill=learnSkill;
+
+function learnSkillFast(id){
+  const sk=SKILLS.find(s=>s.id===id);if(!sk)return;
+  if(S.learnedSkills.includes(id))return logChat('[Library] Already know '+sk.name+'.');
+  const fc=Math.ceil(sk.cost*1.5);
+  if(S.coins<fc)return logChat('[Library] Need '+fc+' coins.');
+  S.coins-=fc;S.learningId=id;updateHUD();renderBuildingPanel();
+  logChat('[Library] 📚 Fast-track '+sk.name+' ('+sk.time/2000+'s)…',false,'#818cf8');
+  onChainTx('LIB:'+id,0.00001);
+  setTimeout(()=>{
+    S.learnedSkills.push(id);S.learningId=null;S.job=sk.job;
+    updateHUD();renderBuildingPanel();
+    logChat('[Library] ✅ Graduated fast: '+sk.name+'!',false,'#22c55e');
+  },sk.time/2);
+}
+window.learnSkillFast=learnSkillFast;
+
+function workJob(id){
+  const sk=SKILLS.find(s=>s.id===id);if(!sk)return;
+  const now=Date.now(),lw=workCDs[id]||0,cd=sk.cd||20000;
+  if(now-lw<cd)return logChat('[Job] Cooldown '+Math.ceil((cd-(now-lw))/1000)+'s');
+  if(!reqEnergy(15,'[Job] Need 15 energy to work.'))return;
+  workCDs[id]=now;
+  const wage=sk.wMin+Math.floor(Math.random()*(sk.wMax-sk.wMin+1));
+  S.coins+=wage;updateHUD();renderBuildingPanel();
+  logChat('[Job] 💰 Worked as '+sk.job+': +'+wage+' coins!',false,'#fbbf24');
+  onChainTx('WORK:'+sk.job,0.00001);
+}
+window.workJob=workJob;
+
+function buyFood(bld,id,cost,energy,inv){
+  if(S.coins<cost)return logChat('['+bld+'] Need '+cost+' coins.');
+  S.coins-=cost;
+  if(inv){S.inv[inv]=(S.inv[inv]||0)+1;logChat('['+bld+'] Got item (+1 inventory).',false,'#a3e635');}
+  else{S.energy=clamp(S.energy+energy,0,S.energyMax);logChat('['+bld+'] +'+energy+' energy.',false,'#34d399');}
+  updateHUD();renderBuildingPanel();
+}
+window.buyFood=buyFood;
+
+function useItem(type){
+  const en={apple:30,soda:20,sandwich:45};
+  if(!S.inv[type]||S.inv[type]<=0)return logChat('[Inventory] No '+type+'.');
+  S.inv[type]--;S.energy=clamp(S.energy+en[type],0,S.energyMax);
+  updateHUD();logChat('[Inventory] Used '+type+': +'+en[type]+' energy.',false,'#34d399');
+}
+window.useItem=useItem;
+
+function sleepAtHome(){
+  if(S.sleeping||S.energy>=S.energyMax)return;
+  S.sleeping=true;updateHUD();renderBuildingPanel();
+  const ov=document.getElementById('sleepOv');ov.style.display='flex';
+  const target=S.energyMax,steps=10,gain=(target-S.energy)/steps;
+  let i=0;
+  const t=setInterval(()=>{
+    i++;S.energy=clamp(S.energy+gain,0,S.energyMax);
+    document.getElementById('sleepPct').textContent='Energy: '+Math.round((S.energy/S.energyMax)*100)+'%';
+    if(i>=steps){clearInterval(t);S.energy=S.energyMax;S.sleeping=false;ov.style.display='none';updateHUD();renderBuildingPanel();logChat('[Home] 🌅 Woke up refreshed!',false,'#fbbf24');}
+  },500);
+}
+window.sleepAtHome=sleepAtHome;
+
+function upgradeHouse(){
+  const c=25*S.house;if(S.coins<c)return logChat('[Home] Need '+c+' coins.');
+  S.coins-=c;S.house++;S.energyMax+=5;S.energy=clamp(S.energy+5,0,S.energyMax);
+  updateHUD();renderBuildingPanel();logChat('[Home] 🏠 Upgraded to Lv '+S.house+'! +5 max energy.',false,'#fbbf24');
+}
+window.upgradeHouse=upgradeHouse;
+
+function gymTrain(){
+  if(S.coins<12)return logChat('[Gym] Need 12 coins.');
+  if(!reqEnergy(20,'[Gym] Need 20 energy.'))return;
+  S.coins-=12;S.energyMax+=5;updateHUD();renderBuildingPanel();
+  logChat('[Gym] 💪 Trained! +5 max energy.',false,'#f87171');
+}
+window.gymTrain=gymTrain;
+
+function heal(level){
+  const costs={basic:10,premium:20};const c=costs[level];
+  if(S.coins<c)return logChat('[Hospital] Need '+c+' coins.');
+  S.coins-=c;S.energy=S.energyMax;
+  if(level==='premium')S.energyMax+=5;
+  updateHUD();renderBuildingPanel();
+  logChat('[Hospital] '+( level==='premium'?'⚕️ Premium':'💊 Basic')+' care done. Full energy!',false,'#34d399');
+}
+window.heal=heal;
+
+function convertCoins(){
+  if(S.coins<100)return logChat('[Bank] Need 100+ coins to convert.');
+  const usdc=(S.coins*COINS_TO_USDC).toFixed(4);
+  logChat('[Bank] Converted '+S.coins+' coins → '+usdc+' USDC (simulated).',false,'#fbbf24');
+  S.coins=0;updateHUD();renderBuildingPanel();
+}
+window.convertCoins=convertCoins;
+
+/* ── 100-player pool ── */
+const PPOOL=(()=>{
+  const pf=['Moga','Plume','Tiger','Neon','Crypto','Star','Moon','Fire','Ice','Gold','Sky','Deep','Wild','Cyber','Pixel','Dark','Bright','Swift','Sharp','Zen'];
+  const ps=['Cat','Fox','Wolf','Bear','Eagle','Shark','Lion','Panda','Dragon','Whale','Hawk','Owl','Raven','Titan','Storm','Flash','Blade','Ghost','Pulse','Wave'];
+  return Array.from({length:100},(_,i)=>{
+    const n=pf[i%pf.length]+ps[Math.floor(i/pf.length)%ps.length]+(10+(i*7+13)%90);
+    const st=i%3===0?'cons':i%3===1?'mod':'agg';
+    const ct=st==='cons'?1.1+Math.random()*.5:st==='mod'?1.5+Math.random()*1.5:2.5+Math.random()*3;
+    return{id:i,name:n,addr:'0x'+n.toLowerCase().slice(0,8)+'…',strat:st,cashTarget:ct};
   });
+})();
+const CHAT_POOL=['won big at Casino! 🎰','just graduated 🎓','sending USDC to a friend 💸','Developer wages are 🔥','who beat 10x? 🚀','sleeping at Home restores everything 😴','Cafe coffee hits different ☕','bought Protein Shake at Gym 💪','Doctor job = best salary','the on-chain confirmation is satisfying','upgraded house to Lv3 🏠','Market is always stocked 🛒','Hospital saved me ⚕️','School Programming worth the 30 coins','Bank USDC send worked perfectly','anyone near Library? 📚','GG on the multiplier round','Engineering skill unlocked big wages ⚙️','this game goes hard on-chain 🔗','sending coins to my crew'];
+let onlineIds=new Set();
 
-  /* ── Helpers ── */
-  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-  const logLine=(t)=>{ const el=document.getElementById('log'); const d=document.createElement('div'); d.textContent=t; el.appendChild(d); el.scrollTop=el.scrollHeight; };
+function updateOnlineCount(){
+  const c=onlineIds.size;
+  document.getElementById('onlineCnt').textContent=c;
+  const el2=document.getElementById('onlineCnt2');if(el2)el2.textContent=c;
+}
 
-  const TILE=32, CITY_W=96, CITY_H=60, INT_W=34, INT_H=22, INTERACT_DIST=135;
-
-  const elCoins=document.getElementById('coins'), elEdu=document.getElementById('edu'),
-        elJob=document.getElementById('job'), elHouse=document.getElementById('house'),
-        elNear=document.getElementById('near'), elApple=document.getElementById('apple'),
-        elSoda=document.getElementById('soda'), elSandwich=document.getElementById('sandwich'),
-        elStTxt=document.getElementById('stTxt'), elStBar=document.getElementById('stBar'),
-        elStMax=document.getElementById('stMax'), loading=document.getElementById('loading'),
-        modePill=document.getElementById('modePill');
-
-  const mmCanvas=document.getElementById('mmCanvas'), mmCtx=mmCanvas.getContext('2d'),
-        mmTargetTxt=document.getElementById('mmTarget'), mmLocTxt=document.getElementById('mmLoc'),
-        navTargetSel=document.getElementById('navTarget');
-  const elTod=document.getElementById('tod'), elTimeTxt=document.getElementById('timeTxt');
-
-  const myState={
-    coins:100, edu:'None', job:'Locked', house:1,
-    stamina:100, staminaMax:100,
-    inv:{apple:1,soda:0,sandwich:0},
-    lastWorkAt:0, lastSchoolAt:0
-  };
-  const worldState={zone:'CITY', interiorKey:'', savedCityPos:{x:32*TILE,y:32*TILE}};
-  const nav={targetKey:'', targetPos:null};
-  const clock={minutes:6*60, speed:10};
-  function formatTime(mins){const h=Math.floor(mins/60)%24,m=Math.floor(mins%60);return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');}
-
-  function updateHUD(){
-    elCoins.textContent=myState.coins;
-    elEdu.textContent=myState.edu;
-    elJob.textContent=myState.job;
-    elHouse.textContent=myState.house;
-    elApple.textContent=myState.inv.apple;
-    elSoda.textContent=myState.inv.soda;
-    elSandwich.textContent=myState.inv.sandwich;
-    elStMax.textContent=myState.staminaMax;
-    myState.stamina=clamp(myState.stamina,0,myState.staminaMax);
-    const pct=(myState.stamina/myState.staminaMax)*100;
-    elStTxt.textContent=`${Math.round(myState.stamina)}/${myState.staminaMax}`;
-    elStBar.style.width=`${pct}%`;
-    elStBar.style.background=myState.stamina>50?'rgba(34,197,94,.8)':myState.stamina>20?'rgba(251,191,36,.85)':'rgba(239,68,68,.9)';
-    const label=worldState.zone==='CITY'?'CITY':worldState.interiorKey.toUpperCase();
-    modePill.textContent=label; mmLocTxt.textContent=label;
-    // Show multiplier panel only in Casino
-    const mulPanel=document.getElementById('mulPanel');
-    if(worldState.zone==='INTERIOR'&&worldState.interiorKey==='Casino'){
-      mulPanel.classList.add('active');
-    } else {
-      mulPanel.classList.remove('active');
+function initOnlinePlayers(){
+  const n=65+Math.floor(Math.random()*20);
+  const sh=[...Array(100).keys()].sort(()=>Math.random()-.5);
+  sh.slice(0,n).forEach(i=>onlineIds.add(i));
+  updateOnlineCount();
+  setInterval(()=>{
+    const d=Math.floor(Math.random()*5)-2;
+    if(d>0){const off=[...Array(100).keys()].filter(i=>!onlineIds.has(i));for(let k=0;k<d&&off.length;k++)onlineIds.add(off[Math.floor(Math.random()*off.length)]);}
+    else{const on=[...onlineIds];for(let k=0;k<-d&&on.length>50;k++)onlineIds.delete(on[Math.floor(Math.random()*on.length)]);}
+    updateOnlineCount();
+  },7000);
+  setInterval(()=>{
+    if(Math.random()<.25){
+      const arr=[...onlineIds];if(!arr.length)return;
+      const p=PPOOL[arr[Math.floor(Math.random()*arr.length)]];
+      const m=CHAT_POOL[Math.floor(Math.random()*CHAT_POOL.length)];
+      logChat('['+p.name+'] '+m,false,'#c084fc');
     }
-  }
+  },5500);
+}
 
-  /* ── Textures ── */
-  function addCanvasTexture(scene,key,w,h,drawFn){
-    const c=document.createElement('canvas');c.width=w;c.height=h;
-    const ctx=c.getContext('2d');ctx.clearRect(0,0,w,h);drawFn(ctx);
-    scene.textures.addCanvas(key,c);
-  }
-  function makeOrangeCatTexture(scene){
-    addCanvasTexture(scene,'orangeCat',32,32,(ctx)=>{
-      const px=(x,y,w,h,col)=>{ctx.fillStyle=col;ctx.fillRect(x,y,w,h);};
-      px(7,26,18,4,'rgba(0,0,0,0.25)');
-      px(24,18,5,2,'#f59e0b');px(26,16,3,2,'#f59e0b');px(27,14,3,2,'#f59e0b');px(28,12,3,2,'#f59e0b');
-      px(9,14,14,12,'#f59e0b');px(8,16,2,8,'#f59e0b');px(23,16,2,8,'#f59e0b');
-      px(10,6,12,10,'#f59e0b');px(10,4,3,3,'#f59e0b');px(19,4,3,3,'#f59e0b');
-      px(11,5,1,1,'#fb7185');px(20,5,1,1,'#fb7185');
-      px(12,8,1,6,'#d97706');px(16,8,1,6,'#d97706');px(20,8,1,6,'#d97706');
-      px(13,16,8,1,'#d97706');px(12,19,10,1,'#d97706');
-      px(13,10,2,2,'#111827');px(18,10,2,2,'#111827');px(16,12,1,1,'#ef4444');
-      px(11,24,3,2,'#f59e0b');px(18,24,3,2,'#f59e0b');
-    });
-  }
-  function makeBuildingTexture(scene,key,opts){
-    addCanvasTexture(scene,key,48,48,(ctx)=>{
-      const px=(x,y,w,h,col)=>{ctx.fillStyle=col;ctx.fillRect(x,y,w,h);};
-      px(6,42,36,4,'rgba(0,0,0,0.25)');px(8,16,32,26,opts.base);
-      px(6,14,36,4,opts.roof);px(10,10,28,4,opts.roof);
-      for(let wy=0;wy<3;wy++)for(let wx=0;wx<3;wx++){
-        px(12+wx*10,20+wy*7,6,4,opts.win);px(12+wx*10,20+wy*7,6,1,'rgba(255,255,255,0.18)');
-      }
-      px(22,32,8,10,opts.door);px(28,37,1,1,'#fbbf24');px(12,6,24,4,opts.sign);
-    });
-  }
-  function makeDecorAndFurnitureTextures(scene){
-    const tex=(key,draw)=>addCanvasTexture(scene,key,32,32,draw);
-    tex('tree',(ctx)=>{const px=(x,y,w,h,c)=>{ctx.fillStyle=c;ctx.fillRect(x,y,w,h);};
-      px(8,26,16,4,'rgba(0,0,0,0.18)');px(14,16,4,10,'#92400e');px(13,20,6,6,'#78350f');
-      px(8,8,16,10,'#22c55e');px(10,6,12,4,'#16a34a');px(9,12,14,6,'#4ade80');
-    });
-    tex('streetLight',(ctx)=>{const px=(x,y,w,h,c)=>{ctx.fillStyle=c;ctx.fillRect(x,y,w,h);};
-      px(10,28,12,3,'rgba(0,0,0,0.18)');px(15,8,2,20,'#94a3b8');px(14,26,4,2,'#64748b');
-      px(16,10,8,2,'#94a3b8');px(22,10,4,3,'#475569');px(22,13,4,2,'#fbbf24');
-    });
-    tex('rock',(ctx)=>{const px=(x,y,w,h,c)=>{ctx.fillStyle=c;ctx.fillRect(x,y,w,h);};
-      px(9,24,14,4,'rgba(0,0,0,0.18)');px(8,14,16,12,'#9ca3af');px(10,12,12,4,'#6b7280');
-    });
-    tex('bench',(ctx)=>{const px=(x,y,w,h,c)=>{ctx.fillStyle=c;ctx.fillRect(x,y,w,h);};
-      px(6,26,20,3,'rgba(0,0,0,0.18)');px(8,18,3,8,'#78350f');px(21,18,3,8,'#78350f');
-      px(7,16,20,3,'#a16207');px(7,14,20,2,'#b45309');px(7,10,20,3,'#92400e');
-    });
-    tex('vending',(ctx)=>{const px=(x,y,w,h,c)=>{ctx.fillStyle=c;ctx.fillRect(x,y,w,h);};
-      px(9,26,14,3,'rgba(0,0,0,0.18)');px(9,8,14,18,'#0ea5e9');px(9,8,14,3,'#0284c7');
-      px(11,12,10,7,'#111827');px(19,20,2,4,'#334155');
-    });
-    tex('vendor',(ctx)=>{const px=(x,y,w,h,c)=>{ctx.fillStyle=c;ctx.fillRect(x,y,w,h);};
-      px(6,26,20,3,'rgba(0,0,0,0.18)');px(8,16,16,10,'#f97316');px(7,10,18,3,'#e11d48');
-    });
-    tex('f_table',(ctx)=>{const px=(x,y,w,h,c)=>{ctx.fillStyle=c;ctx.fillRect(x,y,w,h);};
-      px(6,26,20,3,'rgba(0,0,0,0.18)');px(6,16,20,4,'#a16207');
-      px(8,20,2,6,'#78350f');px(22,20,2,6,'#78350f');px(7,15,18,2,'#b45309');
-    });
-    tex('f_bed',(ctx)=>{const px=(x,y,w,h,c)=>{ctx.fillStyle=c;ctx.fillRect(x,y,w,h);};
-      px(5,26,22,3,'rgba(0,0,0,0.18)');px(6,16,20,8,'#cbd5e1');
-      px(6,14,20,3,'#94a3b8');px(6,24,20,2,'#64748b');px(7,15,6,2,'#e2e8f0');px(15,15,6,2,'#e2e8f0');
-    });
-    tex('f_tv',(ctx)=>{const px=(x,y,w,h,c)=>{ctx.fillStyle=c;ctx.fillRect(x,y,w,h);};
-      px(8,26,16,3,'rgba(0,0,0,0.18)');px(8,10,16,10,'#0f172a');
-      px(10,12,12,6,'#111827');px(7,20,18,3,'#334155');px(14,23,4,3,'#475569');
-    });
-    tex('f_shelf',(ctx)=>{const px=(x,y,w,h,c)=>{ctx.fillStyle=c;ctx.fillRect(x,y,w,h);};
-      px(8,26,16,3,'rgba(0,0,0,0.18)');px(8,10,16,14,'#92400e');
-      px(9,12,14,2,'#78350f');px(9,16,14,2,'#78350f');px(9,20,14,2,'#78350f');
-      px(10,13,2,3,'#ef4444');px(13,13,2,3,'#22c55e');px(16,13,2,3,'#3b82f6');
-    });
-    // Casino slot machine
-    tex('f_slot',(ctx)=>{const px=(x,y,w,h,c)=>{ctx.fillStyle=c;ctx.fillRect(x,y,w,h);};
-      px(6,26,20,3,'rgba(0,0,0,0.25)');px(6,8,20,18,'#7c3aed');px(6,8,20,3,'#5b21b6');
-      px(9,12,14,8,'#111827');px(10,13,4,6,'#fbbf24');px(15,13,4,6,'#ef4444');px(20,13,1,6,'#22c55e');
-      px(14,22,4,2,'#f59e0b');px(13,24,6,2,'#d97706');
-    });
-    tex('f_roulette',(ctx)=>{const px=(x,y,w,h,c)=>{ctx.fillStyle=c;ctx.fillRect(x,y,w,h);};
-      px(6,26,20,3,'rgba(0,0,0,0.25)');px(6,14,20,12,'#166534');px(6,14,20,2,'#14532d');
-      ctx.fillStyle='#dc2626';ctx.beginPath();ctx.arc(16,20,6,0,Math.PI*2);ctx.fill();
-      ctx.fillStyle='#0f172a';ctx.beginPath();ctx.arc(16,20,3,0,Math.PI*2);ctx.fill();
-      px(15,8,2,6,'#a16207');
-    });
-  }
+/* ── Multiplier Game (Crash-style) ── */
+const MG={run:false,phase:'wait',mul:1,crashAt:1,myBet:0,myIn:false,myCashed:false,myCashMul:0,round:0,bots:[],pts:[],tickInt:null,cdInt:null};
+const mulC=document.getElementById('mulGraph');
+const mulCtx=mulC.getContext('2d');
 
-  /* ── Buildings ── */
-  const CITY_BUILDINGS=[
-    {key:'School',action:'school',tex:'b_school',texScale:2.2,x:14*TILE,y:10*TILE,w:7*TILE,h:6*TILE,
-      texOpts:{base:'#a78bfa',roof:'#7c3aed',door:'#111827',win:'#e9d5ff',sign:'#faf5ff'}},
-    {key:'Library',action:'library',tex:'b_library',texScale:2.1,x:26*TILE,y:10*TILE,w:6*TILE,h:6*TILE,
-      texOpts:{base:'#6366f1',roof:'#4338ca',door:'#111827',win:'#bfdbfe',sign:'#eef2ff'}},
-    {key:'Job Center',action:'work',tex:'b_job',texScale:2.35,x:60*TILE,y:18*TILE,w:8*TILE,h:6*TILE,
-      texOpts:{base:'#38bdf8',roof:'#0284c7',door:'#0b1220',win:'#e0f2fe',sign:'#f0f9ff'}},
-    {key:'Market',action:'buyApple',tex:'b_market',texScale:2.35,x:40*TILE,y:22*TILE,w:8*TILE,h:6*TILE,
-      texOpts:{base:'#f472b6',roof:'#be185d',door:'#111827',win:'#ffe4e6',sign:'#fff1f2'}},
-    {key:'Bank',action:'bank',tex:'b_bank',texScale:2.1,x:50*TILE,y:22*TILE,w:6*TILE,h:6*TILE,
-      texOpts:{base:'#64748b',roof:'#334155',door:'#0f172a',win:'#e2e8f0',sign:'#f8fafc'}},
-    {key:'House',action:'house',tex:'b_house',texScale:2.2,x:14*TILE,y:40*TILE,w:7*TILE,h:6*TILE,
-      texOpts:{base:'#fbbf24',roof:'#b45309',door:'#111827',win:'#fef3c7',sign:'#fffbeb'}},
-    {key:'Cafe',action:'cafe',tex:'b_cafe',texScale:2.35,x:60*TILE,y:40*TILE,w:8*TILE,h:6*TILE,
-      texOpts:{base:'#34d399',roof:'#059669',door:'#0f172a',win:'#d1fae5',sign:'#ecfdf5'}},
-    {key:'Gym',action:'gym',tex:'b_gym',texScale:2.1,x:72*TILE,y:40*TILE,w:6*TILE,h:6*TILE,
-      texOpts:{base:'#f43f5e',roof:'#9f1239',door:'#111827',win:'#ffe4e6',sign:'#fff1f2'}},
-    {key:'Hospital',action:'hospital',tex:'b_hosp',texScale:2.2,x:26*TILE,y:40*TILE,w:7*TILE,h:6*TILE,
-      texOpts:{base:'#ef4444',roof:'#991b1b',door:'#111827',win:'#fee2e2',sign:'#fff5f5'}},
-    {key:'Casino',action:'casino',tex:'b_casino',texScale:2.35,x:72*TILE,y:18*TILE,w:8*TILE,h:6*TILE,
-      texOpts:{base:'#fbbf24',roof:'#b45309',door:'#0f172a',win:'#fef9c3',sign:'#fffde7'}},
-  ];
-  const CITY_INTERACTABLES=[
-    {key:'Vending',action:'vending',tex:'vending',texScale:1.6,x:52*TILE,y:30*TILE,w:2*TILE,h:2*TILE},
-    {key:'Street Vendor',action:'vendor',tex:'vendor',texScale:1.7,x:22*TILE,y:32*TILE,w:2*TILE,h:2*TILE},
-  ];
+function genCrash(){
+  const r=Math.random();
+  if(r<.40)return 1+Math.random()*.8;
+  if(r<.70)return 1.8+Math.random()*1.5;
+  if(r<.88)return 3.3+Math.random()*3;
+  if(r<.96)return 6.3+Math.random()*8;
+  return 14+Math.random()*36;
+}
 
-  /* ── City tiles ── */
-  const TT={GRASS:0,ROAD:1,WATER:2,SAND:3,SIDE:4,CROSS:5};
-  const tileColors={0:0x14532d,1:0x475569,2:0x0ea5e9,3:0xfde68a,4:0x1f2937,5:0xe5e7eb};
-  const BLOCKED_TILES=new Set([TT.WATER]);
-
-  function buildCityTiles(){
-    const tiles=Array.from({length:CITY_H},()=>Array.from({length:CITY_W},()=>TT.GRASS));
-    for(let y=0;y<26;y++){for(let x=70;x<=74;x++)tiles[y][x]=TT.WATER;for(let x=68;x<=76;x++)if(tiles[y][x]!==TT.WATER)tiles[y][x]=TT.SAND;}
-    const roadH=[12,28,44],roadV=[18,54,80];
-    for(const y of roadH)for(let x=0;x<CITY_W;x++)tiles[y][x]=TT.ROAD;
-    for(const x of roadV)for(let y=0;y<CITY_H;y++)tiles[y][x]=TT.ROAD;
-    for(let x=8;x<=CITY_W-8;x++){tiles[8][x]=TT.ROAD;tiles[CITY_H-8][x]=TT.ROAD;}
-    for(let y=8;y<=CITY_H-8;y++){tiles[y][8]=TT.ROAD;tiles[y][CITY_W-8]=TT.ROAD;}
-    for(let x=10;x<=30;x++)tiles[36][x]=TT.ROAD;
-    for(let y=30;y<=48;y++)tiles[y][30]=TT.ROAD;
-    for(let x=58;x<=88;x++)tiles[36][x]=TT.ROAD;
-    for(let y=18;y<=36;y++)tiles[y][66]=TT.ROAD;
-    for(let y=0;y<CITY_H;y++)for(let x=0;x<CITY_W;x++)if(tiles[y][x]===TT.ROAD){
-      for(let oy=-1;oy<=1;oy++)for(let ox=-1;ox<=1;ox++){const ny=y+oy,nx=x+ox;if(ny<0||nx<0||ny>=CITY_H||nx>=CITY_W)continue;if(tiles[ny][nx]===TT.GRASS)tiles[ny][nx]=TT.SIDE;}
-    }
-    for(const y of roadH)for(const x of roadV){
-      for(let i=-2;i<=2;i++){const x2=x+i;if(y>=0&&y<CITY_H&&x2>=0&&x2<CITY_W)tiles[y][x2]=(i%2===0)?TT.CROSS:TT.ROAD;}
-    }
-    for(let x=70;x<=74;x++){tiles[12][x]=TT.ROAD;tiles[28][x]=TT.ROAD;}
-    return tiles;
-  }
-
-  function isBlockedAtWorldXY(x,y,tiles){
-    const tx=Math.floor(x/TILE),ty=Math.floor(y/TILE);
-    if(tx<0||ty<0||tx>=CITY_W||ty>=CITY_H)return true;
-    return BLOCKED_TILES.has(tiles[ty][tx]);
-  }
-
-  /* ── Interior ── */
-  const IT={FLOOR_WOOD:0,FLOOR_TILE:1,WALL_BRICK:2,WALL_PLASTER:3,RUG:4,COUNTER:5};
-  const interiorPal={
-    [IT.FLOOR_WOOD]:[0x8b5a2b,0x7c4a22],[IT.FLOOR_TILE]:[0x94a3b8,0x64748b],
-    [IT.WALL_BRICK]:[0xb91c1c,0x7f1d1d],[IT.WALL_PLASTER]:[0xe2e8f0,0x94a3b8],
-    [IT.RUG]:[0x2563eb,0x1d4ed8],[IT.COUNTER]:[0x475569,0x334155]
-  };
-
-  function makeInterior(kind){
-    const w=INT_W,h=INT_H;
-    const baseFloor=(kind==='House'||kind==='Cafe'||kind==='Casino')?IT.FLOOR_WOOD:IT.FLOOR_TILE;
-    const baseWall=(kind==='Hospital')?IT.WALL_PLASTER:IT.WALL_BRICK;
-    const grid=Array.from({length:h},()=>Array.from({length:w},()=>baseFloor));
-    for(let x=0;x<w;x++){grid[0][x]=baseWall;grid[h-1][x]=baseWall;}
-    for(let y=0;y<h;y++){grid[y][0]=baseWall;grid[y][w-1]=baseWall;}
-    const exitX=Math.floor(w/2);
-    grid[h-1][exitX]=baseFloor;
-    for(let y=h-2;y>=2;y--)grid[y][exitX]=IT.RUG;
-    const placeRect=(x0,y0,ww,hh,t)=>{for(let y=y0;y<y0+hh;y++)for(let x=x0;x<x0+ww;x++){if(y<=0||x<=0||y>=h-1||x>=w-1)continue;grid[y][x]=t;}};
-
-    if(kind==='House'){placeRect(3,3,10,6,IT.RUG);placeRect(16,3,14,4,IT.COUNTER);placeRect(4,12,8,5,IT.COUNTER);}
-    else if(kind==='School'){placeRect(4,4,26,2,IT.COUNTER);for(let r=0;r<3;r++)placeRect(6,8+r*3,22,1,IT.RUG);}
-    else if(kind==='Cafe'){placeRect(4,4,26,2,IT.COUNTER);placeRect(6,8,6,2,IT.RUG);placeRect(16,8,6,2,IT.RUG);}
-    else if(kind==='Market'){for(let a=0;a<4;a++)placeRect(5+a*7,5,3,12,IT.COUNTER);placeRect(6,18,22,2,IT.RUG);}
-    else if(kind==='Gym'){placeRect(5,5,8,3,IT.COUNTER);placeRect(18,5,10,3,IT.COUNTER);placeRect(8,11,18,2,IT.RUG);}
-    else if(kind==='Hospital'){placeRect(5,5,10,2,IT.COUNTER);placeRect(5,9,10,2,IT.COUNTER);placeRect(18,5,10,2,IT.COUNTER);placeRect(18,9,10,2,IT.COUNTER);}
-    else if(kind==='Library'){for(let a=0;a<3;a++)placeRect(4,4+a*5,26,2,IT.COUNTER);placeRect(10,16,14,2,IT.RUG);}
-    else if(kind==='Bank'){placeRect(4,4,26,2,IT.COUNTER);placeRect(4,8,26,2,IT.COUNTER);placeRect(10,13,14,3,IT.RUG);}
-    else if(kind==='Job Center'){placeRect(4,4,26,2,IT.COUNTER);placeRect(6,10,8,2,IT.RUG);placeRect(18,10,8,2,IT.RUG);}
-    else if(kind==='Casino'){
-      // Casino: dark floor with rug sections for game tables
-      placeRect(4,4,8,3,IT.RUG);placeRect(14,4,8,3,IT.RUG);placeRect(24,4,6,3,IT.RUG);
-      placeRect(4,10,8,3,IT.RUG);placeRect(14,10,8,3,IT.RUG);placeRect(24,10,6,3,IT.RUG);
-      placeRect(6,16,22,2,IT.COUNTER);
-    }
-    return{grid,exitX,exitY:h-1,title:kind};
-  }
-
-  function drawInteriorTiles(scene,interior,container){
-    const g=scene.add.graphics().setDepth(-3);
-    for(let y=0;y<INT_H;y++)for(let x=0;x<INT_W;x++){
-      const t=interior.grid[y][x];const[c1,c2]=interiorPal[t]||[0x0f172a,0x111827];
-      g.fillStyle(c1,1);g.fillRect(x*TILE,y*TILE,TILE,TILE);
-      if(t===IT.FLOOR_TILE){g.fillStyle(((x+y)%2===0)?c2:c1,0.6);g.fillRect(x*TILE+2,y*TILE+2,TILE-4,TILE-4);}
-      else if(t===IT.FLOOR_WOOD){g.fillStyle(c2,0.35);g.fillRect(x*TILE+2,y*TILE+6,TILE-4,2);g.fillRect(x*TILE+2,y*TILE+18,TILE-4,2);}
-      else if(t===IT.RUG){g.fillStyle(0xffffff,0.08);g.fillRect(x*TILE+6,y*TILE+6,2,2);g.fillRect(x*TILE+22,y*TILE+18,2,2);}
-      else if(t===IT.COUNTER){g.fillStyle(0xffffff,0.10);g.fillRect(x*TILE+3,y*TILE+3,TILE-6,3);}
-      else if(t===IT.WALL_BRICK){g.fillStyle(c2,0.35);g.fillRect(x*TILE+2,y*TILE+10,TILE-4,2);g.fillRect(x*TILE+6,y*TILE+20,TILE-12,2);}
-    }
-    container.add(g);
-    container.add(scene.add.text((INT_W*TILE)/2,10,interior.title,{fontSize:'18px',color:'#e2e8f0',fontStyle:'bold',backgroundColor:'rgba(0,0,0,0.35)',padding:{x:8,y:4}}).setOrigin(0.5,0).setDepth(50));
-    const exitX=(interior.exitX+0.5)*TILE,exitY=(interior.exitY+0.5)*TILE;
-    container.add(scene.add.text(exitX,exitY-8,'EXIT',{fontSize:'14px',color:'#0b1020',fontStyle:'bold',backgroundColor:'rgba(251,191,36,0.9)',padding:{x:6,y:3}}).setOrigin(0.5,1).setDepth(55));
-  }
-
-  function addInteriorFurniture(scene,interior,container){
-    const add=(tx,ty,key,scale=1.1,depth=20)=>{
-      const spr=scene.add.image((tx+0.5)*TILE,(ty+0.5)*TILE,key).setScale(scale).setDepth(depth);
-      container.add(spr);return spr;
-    };
-    if(interior.title==='Casino'){
-      // Slot machines and roulette tables
-      add(5,4,'f_slot',1.2);add(8,4,'f_slot',1.2);add(11,4,'f_slot',1.2);
-      add(15,4,'f_roulette',1.3);add(18,4,'f_roulette',1.3);
-      add(25,4,'f_slot',1.2);add(28,4,'f_slot',1.2);
-      add(5,10,'f_roulette',1.3);add(9,10,'f_roulette',1.3);
-      add(15,10,'f_slot',1.2);add(19,10,'f_slot',1.2);add(23,10,'f_slot',1.2);
-      add(25,10,'f_roulette',1.3);add(28,10,'f_roulette',1.3);
-      add(14,17,'f_tv',1.2);add(18,17,'f_tv',1.2);
-      return;
-    }
-    add(3,3,'f_shelf',1.1);add(7,6,'f_table',1.1);
-    switch(interior.title){
-      case 'House':add(5,14,'f_bed',1.25);add(18,6,'f_tv',1.15);add(26,6,'f_shelf',1.1);break;
-      case 'Cafe':add(10,9,'f_table',1.1);add(20,9,'f_table',1.1);add(6,4,'f_tv',1.05);break;
-      case 'School':add(16,5,'f_table',1.15);add(28,4,'f_shelf',1.05);break;
-      case 'Library':add(8,6,'f_shelf',1.2);add(12,6,'f_shelf',1.2);add(16,6,'f_shelf',1.2);add(20,6,'f_shelf',1.2);add(14,16,'f_table',1.15);break;
-      case 'Hospital':add(6,6,'f_bed',1.15);add(6,10,'f_bed',1.15);add(22,6,'f_bed',1.15);add(22,10,'f_bed',1.15);break;
-      case 'Bank':add(10,14,'f_table',1.15);add(22,14,'f_table',1.15);break;
-      case 'Job Center':add(10,10,'f_table',1.15);add(22,10,'f_table',1.15);break;
-      case 'Market':add(6,6,'f_shelf',1.2);add(13,6,'f_shelf',1.2);add(20,6,'f_shelf',1.2);add(16,18,'f_table',1.1);break;
-      case 'Gym':add(10,6,'f_table',1.05);add(22,6,'f_table',1.05);add(16,12,'f_tv',1.05);break;
-    }
-  }
-
-  /* ── Actions ── */
-  const requireStamina=(cost,msg)=>{if(myState.stamina<cost){logLine(msg||'[info] Low stamina.');return false;}myState.stamina-=cost;return true;};
-  function doAction(action){
-    const t=Date.now();
-    switch(action){
-      case 'school':
-        if(t-myState.lastSchoolAt<5000)return logLine('[School] Cooldown 5s.');
-        if(myState.edu==='Graduated')return logLine('[School] Already graduated.');
-        if(!requireStamina(12,'[School] Low stamina.'))return;
-        myState.lastSchoolAt=t;myState.edu='Studying...';updateHUD();logLine('[School] Started studying...');
-        setTimeout(()=>{myState.edu='Graduated';myState.job='Available';updateHUD();logLine('[School] Graduated! Job unlocked.');},1500);return;
-      case 'library':
-        if(myState.edu==='Graduated')return logLine('[Library] Already graduated.');
-        if(!requireStamina(8,'[Library] Low stamina.'))return;
-        myState.edu='Graduated';myState.job='Available';updateHUD();logLine('[Library] Graduated via fast-track!');return;
-      case 'work':
-        if(myState.job!=='Available')return logLine('[Job Center] Locked. Graduate first.');
-        if(t-myState.lastWorkAt<3000)return logLine('[Job Center] Cooldown 3s.');
-        if(!requireStamina(16,'[Job Center] Low stamina.'))return;
-        myState.lastWorkAt=t;const earned=10+Math.floor(Math.random()*11);myState.coins+=earned;
-        updateHUD();logLine(`[Job Center] Work done! +${earned} coins.`);return;
-      case 'house':{const cost=25*myState.house;if(myState.coins<cost)return logLine(`[House] Need ${cost} coins.`);myState.coins-=cost;myState.house+=1;myState.staminaMax+=5;myState.stamina=clamp(myState.stamina+10,0,myState.staminaMax);updateHUD();logLine(`[House] Upgraded to Lv${myState.house}.`);return;}
-      case 'cafe':if(myState.coins<5)return logLine('[Cafe] Need 5 coins.');myState.coins-=5;myState.stamina=clamp(myState.stamina+40,0,myState.staminaMax);updateHUD();logLine('[Cafe] Stamina restored.');return;
-      case 'gym':if(myState.coins<12)return logLine('[Gym] Need 12 coins.');if(!requireStamina(18,'[Gym] Low stamina.'))return;myState.coins-=12;myState.staminaMax+=8;myState.stamina=clamp(myState.stamina+5,0,myState.staminaMax);updateHUD();logLine('[Gym] StaminaMax +8.');return;
-      case 'hospital':if(myState.coins<15)return logLine('[Hospital] Need 15 coins.');myState.coins-=15;myState.stamina=myState.staminaMax;updateHUD();logLine('[Hospital] Full heal.');return;
-      case 'buyApple':if(myState.coins<3)return logLine('[Market] Need 3 coins.');myState.coins-=3;myState.inv.apple+=1;updateHUD();logLine('[Market] Apple +1.');return;
-      case 'eatApple':if(myState.inv.apple<=0)return logLine('[Inventory] No apples.');myState.inv.apple-=1;myState.stamina=clamp(myState.stamina+28,0,myState.staminaMax);updateHUD();logLine('[Inventory] Ate apple.');return;
-      case 'drinkSoda':if(myState.inv.soda<=0)return logLine('[Inventory] No soda.');myState.inv.soda-=1;myState.stamina=clamp(myState.stamina+20,0,myState.staminaMax);updateHUD();logLine('[Inventory] Drank soda.');return;
-      case 'eatSandwich':if(myState.inv.sandwich<=0)return logLine('[Inventory] No sandwich.');myState.inv.sandwich-=1;myState.stamina=clamp(myState.stamina+35,0,myState.staminaMax);updateHUD();logLine('[Inventory] Ate sandwich.');return;
-      case 'vending':logLine('[Vending] Type: buy soda / buy sandwich');return;
-      case 'vendor':if(myState.coins<4)return logLine('[Vendor] Need 4 coins.');myState.coins-=4;if(Math.random()<0.55)myState.inv.soda+=1;else myState.inv.sandwich+=1;updateHUD();logLine('[Vendor] Got random item.');return;
-      case 'bank':logLine('[Bank] USDC integration coming soon.');return;
-      case 'casino':logLine('[Casino] Welcome! Check the Multiplier Game in the panel →');return;
-    }
-  }
-
-  function nearestCityPOI(px,py){
-    let best=null,bestD=Infinity;
-    for(const b of CITY_BUILDINGS){const cx=b.x+b.w/2,cy=b.y+b.h/2,d=Math.hypot(px-cx,py-cy);if(d<bestD){bestD=d;best=b;}}
-    for(const i of CITY_INTERACTABLES){const cx=i.x+i.w/2,cy=i.y+i.h/2,d=Math.hypot(px-cx,py-cy);if(d<bestD){bestD=d;best=i;}}
-    return{poi:best,d:bestD};
-  }
-
-  /* ── Day/Night ── */
-  let nightOverlay=null,lampGlows=[];
-  function updateDayNight(dtS){
-    clock.minutes=(clock.minutes+clock.speed*dtS)%(24*60);
-    const m=clock.minutes;
-    const lerp=(a,b,t)=>a+(b-a)*t;
-    let tod='Day',darkness=0.08;
-    if(m>=20*60||m<5*60){tod='Night';darkness=0.62;}
-    else if(m>=5*60&&m<6.5*60){tod='Dawn';darkness=lerp(0.62,0.12,(m-5*60)/(1.5*60));}
-    else if(m>=6.5*60&&m<17.5*60){tod='Day';darkness=0.08;}
-    else{tod='Sunset';darkness=lerp(0.12,0.62,(m-17.5*60)/(2.5*60));}
-    elTod.textContent=tod;elTimeTxt.textContent=formatTime(m);
-    const glowAlpha=(tod==='Night')?0.22:(tod==='Sunset'||tod==='Dawn')?0.14:0.06;
-    for(const g of lampGlows)g.setAlpha(glowAlpha);
-    if(nightOverlay)nightOverlay.setAlpha(darkness);
-  }
-
-  /* ── World render ── */
-  let cityTiles=null,interior=null,worldContainer=null;
-  function clearWorld(scene){if(worldContainer)worldContainer.destroy(true);worldContainer=scene.add.container(0,0);lampGlows=[];}
-
-  function decorateCity(scene,tiles,container){
-    for(let y=0;y<CITY_H;y++)for(let x=0;x<CITY_W;x++){
-      if(tiles[y][x]!==TT.SIDE)continue;
-      const px=x*TILE+TILE/2,py=y*TILE+TILE/2;
-      let inLot=false;
-      for(const b of CITY_BUILDINGS)if(px>=b.x&&px<=b.x+b.w&&py>=b.y&&py<=b.y+b.h){inLot=true;break;}
-      if(!inLot)for(const i of CITY_INTERACTABLES)if(px>=i.x&&px<=i.x+i.w&&py>=i.y&&py<=i.y+i.h){inLot=true;break;}
-      if(inLot)continue;
-      const n=(x*83492791^y*29765723)>>>0;
-      if(n%13===0)container.add(scene.add.image(px,py,'tree').setScale(1.35).setDepth(1));
-      else if(n%17===0)container.add(scene.add.image(px,py,'rock').setScale(1.2).setDepth(1));
-      else if(n%29===0)container.add(scene.add.image(px,py,'bench').setScale(1.2).setDepth(1));
-    }
-    const mainRoadY=[12,28,44,8,CITY_H-8],mainRoadX=[18,54,80,8,CITY_W-8];
-    const placeLamp=(tx,ty)=>{
-      const x=tx*TILE+TILE/2,y=ty*TILE+TILE/2;
-      container.add(scene.add.image(x,y,'streetLight').setScale(1.25).setDepth(1.2));
-      const glow=scene.add.circle(x+6,y-8,14,0xfbbf24,0.06).setDepth(1.1);
-      container.add(glow);lampGlows.push(glow);
-    };
-    for(const ry of mainRoadY)for(let x=10;x<CITY_W-10;x+=6){
-      for(const c of [{tx:x,ty:ry-1},{tx:x,ty:ry+1}]){if(c.ty<0||c.ty>=CITY_H)continue;if(tiles[c.ty][c.tx]!==TT.SIDE)continue;placeLamp(c.tx,c.ty);break;}
-    }
-    for(const rx of mainRoadX)for(let y=10;y<CITY_H-10;y+=6){
-      for(const c of [{tx:rx-1,ty:y},{tx:rx+1,ty:y}]){if(c.tx<0||c.tx>=CITY_W)continue;if(tiles[c.ty][c.tx]!==TT.SIDE)continue;placeLamp(c.tx,c.ty);break;}
-    }
-  }
-
-  function drawCity(scene){
-    clearWorld(scene);cityTiles=buildCityTiles();
-    const g=scene.add.graphics().setDepth(-3);
-    for(let y=0;y<CITY_H;y++)for(let x=0;x<CITY_W;x++){g.fillStyle(tileColors[cityTiles[y][x]],1);g.fillRect(x*TILE,y*TILE,TILE,TILE);}
-    worldContainer.add(g);
-    decorateCity(scene,cityTiles,worldContainer);
-    for(const b of CITY_BUILDINGS){
-      const cx=b.x+b.w/2,cy=b.y+b.h/2;
-      worldContainer.add(scene.add.image(cx,cy,b.tex).setScale(b.texScale).setDepth(3));
-      worldContainer.add(scene.add.text(cx,b.y-8,b.key,{fontSize:'13px',color:'#e2e8f0',fontStyle:'bold',backgroundColor:'rgba(0,0,0,0.35)',padding:{x:6,y:3}}).setOrigin(0.5,1).setDepth(4));
-    }
-    for(const i of CITY_INTERACTABLES){
-      const cx=i.x+i.w/2,cy=i.y+i.h/2;
-      worldContainer.add(scene.add.image(cx,cy,i.tex).setScale(i.texScale).setDepth(3));
-      worldContainer.add(scene.add.text(cx,i.y-8,i.key,{fontSize:'12px',color:'#e2e8f0',backgroundColor:'rgba(0,0,0,0.35)',padding:{x:6,y:3}}).setOrigin(0.5,1).setDepth(4));
-    }
-    scene.cameras.main.setBounds(0,0,CITY_W*TILE,CITY_H*TILE);
-    drawMinimap._key=null;
-  }
-
-  function drawInterior(scene,buildingKey){
-    clearWorld(scene);interior=makeInterior(buildingKey);
-    drawInteriorTiles(scene,interior,worldContainer);
-    addInteriorFurniture(scene,interior,worldContainer);
-    scene.cameras.main.setBounds(0,0,INT_W*TILE,INT_H*TILE);
-    drawMinimap._key=null;
-  }
-
-  function enterBuilding(scene,buildingKey){
-    worldState.savedCityPos={x:scene.me.x,y:scene.me.y};
-    worldState.zone='INTERIOR';worldState.interiorKey=buildingKey;
-    mmTargetTxt.textContent='Target: -';
-    drawInterior(scene,buildingKey);
-    scene.me.x=(interior.exitX+0.5)*TILE;
-    scene.me.y=(INT_H-3)*TILE;
-    updateHUD();logLine(`[system] Entered: ${buildingKey}. Press E at EXIT to leave.`);
-    if(buildingKey==='Casino')initMultiplierGame();
-  }
-
-  function exitToCity(scene){
-    worldState.zone='CITY';worldState.interiorKey='';interior=null;
-    stopMultiplierGame();
-    drawCity(scene);
-    scene.me.x=worldState.savedCityPos.x;scene.me.y=worldState.savedCityPos.y;
-    updateHUD();logLine('[system] Back to CITY.');
-  }
-
-  /* ── Minimap ── */
-  function worldToMinimap(x,y){
-    const wPx=(worldState.zone==='CITY'?CITY_W:INT_W)*TILE;
-    const hPx=(worldState.zone==='CITY'?CITY_H:INT_H)*TILE;
-    return{mx:(x/wPx)*mmCanvas.width,my:(y/hPx)*mmCanvas.height};
-  }
-  function drawMinimap(playerPos){
-    const cacheKey=worldState.zone==='CITY'?'CITY':'INT:'+worldState.interiorKey;
-    if(drawMinimap._key!==cacheKey){
-      drawMinimap._key=cacheKey;
-      const bg=document.createElement('canvas');bg.width=mmCanvas.width;bg.height=mmCanvas.height;
-      const ictx=bg.getContext('2d');
-      if(worldState.zone==='CITY'){
-        for(let y=0;y<mmCanvas.height;y++)for(let x=0;x<mmCanvas.width;x++){
-          const tx=Math.floor((x/mmCanvas.width)*CITY_W),ty=Math.floor((y/mmCanvas.height)*CITY_H);
-          const t=cityTiles[ty][tx];
-          let col='#1f7a3a';
-          if(t===TT.ROAD||t===TT.CROSS)col='#64748b';else if(t===TT.SIDE)col='#334155';else if(t===TT.WATER)col='#0284c7';else if(t===TT.SAND)col='#fde68a';
-          ictx.fillStyle=col;ictx.fillRect(x,y,1,1);
-        }
-      } else {
-        for(let y=0;y<mmCanvas.height;y++)for(let x=0;x<mmCanvas.width;x++){
-          const tx=Math.floor((x/mmCanvas.width)*INT_W),ty=Math.floor((y/mmCanvas.height)*INT_H);
-          const t=interior.grid[ty][tx];
-          let col='#1f2937';
-          if(t===IT.FLOOR_WOOD)col='#8b5a2b';else if(t===IT.FLOOR_TILE)col='#94a3b8';else if(t===IT.WALL_BRICK)col='#7f1d1d';else if(t===IT.RUG)col='#1d4ed8';else if(t===IT.COUNTER)col='#475569';
-          ictx.fillStyle=col;ictx.fillRect(x,y,1,1);
-        }
-      }
-      drawMinimap._bg=bg;
-    }
-    mmCtx.clearRect(0,0,mmCanvas.width,mmCanvas.height);
-    mmCtx.drawImage(drawMinimap._bg,0,0);
-    if(worldState.zone==='CITY'&&nav.targetPos){
-      const t=worldToMinimap(nav.targetPos.x,nav.targetPos.y);
-      mmCtx.fillStyle='#ef4444';mmCtx.fillRect((t.mx-2)|0,(t.my-2)|0,5,5);
-    }
-    const p=worldToMinimap(playerPos.x,playerPos.y);
-    mmCtx.fillStyle='#22c55e';mmCtx.beginPath();mmCtx.arc(p.mx,p.my,3,0,Math.PI*2);mmCtx.fill();
-  }
-
-  /* ── Nav dropdown ── */
-  function populateNavDropdown(){
-    CITY_BUILDINGS.forEach(b=>{const opt=document.createElement('option');opt.value=b.key;opt.textContent=b.key;navTargetSel.appendChild(opt);});
-    CITY_INTERACTABLES.forEach(i=>{const opt=document.createElement('option');opt.value=i.key;opt.textContent=i.key;navTargetSel.appendChild(opt);});
-  }
-  function setTargetByKey(key){
-    if(!key){nav.targetKey='';nav.targetPos=null;mmTargetTxt.textContent='Target: -';return;}
-    const all=[];
-    CITY_BUILDINGS.forEach(b=>all.push({key:b.key,x:b.x+b.w/2,y:b.y+b.h/2}));
-    CITY_INTERACTABLES.forEach(i=>all.push({key:i.key,x:i.x+i.w/2,y:i.y+i.h/2}));
-    const found=all.find(t=>t.key===key);if(!found)return;
-    nav.targetKey=key;nav.targetPos={x:found.x,y:found.y};
-    mmTargetTxt.textContent='Target: '+key;logLine('[nav] Target: '+key);
-  }
-  document.getElementById('setTarget').onclick=()=>{if(worldState.zone!=='CITY')return logLine('[nav] Target only in CITY.');setTargetByKey(navTargetSel.value);};
-  document.getElementById('clearTarget').onclick=()=>{navTargetSel.value='';setTargetByKey('');};
-
-  /* ── Chat ── */
-  document.getElementById('send').onclick=()=>{
-    const input=document.getElementById('chat');const text=input.value.trim();if(!text)return;
-    const lower=text.toLowerCase();
-    if(lower==='buy soda'){if(myState.coins<4)logLine('[Vending] Need 4 coins.');else{myState.coins-=4;myState.inv.soda+=1;updateHUD();logLine('[Vending] Soda +1 (-4)');}}
-    else if(lower==='buy sandwich'){if(myState.coins<7)logLine('[Vending] Need 7 coins.');else{myState.coins-=7;myState.inv.sandwich+=1;updateHUD();logLine('[Vending] Sandwich +1 (-7)');}}
-    else{logLine('[YOU] '+text);}
-    input.value='';
-  };
-  document.getElementById('chat').addEventListener('keypress',e=>{if(e.key==='Enter')document.getElementById('send').click();});
-  document.getElementById('eatApple').onclick=()=>doAction('eatApple');
-  document.getElementById('drinkSoda').onclick=()=>doAction('drinkSoda');
-  document.getElementById('eatSandwich').onclick=()=>doAction('eatSandwich');
-
-  /* ══════════════════════════════════════════════════
-     MULTIPLIER GAME (Crash-style, multi-player)
-  ══════════════════════════════════════════════════ */
-  const MUL_NAMES=['TigerCat','PlumeFan','MogaWhale','CryptoFox','NeonRider','StarBull','DeepSea','GoldMask','SkyPanda','NightOwl','MoonWolf','IceBear','FireFly','DarkHorse','LuckyDragon'];
-  const MUL_MAX_BOTS=8;
-
-  let mulState={
-    running:false, countdown:0, multiplier:1.0, crashAt:1.0,
-    myBet:0, myJoined:false, myCashedOut:false, myWon:false,
-    round:0, bots:[], graphPoints:[], phase:'waiting',
-    tickInterval:null, countdownInterval:null, botInterval:null
-  };
-
-  const mulCanv=document.getElementById('mulGraph');
-  const mulCtx2=mulCanv.getContext('2d');
-  const elMulNum=document.getElementById('mulNum');
-  const elMulState=document.getElementById('mulState');
-  const elMulRound=document.getElementById('mulRound');
-  const elMulPlayers=document.getElementById('mulPlayers');
-  const btnJoin=document.getElementById('mulJoin');
-  const btnCash=document.getElementById('mulCash');
-  const inBet=document.getElementById('mulBet');
-
-  function generateCrashAt(){
-    // House edge ~5%. 1/r gives expected crash, bias toward <3x
-    const r=Math.random();
-    if(r<0.4)return 1.0+Math.random()*0.8;  // 40% crash under 1.8x
-    if(r<0.7)return 1.8+Math.random()*1.5;  // 30% crash 1.8–3.3x
-    if(r<0.88)return 3.3+Math.random()*3;   // 18% crash 3.3–6.3x
-    if(r<0.96)return 6.3+Math.random()*8;   // 8% crash 6.3–14x
-    return 14+Math.random()*36;              // 4% big crash
-  }
-
-  function generateBots(){
-    const count=3+Math.floor(Math.random()*(MUL_MAX_BOTS-2));
-    const bots=[];
-    for(let i=0;i<count;i++){
-      const name=MUL_NAMES[Math.floor(Math.random()*MUL_NAMES.length)];
-      const bet=5+Math.floor(Math.random()*46);
-      const targetMul=1.1+Math.random()*4; // bots aim for 1.1–5.1x
-      bots.push({name,bet,targetMul,cashedOut:false,lost:false,cashMul:0});
-    }
-    return bots;
-  }
-
-  function renderMulPlayers(){
-    let html='';
-    if(mulState.myJoined&&!mulState.myCashedOut&&!mulState.myWon&&mulState.running){
-      const me=walletAddress?walletAddress.slice(0,6)+'...'+walletAddress.slice(-4):'You';
-      html+=`<div class="p-row"><span class="p-playing">▶ ${me}</span><span>${mulState.myBet}c @ ${mulState.multiplier.toFixed(2)}x</span></div>`;
-    } else if(mulState.myJoined&&(mulState.myCashedOut||mulState.myWon)){
-      const me=walletAddress?walletAddress.slice(0,6)+'...'+walletAddress.slice(-4):'You';
-      const mul=mulState.myCashedOut?mulState.cashMul:(mulState.running?mulState.multiplier:mulState.multiplier);
-      html+=`<div class="p-row"><span class="p-cashed">✓ ${me}</span><span>${Math.floor(mulState.myBet*mul)}c</span></div>`;
-    }
-    for(const b of mulState.bots){
-      if(b.cashedOut){html+=`<div class="p-row"><span class="p-cashed">✓ ${b.name}</span><span>${Math.floor(b.bet*b.cashMul)}c @ ${b.cashMul.toFixed(2)}x</span></div>`;}
-      else if(b.lost){html+=`<div class="p-row p-lost"><span>✗ ${b.name}</span><span>-${b.bet}c</span></div>`;}
-      else{html+=`<div class="p-row"><span class="p-playing">▶ ${b.name}</span><span>${b.bet}c</span></div>`;}
-    }
-    elMulPlayers.innerHTML=html;
-  }
-
-  function renderMulGraph(){
-    const w=mulCanv.width,h=mulCanv.height;
-    mulCtx2.clearRect(0,0,w,h);
-    mulCtx2.fillStyle='#0f172a';mulCtx2.fillRect(0,0,w,h);
-    if(mulState.graphPoints.length<2)return;
-    // Scale: x = time (0–maxIdx), y = multiplier (1 at bottom, maxMul at top)
-    const pts=mulState.graphPoints;
-    const maxMul=Math.max(2,pts[pts.length-1]+0.5);
-    const toX=(i)=>(i/Math.max(pts.length-1,1))*w;
-    const toY=(m)=>h-((m-1)/(maxMul-1))*(h-8)-4;
-    const crashed=mulState.phase==='crashed';
-    mulCtx2.beginPath();mulCtx2.moveTo(toX(0),toY(pts[0]));
-    for(let i=1;i<pts.length;i++)mulCtx2.lineTo(toX(i),toY(pts[i]));
-    mulCtx2.strokeStyle=crashed?'#ef4444':'#22c55e';mulCtx2.lineWidth=2;mulCtx2.stroke();
-    // Fill under curve
-    mulCtx2.lineTo(toX(pts.length-1),h);mulCtx2.lineTo(0,h);mulCtx2.closePath();
-    mulCtx2.fillStyle=crashed?'rgba(239,68,68,0.12)':'rgba(34,197,94,0.12)';mulCtx2.fill();
-  }
-
-  let mulTickMs=100; // tick every 100ms
-  function startMultiplierRound(){
-    mulState.round++;mulState.multiplier=1.0;mulState.crashAt=generateCrashAt();
-    mulState.graphPoints=[1.0];mulState.phase='running';mulState.running=true;
-    mulState.bots=generateBots();mulState.myJoined=false;mulState.myCashedOut=false;mulState.myWon=false;
-    elMulRound.textContent=`Round ${mulState.round}`;
-    elMulState.textContent='🚀 Running... Cash out before crash!';
-    elMulNum.className='mul-num mul-green';
-    btnJoin.disabled=false;btnCash.disabled=true;
-    logLine(`[Casino] Round ${mulState.round} started! Crash target: ${mulState.crashAt.toFixed(2)}x`);
-    renderMulPlayers();
-
-    mulState.tickInterval=setInterval(()=>{
-      if(!mulState.running)return;
-      // Grow multiplier (exponential-like)
-      mulState.multiplier+=mulState.multiplier*0.008+0.003;
-      mulState.graphPoints.push(mulState.multiplier);
-
-      // Bot auto-cashout
-      for(const b of mulState.bots){
-        if(!b.cashedOut&&!b.lost&&mulState.multiplier>=b.targetMul){
-          b.cashedOut=true;b.cashMul=mulState.multiplier;
-          logLine(`[Casino] ${b.name} cashed out @ ${b.cashMul.toFixed(2)}x (+${Math.floor(b.bet*b.cashMul)})`);
-        }
-      }
-
-      elMulNum.textContent=mulState.multiplier.toFixed(2)+'x';
-      renderMulGraph();renderMulPlayers();
-
-      if(mulState.multiplier>=mulState.crashAt){
-        crashRound();
-      }
-    },mulTickMs);
-  }
-
-  function crashRound(){
-    clearInterval(mulState.tickInterval);
-    mulState.running=false;mulState.phase='crashed';
-    const crashedAt=mulState.multiplier.toFixed(2);
-    elMulNum.textContent=`💥 ${crashedAt}x`;elMulNum.className='mul-num mul-red';
-    elMulState.textContent=`CRASHED @ ${crashedAt}x!`;
-    btnCash.disabled=true;btnJoin.disabled=true;
-
-    // Mark all remaining bots as lost
-    for(const b of mulState.bots)if(!b.cashedOut)b.lost=true;
-
-    // Player result
-    if(mulState.myJoined&&!mulState.myCashedOut){
-      myState.coins-=mulState.myBet;
-      updateHUD();logLine(`[Casino] 💥 CRASH @ ${crashedAt}x! Lost ${mulState.myBet} coins.`);
-    }
-    renderMulGraph();renderMulPlayers();
-    logLine(`[Casino] Next round in 5s...`);
-
-    // Schedule next round
-    let cd=5;
-    mulState.countdownInterval=setInterval(()=>{
-      cd--;
-      elMulState.textContent=`Next round in ${cd}s...`;
-      if(cd<=0){
-        clearInterval(mulState.countdownInterval);
-        startMultiplierRound();
-      }
-    },1000);
-  }
-
-  function mulJoin(){
-    if(!mulState.running){return logLine('[Casino] Wait for next round.');}
-    if(mulState.myJoined){return logLine('[Casino] Already joined.');}
-    const bet=parseInt(inBet.value)||10;
-    if(bet<5)return logLine('[Casino] Min bet is 5 coins.');
-    if(myState.coins<bet)return logLine('[Casino] Not enough coins.');
-    mulState.myBet=bet;mulState.myJoined=true;
-    btnJoin.disabled=true;btnCash.disabled=false;
-    logLine(`[Casino] Joined round ${mulState.round} with ${bet} coins bet.`);
-    renderMulPlayers();
-  }
-
-  function mulCashOut(){
-    if(!mulState.running||!mulState.myJoined||mulState.myCashedOut)return;
-    mulState.myCashedOut=true;mulState.cashMul=mulState.multiplier;
-    const winnings=Math.floor(mulState.myBet*mulState.cashMul);
-    const profit=winnings-mulState.myBet;
-    myState.coins+=winnings;
-    updateHUD();
-    elMulNum.className='mul-num mul-yellow';
-    logLine(`[Casino] Cashed out @ ${mulState.cashMul.toFixed(2)}x! +${winnings} coins (profit: ${profit}).`);
-    btnCash.disabled=true;renderMulPlayers();
-  }
-
-  function stopMultiplierGame(){
-    clearInterval(mulState.tickInterval);clearInterval(mulState.countdownInterval);clearInterval(mulState.botInterval);
-    mulState.running=false;mulState.phase='stopped';
-  }
-
-  function initMultiplierGame(){
-    stopMultiplierGame();
-    mulState.round=0;
-    // Brief intro countdown
-    elMulState.textContent='Starting in 3s...';
-    elMulNum.textContent='--';
-    btnJoin.disabled=true;btnCash.disabled=true;
-    let cd=3;
-    mulState.countdownInterval=setInterval(()=>{
-      cd--;elMulState.textContent=`Starting in ${cd}s...`;
-      if(cd<=0){clearInterval(mulState.countdownInterval);startMultiplierRound();}
-    },1000);
-  }
-
-  btnJoin.onclick=mulJoin;
-  btnCash.onclick=mulCashOut;
-
-  /* ── Phaser ── */
-  const config={
-    type:Phaser.AUTO, parent:'game',
-    width:Math.max(400,window.innerWidth-340), height:Math.max(300,window.innerHeight),
-    backgroundColor:'#0b1020', pixelArt:true,
-    scene:{
-      preload(){
-        loading.textContent='Loading assets...';
-        makeOrangeCatTexture(this);makeDecorAndFurnitureTextures(this);
-        for(const b of CITY_BUILDINGS)makeBuildingTexture(this,b.tex,b.texOpts);
-      },
-      create(){
-        loading.style.display='none';
-        this.me=this.add.container(32*TILE,32*TILE).setDepth(10);
-        this.me.add([this.add.image(0,0,'orangeCat').setScale(2.0).setOrigin(0.5,0.62),
-                     this.add.text(-26,-54,'YOU',{fontSize:'13px',color:'#a5f3fc',fontStyle:'bold'})]);
-        this.cameras.main.startFollow(this.me,true,0.12,0.12);
-        this.cameras.main.setZoom(1.3);
-        this.cursors=this.input.keyboard.createCursorKeys();
-        this.keys=this.input.keyboard.addKeys('W,A,S,D,SHIFT,E');
-        drawCity(this);populateNavDropdown();updateHUD();
-        logLine('[system] Welcome to Moga World! 🎮 Enter Casino for Multiplier Game.');
-        nightOverlay=this.add.rectangle(0,0,this.scale.width,this.scale.height,0x020617,1).setOrigin(0,0).setScrollFactor(0).setDepth(999);
-        nightOverlay.setAlpha(0.08);
-        this.scale.on('resize',(sz)=>{if(nightOverlay){nightOverlay.width=sz.width;nightOverlay.height=sz.height;}});
-        this.time.addEvent({delay:200,loop:true,callback:()=>{
-          if(worldState.zone==='CITY'){
-            const{poi,d}=nearestCityPOI(this.me.x,this.me.y);
-            elNear.textContent=(poi&&d<INTERACT_DIST)?`${poi.key} (E)`:'-';
-          } else {
-            const ex=(interior.exitX+0.5)*TILE,ey=(interior.exitY+0.5)*TILE;
-            const dd=Math.hypot(this.me.x-ex,this.me.y-ey);
-            elNear.textContent=dd<120?'EXIT (E)':`${worldState.interiorKey} (E)`;
-          }
-        }});
-      },
-      update(_,dt){
-        const dtS=dt/1000;updateDayNight(dtS);
-        const sprinting=this.keys.SHIFT.isDown&&myState.stamina>0;
-        const speed=sprinting?380:240;
-        let vx=0,vy=0;
-        if(this.cursors.up.isDown||this.keys.W.isDown)vy-=1;
-        if(this.cursors.down.isDown||this.keys.S.isDown)vy+=1;
-        if(this.cursors.left.isDown||this.keys.A.isDown)vx-=1;
-        if(this.cursors.right.isDown||this.keys.D.isDown)vx+=1;
-        if(vx!==0&&vy!==0){const inv=0.7071;vx*=inv;vy*=inv;}
-        const moving=(vx!==0||vy!==0);
-        const nx=this.me.x+vx*speed*dtS,ny=this.me.y+vy*speed*dtS;
-        if(worldState.zone==='CITY'){
-          const cx=clamp(nx,20,CITY_W*TILE-20),cy=clamp(ny,20,CITY_H*TILE-20);
-          if(!isBlockedAtWorldXY(cx,cy,cityTiles)){this.me.x=cx;this.me.y=cy;}
-          else{if(!isBlockedAtWorldXY(cx,this.me.y,cityTiles))this.me.x=cx;if(!isBlockedAtWorldXY(this.me.x,cy,cityTiles))this.me.y=cy;}
-        } else {
-          this.me.x=clamp(nx,20,INT_W*TILE-20);this.me.y=clamp(ny,20,INT_H*TILE-20);
-        }
-        if(sprinting&&moving)myState.stamina-=22*dtS;else myState.stamina+=11*dtS;
-        if(Phaser.Input.Keyboard.JustDown(this.keys.E)){
-          if(worldState.zone==='CITY'){
-            const{poi,d}=nearestCityPOI(this.me.x,this.me.y);
-            if(!poi||d>=INTERACT_DIST){logLine('[info] Nothing nearby.');}
-            else{const isBuilding=!!CITY_BUILDINGS.find(b=>b.key===poi.key);if(isBuilding)enterBuilding(this,poi.key);else doAction(poi.action);}
-          } else {
-            const ex=(interior.exitX+0.5)*TILE,ey=(interior.exitY+0.5)*TILE;
-            const dd=Math.hypot(this.me.x-ex,this.me.y-ey);
-            if(dd<120)exitToCity(this);else{const b=CITY_BUILDINGS.find(b=>b.key===worldState.interiorKey);if(b)doAction(b.action);}
-          }
-        }
-        updateHUD();drawMinimap({x:this.me.x,y:this.me.y});
-      }
-    }
-  };
-
-  const game=new Phaser.Game(config);
-  window.addEventListener('resize',()=>{
-    const w=Math.max(400,window.innerWidth-340),h=Math.max(300,window.innerHeight);
-    game.scale.resize(w,h);
+function genBots(){
+  const n=15+Math.floor(Math.random()*26);
+  const arr=[...onlineIds].sort(()=>Math.random()-.5).slice(0,n);
+  return arr.map(i=>{
+    const p=PPOOL[i];
+    return{name:p.name,bet:5+Math.floor(Math.random()*46),target:p.cashTarget,cashed:false,lost:false,cashMul:0};
   });
+}
+
+function mulRenderGraph(){
+  const w=mulC.width,h=mulC.height;
+  mulCtx.clearRect(0,0,w,h);mulCtx.fillStyle='#0f172a';mulCtx.fillRect(0,0,w,h);
+  if(MG.pts.length<2)return;
+  const maxM=Math.max(2,MG.pts[MG.pts.length-1]+.5);
+  const tx=i=>(i/Math.max(MG.pts.length-1,1))*w;
+  const ty=m=>h-((m-1)/(maxM-1))*(h-6)-3;
+  const crash=MG.phase==='crash';
+  mulCtx.beginPath();mulCtx.moveTo(tx(0),ty(MG.pts[0]));
+  for(let i=1;i<MG.pts.length;i++)mulCtx.lineTo(tx(i),ty(MG.pts[i]));
+  mulCtx.strokeStyle=crash?'#ef4444':'#22c55e';mulCtx.lineWidth=2;mulCtx.stroke();
+  mulCtx.lineTo(tx(MG.pts.length-1),h);mulCtx.lineTo(0,h);mulCtx.closePath();
+  mulCtx.fillStyle=crash?'rgba(239,68,68,.1)':'rgba(34,197,94,.1)';mulCtx.fill();
+}
+
+function mulRenderPlayers(){
+  let h='';
+  if(MG.myIn&&!MG.myCashed){h+=`<div class="prow"><span class="pp">▶ YOU</span><span>${MG.myBet}c @ ${MG.mul.toFixed(2)}x</span></div>`;}
+  else if(MG.myIn&&MG.myCashed){h+=`<div class="prow"><span class="pc">✓ YOU</span><span>${Math.floor(MG.myBet*MG.myCashMul)}c</span></div>`;}
+  for(const b of MG.bots){
+    if(b.cashed)h+=`<div class="prow"><span class="pc">✓ ${b.name}</span><span>${Math.floor(b.bet*b.cashMul)}c @${b.cashMul.toFixed(2)}x</span></div>`;
+    else if(b.lost)h+=`<div class="prow pl"><span>✗ ${b.name}</span><span>−${b.bet}c</span></div>`;
+    else h+=`<div class="prow"><span class="pp">▶ ${b.name}</span><span>${b.bet}c</span></div>`;
+  }
+  document.getElementById('mulPList').innerHTML=h;
+}
+
+function startMulRound(){
+  MG.round++;MG.mul=1;MG.crashAt=genCrash();MG.pts=[1];MG.phase='run';MG.run=true;
+  MG.bots=genBots();MG.myIn=false;MG.myCashed=false;MG.myCashMul=0;
+  document.getElementById('mulRound').textContent='Round '+MG.round;
+  document.getElementById('mulNum').textContent='1.00x';document.getElementById('mulNum').className='mulnum mg';
+  document.getElementById('mulStatus').textContent='🚀 Running! Cash out before crash!';
+  document.getElementById('btnJoin').disabled=false;document.getElementById('btnCash').disabled=true;
+  mulRenderPlayers();
+  MG.tickInt=setInterval(()=>{
+    if(!MG.run)return;
+    MG.mul+=MG.mul*.008+.003;MG.pts.push(MG.mul);
+    for(const b of MG.bots)if(!b.cashed&&!b.lost&&MG.mul>=b.target){b.cashed=true;b.cashMul=MG.mul;logChat('[Casino] '+b.name+' cashed @'+MG.mul.toFixed(2)+'x',false,'#22c55e');}
+    document.getElementById('mulNum').textContent=MG.mul.toFixed(2)+'x';
+    mulRenderGraph();mulRenderPlayers();
+    if(MG.mul>=MG.crashAt)crashRound();
+  },100);
+}
+
+function crashRound(){
+  clearInterval(MG.tickInt);MG.run=false;MG.phase='crash';
+  const ca=MG.mul.toFixed(2);
+  document.getElementById('mulNum').textContent='💥 '+ca+'x';document.getElementById('mulNum').className='mulnum mr';
+  document.getElementById('mulStatus').textContent='CRASHED @ '+ca+'x!';
+  document.getElementById('btnCash').disabled=true;document.getElementById('btnJoin').disabled=true;
+  for(const b of MG.bots)if(!b.cashed)b.lost=true;
+  if(MG.myIn&&!MG.myCashed){logChat('[Casino] 💥 CRASH @'+ca+'x! Lost '+MG.myBet+' coins.',false,'#ef4444');}
+  mulRenderGraph();mulRenderPlayers();
+  let cd=5;
+  MG.cdInt=setInterval(()=>{
+    cd--;document.getElementById('mulStatus').textContent='Next round in '+cd+'s…';
+    if(cd<=0){clearInterval(MG.cdInt);startMulRound();}
+  },1000);
+}
+
+function mulJoin(){
+  if(!MG.run)return logChat('[Casino] Wait for next round.');
+  if(MG.myIn)return logChat('[Casino] Already joined.');
+  const bet=parseInt(document.getElementById('mulBetIn').value)||10;
+  if(bet<5)return logChat('[Casino] Min bet 5 coins.');
+  if(S.coins<bet)return logChat('[Casino] Not enough coins.');
+  S.coins-=bet; // deduct upfront — returned proportionally on cashout
+  MG.myBet=bet;MG.myIn=true;
   updateHUD();
+  document.getElementById('btnJoin').disabled=true;document.getElementById('btnCash').disabled=false;
+  logChat('[Casino] Joined round '+MG.round+' — bet: '+bet+' coins.',false,'#fbbf24');
+  onChainTx('CASINO_BET:'+bet,0.00001);
+  mulRenderPlayers();
+}
+window.mulJoin=mulJoin;
+
+function mulCashOut(){
+  if(!MG.run||!MG.myIn||MG.myCashed)return;
+  MG.myCashed=true;MG.myCashMul=MG.mul;
+  const win=Math.floor(MG.myBet*MG.myCashMul); // includes original bet back
+  S.coins+=win;updateHUD();
+  document.getElementById('btnCash').disabled=true;
+  document.getElementById('mulNum').className='mulnum my';
+  logChat('[Casino] 💰 Cashed @'+MG.myCashMul.toFixed(2)+'x! +'+win+' coins (profit: '+(win-MG.myBet)+').',false,'#fbbf24');
+  mulRenderPlayers();
+}
+window.mulCashOut=mulCashOut;
+
+function initMulGame(){
+  clearInterval(MG.tickInt);clearInterval(MG.cdInt);MG.run=false;MG.round=0;
+  document.getElementById('mulStatus').textContent='Starting in 3s…';
+  document.getElementById('mulNum').textContent='——';
+  document.getElementById('btnJoin').disabled=true;document.getElementById('btnCash').disabled=true;
+  let cd=3;
+  MG.cdInt=setInterval(()=>{
+    cd--;document.getElementById('mulStatus').textContent='Starting in '+cd+'s…';
+    if(cd<=0){clearInterval(MG.cdInt);startMulRound();}
+  },1000);
+}
+
+function stopMulGame(){clearInterval(MG.tickInt);clearInterval(MG.cdInt);MG.run=false;}
+
+/* ── Textures ── */
+function addTex(scene,key,w,h,fn){const c=document.createElement('canvas');c.width=w;c.height=h;fn(c.getContext('2d'));scene.textures.addCanvas(key,c);}
+function px(ctx,x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(x,y,w,h);}
+
+function makeTextures(scene){
+  /* player */
+  addTex(scene,'cat',32,32,c=>{const p=(x,y,w,h,col)=>px(c,x,y,w,h,col);
+    p(7,26,18,4,'rgba(0,0,0,.22)');p(24,18,5,2,'#f59e0b');p(26,16,3,2,'#f59e0b');p(27,14,3,2,'#f59e0b');
+    p(9,14,14,12,'#f59e0b');p(8,16,2,8,'#f59e0b');p(23,16,2,8,'#f59e0b');p(10,6,12,10,'#f59e0b');
+    p(10,4,3,3,'#f59e0b');p(19,4,3,3,'#f59e0b');p(11,5,1,1,'#fb7185');p(20,5,1,1,'#fb7185');
+    p(12,8,1,6,'#d97706');p(16,8,1,6,'#d97706');p(20,8,1,6,'#d97706');
+    p(13,16,8,1,'#d97706');p(12,19,10,1,'#d97706');
+    p(13,10,2,2,'#111827');p(18,10,2,2,'#111827');p(16,12,1,1,'#ef4444');
+    p(11,24,3,2,'#f59e0b');p(18,24,3,2,'#f59e0b');
+  });
+  /* buildings */
+  const bldg=(key,base,roof,win,door,sign)=>addTex(scene,key,48,48,c=>{
+    const p=(x,y,w,h,col)=>px(c,x,y,w,h,col);
+    p(6,42,36,4,'rgba(0,0,0,.22)');p(8,16,32,26,base);p(6,14,36,4,roof);p(10,10,28,4,roof);
+    for(let wy=0;wy<3;wy++)for(let wx=0;wx<3;wx++){p(12+wx*10,20+wy*7,6,4,win);p(12+wx*10,20+wy*7,6,1,'rgba(255,255,255,.18)');}
+    p(22,32,8,10,door);p(28,37,1,1,'#fbbf24');p(12,6,24,4,sign);
+  });
+  bldg('bSchool','#a78bfa','#7c3aed','#e9d5ff','#111827','#faf5ff');
+  bldg('bLib','#6366f1','#4338ca','#bfdbfe','#111827','#eef2ff');
+  bldg('bJob','#38bdf8','#0284c7','#e0f2fe','#0b1220','#f0f9ff');
+  bldg('bMkt','#f472b6','#be185d','#ffe4e6','#111827','#fff1f2');
+  bldg('bBank','#64748b','#334155','#e2e8f0','#0f172a','#f8fafc');
+  bldg('bHouse','#fbbf24','#b45309','#fef3c7','#111827','#fffbeb');
+  bldg('bCafe','#34d399','#059669','#d1fae5','#0f172a','#ecfdf5');
+  bldg('bGym','#f43f5e','#9f1239','#ffe4e6','#111827','#fff1f2');
+  bldg('bHosp','#ef4444','#991b1b','#fee2e2','#111827','#fff5f5');
+  bldg('bCasino','#fbbf24','#92400e','#fef9c3','#0f172a','#fffde7');
+  /* decor */
+  addTex(scene,'tree',32,32,c=>{const p=(x,y,w,h,col)=>px(c,x,y,w,h,col);
+    p(8,26,16,4,'rgba(0,0,0,.15)');p(14,16,4,10,'#92400e');p(13,20,6,6,'#78350f');
+    p(8,8,16,10,'#22c55e');p(10,6,12,4,'#16a34a');p(9,12,14,6,'#4ade80');
+  });
+  addTex(scene,'lamp',32,32,c=>{const p=(x,y,w,h,col)=>px(c,x,y,w,h,col);
+    p(10,28,12,3,'rgba(0,0,0,.15)');p(15,8,2,20,'#94a3b8');p(14,26,4,2,'#64748b');
+    p(16,10,8,2,'#94a3b8');p(22,10,4,3,'#475569');p(22,13,4,2,'#fbbf24');
+  });
+  addTex(scene,'bench',32,32,c=>{const p=(x,y,w,h,col)=>px(c,x,y,w,h,col);
+    p(6,26,20,3,'rgba(0,0,0,.15)');p(8,18,3,8,'#78350f');p(21,18,3,8,'#78350f');
+    p(7,16,20,3,'#a16207');p(7,14,20,2,'#b45309');p(7,10,20,3,'#92400e');
+  });
+  addTex(scene,'vend',32,32,c=>{const p=(x,y,w,h,col)=>px(c,x,y,w,h,col);
+    p(9,26,14,3,'rgba(0,0,0,.15)');p(9,8,14,18,'#0ea5e9');p(9,8,14,3,'#0284c7');p(11,12,10,7,'#111827');p(19,20,2,4,'#334155');
+  });
+  addTex(scene,'vendor',32,32,c=>{const p=(x,y,w,h,col)=>px(c,x,y,w,h,col);
+    p(6,26,20,3,'rgba(0,0,0,.15)');p(8,16,16,10,'#f97316');p(7,10,18,3,'#e11d48');p(13,11,4,4,'#fde68a');
+  });
+  /* furniture */
+  addTex(scene,'fTable',32,32,c=>{const p=(x,y,w,h,col)=>px(c,x,y,w,h,col);
+    p(6,26,20,3,'rgba(0,0,0,.18)');p(6,16,20,4,'#a16207');p(8,20,2,6,'#78350f');p(22,20,2,6,'#78350f');p(7,15,18,2,'#b45309');
+  });
+  addTex(scene,'fBed',32,32,c=>{const p=(x,y,w,h,col)=>px(c,x,y,w,h,col);
+    p(5,26,22,3,'rgba(0,0,0,.18)');p(6,16,20,8,'#cbd5e1');p(6,14,20,3,'#94a3b8');p(6,24,20,2,'#64748b');p(7,15,6,2,'#e2e8f0');p(15,15,6,2,'#e2e8f0');
+  });
+  addTex(scene,'fTV',32,32,c=>{const p=(x,y,w,h,col)=>px(c,x,y,w,h,col);
+    p(8,26,16,3,'rgba(0,0,0,.18)');p(8,10,16,10,'#0f172a');p(10,12,12,6,'#111827');p(7,20,18,3,'#334155');p(14,23,4,3,'#475569');
+  });
+  addTex(scene,'fShelf',32,32,c=>{const p=(x,y,w,h,col)=>px(c,x,y,w,h,col);
+    p(8,26,16,3,'rgba(0,0,0,.18)');p(8,10,16,14,'#92400e');p(9,12,14,2,'#78350f');p(9,16,14,2,'#78350f');p(9,20,14,2,'#78350f');
+    p(10,13,2,3,'#ef4444');p(13,13,2,3,'#22c55e');p(16,13,2,3,'#3b82f6');p(11,17,2,3,'#f59e0b');p(15,17,2,3,'#a78bfa');
+  });
+  addTex(scene,'fBoard',48,32,c=>{const p=(x,y,w,h,col)=>px(c,x,y,w,h,col);
+    p(1,4,46,24,'#166534');p(2,5,44,22,'#15803d');
+    p(4,9,16,2,'rgba(255,255,255,.85)');p(22,9,18,2,'rgba(255,255,255,.82)');
+    p(4,13,12,2,'rgba(255,255,255,.7)');p(18,13,14,2,'rgba(255,255,255,.65)');
+    p(4,17,10,2,'rgba(255,255,255,.6)');
+    p(0,4,48,2,'#78350f');p(0,26,48,2,'#78350f');p(0,4,2,24,'#78350f');p(46,4,2,24,'#78350f');
+    p(4,27,40,2,'#6b7280');
+  });
+  addTex(scene,'fComputer',32,32,c=>{const p=(x,y,w,h,col)=>px(c,x,y,w,h,col);
+    p(6,26,20,3,'rgba(0,0,0,.18)');p(6,6,20,14,'#1e293b');p(8,8,16,10,'#0ea5e9');
+    p(10,9,4,4,'rgba(255,255,255,.3)');p(10,11,8,1,'rgba(255,255,255,.4)');p(10,13,5,1,'rgba(255,255,255,.3)');p(10,15,10,1,'rgba(255,255,255,.35)');
+    p(14,20,4,3,'#334155');p(11,23,10,2,'#475569');
+  });
+  addTex(scene,'fSofa',32,32,c=>{const p=(x,y,w,h,col)=>px(c,x,y,w,h,col);
+    p(4,26,24,3,'rgba(0,0,0,.18)');p(4,18,24,6,'#4338ca');p(4,12,4,10,'#3730a3');p(24,12,4,10,'#3730a3');p(4,10,24,4,'#3730a3');p(14,18,2,6,'#312e81');p(6,11,20,2,'rgba(255,255,255,.15)');
+  });
+  addTex(scene,'fPlant',32,32,c=>{const p=(x,y,w,h,col)=>px(c,x,y,w,h,col);
+    p(10,26,12,3,'rgba(0,0,0,.18)');p(12,20,8,6,'#92400e');p(13,18,6,4,'#78350f');p(14,22,4,2,'#b45309');
+    p(8,8,16,12,'#16a34a');p(6,12,10,6,'#15803d');p(16,10,10,8,'#22c55e');p(10,6,12,6,'#4ade80');
+  });
+  addTex(scene,'fATM',32,32,c=>{const p=(x,y,w,h,col)=>px(c,x,y,w,h,col);
+    p(5,26,22,3,'rgba(0,0,0,.18)');p(5,4,22,22,'#1e293b');p(5,4,22,3,'#0f172a');p(8,8,16,8,'#0284c7');
+    p(10,9,4,4,'rgba(255,255,255,.25)');p(8,18,6,6,'#334155');p(9,19,1,1,'#fbbf24');p(11,19,1,1,'#fbbf24');p(13,19,1,1,'#fbbf24');p(9,21,1,1,'#22c55e');p(11,21,1,1,'#22c55e');
+    p(18,20,6,2,'#374151');p(16,24,10,2,'#374151');
+  });
+  addTex(scene,'fSlot',32,32,c=>{const p=(x,y,w,h,col)=>px(c,x,y,w,h,col);
+    p(6,26,20,3,'rgba(0,0,0,.22)');p(6,8,20,18,'#7c3aed');p(6,8,20,3,'#5b21b6');
+    p(9,12,14,8,'#111827');p(10,13,4,6,'#fbbf24');p(15,13,4,6,'#ef4444');p(20,13,1,6,'#22c55e');
+    p(14,22,4,2,'#f59e0b');p(13,24,6,2,'#d97706');
+  });
+  addTex(scene,'fRoul',32,32,c=>{const p=(x,y,w,h,col)=>px(c,x,y,w,h,col);
+    p(6,26,20,3,'rgba(0,0,0,.22)');p(6,14,20,12,'#166534');p(6,14,20,2,'#14532d');
+    c.fillStyle='#dc2626';c.beginPath();c.arc(16,20,6,0,Math.PI*2);c.fill();
+    c.fillStyle='#0f172a';c.beginPath();c.arc(16,20,3,0,Math.PI*2);c.fill();
+    p(15,8,2,6,'#a16207');
+  });
+  addTex(scene,'fMachine',32,32,c=>{const p=(x,y,w,h,col)=>px(c,x,y,w,h,col);
+    p(5,26,22,3,'rgba(0,0,0,.18)');p(6,10,20,14,'#1f2937');p(6,10,20,2,'#374151');
+    p(8,12,4,10,'#374151');p(20,12,4,10,'#374151');p(12,16,8,6,'#111827');
+    p(4,16,3,8,'#64748b');p(25,16,3,8,'#64748b');p(3,18,5,2,'#475569');p(24,18,5,2,'#475569');
+  });
+}
+
+/* ── World data ── */
+const BLDGS=[
+  {key:'School',  tex:'bSchool',ts:2.2,x:14*TILE,y:10*TILE,w:7*TILE,h:6*TILE},
+  {key:'Library', tex:'bLib',   ts:2.1,x:26*TILE,y:10*TILE,w:6*TILE,h:6*TILE},
+  {key:'Job Center',tex:'bJob', ts:2.35,x:60*TILE,y:18*TILE,w:8*TILE,h:6*TILE},
+  {key:'Market',  tex:'bMkt',   ts:2.35,x:40*TILE,y:22*TILE,w:8*TILE,h:6*TILE},
+  {key:'Bank',    tex:'bBank',  ts:2.1,x:50*TILE,y:22*TILE,w:6*TILE,h:6*TILE},
+  {key:'House',   tex:'bHouse', ts:2.2,x:14*TILE,y:40*TILE,w:7*TILE,h:6*TILE},
+  {key:'Cafe',    tex:'bCafe',  ts:2.35,x:60*TILE,y:40*TILE,w:8*TILE,h:6*TILE},
+  {key:'Gym',     tex:'bGym',   ts:2.1,x:72*TILE,y:40*TILE,w:6*TILE,h:6*TILE},
+  {key:'Hospital',tex:'bHosp',  ts:2.2,x:26*TILE,y:40*TILE,w:7*TILE,h:6*TILE},
+  {key:'Casino',  tex:'bCasino',ts:2.35,x:72*TILE,y:18*TILE,w:8*TILE,h:6*TILE},
+];
+const IACTS=[
+  {key:'Vending',tex:'vend',ts:1.6,x:52*TILE,y:30*TILE,w:2*TILE,h:2*TILE},
+  {key:'Vendor', tex:'vendor',ts:1.7,x:22*TILE,y:32*TILE,w:2*TILE,h:2*TILE},
+];
+
+/* ── City tiles ── */
+const TT={G:0,R:1,W:2,S:3,SD:4,CR:5};
+const TC={0:0x14532d,1:0x475569,2:0x0ea5e9,3:0xfde68a,4:0x1f2937,5:0xe5e7eb};
+const BLKT=new Set([TT.W]);
+function buildTiles(){
+  const t=Array.from({length:CH},()=>Array.from({length:CW},()=>TT.G));
+  for(let y=0;y<26;y++){for(let x=70;x<=74;x++)t[y][x]=TT.W;for(let x=68;x<=76;x++)if(t[y][x]!==TT.W)t[y][x]=TT.S;}
+  for(const y of[12,28,44])for(let x=0;x<CW;x++)t[y][x]=TT.R;
+  for(const x of[18,54,80])for(let y=0;y<CH;y++)t[y][x]=TT.R;
+  for(let x=8;x<=CW-8;x++){t[8][x]=TT.R;t[CH-8][x]=TT.R;}
+  for(let y=8;y<=CH-8;y++){t[y][8]=TT.R;t[y][CW-8]=TT.R;}
+  for(let x=10;x<=30;x++)t[36][x]=TT.R;for(let y=30;y<=48;y++)t[y][30]=TT.R;
+  for(let x=58;x<=88;x++)t[36][x]=TT.R;for(let y=18;y<=36;y++)t[y][66]=TT.R;
+  for(let y=0;y<CH;y++)for(let x=0;x<CW;x++)if(t[y][x]===TT.R)
+    for(let oy=-1;oy<=1;oy++)for(let ox=-1;ox<=1;ox++){const ny=y+oy,nx=x+ox;if(ny>=0&&nx>=0&&ny<CH&&nx<CW&&t[ny][nx]===TT.G)t[ny][nx]=TT.SD;}
+  for(const y of[12,28,44])for(const x of[18,54,80])
+    for(let i=-2;i<=2;i++){const x2=x+i;if(y>=0&&y<CH&&x2>=0&&x2<CW)t[y][x2]=(i%2===0)?TT.CR:TT.R;}
+  for(let x=70;x<=74;x++){t[12][x]=TT.R;t[28][x]=TT.R;}
+  return t;
+}
+function blocked(x,y,tiles){const tx=Math.floor(x/TILE),ty=Math.floor(y/TILE);return(tx<0||ty<0||tx>=CW||ty>=CH)||BLKT.has(tiles[ty][tx]);}
+
+/* ── Interior tiles ── */
+const IT={FW:0,FT:1,WB:2,WP:3,RG:4,CT:5};
+const IPal={0:[0x8b5a2b,0x7c4a22],1:[0x94a3b8,0x64748b],2:[0xb91c1c,0x7f1d1d],3:[0xe2e8f0,0x94a3b8],4:[0x2563eb,0x1d4ed8],5:[0x475569,0x334155]};
+
+function makeInterior(kind){
+  const w=IW,h=IH;
+  const bf=(kind==='House'||kind==='Cafe'||kind==='Casino'||kind==='Gym')?IT.FW:IT.FT;
+  const bw=(kind==='Hospital'||kind==='School'||kind==='Library'||kind==='Bank')?IT.WP:IT.WB;
+  const g=Array.from({length:h},()=>Array.from({length:w},()=>bf));
+  for(let x=0;x<w;x++){g[0][x]=bw;g[h-1][x]=bw;}for(let y=0;y<h;y++){g[y][0]=bw;g[y][w-1]=bw;}
+  const ex=Math.floor(w/2);g[h-1][ex]=bf;for(let y=h-2;y>=2;y--)g[y][ex]=IT.RG;
+  const pr=(x0,y0,ww,hh,tp)=>{for(let y=y0;y<y0+hh;y++)for(let x=x0;x<x0+ww;x++){if(y<=0||x<=0||y>=h-1||x>=w-1)continue;g[y][x]=tp;}};
+  switch(kind){
+    case 'House':
+      pr(1,1,3,9,IT.CT);pr(20,1,12,3,IT.CT);pr(3,3,12,6,IT.RG);pr(3,12,15,7,IT.RG);pr(20,12,12,7,IT.CT);break;
+    case 'School':
+      pr(2,1,30,3,IT.CT);pr(2,5,30,2,IT.RG);pr(2,8,30,2,IT.RG);pr(2,11,30,2,IT.RG);
+      pr(1,14,2,6,IT.CT);pr(31,14,2,6,IT.CT);pr(4,15,25,4,IT.RG);break;
+    case 'Library':
+      pr(2,1,30,2,IT.CT);for(let r=0;r<4;r++)pr(2,4+r*4,30,2,IT.CT);pr(4,6,8,2,IT.RG);pr(22,6,8,2,IT.RG);pr(8,18,18,2,IT.RG);break;
+    case 'Job Center':
+      pr(2,1,30,2,IT.CT);pr(2,4,8,6,IT.CT);pr(13,4,8,6,IT.CT);pr(24,4,8,6,IT.CT);pr(4,12,26,3,IT.RG);break;
+    case 'Market':
+      pr(2,1,30,2,IT.CT);for(let a=0;a<4;a++)pr(3+a*7,4,2,14,IT.CT);pr(2,18,30,2,IT.CT);break;
+    case 'Gym':
+      pr(2,1,15,6,IT.RG);pr(19,1,13,6,IT.RG);pr(3,9,28,4,IT.RG);pr(2,14,6,5,IT.CT);pr(26,14,6,5,IT.CT);break;
+    case 'Hospital':
+      pr(2,1,30,2,IT.CT);for(let b=0;b<3;b++){pr(2,4+b*4,13,3,IT.RG);pr(19,4+b*4,13,3,IT.RG);}pr(8,17,18,2,IT.CT);break;
+    case 'Cafe':
+      pr(2,1,30,3,IT.CT);pr(2,5,12,6,IT.RG);pr(20,5,12,6,IT.RG);pr(4,13,10,5,IT.RG);pr(20,13,10,5,IT.RG);break;
+    case 'Bank':
+      pr(2,2,30,3,IT.CT);pr(6,7,22,4,IT.RG);pr(2,12,8,6,IT.CT);pr(24,12,8,7,IT.CT);pr(12,14,10,4,IT.CT);break;
+    case 'Casino':
+      pr(2,1,30,3,IT.CT);pr(2,5,13,5,IT.RG);pr(19,5,13,5,IT.RG);pr(8,12,18,5,IT.RG);pr(2,18,30,2,IT.CT);break;
+  }
+  return{g,exitX:ex,exitY:h-1,title:kind};
+}
+
+function drawInteriorTiles(scene,intr,cont){
+  const gr=scene.add.graphics().setDepth(-3);
+  for(let y=0;y<IH;y++)for(let x=0;x<IW;x++){
+    const t=intr.g[y][x];const[c1,c2]=IPal[t]||[0x0f172a,0x111827];
+    gr.fillStyle(c1,1);gr.fillRect(x*TILE,y*TILE,TILE,TILE);
+    if(t===IT.FT){gr.fillStyle(((x+y)%2===0)?c2:c1,.55);gr.fillRect(x*TILE+2,y*TILE+2,TILE-4,TILE-4);}
+    else if(t===IT.FW){gr.fillStyle(c2,.32);gr.fillRect(x*TILE+2,y*TILE+6,TILE-4,2);gr.fillRect(x*TILE+2,y*TILE+18,TILE-4,2);}
+    else if(t===IT.RG){gr.fillStyle(0xffffff,.07);gr.fillRect(x*TILE+6,y*TILE+6,2,2);gr.fillRect(x*TILE+22,y*TILE+18,2,2);}
+    else if(t===IT.CT){gr.fillStyle(0xffffff,.09);gr.fillRect(x*TILE+3,y*TILE+3,TILE-6,3);}
+    else if(t===IT.WB){gr.fillStyle(c2,.32);gr.fillRect(x*TILE+2,y*TILE+10,TILE-4,2);}
+    else if(t===IT.WP){gr.fillStyle(c2,.15);gr.fillRect(x*TILE+4,y*TILE+4,TILE-8,TILE-8);}
+  }
+  cont.add(gr);
+  cont.add(scene.add.text((IW*TILE)/2,10,intr.title,{fontSize:'18px',color:'#e2e8f0',fontStyle:'bold',backgroundColor:'rgba(0,0,0,.38)',padding:{x:8,y:4}}).setOrigin(.5,0).setDepth(50));
+  const ex=(intr.exitX+.5)*TILE,ey=(intr.exitY+.5)*TILE;
+  cont.add(scene.add.text(ex,ey-8,'EXIT',{fontSize:'13px',color:'#0b1020',fontStyle:'bold',backgroundColor:'rgba(251,191,36,.9)',padding:{x:6,y:3}}).setOrigin(.5,1).setDepth(55));
+}
+
+function add(scene,cont,tx,ty,key,sc=1.1,dp=20){
+  const spr=scene.add.image((tx+.5)*TILE,(ty+.5)*TILE,key).setScale(sc).setDepth(dp);cont.add(spr);
+}
+
+function addFurniture(scene,intr,cont){
+  switch(intr.title){
+    case 'House':
+      add(scene,cont,22,1,'fTV',1.15);add(scene,cont,3,7,'fSofa',1.2);add(scene,cont,9,7,'fSofa',1.2);add(scene,cont,6,4,'fTable',1.1);
+      add(scene,cont,1,4,'fShelf',1.0);add(scene,cont,5,13,'fBed',1.3);add(scene,cont,11,13,'fBed',1.3);
+      add(scene,cont,21,14,'fTable',1.1);add(scene,cont,23,12,'fShelf',1.0);add(scene,cont,26,15,'fPlant',1.0);break;
+    case 'School':
+      add(scene,cont,10,1,'fBoard',1.8);add(scene,cont,22,1,'fBoard',1.5);
+      add(scene,cont,16,3,'fTable',1.2);add(scene,cont,2,3,'fPlant',.9);add(scene,cont,31,3,'fPlant',.9);
+      for(const x of[4,9,14,20,25,29]){add(scene,cont,x,6,'fTable',1.0);add(scene,cont,x,9,'fTable',1.0);add(scene,cont,x,12,'fTable',1.0);}
+      add(scene,cont,1,15,'fShelf',1.1);add(scene,cont,1,17,'fShelf',1.1);add(scene,cont,32,15,'fShelf',1.1);add(scene,cont,32,17,'fShelf',1.1);
+      add(scene,cont,12,17,'fTable',1.1);add(scene,cont,20,17,'fTable',1.1);break;
+    case 'Library':
+      add(scene,cont,10,1,'fComputer',1.1);add(scene,cont,16,2,'fTable',1.2);add(scene,cont,22,1,'fComputer',1.1);
+      for(let r=0;r<4;r++)for(let x=3;x<=29;x+=3)add(scene,cont,x,5+r*4,'fShelf',1.0);
+      add(scene,cont,10,18,'fTable',1.1);add(scene,cont,22,18,'fTable',1.1);add(scene,cont,3,18,'fPlant',1.0);add(scene,cont,30,18,'fPlant',1.0);break;
+    case 'Job Center':
+      add(scene,cont,10,1,'fComputer',1.1);add(scene,cont,16,1,'fTable',1.1);add(scene,cont,22,1,'fComputer',1.1);
+      for(const x of[4,7,15,18,26,29]){add(scene,cont,x,6,'fComputer',1.0);add(scene,cont,x,7,'fTable',.9);}
+      add(scene,cont,16,13,'fTable',1.3);add(scene,cont,3,15,'fPlant',1.0);add(scene,cont,30,15,'fPlant',1.0);break;
+    case 'Market':
+      for(const x of[5,12,19,26])add(scene,cont,x,1,'fTable',1.0);
+      for(const x of[4,11,18,25])for(let y=5;y<=16;y+=3)add(scene,cont,x,y,'fShelf',1.1);
+      for(const x of[5,14,23])add(scene,cont,x,18,'fTable',1.1);break;
+    case 'Gym':
+      for(let x=4;x<=14;x+=4)add(scene,cont,x,3,'fMachine',1.1);
+      for(let x=20;x<=30;x+=4)add(scene,cont,x,3,'fMachine',1.1);
+      add(scene,cont,9,5,'fTV',1.1);add(scene,cont,24,5,'fTV',1.1);
+      for(let x=6;x<=28;x+=7)add(scene,cont,x,11,'fTable',1.0);
+      for(let y=15;y<=18;y+=2){add(scene,cont,3,y,'fShelf',1.0);add(scene,cont,28,y,'fShelf',1.0);}
+      add(scene,cont,16,11,'fPlant',.9);break;
+    case 'Hospital':
+      add(scene,cont,16,1,'fComputer',1.1);add(scene,cont,8,1,'fTable',1.1);add(scene,cont,24,1,'fTable',1.1);
+      for(const x of[7,25])for(let y=5;y<=13;y+=4)add(scene,cont,x,y,'fBed',1.2);
+      for(const x of[4,29])for(let y=5;y<=13;y+=4)add(scene,cont,x,y,'fTV',1.0);
+      for(const x of[12,17,22])add(scene,cont,x,18,'fShelf',1.1);add(scene,cont,3,1,'fPlant',.9);break;
+    case 'Cafe':
+      add(scene,cont,8,2,'fTV',1.0);add(scene,cont,24,2,'fTV',1.0);add(scene,cont,16,2,'fTable',1.1);
+      for(const x of[4,10,22,28]){add(scene,cont,x,7,'fSofa',1.1);add(scene,cont,x,10,'fTable',1.0);}
+      add(scene,cont,6,14,'fSofa',1.1);add(scene,cont,26,14,'fSofa',1.1);
+      add(scene,cont,6,17,'fTable',1.0);add(scene,cont,26,17,'fTable',1.0);
+      add(scene,cont,2,4,'fPlant',1.0);add(scene,cont,31,4,'fPlant',1.0);add(scene,cont,16,14,'fPlant',1.0);break;
+    case 'Bank':
+      for(const x of[6,12,18,24]){add(scene,cont,x,3,'fComputer',1.0);add(scene,cont,x,4,'fTable',1.0);}
+      for(const x of[8,16,24])add(scene,cont,x,8,'fSofa',1.1);
+      add(scene,cont,3,13,'fATM',1.2);add(scene,cont,5,13,'fATM',1.2);
+      for(const x of[25,28])for(const y of[15,17]){add(scene,cont,x,y,'fShelf',1.1);}
+      add(scene,cont,16,15,'fTable',1.2);add(scene,cont,2,4,'fPlant',1.0);add(scene,cont,31,4,'fPlant',1.0);break;
+    case 'Casino':
+      for(let x=4;x<=28;x+=3)add(scene,cont,x,2,'fSlot',1.1);
+      for(const x of[6,10])add(scene,cont,x,7,'fRoul',1.3);
+      for(const x of[21,25])add(scene,cont,x,7,'fTable',1.3);
+      add(scene,cont,14,14,'fRoul',1.5);add(scene,cont,20,14,'fTable',1.3);
+      for(const x of[6,12,18,24])add(scene,cont,x,19,'fTable',1.0);
+      add(scene,cont,2,4,'fTV',1.1);add(scene,cont,31,4,'fTV',1.1);add(scene,cont,16,4,'fTV',1.2);break;
+  }
+}
+
+/* ── Day/night, world render, minimap, Phaser ── */
+let nightOv=null,lampGlows=[],cityTiles=null,interior=null,worldCont=null;
+function clearWorld(scene){if(worldCont)worldCont.destroy(true);worldCont=scene.add.container(0,0);lampGlows=[];}
+
+function updateDN(dtS){
+  CLK.min=(CLK.min+CLK.speed*dtS)%(24*60);const m=CLK.min;
+  const lerp=(a,b,t)=>a+(b-a)*t;
+  let tod='Day',dark=.08;
+  if(m>=20*60||m<5*60){tod='Night';dark=.62;}
+  else if(m<6.5*60){tod='Dawn';dark=lerp(.62,.12,(m-5*60)/(1.5*60));}
+  else if(m<17.5*60){tod='Day';dark=.08;}
+  else{tod='Sunset';dark=lerp(.12,.62,(m-17.5*60)/(2.5*60));}
+  document.getElementById('tod').textContent=tod;document.getElementById('timeTxt').textContent=fmtTime(CLK.min);
+  const ga=(tod==='Night')?.22:(tod==='Sunset'||tod==='Dawn')?.14:.06;
+  for(const g of lampGlows)g.setAlpha(ga);
+  if(nightOv)nightOv.setAlpha(dark);
+}
+
+function decorateCity(scene,tiles,cont){
+  for(let y=0;y<CH;y++)for(let x=0;x<CW;x++){
+    if(tiles[y][x]!==TT.SD)continue;const px=x*TILE+TILE/2,py=y*TILE+TILE/2;
+    let inLot=false;
+    for(const b of BLDGS)if(px>=b.x&&px<=b.x+b.w&&py>=b.y&&py<=b.y+b.h){inLot=true;break;}
+    if(!inLot)for(const i of IACTS)if(px>=i.x&&px<=i.x+i.w&&py>=i.y&&py<=i.y+i.h){inLot=true;break;}
+    if(inLot)continue;
+    const n=(x*83492791^y*29765723)>>>0;
+    if(n%13===0)cont.add(scene.add.image(px,py,'tree').setScale(1.35).setDepth(1));
+    else if(n%29===0)cont.add(scene.add.image(px,py,'bench').setScale(1.2).setDepth(1));
+  }
+  const placeLamp=(tx,ty)=>{
+    const x=tx*TILE+TILE/2,y=ty*TILE+TILE/2;
+    cont.add(scene.add.image(x,y,'lamp').setScale(1.2).setDepth(1.2));
+    const g=scene.add.circle(x+6,y-8,14,0xfbbf24,.06).setDepth(1.1);cont.add(g);lampGlows.push(g);
+  };
+  for(const ry of[12,28,44,8,CH-8])for(let x=10;x<CW-10;x+=6)
+    for(const c of[{tx:x,ty:ry-1},{tx:x,ty:ry+1}]){if(c.ty<0||c.ty>=CH)continue;if(tiles[c.ty][c.tx]!==TT.SD)continue;placeLamp(c.tx,c.ty);break;}
+  for(const rx of[18,54,80,8,CW-8])for(let y=10;y<CH-10;y+=6)
+    for(const c of[{tx:rx-1,ty:y},{tx:rx+1,ty:y}]){if(c.tx<0||c.tx>=CW)continue;if(tiles[c.ty][c.tx]!==TT.SD)continue;placeLamp(c.tx,c.ty);break;}
+}
+
+function drawCity(scene){
+  clearWorld(scene);cityTiles=buildTiles();
+  const gr=scene.add.graphics().setDepth(-3);
+  for(let y=0;y<CH;y++)for(let x=0;x<CW;x++){gr.fillStyle(TC[cityTiles[y][x]],1);gr.fillRect(x*TILE,y*TILE,TILE,TILE);}
+  worldCont.add(gr);decorateCity(scene,cityTiles,worldCont);
+  for(const b of BLDGS){
+    const cx=b.x+b.w/2,cy=b.y+b.h/2;
+    worldCont.add(scene.add.image(cx,cy,b.tex).setScale(b.ts).setDepth(3));
+    worldCont.add(scene.add.text(cx,b.y-8,b.key,{fontSize:'13px',color:'#e2e8f0',fontStyle:'bold',backgroundColor:'rgba(0,0,0,.35)',padding:{x:6,y:3}}).setOrigin(.5,1).setDepth(4));
+  }
+  for(const i of IACTS){
+    const cx=i.x+i.w/2,cy=i.y+i.h/2;
+    worldCont.add(scene.add.image(cx,cy,i.tex).setScale(i.ts).setDepth(3));
+    worldCont.add(scene.add.text(cx,i.y-8,i.key,{fontSize:'12px',color:'#e2e8f0',backgroundColor:'rgba(0,0,0,.35)',padding:{x:5,y:2}}).setOrigin(.5,1).setDepth(4));
+  }
+  scene.cameras.main.setBounds(0,0,CW*TILE,CH*TILE);drawMM._k=null;
+}
+
+function drawInterior(scene,bk){
+  clearWorld(scene);interior=makeInterior(bk);
+  drawInteriorTiles(scene,interior,worldCont);addFurniture(scene,interior,worldCont);
+  scene.cameras.main.setBounds(0,0,IW*TILE,IH*TILE);drawMM._k=null;
+}
+
+function enterBuilding(scene,bk){
+  WS.savedPos={x:scene.me.x,y:scene.me.y};WS.zone='INTERIOR';WS.key=bk;
+  document.getElementById('mmTgt').textContent='—';
+  drawInterior(scene,bk);
+  scene.me.x=(interior.exitX+.5)*TILE;scene.me.y=(IH-3)*TILE;
+  updateHUD();renderBuildingPanel();
+  logChat('[→] Entered: '+bk+'. Press E near EXIT to leave.',false,'#93c5fd');
+  if(bk==='Casino')initMulGame();
+  if(bk==='Bank')setTimeout(refreshUSDCBalance,500);
+}
+function exitCity(scene){
+  WS.zone='CITY';WS.key='';interior=null;stopMulGame();
+  drawCity(scene);scene.me.x=WS.savedPos.x;scene.me.y=WS.savedPos.y;
+  updateHUD();renderBuildingPanel();logChat('[←] Back to CITY.',false,'#93c5fd');
+}
+
+/* minimap */
+const mmCanvas=document.getElementById('mmC'),mmCtx2=mmCanvas.getContext('2d');
+function w2mm(x,y){const wP=(WS.zone==='CITY'?CW:IW)*TILE,hP=(WS.zone==='CITY'?CH:IH)*TILE;return{mx:(x/wP)*mmCanvas.width,my:(y/hP)*mmCanvas.height};}
+function drawMM(pos){
+  const ck=WS.zone==='CITY'?'CITY':'INT:'+WS.key;
+  if(drawMM._k!==ck){
+    drawMM._k=ck;
+    const bg=document.createElement('canvas');bg.width=mmCanvas.width;bg.height=mmCanvas.height;const ic=bg.getContext('2d');
+    if(WS.zone==='CITY')for(let y=0;y<mmCanvas.height;y++)for(let x=0;x<mmCanvas.width;x++){
+      const t=cityTiles[Math.floor((y/mmCanvas.height)*CH)][Math.floor((x/mmCanvas.width)*CW)];
+      ic.fillStyle=t===TT.R||t===TT.CR?'#64748b':t===TT.SD?'#334155':t===TT.W?'#0284c7':t===TT.S?'#fde68a':'#1f7a3a';ic.fillRect(x,y,1,1);
+    }else for(let y=0;y<mmCanvas.height;y++)for(let x=0;x<mmCanvas.width;x++){
+      const t=interior.g[Math.floor((y/mmCanvas.height)*IH)][Math.floor((x/mmCanvas.width)*IW)];
+      ic.fillStyle=t===IT.FW?'#8b5a2b':t===IT.FT?'#94a3b8':t===IT.WB?'#7f1d1d':t===IT.WP?'#cbd5e1':t===IT.RG?'#1d4ed8':'#475569';ic.fillRect(x,y,1,1);
+    }
+    drawMM._bg=bg;
+  }
+  mmCtx2.clearRect(0,0,mmCanvas.width,mmCanvas.height);mmCtx2.drawImage(drawMM._bg,0,0);
+  if(WS.zone==='CITY'&&NAV.pos){const t=w2mm(NAV.pos.x,NAV.pos.y);mmCtx2.fillStyle='#ef4444';mmCtx2.fillRect((t.mx-2)|0,(t.my-2)|0,5,5);}
+  const p=w2mm(pos.x,pos.y);mmCtx2.fillStyle='#22c55e';mmCtx2.beginPath();mmCtx2.arc(p.mx,p.my,3,0,Math.PI*2);mmCtx2.fill();
+}
+
+function nearPOI(px,py){let best=null,bd=Infinity;
+  for(const b of BLDGS){const d=Math.hypot(px-b.x-b.w/2,py-b.y-b.h/2);if(d<bd){bd=d;best=b;}}
+  for(const i of IACTS){const d=Math.hypot(px-i.x-i.w/2,py-i.y-i.h/2);if(d<bd){bd=d;best=i;}}
+  return{poi:best,d:bd};
+}
+
+function doIAct(action){
+  switch(action){
+    case 'vending':logChat('[Vending] Type: buy soda (4c, +20e), buy sandwich (7c, +45e)');break;
+    case 'vendor':if(S.coins<4)return logChat('[Vendor] Need 4 coins.');S.coins-=4;if(Math.random()<.55)S.inv.soda++;else S.inv.sandwich++;updateHUD();logChat('[Vendor] Got random item!');break;
+    default:logChat('[info] Press E to enter '+action+' building.');
+  }
+}
+
+/* nav */
+function populateNav(){
+  const sel=document.getElementById('navSel');
+  BLDGS.forEach(b=>{const o=document.createElement('option');o.value=b.key;o.textContent=b.key;sel.appendChild(o);});
+  IACTS.forEach(i=>{const o=document.createElement('option');o.value=i.key;o.textContent=i.key;sel.appendChild(o);});
+}
+document.getElementById('btnGo').onclick=()=>{
+  if(WS.zone!=='CITY')return logChat('[nav] Only in CITY.');
+  const k=document.getElementById('navSel').value;if(!k)return;
+  const all=[...BLDGS.map(b=>({key:b.key,x:b.x+b.w/2,y:b.y+b.h/2})),...IACTS.map(i=>({key:i.key,x:i.x+i.w/2,y:i.y+i.h/2}))];
+  const f=all.find(t=>t.key===k);if(!f)return;
+  NAV.key=k;NAV.pos={x:f.x,y:f.y};document.getElementById('mmTgt').textContent=k;logChat('[nav] Target: '+k);
+};
+document.getElementById('btnClear').onclick=()=>{document.getElementById('navSel').value='';NAV.key='';NAV.pos=null;document.getElementById('mmTgt').textContent='—';};
+
+/* chat input */
+document.getElementById('btnSend').onclick=()=>{
+  const inp=document.getElementById('chatIn');const t=inp.value.trim();if(!t)return;inp.value='';
+  const l=t.toLowerCase();
+  if(l==='buy soda'){if(S.coins<4)logChat('[Vending] Need 4 coins.');else{S.coins-=4;S.inv.soda++;updateHUD();logChat('[Vending] Soda +1');}}
+  else if(l==='buy sandwich'){if(S.coins<7)logChat('[Vending] Need 7 coins.');else{S.coins-=7;S.inv.sandwich++;updateHUD();logChat('[Vending] Sandwich +1');}}
+  else{
+    const me=walletAddress?walletAddress.slice(0,6)+'…':'YOU';
+    logChat('['+me+'] '+t,true,'#93c5fd');
+  }
+};
+document.getElementById('chatIn').addEventListener('keypress',e=>{if(e.key==='Enter')document.getElementById('btnSend').click();});
+
+/* Phaser */
+const phaserCfg={
+  type:Phaser.AUTO,parent:'game',
+  width:Math.max(400,window.innerWidth-320),height:Math.max(300,window.innerHeight),
+  backgroundColor:'#0b1020',pixelArt:true,
+  scene:{
+    preload(){document.getElementById('loading').textContent='Loading…';makeTextures(this);},
+    create(){
+      document.getElementById('loading').style.display='none';
+      this.me=this.add.container(32*TILE,32*TILE).setDepth(10);
+      const meLabel=walletAddress?walletAddress.slice(0,6)+'…':'YOU';
+      this.me.add([this.add.image(0,0,'cat').setScale(2.0).setOrigin(.5,.62),
+                   this.add.text(-24,-52,meLabel,{fontSize:'12px',color:'#a5f3fc',fontStyle:'bold'})]);
+      this.cameras.main.startFollow(this.me,true,.12,.12);this.cameras.main.setZoom(1.3);
+      this.cursors=this.input.keyboard.createCursorKeys();
+      this.keys=this.input.keyboard.addKeys('W,A,S,D,SHIFT,E');
+      drawCity(this);populateNav();updateHUD();
+      nightOv=this.add.rectangle(0,0,this.scale.width,this.scale.height,0x020617,1).setOrigin(0,0).setScrollFactor(0).setDepth(999);nightOv.setAlpha(.08);
+      this.scale.on('resize',sz=>{if(nightOv){nightOv.width=sz.width;nightOv.height=sz.height;}});
+      initChain();initOnlinePlayers();
+      logChat('[system] Welcome to Moga World! 🎮 Pay school → get skills → work → earn!',false,'#fbbf24');
+      logChat('[system] Enter Casino for 100-player Multiplier Game 🎰',false,'#a78bfa');
+      this.time.addEvent({delay:200,loop:true,callback:()=>{
+        if(WS.zone==='CITY'){
+          const{poi,d}=nearPOI(this.me.x,this.me.y);
+          document.getElementById('elNear').textContent=(poi&&d<IDIST)?poi.key+' (E)':'—';
+        }else{
+          const ex=(interior.exitX+.5)*TILE,ey=(interior.exitY+.5)*TILE;
+          const dd=Math.hypot(this.me.x-ex,this.me.y-ey);
+          document.getElementById('elNear').textContent=dd<120?'EXIT (E)':WS.key+' (E)';
+        }
+      }});
+      /* job cooldown refresh timer */
+      this.time.addEvent({delay:1000,loop:true,callback:()=>{if(WS.zone==='INTERIOR'&&WS.key==='Job Center')renderBuildingPanel();}});
+    },
+    update(_,dt){
+      const dtS=dt/1000;updateDN(dtS);
+      if(S.sleeping)return;
+      const spr=this.keys.SHIFT.isDown&&S.energy>0,spd=spr?380:240;
+      let vx=0,vy=0;
+      if(this.cursors.up.isDown||this.keys.W.isDown)vy-=1;
+      if(this.cursors.down.isDown||this.keys.S.isDown)vy+=1;
+      if(this.cursors.left.isDown||this.keys.A.isDown)vx-=1;
+      if(this.cursors.right.isDown||this.keys.D.isDown)vx+=1;
+      if(vx&&vy){vx*=.7071;vy*=.7071;}
+      const mv=(vx||vy),nx=this.me.x+vx*spd*dtS,ny=this.me.y+vy*spd*dtS;
+      if(WS.zone==='CITY'){
+        const cx=clamp(nx,20,CW*TILE-20),cy=clamp(ny,20,CH*TILE-20);
+        if(!blocked(cx,cy,cityTiles)){this.me.x=cx;this.me.y=cy;}
+        else{if(!blocked(cx,this.me.y,cityTiles))this.me.x=cx;if(!blocked(this.me.x,cy,cityTiles))this.me.y=cy;}
+      }else{this.me.x=clamp(nx,20,IW*TILE-20);this.me.y=clamp(ny,20,IH*TILE-20);}
+      if(spr&&mv)S.energy-=20*dtS;else S.energy=clamp(S.energy+8*dtS,0,S.energyMax);
+      if(Phaser.Input.Keyboard.JustDown(this.keys.E)){
+        if(WS.zone==='CITY'){
+          const{poi,d}=nearPOI(this.me.x,this.me.y);
+          if(!poi||d>=IDIST)logChat('[info] Nothing nearby.');
+          else if(BLDGS.find(b=>b.key===poi.key))enterBuilding(this,poi.key);
+          else doIAct(poi.key.toLowerCase());
+        }else{
+          const ex=(interior.exitX+.5)*TILE,ey=(interior.exitY+.5)*TILE;
+          if(Math.hypot(this.me.x-ex,this.me.y-ey)<120)exitCity(this);
+          else renderBuildingPanel();
+        }
+      }
+      updateHUD();drawMM({x:this.me.x,y:this.me.y});
+    }
+  }
+};
+const game=new Phaser.Game(phaserCfg);
+window.addEventListener('resize',()=>{game.scale.resize(Math.max(400,window.innerWidth-320),Math.max(300,window.innerHeight));});
+updateHUD();
 })();
 </script>
 </body>
