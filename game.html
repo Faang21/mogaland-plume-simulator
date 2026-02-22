@@ -162,6 +162,14 @@ kbd{padding:1px 4px;border-radius:4px;border:1px solid rgba(255,255,255,.22);bac
         <button id="btnSend">Send</button>
       </div>
     </div>
+
+    <div class="card" id="txHistCard">
+      <div class="row" style="justify-content:space-between;margin-bottom:5px;">
+        <strong>🧾 Tx History</strong>
+        <button onclick="clearTxHistory()" style="font-size:10px;padding:2px 7px;opacity:.6;">Clear</button>
+      </div>
+      <div id="txHistList" style="max-height:110px;overflow-y:auto;font-size:10px;"></div>
+    </div>
   </aside>
 </div>
 
@@ -212,6 +220,7 @@ async function initChain(){
     if(!walletAddress){const accs=await prov.listAccounts();if(accs[0])walletAddress=accs[0].toLowerCase();}
     document.getElementById('networkBadge').textContent=networkConfig.name;
     document.getElementById('wAddr').textContent=walletAddress?walletAddress.slice(0,6)+'...'+walletAddress.slice(-4):'Not connected';
+    loadTxHistory();renderTxHistory();
     window.ethereum.on('chainChanged',()=>initChain());
     window.ethereum.on('accountsChanged',a=>{walletAddress=a[0]?a[0].toLowerCase():'';initChain();});
   }catch(e){console.log('[chain]',e.message);}
@@ -221,19 +230,109 @@ window.addEventListener('message',ev=>{
   if(ev.data&&ev.data.type==='walletUpdate'){
     walletAddress=ev.data.address||'';
     document.getElementById('wAddr').textContent=walletAddress?walletAddress.slice(0,6)+'...'+walletAddress.slice(-4):'Not connected';
+    loadTxHistory();renderTxHistory();
   }
   if(ev.data&&ev.data.type==='networkConfig')Object.assign(networkConfig,ev.data.config);
 });
 
-async function onChainTx(label,ethVal=0.00001){
-  if(!window.ethereum||!walletAddress)return null;
+/* ── Treasury transaction handlers ──
+   All in-game financial flows are routed through the single TREASURY wallet
+   on whichever EVM network the player's wallet is connected to.
+   - treasuryPay    : player  → treasury  (skill enroll, purchases, upgrades, bets)
+   - treasurySalary : player claims salary; sends a proof-of-work tx to treasury so
+                      the treasury can authorise and process the payout on-chain.
+*/
+async function treasuryPay(label,gameUsdAmt){
+  if(!window.ethereum||!walletAddress){
+    logChat('[Treasury] Wallet not connected – connect first to pay.',false,'#f87171');return null;
+  }
+  // Amount: proportional to game-USD, minimum 0.000010 native token
+  const nativeAmt=Math.max((gameUsdAmt||0)*0.000003,0.00001).toFixed(8);
+  const cur=networkConfig.currency||'ETH';
+  const net=networkConfig.name||'Unknown Network';
   try{
-    const signer=new ethers.providers.Web3Provider(window.ethereum).getSigner();
-    const tx=await signer.sendTransaction({to:TREASURY,value:ethers.utils.parseEther(String(ethVal))});
-    logChat('[TX] '+label+' confirmed: '+tx.hash.slice(0,12)+'…',false,'#34d399');
+    const provider=new ethers.providers.Web3Provider(window.ethereum);
+    const signer=provider.getSigner();
+    logChat('[Treasury] 🔐 Sending '+nativeAmt+' '+cur+' → Treasury on '+net+'…',false,'#a78bfa');
+    const tx=await signer.sendTransaction({to:TREASURY,value:ethers.utils.parseEther(nativeAmt)});
+    saveTxRecord(tx.hash,label,nativeAmt,cur,net,'PAY');
+    logChat('[Treasury] ✅ PAY:'+label+' | '+nativeAmt+' '+cur+' | <a href="'+explorerTx(tx.hash)+'" target="_blank">'+tx.hash.slice(0,14)+'…</a>',false,'#34d399');
     return tx;
-  }catch(e){logChat('[TX] '+e.message.slice(0,60),false,'#f87171');return null;}
+  }catch(e){
+    logChat('[Treasury] ❌ Payment failed ('+net+'): '+e.message.slice(0,80),false,'#f87171');
+    return null;
+  }
 }
+
+async function treasurySalary(jobName,gameUsdAmt){
+  if(!window.ethereum||!walletAddress){
+    logChat('[Treasury] Wallet not connected – salary claim skipped.',false,'#f87171');return null;
+  }
+  // Claim fee: small tx to treasury so it can record and process the salary disbursement
+  const nativeAmt=(0.00001).toFixed(8);
+  const cur=networkConfig.currency||'ETH';
+  const net=networkConfig.name||'Unknown Network';
+  try{
+    const provider=new ethers.providers.Web3Provider(window.ethereum);
+    const signer=provider.getSigner();
+    logChat('[Treasury] 🏦 Claiming $'+gameUsdAmt+' salary ('+jobName+') on '+net+'…',false,'#fbbf24');
+    const tx=await signer.sendTransaction({to:TREASURY,value:ethers.utils.parseEther(nativeAmt)});
+    saveTxRecord(tx.hash,'SALARY:'+jobName,nativeAmt,cur,net,'SALARY');
+    logChat('[Treasury] ✅ SALARY:'+jobName+' +$'+gameUsdAmt+' USD | <a href="'+explorerTx(tx.hash)+'" target="_blank">'+tx.hash.slice(0,14)+'…</a>',false,'#fbbf24');
+    return tx;
+  }catch(e){
+    logChat('[Treasury] ❌ Salary claim failed ('+net+'): '+e.message.slice(0,80),false,'#f87171');
+    return null;
+  }
+}
+
+/* Backward-compat alias – remaining callers (casino, vending) route through treasuryPay */
+async function onChainTx(label,ethVal=0.00001){
+  return treasuryPay(label,Math.round(ethVal/0.000003));
+}
+
+/* ── Transaction History ──
+   Every confirmed on-chain tx hash is saved to localStorage so players
+   can always verify their payments. Gas fees are part of each tx and
+   land in the treasury wallet on the active network.
+*/
+let txHistory=[];
+function txHistKey(){return'mogaTxHistory_'+(walletAddress||'guest');}
+function loadTxHistory(){
+  try{const raw=localStorage.getItem(txHistKey());if(raw)txHistory=JSON.parse(raw);}catch{}
+}
+loadTxHistory();
+
+function saveTxRecord(hash,label,nativeAmt,currency,network,type){
+  const rec={hash,label,nativeAmt,currency,network,type,ts:Date.now()};
+  txHistory.unshift(rec);
+  if(txHistory.length>50)txHistory.length=50; // keep last 50
+  try{localStorage.setItem(txHistKey(),JSON.stringify(txHistory));}catch{}
+  renderTxHistory();
+}
+
+function renderTxHistory(){
+  const el=document.getElementById('txHistList');if(!el)return;
+  if(!txHistory.length){el.innerHTML='<div style="color:#64748b;padding:4px;">No transactions yet.</div>';return;}
+  el.innerHTML=txHistory.slice(0,10).map(r=>{
+    const d=new Date(r.ts);
+    const time=d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    const icon=r.type==='SALARY'?'💰':r.type==='PAY'?'💸':'🎰';
+    const link=r.network&&explorerTx(r.hash);
+    return`<div style="border-bottom:1px solid rgba(255,255,255,.07);padding:3px 0;">
+<span style="color:#94a3b8;">${time}</span> ${icon}
+<span style="color:#e2e8f0;">${r.label.slice(0,22)}</span>
+<span style="color:#fbbf24;">${r.nativeAmt} ${r.currency}</span>
+<a href="${link}" target="_blank" style="color:#60a5fa;font-size:9px;display:block;word-break:break-all;">${r.hash.slice(0,20)}…</a></div>`;
+  }).join('');
+}
+
+function clearTxHistory(){
+  txHistory=[];
+  try{localStorage.removeItem(txHistKey());}catch{}
+  renderTxHistory();
+}
+window.clearTxHistory=clearTxHistory;
 
 async function sendUSDCOnChain(to,amount){
   if(!window.ethereum||!walletAddress){logChat('[Bank] Connect wallet first.',false,'#f87171');return;}
@@ -266,20 +365,20 @@ async function refreshUSDCBalance(){
 window.refreshUSDCBalance=refreshUSDCBalance;
 
 /* ── Skills ── */
-/* All skills cost 30 game-USD. Work pays 2 game-USD per 8-game-hour shift. */
+/* All skills cost 30 game-USD. Work pays 2 game-USD per 3-real-hour shift. */
 const SKILL_COST_USD=30; // game-USD per skill
-const WORK_PAY_USD=2;    // game-USD per 8-game-hour shift (48 real seconds at CLK.speed=10)
-const WORK_CD_MS=48000;  // 8 game-hours in ms (CLK.speed=10 → 1 game-h = 6 real-s)
-const ENERGY_DRAIN_PASSIVE=2.1;  // energy/sec while idle (100→0 in ~48 real-s = 8 game-h)
-const ENERGY_DRAIN_SPRINT=22;    // energy/sec while sprinting
+const WORK_PAY_USD=2;    // game-USD per 3-real-hour shift
+const WORK_CD_MS=10800000;  // 3 real hours in ms
+const ENERGY_DRAIN_PASSIVE=100/3600;  // energy/sec while idle (100→0 in exactly 1 real hour)
+const ENERGY_DRAIN_SPRINT=1.0;    // energy/sec while sprinting
 const ENERGY_LOW_THRESHOLD=20;   // show warning / block work below this level
 const NPC_MAX_WANDER=480;        // max pixel distance for random NPC wander target
 const SKILLS=[
-  {id:'basic',   name:'Basic Labor',   icon:'🔨',cost:SKILL_COST_USD,time:2000,teacher:'Ms. Ana',    job:'Laborer',  wMin:WORK_PAY_USD,wMax:WORK_PAY_USD,cd:WORK_CD_MS},
-  {id:'prog',    name:'Programming',   icon:'💻',cost:SKILL_COST_USD,time:4000,teacher:'Mr. Budi',   job:'Developer',wMin:WORK_PAY_USD,wMax:WORK_PAY_USD,cd:WORK_CD_MS},
-  {id:'biz',     name:'Business Mgmt', icon:'📊',cost:SKILL_COST_USD,time:3500,teacher:'Mr. Candra', job:'Manager',  wMin:WORK_PAY_USD,wMax:WORK_PAY_USD,cd:WORK_CD_MS},
-  {id:'med',     name:'Medicine',      icon:'🏥',cost:SKILL_COST_USD,time:5000,teacher:'Dr. Dewi',   job:'Doctor',   wMin:WORK_PAY_USD,wMax:WORK_PAY_USD,cd:WORK_CD_MS},
-  {id:'eng',     name:'Engineering',   icon:'⚙️',cost:SKILL_COST_USD,time:4500,teacher:'Mr. Eko',    job:'Engineer', wMin:WORK_PAY_USD,wMax:WORK_PAY_USD,cd:WORK_CD_MS},
+  {id:'basic',   name:'Basic Labor',   icon:'🔨',cost:SKILL_COST_USD,time:7200000,teacher:'Ms. Ana',    job:'Laborer',  wMin:WORK_PAY_USD,wMax:WORK_PAY_USD,cd:WORK_CD_MS},
+  {id:'prog',    name:'Programming',   icon:'💻',cost:SKILL_COST_USD,time:7200000,teacher:'Mr. Budi',   job:'Developer',wMin:WORK_PAY_USD,wMax:WORK_PAY_USD,cd:WORK_CD_MS},
+  {id:'biz',     name:'Business Mgmt', icon:'📊',cost:SKILL_COST_USD,time:7200000,teacher:'Mr. Candra', job:'Manager',  wMin:WORK_PAY_USD,wMax:WORK_PAY_USD,cd:WORK_CD_MS},
+  {id:'med',     name:'Medicine',      icon:'🏥',cost:SKILL_COST_USD,time:7200000,teacher:'Dr. Dewi',   job:'Doctor',   wMin:WORK_PAY_USD,wMax:WORK_PAY_USD,cd:WORK_CD_MS},
+  {id:'eng',     name:'Engineering',   icon:'⚙️',cost:SKILL_COST_USD,time:7200000,teacher:'Mr. Eko',    job:'Engineer', wMin:WORK_PAY_USD,wMax:WORK_PAY_USD,cd:WORK_CD_MS},
 ];
 const workCDs={};
 const COINS_TO_USDC=1; // 1 coin = 1 USD (game economy)
@@ -364,7 +463,7 @@ function renderHome(){
 }
 
 function renderSchool(){
-  let h=`<strong>🏫 Skill Shop</strong><div style="font-size:10px;color:#94a3b8;margin:4px 0;">Pay $30 game-USD on-chain → gain skill → work 8h → earn $2 game-USD</div>`;
+  let h=`<strong>🏫 Skill Shop</strong><div style="font-size:10px;color:#94a3b8;margin:4px 0;">Pay $30 game-USD on-chain → gain skill (2h) → work 3h → earn $2 game-USD</div>`;
   for(const sk of SKILLS){
     const l=S.learnedSkills.includes(sk.id);
     const a=S.coins>=sk.cost;
@@ -388,9 +487,9 @@ function renderJobBoard(){
   for(const id of S.learnedSkills){
     const sk=SKILLS.find(s=>s.id===id);if(!sk)continue;
     const cd=sk.cd||WORK_CD_MS,lw=workCDs[id]||0,oc=(now-lw)<cd,cl=oc?Math.ceil((cd-(now-lw))/1000):0;
-    const clFmt=oc?(cl>60?Math.ceil(cl/60)+'m':cl+'s'):'';
+    const clFmt=oc?(cl>3600?Math.ceil(cl/3600)+'h':cl>60?Math.ceil(cl/60)+'m':cl+'s'):'';
     h+=`<div class="irow"><div class="ileft"><div class="iname">${sk.icon} ${sk.job}</div>
-<div class="idesc">Pay: $${sk.wMin} USD · −${ENERGY_LOW_THRESHOLD} energy · 8h shift${oc?' · ⏳'+clFmt:''}</div></div>
+<div class="idesc">Pay: $${sk.wMin} USD · −${ENERGY_LOW_THRESHOLD} energy · 3h shift${oc?' · ⏳'+clFmt:''}</div></div>
 <button onclick="workJob('${id}')" ${S.energy<ENERGY_LOW_THRESHOLD||oc?'disabled':''} class="ibtn btn-blue">
   ${oc?clFmt:S.energy<ENERGY_LOW_THRESHOLD?'⚡Low':'Work'}
 </button></div>`;
@@ -446,13 +545,13 @@ function renderHospital(){
 }
 
 function renderLibrary(){
-  let h=`<strong>📚 Library</strong><div style="font-size:10px;color:#94a3b8;margin:3px 0;">Fast-track (1.5× cost, half time)</div>`;
+  let h=`<strong>📚 Library</strong><div style="font-size:10px;color:#94a3b8;margin:3px 0;">Fast-track (1.5× cost, 1h instead of 2h)</div>`;
   for(const sk of SKILLS){
     const l=S.learnedSkills.includes(sk.id),fc=Math.ceil(sk.cost*1.5),a=S.coins>=fc;
     h+=`<div class="sitem${l?' learned':''}">
 <div style="display:flex;justify-content:space-between;"><span style="font-size:12px;font-weight:bold;">${sk.icon} ${sk.name}</span>
 <span style="font-size:10px;color:${l?'#22c55e':'#fbbf24'};">${l?'✅':'$'+fc+' USD'}</span></div>
-<div style="font-size:10px;color:#64748b;">${sk.job} · ${sk.time/2000}s</div>
+<div style="font-size:10px;color:#64748b;">${sk.job} · 2h learning</div>
 ${!l?`<button onclick="learnSkillFast('${sk.id}')" ${!a?'disabled':''} class="ibtn btn-indigo" style="width:100%;margin-top:4px;">Fast-track ($${fc} USD)</button>`:''}
 </div>`;
   }
@@ -461,14 +560,14 @@ ${!l?`<button onclick="learnSkillFast('${sk.id}')" ${!a?'disabled':''} class="ib
 
 function renderOffice(){
   const now=Date.now();
-  let h=`<strong>🏢 Office</strong><div style="font-size:10px;color:#94a3b8;margin:3px 0;">Freelance work available — 8-hour shifts</div>`;
+  let h=`<strong>🏢 Office</strong><div style="font-size:10px;color:#94a3b8;margin:3px 0;">Freelance work available — 3-hour shifts</div>`;
   if(!S.learnedSkills.length)return h+`<div style="color:#94a3b8;font-size:11px;margin:10px 0;text-align:center;">No skills. Visit School first.</div>`;
   for(const id of S.learnedSkills){
     const sk=SKILLS.find(s=>s.id===id);if(!sk)continue;
     const cd=sk.cd||WORK_CD_MS,lw=workCDs[id]||0,oc=(now-lw)<cd,cl=oc?Math.ceil((cd-(now-lw))/1000):0;
-    const clFmt=oc?(cl>60?Math.ceil(cl/60)+'m':cl+'s'):'';
+    const clFmt=oc?(cl>3600?Math.ceil(cl/3600)+'h':cl>60?Math.ceil(cl/60)+'m':cl+'s'):'';
     h+=`<div class="irow"><div class="ileft"><div class="iname">${sk.icon} ${sk.job} (Freelance)</div>
-<div class="idesc">$${sk.wMin} USD · −${ENERGY_LOW_THRESHOLD} energy · 8h${oc?' · ⏳'+clFmt:''}</div></div>
+<div class="idesc">$${sk.wMin} USD · −${ENERGY_LOW_THRESHOLD} energy · 3h${oc?' · ⏳'+clFmt:''}</div></div>
 <button onclick="workJob('${id}')" ${S.energy<ENERGY_LOW_THRESHOLD||oc?'disabled':''} class="ibtn btn-blue">
   ${oc?clFmt:S.energy<ENERGY_LOW_THRESHOLD?'⚡Low':'Work'}
 </button></div>`;
@@ -495,8 +594,8 @@ function learnSkill(id){
   if(S.learnedSkills.includes(id))return logChat('[School] Already know '+sk.name+'.');
   if(S.coins<sk.cost)return logChat('[School] Need $'+sk.cost+' USD for '+sk.name+'.');
   S.coins-=sk.cost;S.learningId=id;updateHUD();renderBuildingPanel();
-  logChat('[School] 📚 Enrolling in '+sk.name+'… ($'+sk.cost+' USD on-chain)',false,'#a78bfa');
-  onChainTx('SCHOOL:'+id+':$'+sk.cost+'USD',0.00001);
+  logChat('[School] 📚 Enrolling in '+sk.name+'… ($'+sk.cost+' USD → Treasury)',false,'#a78bfa');
+  treasuryPay('SCHOOL:'+id,sk.cost);
   saveProgress();
   setTimeout(()=>{
     S.learnedSkills.push(id);S.learningId=null;S.job=sk.job;
@@ -513,8 +612,8 @@ function learnSkillFast(id){
   const fc=Math.ceil(sk.cost*1.5);
   if(S.coins<fc)return logChat('[Library] Need $'+fc+' USD.');
   S.coins-=fc;S.learningId=id;updateHUD();renderBuildingPanel();
-  logChat('[Library] 📚 Fast-track '+sk.name+'… ($'+fc+' USD on-chain)',false,'#818cf8');
-  onChainTx('LIB:'+id+':$'+fc+'USD',0.00001);
+  logChat('[Library] 📚 Fast-track '+sk.name+'… ($'+fc+' USD → Treasury)',false,'#818cf8');
+  treasuryPay('LIB:'+id,fc);
   saveProgress();
   setTimeout(()=>{
     S.learnedSkills.push(id);S.learningId=null;S.job=sk.job;
@@ -528,14 +627,14 @@ window.learnSkillFast=learnSkillFast;
 function workJob(id){
   const sk=SKILLS.find(s=>s.id===id);if(!sk)return;
   const now=Date.now(),lw=workCDs[id]||0,cd=sk.cd||WORK_CD_MS;
-  if(now-lw<cd){const rem=Math.ceil((cd-(now-lw))/1000);return logChat('[Job] On cooldown: '+( rem>60?Math.ceil(rem/60)+'m':rem+'s')+' left (8h shift)');}
+  if(now-lw<cd){const rem=Math.ceil((cd-(now-lw))/1000);return logChat('[Job] On cooldown: '+( rem>3600?Math.ceil(rem/3600)+'h':rem>60?Math.ceil(rem/60)+'m':rem+'s')+' left (3h shift)');}
   if(S.energy<ENERGY_LOW_THRESHOLD)return logChat('[Job] Need '+ENERGY_LOW_THRESHOLD+' energy to work an 8-hour shift.');
   S.energy=clamp(S.energy-ENERGY_LOW_THRESHOLD,0,S.energyMax);
   workCDs[id]=now;
-  S.coins+=sk.wMin; // 2 USD per 8h shift
+  S.coins+=sk.wMin; // 2 USD per 3h shift
   updateHUD();renderBuildingPanel();
-  logChat('[Job] 💰 Completed 8h shift as '+sk.job+': +$'+sk.wMin+' USD!',false,'#fbbf24');
-  onChainTx('WORK:'+sk.job+':$'+sk.wMin+'USD',0.00001);
+  logChat('[Job] 💰 Completed 3h shift as '+sk.job+': +$'+sk.wMin+' USD!',false,'#fbbf24');
+  treasurySalary(sk.job,sk.wMin);
   saveProgress();
 }
 window.workJob=workJob;
@@ -545,7 +644,9 @@ function buyFood(bld,id,cost,energy,inv){
   S.coins-=cost;
   if(inv){S.inv[inv]=(S.inv[inv]||0)+1;logChat('['+bld+'] Got item (+1 inventory).',false,'#a3e635');}
   else{S.energy=clamp(S.energy+energy,0,S.energyMax);logChat('['+bld+'] +'+energy+' energy.',false,'#34d399');}
+  onChainTx('BUY:'+bld+':'+id+':$'+cost+'USD',0.00001);
   updateHUD();renderBuildingPanel();
+  saveProgress();
 }
 window.buyFood=buyFood;
 
@@ -575,6 +676,7 @@ window.sleepAtHome=sleepAtHome;
 function upgradeHouse(){
   const c=25*S.house;if(S.coins<c)return logChat('[Home] Need $'+c+' USD.');
   S.coins-=c;S.house++;S.energyMax+=5;S.energy=clamp(S.energy+5,0,S.energyMax);
+  onChainTx('HOME:UPGRADE:Lv'+S.house+':$'+c+'USD',0.00001);
   updateHUD();renderBuildingPanel();logChat('[Home] 🏠 Upgraded to Lv '+S.house+'! +5 max energy.',false,'#fbbf24');
   saveProgress();
 }
@@ -583,8 +685,11 @@ window.upgradeHouse=upgradeHouse;
 function gymTrain(){
   if(S.coins<12)return logChat('[Gym] Need 12 coins.');
   if(!reqEnergy(20,'[Gym] Need 20 energy.'))return;
-  S.coins-=12;S.energyMax+=5;updateHUD();renderBuildingPanel();
+  S.coins-=12;S.energyMax+=5;
+  onChainTx('GYM:TRAIN:$12USD',0.00001);
+  updateHUD();renderBuildingPanel();
   logChat('[Gym] 💪 Trained! +5 max energy.',false,'#f87171');
+  saveProgress();
 }
 window.gymTrain=gymTrain;
 
@@ -593,8 +698,10 @@ function heal(level){
   if(S.coins<c)return logChat('[Hospital] Need '+c+' coins.');
   S.coins-=c;S.energy=S.energyMax;
   if(level==='premium')S.energyMax+=5;
+  onChainTx('HOSPITAL:'+level+':$'+c+'USD',0.00001);
   updateHUD();renderBuildingPanel();
   logChat('[Hospital] '+( level==='premium'?'⚕️ Premium':'💊 Basic')+' care done. Full energy!',false,'#34d399');
+  saveProgress();
 }
 window.heal=heal;
 
@@ -1358,8 +1465,8 @@ const phaserCfg={
         if(!blocked(cx,cy,cityTiles)){this.me.x=cx;this.me.y=cy;}
         else{if(!blocked(cx,this.me.y,cityTiles))this.me.x=cx;if(!blocked(this.me.x,cy,cityTiles))this.me.y=cy;}
       }else{this.me.x=clamp(nx,20,IW*TILE-20);this.me.y=clamp(ny,20,IH*TILE-20);}
-      /* Passive energy drain: depletes over 8 game-hours (≈48 real seconds at CLK.speed=10)
-         Rate: 100/48 ≈ 2.1 per real second. Sprint adds extra drain. */
+      /* Passive energy drain: depletes over 1 real hour (3600 real seconds).
+         Rate: 100/3600 ≈ 0.028 per real second. Sprint adds extra drain. */
       const drainRate=spr&&mv?ENERGY_DRAIN_SPRINT:ENERGY_DRAIN_PASSIVE;
       S.energy=clamp(S.energy-drainRate*dtS,0,S.energyMax);
       if(Phaser.Input.Keyboard.JustDown(this.keys.E)){
@@ -1384,6 +1491,7 @@ const phaserCfg={
 const game=new Phaser.Game(phaserCfg);
 window.addEventListener('resize',()=>{game.scale.resize(Math.max(400,window.innerWidth-320),Math.max(300,window.innerHeight));});
 updateHUD();
+renderTxHistory();
 })();
 </script>
 </body>
