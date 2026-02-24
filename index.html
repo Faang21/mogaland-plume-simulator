@@ -6061,6 +6061,7 @@
                         closeTime: new Date().toLocaleTimeString()
                       });
                       showNotification(`🏆 Match result: ${selectedAsset.symbol} - You won $${profit.toFixed(2)} from treasury!`, false);
+                      recordTransaction(null, 'Sports Bet', `${selectedAsset.symbol} WIN - Treasury paid $${profit.toFixed(2)} USDC profit`, {amount: profit, token: 'USDC', from: TREASURY_WALLET_ADDRESS, to: userAddress});
                     }
                   } else {
                     // Loss - money stays in treasury
@@ -6073,6 +6074,7 @@
                       closeTime: new Date().toLocaleTimeString()
                     });
                     showNotification(`🏆 Match result: ${selectedAsset.symbol} - You lost $${amount.toFixed(2)} to treasury`, true);
+                    recordTransaction(null, 'Sports Bet', `${selectedAsset.symbol} LOSS - $${amount.toFixed(2)} USDC kept by treasury`, {amount: amount, token: 'USDC', from: userAddress, to: TREASURY_WALLET_ADDRESS});
                   }
                   
                   // Track trading volume for leaderboard (closing bet)
@@ -6194,7 +6196,7 @@
               // Profit: Return position + profit from treasury
               const totalPayout = position.amount + pnl;
               if (transferFromTreasury(totalPayout)) {
-                recordTransaction(tx.hash, 'Market', `Closed ${position.type.toUpperCase()} ${position.asset} with profit $${pnl.toFixed(2)}`, {amount: pnl, token: 'USDC', to: userAddress});
+                recordTransaction(tx.hash, 'Market', `Closed ${position.type.toUpperCase()} ${position.asset} with profit $${pnl.toFixed(2)}`, {amount: pnl, token: 'USDC', from: TREASURY_WALLET_ADDRESS, to: userAddress});
                 showNotification(
                   `✅ Position closed with profit: $${pnl.toFixed(2)}<br>TX: <a href="${getActiveNetwork().explorer}/tx/${tx.hash}" target="_blank" style="color:#60a5fa;">${tx.hash.slice(0, 10)}...</a>`,
                   false
@@ -7796,7 +7798,7 @@
           `<br>Gas: ${GAS_FEE_ETH} ${getNetworkCurrency()}`,
           false
         );
-        recordTransaction(null, 'NFT Claim', `Claimed ${totalRewards.toFixed(4)} USDC total rewards (${breakdown.join(', ')})`, {amount: totalRewards, token: 'USDC'});
+        recordTransaction(null, 'NFT Claim', `Claimed ${totalRewards.toFixed(4)} USDC total rewards (${breakdown.join(', ')})`, {amount: totalRewards, token: 'USDC', from: TREASURY_WALLET_ADDRESS, to: userAddress});
         console.log(`[Rewards] Total claimed: ${totalRewards.toFixed(4)} USDC (${breakdown.join(', ')})`);
       }
     }
@@ -7829,7 +7831,7 @@
         
         showSection('nft');
         showNotification(`✅ Redeemed points for ${usdcAmount.toFixed(2)} USDC | Gas: ${GAS_FEE_ETH} ${getNetworkCurrency()}`);
-        recordTransaction(null, 'Redeem', `Redeemed points for ${usdcAmount.toFixed(2)} USDC`, {amount: usdcAmount, token: 'USDC'});
+        recordTransaction(null, 'Redeem', `Redeemed points for ${usdcAmount.toFixed(2)} USDC`, {amount: usdcAmount, token: 'USDC', from: TREASURY_WALLET_ADDRESS, to: userAddress});
         console.log(`[NFT] Redeemed points for ${usdcAmount.toFixed(2)} USDC`);
       }
     }
