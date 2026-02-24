@@ -2315,6 +2315,7 @@
         // Save wallet connection for auto-reconnect
         saveWalletConnection(walletType, userAddress);
         if (typeof loadTxHistory === 'function') loadTxHistory();
+        recordTransaction(null, 'Wallet Connect', `Connected via ${walletType} (${userAddress.slice(0,8)}...)`, {});
         
         // Setup wallet event listeners
         setupWalletEventListeners();
@@ -3016,7 +3017,9 @@
         const typeIcons = {
           'Swap': '🔄', 'Bridge': '🌉', 'NFT Stake': '🏦', 'NFT Unstake': '↩️', 'NFT Claim': '🎁',
           'Learning': '🎓', 'Market': '📈', 'Sports Bet': '🏆', 'Send': '↑', 'Gas Fee': '⛽',
-          'Treasury': '🏛️', 'NFT Mint': '🎨', 'Stake': '🔒', 'Unstake': '🔓', 'Redeem': '💱', 'Default': '🔗'
+          'Treasury': '🏛️', 'NFT Mint': '🎨', 'Stake': '🔒', 'Unstake': '🔓', 'Redeem': '💱',
+          'Wallet Connect': '🔗', 'Wallet Disconnect': '⛔', 'Login': '🔑',
+          'Social Connect': '🤝', 'Social Disconnect': '👋', 'Game': '🎮', 'Default': '🔗'
         };
 
         // Build a map of hash → tx entry for safe lookup (hash is unique per blockchain)
@@ -3041,7 +3044,7 @@
             const date = new Date(tx.timestamp).toLocaleDateString('en-US', {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'});
             const netBadgeColor = tx.networkId === 'sepolia' ? '#3b82f6' : tx.networkId === 'educhain' ? '#a78bfa' : '#34d399';
             // Use hex TX hash (sanitised: only hex chars) as the safe data attribute for lookup
-            const safeHash = tx.hash ? tx.hash.replace(/[^0-9a-fA-Fx]/g, '') : '';
+            const safeHash = tx.hash ? tx.hash.replace(/[^0-9a-zA-Z_]/g, '') : '';
             html += `
               <div class="activity-item tx-row"
                    data-tx-hash="${safeHash}"
@@ -3056,7 +3059,7 @@
                 </div>
                 <div style="text-align:right;flex-shrink:0;">
                   <div style="font-size:0.8em;color:#94a3b8;">${date}</div>
-                  <div style="font-size:0.75em;color:#60a5fa;font-family:monospace;">${tx.hash ? tx.hash.slice(0,8)+'...' : ''}</div>
+                  <div style="font-size:0.75em;color:#60a5fa;font-family:monospace;">${tx.hash && !tx.hash.startsWith('local_') ? tx.hash.slice(0,8)+'...' : ''}</div>
                 </div>
               </div>`;
           });
@@ -3106,8 +3109,8 @@
             <div style="display:flex;justify-content:space-between;padding:10px;background:#0f172a;border-radius:8px;gap:8px;">
               <span style="color:#94a3b8;flex-shrink:0;">TX Hash</span>
               <div style="display:flex;align-items:center;gap:6px;min-width:0;">
-                <span style="font-family:monospace;color:#60a5fa;font-size:0.85em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${tx.hash ? tx.hash.slice(0,18)+'...' : 'N/A'}</span>
-                ${tx.hash ? `<button id="txCopyHashBtn" data-copy-hash style="background:none;border:1px solid #334155;color:#94a3b8;padding:2px 6px;border-radius:4px;cursor:pointer;font-size:0.75em;flex-shrink:0;">Copy</button>` : ''}
+                <span style="font-family:monospace;color:#60a5fa;font-size:0.85em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${tx.hash && !tx.hash.startsWith('local_') ? tx.hash.slice(0,18)+'...' : 'Local Activity'}</span>
+                ${tx.hash && !tx.hash.startsWith('local_') ? `<button id="txCopyHashBtn" data-copy-hash style="background:none;border:1px solid #334155;color:#94a3b8;padding:2px 6px;border-radius:4px;cursor:pointer;font-size:0.75em;flex-shrink:0;">Copy</button>` : ''}
               </div>
             </div>
             <div style="display:flex;justify-content:space-between;padding:10px;background:#0f172a;border-radius:8px;">
@@ -3136,7 +3139,7 @@
             </div>
           </div>
           
-          ${tx.hash ? `<a href="${explorerTxUrl}" target="_blank" rel="noopener noreferrer"
+          ${tx.hash && !tx.hash.startsWith('local_') ? `<a href="${explorerTxUrl}" target="_blank" rel="noopener noreferrer"
              style="display:block;margin-top:16px;padding:12px;background:linear-gradient(135deg,#3b82f6,#2563eb);color:white;text-align:center;border-radius:10px;text-decoration:none;font-weight:600;font-size:0.95em;">
             🔍 View on ${tx.networkName} Explorer
           </a>` : ''}
@@ -3206,6 +3209,8 @@
     };
 
     function logoutUser() {
+      // Record disconnect before clearing address
+      if (userAddress) recordTransaction(null, 'Wallet Disconnect', `Wallet disconnected on logout (${userAddress.slice(0,8)}...)`, {});
       // Clear wallet connection and persistence
       userAddress = null;
       provider = null;
@@ -3374,6 +3379,8 @@
 
     window.disconnectWallet = function() {
       if (confirm('Are you sure you want to disconnect your wallet?')) {
+        // Record disconnect before clearing address
+        if (userAddress) recordTransaction(null, 'Wallet Disconnect', `Wallet disconnected (${userAddress.slice(0,8)}...)`, {});
         // Clear wallet connection
         userAddress = null;
         provider = null;
@@ -3913,6 +3920,7 @@
           localStorage.setItem('socialConnections', JSON.stringify(connections));
           
           showNotification(`✅ Connected to ${platformName} as @${username}`, false);
+          if (userAddress) recordTransaction(null, 'Social Connect', `Connected ${platformName} as @${username}`, {});
           loadSocialConnections();
         }
       }, 500);
@@ -3943,6 +3951,7 @@
         }
         
         showNotification(`Disconnected from ${platformNames[platform]}`, false);
+        if (userAddress) recordTransaction(null, 'Social Disconnect', `Disconnected from ${platformNames[platform]}`, {});
       }
     }
 
@@ -4093,7 +4102,7 @@
     }
 
     function recordTransaction(hash, type, description, details = {}) {
-      if (!hash) return;
+      if (!hash) hash = 'local_' + Date.now().toString(16) + Math.random().toString(16).slice(2, 8);
       const net = getActiveNetwork();
       const entry = {
         hash,
@@ -6830,8 +6839,10 @@
                 saveMogalandPoints();
                 
                 showNotification(`WIN! +${profit} MOGA`, false);
+                if (userAddress) recordTransaction(null, 'Game', `Bet WIN: +${profit} MOGA on ${currentBet.asset} ${currentBet.direction.toUpperCase()}`, {amount: profit, token: 'MOGA'});
               } else {
                 showNotification(`LOSE -${amt} MOGA`, true);
+                if (userAddress) recordTransaction(null, 'Game', `Bet LOSE: -${amt} MOGA on ${currentBet.asset} ${currentBet.direction.toUpperCase()}`, {amount: amt, token: 'MOGA'});
               }
               document.getElementById('timerDisplay').textContent = '';
             }
@@ -7421,6 +7432,7 @@
       selectedNFTs.clear();
       showSection('nft');
       showNotification(`✅ Successfully unstaked ${count} NFT(s) | Gas: ${GAS_FEE_ETH} ${getNetworkCurrency()}`);
+      recordTransaction(null, 'NFT Unstake', `Unstaked ${count} NFT(s)`, {});
       console.log(`[NFT] Unstaked ${count} NFTs with gas fee`);
     }
 
@@ -7448,6 +7460,7 @@
       
       showSection('nft');
       showNotification(`✅ Claimed ${claimed.toFixed(2)} PLUME rewards | Gas: ${GAS_FEE_ETH} ${getNetworkCurrency()}`);
+      recordTransaction(null, 'NFT Claim', `Claimed ${claimed.toFixed(2)} PLUME NFT staking rewards`, {amount: claimed, token: 'PLUME'});
       console.log(`[NFT] Claimed ${claimed.toFixed(2)} PLUME rewards with gas fee. Reset staking times for ${stakedNFTsData.length} NFTs.`);
     }
 
@@ -7715,6 +7728,7 @@
       selectedNFTs.clear();
       showSection('nft');
       showNotification(`✅ Successfully unstaked ${count} NFT(s) | Gas: ${GAS_FEE_ETH} ${getNetworkCurrency()}`);
+      recordTransaction(null, 'NFT Unstake', `Unstaked ${count} NFT(s)`, {});
       console.log(`[NFT] Unstaked ${count} NFTs with gas fee`);
     }
     window.unstakeSelectedNFTs = unstakeSelectedNFTs;
@@ -7782,6 +7796,7 @@
           `<br>Gas: ${GAS_FEE_ETH} ${getNetworkCurrency()}`,
           false
         );
+        recordTransaction(null, 'NFT Claim', `Claimed ${totalRewards.toFixed(4)} USDC total rewards (${breakdown.join(', ')})`, {amount: totalRewards, token: 'USDC'});
         console.log(`[Rewards] Total claimed: ${totalRewards.toFixed(4)} USDC (${breakdown.join(', ')})`);
       }
     }
@@ -7814,6 +7829,7 @@
         
         showSection('nft');
         showNotification(`✅ Redeemed points for ${usdcAmount.toFixed(2)} USDC | Gas: ${GAS_FEE_ETH} ${getNetworkCurrency()}`);
+        recordTransaction(null, 'Redeem', `Redeemed points for ${usdcAmount.toFixed(2)} USDC`, {amount: usdcAmount, token: 'USDC'});
         console.log(`[NFT] Redeemed points for ${usdcAmount.toFixed(2)} USDC`);
       }
     }
@@ -8270,6 +8286,7 @@
         
         // Show enhanced notification with point change
         showNotification(`✅ Correct! +100 Points | Total: ${mogalandPoints} points`, false);
+        recordTransaction(null, 'Learning', `Correct answer: +100 pts (Total: ${mogalandPoints})`, {});
         
         // Update displays immediately
         updatePointDisplay();
@@ -8303,6 +8320,7 @@
         
         // Show enhanced notification with point change
         showNotification(`❌ Wrong! -100 Points | Total: ${mogalandPoints} points. Try again!`, true);
+        recordTransaction(null, 'Learning', `Wrong answer: -100 pts (Total: ${mogalandPoints})`, {});
         
         // Update displays immediately
         updatePointDisplay();
