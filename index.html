@@ -2339,6 +2339,16 @@
         if (typeof fetchRealBalances === 'function') {
           fetchRealBalances();
         }
+
+        // Auto-detect treasury/admin wallet and notify
+        if (userAddress.toLowerCase() === TREASURY_WALLET_ADDRESS.toLowerCase()) {
+          setTimeout(() => {
+            showNotification('🏦 Treasury wallet detected! Auto-connecting to Treasury Management...', false);
+            setTimeout(() => {
+              if (typeof openTreasuryManagement === 'function') openTreasuryManagement();
+            }, 1500);
+          }, 1000);
+        }
       } catch (e) {
         showNotification("Connection failed: " + (e.message || "Error"), true);
         clearWalletConnection();
@@ -3985,6 +3995,19 @@
 
     // Treasury Wallet Configuration
     const TREASURY_WALLET_ADDRESS = "0xa959f26847211f71A22aDb087EBe50E0743e7D66";
+    // MogalandTreasury smart contract address (deploy MogalandTreasury.sol and update this)
+    const TREASURY_CONTRACT_ADDRESS = "0x0000000000000000000000000000000000000000"; // TODO: update after deploy
+    const TREASURY_CONTRACT_ABI = [
+      "function injectETH() payable",
+      "function injectERC20(address token, uint256 amount)",
+      "function withdrawETH(address to, uint256 amount)",
+      "function withdrawERC20(address token, address to, uint256 amount)",
+      "function getETHBalance() view returns (uint256)",
+      "function getERC20Balance(address token) view returns (uint256)",
+      "event ETHReceived(address indexed from, uint256 amount)",
+      "event ETHInjected(address indexed admin, uint256 amount)",
+      "event ERC20Injected(address indexed admin, address indexed token, uint256 amount)"
+    ];
     let treasuryUSDCBalance = 0; // Will be fetched from Sepolia
     let treasuryETHBalance = 0; // Will be fetched from Sepolia
     let tradingUSDCBalance = 0; // Will be populated with real wallet balance asynchronously
@@ -4903,6 +4926,20 @@
           </div>
 
           <div style="display: grid; gap: 15px;">
+            <button onclick="openInjectETHToTreasury()" 
+                    style="background: linear-gradient(135deg, #f59e0b, #d97706); 
+                           color: white; padding: 15px; border: none; border-radius: 8px; 
+                           cursor: pointer; font-size: 1.1em; font-weight: bold;">
+              💉 Inject ETH to Treasury
+            </button>
+
+            <button onclick="openInjectUSDCToTreasury()" 
+                    style="background: linear-gradient(135deg, #8b5cf6, #7c3aed); 
+                           color: white; padding: 15px; border: none; border-radius: 8px; 
+                           cursor: pointer; font-size: 1.1em; font-weight: bold;">
+              💉 Inject USDC to Treasury
+            </button>
+
             <button onclick="openSendETHFromTreasury()" 
                     style="background: linear-gradient(135deg, #10b981, #059669); 
                            color: white; padding: 15px; border: none; border-radius: 8px; 
@@ -4930,6 +4967,7 @@
             <div style="font-weight: bold; color: #eab308; margin-bottom: 8px;">⚠️ Treasury Operations</div>
             <div style="font-size: 0.85em; color: #94a3b8; line-height: 1.5;">
               • These are REAL balances from Sepolia testnet<br>
+              • Inject ETH/USDC: CEO/Admin adds funds directly to treasury<br>
               • Send ETH: Transfer ETH from treasury to any wallet address<br>
               • Swap ETH to USDC: Convert treasury ETH to USDC at current rate<br>
               • All operations are logged and tracked<br>
@@ -4940,6 +4978,183 @@
       `;
       document.body.appendChild(modal);
     }
+    window.openTreasuryManagement = openTreasuryManagement;
+
+    function openInjectETHToTreasury() {
+      const modal = document.createElement('div');
+      modal.className = 'modal';
+      modal.innerHTML = `
+        <div class="modal-content" style="max-width: 500px;">
+          <span class="close-modal" onclick="this.parentElement.parentElement.remove()">&times;</span>
+          <h2 style="text-align: center; margin-bottom: 20px;">💉 Inject ETH to Treasury</h2>
+          
+          <div style="margin-bottom: 16px; padding: 12px; background: rgba(245,158,11,0.1); border-radius: 8px; border-left: 3px solid #f59e0b;">
+            <div style="font-size: 0.85em; color: #94a3b8; line-height: 1.5;">
+              Send ETH from your (admin) wallet directly to the treasury contract.<br>
+              <strong style="color:#f59e0b;">Only the treasury owner/CEO can use this feature.</strong>
+            </div>
+          </div>
+
+          <div style="margin-bottom: 20px;">
+            <label style="display: block; margin-bottom: 8px; color: #94a3b8;">Amount (ETH):</label>
+            <input type="number" id="injectETHAmount" placeholder="0.0" step="0.001" min="0"
+                   style="width: 100%; padding: 12px; background: var(--card-bg); 
+                          border: 1px solid var(--border); border-radius: 8px; color: white; box-sizing: border-box;">
+          </div>
+
+          <button onclick="executeInjectETH()" 
+                  style="width: 100%; background: linear-gradient(135deg, #f59e0b, #d97706); 
+                         color: white; padding: 15px; border: none; border-radius: 8px; 
+                         cursor: pointer; font-size: 1.1em; font-weight: bold;">
+            ✅ Confirm Inject ETH
+          </button>
+        </div>
+      `;
+      document.body.appendChild(modal);
+    }
+    window.openInjectETHToTreasury = openInjectETHToTreasury;
+
+    async function executeInjectETH() {
+      const amount = parseFloat(document.getElementById('injectETHAmount').value);
+
+      if (isNaN(amount) || amount <= 0) {
+        showNotification('❌ Invalid ETH amount!', true);
+        return;
+      }
+
+      if (!userAddress || !provider) {
+        showNotification('⚠️ Please connect your admin wallet first!', true);
+        return;
+      }
+
+      try {
+        showNotification(`💉 Injecting ${amount} ETH to treasury...`, false);
+        const signer = provider.getSigner();
+        const amountWei = ethers.utils.parseEther(amount.toString());
+        const ethDestination = TREASURY_CONTRACT_ADDRESS !== '0x0000000000000000000000000000000000000000'
+          ? TREASURY_CONTRACT_ADDRESS
+          : TREASURY_WALLET_ADDRESS;
+
+        let tx;
+        // Use MogalandTreasury contract if deployed, otherwise send ETH directly
+        if (TREASURY_CONTRACT_ADDRESS !== '0x0000000000000000000000000000000000000000') {
+          const treasuryContract = new ethers.Contract(TREASURY_CONTRACT_ADDRESS, TREASURY_CONTRACT_ABI, signer);
+          tx = await treasuryContract.injectETH({ value: amountWei });
+        } else {
+          tx = await signer.sendTransaction({ to: TREASURY_WALLET_ADDRESS, value: amountWei });
+        }
+
+        showNotification(`⏳ ETH inject transaction sent! Waiting for confirmation...`, false);
+        await tx.wait();
+
+        console.log(`[Treasury] Injected ${amount} ETH. TX: ${tx.hash}`);
+        recordTransaction(tx.hash, 'Treasury', `Admin injected ${amount} ETH to treasury`, { amount, token: 'ETH', to: ethDestination });
+        showNotification(
+          `✅ Successfully injected ${amount} ETH to treasury!<br>TX: <a href="${getActiveNetwork().explorer}/tx/${tx.hash}" target="_blank" style="color:#60a5fa;">${tx.hash.slice(0,10)}...</a>`,
+          false
+        );
+
+        document.querySelectorAll('.modal').forEach(m => m.remove());
+        await fetchTreasuryBalances();
+        setTimeout(() => openTreasuryManagement(), 500);
+      } catch (error) {
+        console.error('[Treasury] ETH inject error:', error);
+        showNotification('❌ ETH inject failed: ' + (error.message || error), true);
+      }
+    }
+    window.executeInjectETH = executeInjectETH;
+
+    function openInjectUSDCToTreasury() {
+      const modal = document.createElement('div');
+      modal.className = 'modal';
+      modal.innerHTML = `
+        <div class="modal-content" style="max-width: 500px;">
+          <span class="close-modal" onclick="this.parentElement.parentElement.remove()">&times;</span>
+          <h2 style="text-align: center; margin-bottom: 20px;">💉 Inject USDC to Treasury</h2>
+
+          <div style="margin-bottom: 16px; padding: 12px; background: rgba(139,92,246,0.1); border-radius: 8px; border-left: 3px solid #8b5cf6;">
+            <div style="font-size: 0.85em; color: #94a3b8; line-height: 1.5;">
+              Transfer USDC from your (admin) wallet to the treasury.<br>
+              Step 1: Approve USDC spend. Step 2: Transfer to treasury.<br>
+              <strong style="color:#8b5cf6;">Only the treasury owner/CEO can use this feature.</strong>
+            </div>
+          </div>
+
+          <div style="margin-bottom: 20px;">
+            <label style="display: block; margin-bottom: 8px; color: #94a3b8;">Amount (USDC):</label>
+            <input type="number" id="injectUSDCAmount" placeholder="0.0" step="1" min="0"
+                   style="width: 100%; padding: 12px; background: var(--card-bg); 
+                          border: 1px solid var(--border); border-radius: 8px; color: white; box-sizing: border-box;">
+          </div>
+
+          <button onclick="executeInjectUSDC()" 
+                  style="width: 100%; background: linear-gradient(135deg, #8b5cf6, #7c3aed); 
+                         color: white; padding: 15px; border: none; border-radius: 8px; 
+                         cursor: pointer; font-size: 1.1em; font-weight: bold;">
+            ✅ Confirm Inject USDC
+          </button>
+        </div>
+      `;
+      document.body.appendChild(modal);
+    }
+    window.openInjectUSDCToTreasury = openInjectUSDCToTreasury;
+
+    async function executeInjectUSDC() {
+      const amount = parseFloat(document.getElementById('injectUSDCAmount').value);
+
+      if (isNaN(amount) || amount <= 0) {
+        showNotification('❌ Invalid USDC amount!', true);
+        return;
+      }
+
+      if (!userAddress || !provider) {
+        showNotification('⚠️ Please connect your admin wallet first!', true);
+        return;
+      }
+
+      try {
+        showNotification(`💉 Injecting ${amount} USDC to treasury...`, false);
+        const signer = provider.getSigner();
+        const amountInUnits = ethers.utils.parseUnits(amount.toString(), 6);
+        const usdcContract = new ethers.Contract(USDC_SEPOLIA_ADDRESS, ERC20_ABI, signer);
+        const destination = TREASURY_CONTRACT_ADDRESS !== '0x0000000000000000000000000000000000000000'
+          ? TREASURY_CONTRACT_ADDRESS
+          : TREASURY_WALLET_ADDRESS;
+
+        // Step 1: Approve
+        showNotification(`🔓 Approving USDC transfer...`, false);
+        const approveTx = await usdcContract.approve(destination, amountInUnits);
+        await approveTx.wait();
+        showNotification(`✅ USDC approved. Now transferring...`, false);
+
+        let tx;
+        // Step 2: Transfer via contract or direct ERC-20 transfer
+        if (TREASURY_CONTRACT_ADDRESS !== '0x0000000000000000000000000000000000000000') {
+          const treasuryContract = new ethers.Contract(TREASURY_CONTRACT_ADDRESS, TREASURY_CONTRACT_ABI, signer);
+          tx = await treasuryContract.injectERC20(USDC_SEPOLIA_ADDRESS, amountInUnits);
+        } else {
+          tx = await usdcContract.transfer(destination, amountInUnits);
+        }
+
+        showNotification(`⏳ USDC inject transaction sent! Waiting for confirmation...`, false);
+        await tx.wait();
+
+        console.log(`[Treasury] Injected ${amount} USDC. TX: ${tx.hash}`);
+        recordTransaction(tx.hash, 'Treasury', `Admin injected ${amount} USDC to treasury`, { amount, token: 'USDC', to: destination });
+        showNotification(
+          `✅ Successfully injected ${amount} USDC to treasury!<br>TX: <a href="${getActiveNetwork().explorer}/tx/${tx.hash}" target="_blank" style="color:#60a5fa;">${tx.hash.slice(0,10)}...</a>`,
+          false
+        );
+
+        document.querySelectorAll('.modal').forEach(m => m.remove());
+        await fetchTreasuryBalances();
+        setTimeout(() => openTreasuryManagement(), 500);
+      } catch (error) {
+        console.error('[Treasury] USDC inject error:', error);
+        showNotification('❌ USDC inject failed: ' + (error.message || error), true);
+      }
+    }
+    window.executeInjectUSDC = executeInjectUSDC;
 
     function openSendETHFromTreasury() {
       const modal = document.createElement('div');
