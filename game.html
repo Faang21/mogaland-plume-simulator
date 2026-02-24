@@ -126,6 +126,7 @@ kbd{padding:1px 4px;border-radius:4px;border:1px solid rgba(255,255,255,.22);bac
       <div class="zz">😴</div>
       <div class="stxt">Sleeping... zZz</div>
       <div class="spct" id="sleepPct">Energy: 0%</div>
+      <div id="sleepLockCd" style="font-size:11px;color:#f87171;margin-top:8px;"></div>
     </div>
     <!-- Virtual D-pad for mobile -->
     <div id="dpad">
@@ -288,6 +289,7 @@ kbd{padding:1px 4px;border-radius:4px;border:1px solid rgba(255,255,255,.22);bac
         <button onclick="msgrSendCrypto()" class="ibtn btn-green" style="font-size:11px;">💸 Send Crypto</button>
         <button onclick="msgrSendNFT()" class="ibtn btn-yellow" style="font-size:11px;">🎨 Send NFT</button>
         <button onclick="msgrSendImage()" class="ibtn btn-blue" style="font-size:11px;">📷 Image</button>
+        <button onclick="msgrShareContact()" class="ibtn" style="font-size:11px;background:rgba(20,184,166,.2);border-color:rgba(20,184,166,.4);">👤 Contact</button>
         <button onclick="msgrOfferHouse()" class="ibtn btn-purple" style="font-size:11px;">🏠 Offer House</button>
         <button onclick="msgrOfferSkill()" class="ibtn btn-indigo" style="font-size:11px;">🎓 Offer Skill</button>
       </div>
@@ -524,11 +526,18 @@ const ONLINE_PLAYERS_MIN=65;      // minimum simulated players online
 const ONLINE_PLAYERS_MAX=84;      // starting maximum (hard cap is 100 slots)
 const PM_LIST_MAX=8;              // players shown in the private-chat panel
 const SKILLS=[
-  {id:'basic',   name:'Basic Labor',   icon:'🔨',cost:SKILL_COST_USD,time:SKILL_LEARN_MS,teacher:'Ms. Ana',    job:'Laborer',  wMin:WORK_PAY_USD,wMax:WORK_PAY_USD,cd:WORK_CD_MS},
-  {id:'prog',    name:'Programming',   icon:'💻',cost:SKILL_COST_USD,time:SKILL_LEARN_MS,teacher:'Mr. Budi',   job:'Developer',wMin:WORK_PAY_USD,wMax:WORK_PAY_USD,cd:WORK_CD_MS},
-  {id:'biz',     name:'Business Mgmt', icon:'📊',cost:SKILL_COST_USD,time:SKILL_LEARN_MS,teacher:'Mr. Candra', job:'Manager',  wMin:WORK_PAY_USD,wMax:WORK_PAY_USD,cd:WORK_CD_MS},
-  {id:'med',     name:'Medicine',      icon:'🏥',cost:SKILL_COST_USD,time:SKILL_LEARN_MS,teacher:'Dr. Dewi',   job:'Doctor',   wMin:WORK_PAY_USD,wMax:WORK_PAY_USD,cd:WORK_CD_MS},
-  {id:'eng',     name:'Engineering',   icon:'⚙️',cost:SKILL_COST_USD,time:SKILL_LEARN_MS,teacher:'Mr. Eko',    job:'Engineer', wMin:WORK_PAY_USD,wMax:WORK_PAY_USD,cd:WORK_CD_MS},
+  {id:'basic',   name:'Basic Labor',   icon:'🔨',cost:SKILL_COST_USD,time:SKILL_LEARN_MS,teacher:'Ms. Ana',    job:'Laborer',    wMin:WORK_PAY_USD,wMax:WORK_PAY_USD,cd:WORK_CD_MS,workBuilding:'Job Center'},
+  {id:'prog',    name:'Programming',   icon:'💻',cost:SKILL_COST_USD,time:SKILL_LEARN_MS,teacher:'Mr. Budi',   job:'Developer',  wMin:WORK_PAY_USD,wMax:WORK_PAY_USD,cd:WORK_CD_MS,workBuilding:'Office'},
+  {id:'biz',     name:'Business Mgmt', icon:'📊',cost:SKILL_COST_USD,time:SKILL_LEARN_MS,teacher:'Mr. Candra', job:'Manager',    wMin:WORK_PAY_USD,wMax:WORK_PAY_USD,cd:WORK_CD_MS,workBuilding:'Office'},
+  {id:'med',     name:'Medicine',      icon:'🏥',cost:SKILL_COST_USD,time:SKILL_LEARN_MS,teacher:'Dr. Dewi',   job:'Doctor',     wMin:WORK_PAY_USD,wMax:WORK_PAY_USD,cd:WORK_CD_MS,workBuilding:'Hospital'},
+  {id:'eng',     name:'Engineering',   icon:'⚙️',cost:SKILL_COST_USD,time:SKILL_LEARN_MS,teacher:'Mr. Eko',    job:'Engineer',   wMin:WORK_PAY_USD,wMax:WORK_PAY_USD,cd:WORK_CD_MS,workBuilding:'Office'},
+  {id:'farm',    name:'Farming',       icon:'🌾',cost:SKILL_COST_USD,time:SKILL_LEARN_MS,teacher:'Mr. Tani',   job:'Farmer',     wMin:WORK_PAY_USD,wMax:WORK_PAY_USD,cd:WORK_CD_MS,workBuilding:'Market'},
+  {id:'chef',    name:'Culinary Arts', icon:'👨‍🍳',cost:SKILL_COST_USD,time:SKILL_LEARN_MS,teacher:'Chef Rina',  job:'Chef',       wMin:WORK_PAY_USD,wMax:WORK_PAY_USD,cd:WORK_CD_MS,workBuilding:'Cafe'},
+  {id:'teach',   name:'Education',     icon:'📚',cost:SKILL_COST_USD,time:SKILL_LEARN_MS,teacher:'Prof. Sari', job:'Teacher',    wMin:WORK_PAY_USD,wMax:WORK_PAY_USD,cd:WORK_CD_MS,workBuilding:'School'},
+  {id:'sec',     name:'Security',      icon:'🚔',cost:SKILL_COST_USD,time:SKILL_LEARN_MS,teacher:'Cap. Bowo',  job:'Security',   wMin:WORK_PAY_USD,wMax:WORK_PAY_USD,cd:WORK_CD_MS,workBuilding:'Town Hall'},
+  {id:'trade',   name:'Trading',       icon:'📈',cost:SKILL_COST_USD,time:SKILL_LEARN_MS,teacher:'Mrs. Hana',  job:'Trader',     wMin:WORK_PAY_USD,wMax:WORK_PAY_USD,cd:WORK_CD_MS,workBuilding:'Bank'},
+  {id:'report',  name:'Journalism',    icon:'📰',cost:SKILL_COST_USD,time:SKILL_LEARN_MS,teacher:'Ed. Reza',   job:'Reporter',   wMin:WORK_PAY_USD,wMax:WORK_PAY_USD,cd:WORK_CD_MS,workBuilding:'Library'},
+  {id:'fire',    name:'Firefighting',  icon:'🚒',cost:SKILL_COST_USD,time:SKILL_LEARN_MS,teacher:'Chief Agus', job:'Firefighter',wMin:WORK_PAY_USD,wMax:WORK_PAY_USD,cd:WORK_CD_MS,workBuilding:'Town Hall'},
 ];
 
 /* ── Per-user house color ── */
@@ -602,6 +611,7 @@ const SEED_COST=3;               // seeds ×10 per purchase ($3 USD)
 const SEED_GROW_MS=86400000;     // 24 real hours from watering to harvest (1 day)
 const HOTEL_RENT_COST=1;         // $1 USD per day hotel room
 const HOTEL_RENT_MS=86400000;    // 24 real hours hotel room validity
+const SLEEP_LOCK_MS=28800000;    // 8 real hours sleep lock (cannot leave home/hotel while resting)
 const FISH_ENERGY=25;            // energy restored by eating fish
 const FRUIT_ENERGY=35;           // energy restored by eating fruit
 const FISH_SELL_PRICE=0.5;       // coins per fish sold ($0.5 USD, all types)
@@ -645,6 +655,7 @@ const S={
   fishValueSum:0, // total accumulated sell value of fish in inventory
   lastFishType:null, // {name, price} of last caught fish
   hotelRentedUntil:0, // timestamp when hotel room rental expires
+  sleepLockUntil:0,   // timestamp when sleep lock expires (cannot leave for 8h after sleeping)
 };
 
 /* ── World state ── */
@@ -749,10 +760,10 @@ function renderHome(){
 <div style="font-size:11px;color:#94a3b8;margin:5px 0;">Energy: ${Math.round(S.energy)}/${S.energyMax} · Lv ${S.house} · NFT Value ≈ $${suggestedPrice} USD</div>
 <div style="border:1px solid rgba(99,102,241,.35);border-radius:8px;padding:9px;margin:5px 0;background:rgba(99,102,241,.06);">
   <div style="font-size:12px;font-weight:bold;margin-bottom:6px;">🛏️ Bedroom — Click the Bed to Sleep</div>
-  <button onclick="sleepAtHome()" ${S.sleeping||S.energy>=S.energyMax?'disabled':''} style="width:100%;padding:8px;border-radius:7px;border:none;background:linear-gradient(90deg,#1d4ed8,#3b82f6);color:white;font-size:12px;cursor:pointer;">
-    ${S.sleeping?'😴 Sleeping… (8-hour rest)':S.energy>=S.energyMax?'✅ Fully Rested':'😴 Sleep in Bed (Restore Full Energy)'}
+  <button onclick="sleepAtHome()" ${S.sleeping||S.energy>=S.energyMax||S.sleepLockUntil>Date.now()?'disabled':''} style="width:100%;padding:8px;border-radius:7px;border:none;background:linear-gradient(90deg,#1d4ed8,#3b82f6);color:white;font-size:12px;cursor:pointer;">
+    ${S.sleeping?'😴 Sleeping… (8-hour rest)':S.sleepLockUntil>Date.now()?'🔒 Rest cooldown active':S.energy>=S.energyMax?'✅ Fully Rested':'😴 Sleep in Bed (Restore Full Energy)'}
   </button>
-  <div style="font-size:10px;color:#64748b;margin-top:4px;">Sleep for 8 game-hours to fully restore energy</div>
+  ${S.sleepLockUntil>Date.now()?`<div style="font-size:10px;color:#f87171;margin-top:4px;">🔒 Cannot leave for ${fmtCountdown(S.sleepLockUntil-Date.now())}</div>`:'<div style="font-size:10px;color:#64748b;margin-top:4px;">Sleep for 8 hours to fully restore energy · cannot leave while resting</div>'}
 </div>
 <div style="border-top:1px solid rgba(255,255,255,.1);margin-top:9px;padding-top:9px;">
   <div style="font-size:11px;color:#64748b;">House Lv ${S.house} · Upgrade: +5 max energy</div>
@@ -907,9 +918,10 @@ function renderHotel(){
   <div style="font-size:12px;color:#22c55e;font-weight:bold;">✅ Room Active</div>
   <div style="font-size:10px;color:#94a3b8;margin-top:3px;">⏳ Expires in: ${fmtCountdown(remaining)}</div>
 </div>
-<button onclick="sleepAtHotel()" ${S.sleeping||S.energy>=S.energyMax?'disabled':''} style="width:100%;padding:9px;border-radius:8px;border:none;background:linear-gradient(90deg,#1d4ed8,#3b82f6);color:#fff;font-size:12px;cursor:pointer;margin-bottom:6px;">
-  ${S.sleeping?'😴 Sleeping… zZz':S.energy>=S.energyMax?'✅ Fully Rested':'😴 Sleep in Hotel Room (Restore Energy)'}
-</button>`;
+<button onclick="sleepAtHotel()" ${S.sleeping||S.energy>=S.energyMax||S.sleepLockUntil>now?'disabled':''} style="width:100%;padding:9px;border-radius:8px;border:none;background:linear-gradient(90deg,#1d4ed8,#3b82f6);color:#fff;font-size:12px;cursor:pointer;margin-bottom:6px;">
+  ${S.sleeping?'😴 Sleeping… zZz':S.sleepLockUntil>now?'🔒 Resting ('+fmtCountdown(S.sleepLockUntil-now)+')':S.energy>=S.energyMax?'✅ Fully Rested':'😴 Sleep in Hotel Room (Restore Full Energy)'}
+</button>
+${S.sleepLockUntil>now?`<div style="font-size:10px;color:#f87171;margin-bottom:6px;">🔒 Cannot leave for ${fmtCountdown(S.sleepLockUntil-now)}</div>`:''}`;
   }else{
     h+=`<div style="background:rgba(99,102,241,.07);border:1px solid rgba(99,102,241,.28);border-radius:8px;padding:10px;margin:6px 0;">
   <div style="font-size:13px;font-weight:bold;margin-bottom:5px;">🛏️ Rent a Room</div>
@@ -1052,16 +1064,25 @@ window.useItem=useItem;
 
 /* ── Shared sleep engine ── */
 function _doSleep(wakeMsg){
-  S.sleeping=true;updateHUD();renderBuildingPanel();
+  S.sleeping=true;
+  S.sleepLockUntil=Date.now()+SLEEP_LOCK_MS; // 8-hour lock — cannot leave while resting
+  updateHUD();renderBuildingPanel();
   const ov=document.getElementById('sleepOv');ov.style.display='flex';
   const target=S.energyMax,steps=20,gain=(target-S.energy)/steps;
   let i=0;
+  // Update sleep overlay countdown every second
+  const cdInt=setInterval(()=>{
+    const rem=S.sleepLockUntil-Date.now();
+    if(rem>0){const h=Math.floor(rem/3600000),m=Math.floor((rem%3600000)/60000),s=Math.floor((rem%60000)/1000);
+      document.getElementById('sleepLockCd').textContent='🔒 Cannot leave for: '+(h>0?h+'h ':'')+m+'m '+s+'s';}
+    else{clearInterval(cdInt);const el=document.getElementById('sleepLockCd');if(el)el.textContent='';}
+  },1000);
   const t=setInterval(()=>{
     i++;S.energy=clamp(S.energy+gain,0,S.energyMax);
     document.getElementById('sleepPct').textContent='Energy: '+Math.round((S.energy/S.energyMax)*100)+'% (restoring…)';
     if(i>=steps){
       clearInterval(t);S.energy=S.energyMax;S.sleeping=false;
-      ov.style.display='none';updateHUD();renderBuildingPanel();
+      ov.style.display='none';clearInterval(cdInt);updateHUD();renderBuildingPanel();
       logChat(wakeMsg,false,'#fbbf24');saveProgress();
     }
   },500);
@@ -1073,7 +1094,9 @@ function sleepAtHome(){
     logChat('[🏠 Home] You don\'t own a house! Buy one on the NFT market or 🏨 rent a Hotel room ($1 USD/day).',false,'#f87171');
     return;
   }
-  if(S.sleeping||S.energy>=S.energyMax)return;
+  if(S.sleeping||S.energy>=S.energyMax||S.sleepLockUntil>Date.now())return;
+  // Record home sleep on-chain (free — house NFT owner perk)
+  onChainTx('HOME:SLEEP:FULL_ENERGY:FREE',0.00001);
   _doSleep('[Home] 🌅 Woke up refreshed! Full energy restored.');
 }
 window.sleepAtHome=sleepAtHome;
@@ -1091,12 +1114,14 @@ function rentHotelRoom(){
 window.rentHotelRoom=rentHotelRoom;
 
 function sleepAtHotel(){
-  if(S.sleeping||S.energy>=S.energyMax)return;
+  if(S.sleeping||S.energy>=S.energyMax||S.sleepLockUntil>Date.now())return;
   if(!S.hotelRentedUntil||Date.now()>S.hotelRentedUntil){
     logChat('[Hotel] 🏨 Rent a room first ($'+HOTEL_RENT_COST+' USD/day).',false,'#f87171');
     renderBuildingPanel();return;
   }
-  _doSleep('[Hotel] 🌅 Woke up refreshed in your hotel room!');
+  // $1 USD hotel room includes full energy restore — send on-chain proof of rest
+  onChainTx('HOTEL:SLEEP:FULL_ENERGY:$'+HOTEL_RENT_COST+'USD',0.00001);
+  _doSleep('[Hotel] 🌅 Woke up refreshed in your hotel room! Full energy restored.');
 }
 window.sleepAtHotel=sleepAtHotel;
 
@@ -1149,7 +1174,7 @@ const PPOOL=(()=>{
     return{id:i,name:n,addr:'0x'+n.toLowerCase().slice(0,8)+'…',strat:st,cashTarget:ct};
   });
 })();
-const CHAT_POOL=['won big at Casino! 🎰','just graduated 🎓','sending USDC to a friend 💸','Developer wages are 🔥','who beat 10x? 🚀','sleeping at Home restores everything 😴','Cafe coffee hits different ☕','bought Protein Shake at Gym 💪','Doctor job = best salary','the on-chain confirmation is satisfying','upgraded house to Lv3 🏠','Market is always stocked 🛒','Hospital saved me ⚕️','School skill costs $30 USD — worth it!','Bank USDC send worked perfectly','anyone near Library? 📚','GG on the multiplier round','Engineering skill unlocked big wages ⚙️','this game goes hard on-chain 🔗','just refilled energy at vending machine 🥤','earned $2 USD from my 8-hour work shift 💼','energy drained fast today, time to eat! 🍔','cat bots are walking everywhere 🐱'];
+const CHAT_POOL=['won big at Casino! 🎰','just graduated 🎓','sending USDC to a friend 💸','Developer wages are 🔥','who beat 10x? 🚀','sleeping at Home restores everything 😴','Cafe coffee hits different ☕','bought Protein Shake at Gym 💪','Doctor job = best salary','the on-chain confirmation is satisfying','upgraded house to Lv3 🏠','Market is always stocked 🛒','Hospital saved me ⚕️','School skill costs $30 USD — worth it!','Bank USDC send worked perfectly','anyone near Library? 📚','GG on the multiplier round','Engineering skill unlocked big wages ⚙️','this game goes hard on-chain 🔗','just refilled energy at vending machine 🥤','earned $2 USD from my 8-hour work shift 💼','energy drained fast today, time to eat! 🍔','cat bots are walking everywhere 🐱','Chef job at Cafe = best life 👨‍🍳','Farmer harvested big today 🌾','Teacher salary just hit on-chain 📚','Security patrol done, $2 USD earned 🚔','Trader just closed a 3h shift at Bank 📈','Reporter broke a story at Library 📰','Firefighter training done 🚒','check the map — my house is the gold dot 🏠','Hotel room is just $1 USD — sleep & earn 🏨','contact share is so useful in Messenger 👤'];
 let onlineIds=new Set();
 
 function updateOnlineCount(){
@@ -1790,6 +1815,11 @@ function enterBuilding(scene,bk){
   if(bk==='Bank')setTimeout(refreshUSDCBalance,500);
 }
 function exitCity(scene){
+  if(S.sleepLockUntil>Date.now()){
+    const rem=S.sleepLockUntil-Date.now();
+    const h=Math.floor(rem/3600000),m=Math.floor((rem%3600000)/60000),s=Math.floor((rem%60000)/1000);
+    return logChat('[⚠️] Still resting! '+(h>0?h+'h ':'')+m+'m '+s+'s remaining. Cannot leave while sleeping.',false,'#f87171');
+  }
   if(S.learningEndTime>Date.now()){
     const rem=S.learningEndTime-Date.now();
     return logChat('[⚠️] Still learning! '+fmtCountdown(rem)+' left. Cannot leave building!',false,'#f87171');
@@ -1821,6 +1851,43 @@ function drawMM(pos){
     drawMM._bg=bg;
   }
   mmCtx2.clearRect(0,0,mmCanvas.width,mmCanvas.height);mmCtx2.drawImage(drawMM._bg,0,0);
+  // Draw building markers on city minimap
+  if(WS.zone==='CITY'){
+    const myHouseKey=getMyHouseKey();
+    // Cache job→workBuilding lookup to avoid searching SKILLS array every frame
+    if(drawMM._job!==S.job){drawMM._job=S.job;const sk=S.job&&S.job!=='Unemployed'?SKILLS.find(s=>s.job===S.job):null;drawMM._workBldg=sk?sk.workBuilding:null;}
+    const myWorkBldg=drawMM._workBldg;
+    const wP=CW*TILE,hP=CH*TILE;
+    for(const b of BLDGS){
+      const mx=(b.x+b.w/2)/wP*mmCanvas.width;
+      const my=(b.y+b.h/2)/hP*mmCanvas.height;
+      const isMyHouse=b.isHouse&&b.key===myHouseKey;
+      const isWork=b.key===myWorkBldg;
+      if(isMyHouse){
+        // Gold house marker
+        mmCtx2.fillStyle='#fbbf24';mmCtx2.strokeStyle='#92400e';mmCtx2.lineWidth=1;
+        mmCtx2.beginPath();mmCtx2.arc(mx,my,3.5,0,Math.PI*2);mmCtx2.fill();mmCtx2.stroke();
+      }else if(isWork){
+        // Green workplace marker
+        mmCtx2.fillStyle='#4ade80';mmCtx2.strokeStyle='#166534';mmCtx2.lineWidth=1;
+        mmCtx2.fillRect((mx-2.5)|0,(my-2.5)|0,5,5);mmCtx2.strokeRect((mx-2.5)|0,(my-2.5)|0,5,5);
+      }else if(b.isHouse){
+        // Occupied house — tiny grey dot
+        mmCtx2.fillStyle='rgba(148,163,184,.5)';mmCtx2.fillRect((mx-1)|0,(my-1)|0,2,2);
+      }else{
+        // Other key buildings — tiny colored dots
+        const col=b.key==='Hospital'?'#f87171':b.key==='School'?'#60a5fa':b.key==='Bank'?'#a3e635':b.key==='Hotel'?'#a78bfa':'rgba(203,213,225,.4)';
+        mmCtx2.fillStyle=col;mmCtx2.fillRect((mx-1.5)|0,(my-1.5)|0,3,3);
+      }
+    }
+    // Draw minimap legend hint
+    if(myHouseKey||myWorkBldg){
+      mmCtx2.font='6px sans-serif';mmCtx2.fillStyle='rgba(255,255,255,.5)';
+      let ly=mmCanvas.height-2;
+      if(myWorkBldg){mmCtx2.fillStyle='#4ade80';mmCtx2.fillRect(2,ly-5,5,5);mmCtx2.fillStyle='rgba(255,255,255,.5)';mmCtx2.fillText('Work',9,ly);ly-=8;}
+      if(myHouseKey){mmCtx2.fillStyle='#fbbf24';mmCtx2.beginPath();mmCtx2.arc(4.5,ly-2,3,0,Math.PI*2);mmCtx2.fill();mmCtx2.fillStyle='rgba(255,255,255,.5)';mmCtx2.fillText('Home',9,ly);}
+    }
+  }
   if(WS.zone==='CITY'&&NAV.pos){const t=w2mm(NAV.pos.x,NAV.pos.y);mmCtx2.fillStyle='#ef4444';mmCtx2.fillRect((t.mx-2)|0,(t.my-2)|0,5,5);}
   const p=w2mm(pos.x,pos.y);mmCtx2.fillStyle='#22c55e';mmCtx2.beginPath();mmCtx2.arc(p.mx,p.my,3,0,Math.PI*2);mmCtx2.fill();
 }
@@ -2111,7 +2178,7 @@ function renderMsgrContacts(){
     const color=avatarColors[i%avatarColors.length];
     const active=_msgrActive===addr?'active':'';
     const lastMsg=(_msgs[addr]&&_msgs[addr].length)?_msgs[addr][_msgs[addr].length-1]:null;
-    const preview=lastMsg?(lastMsg.type==='image'?'📷 Image':lastMsg.type==='stamina'?'💊 Stamina gift':lastMsg.type==='crypto'?'💸 Crypto':lastMsg.type==='nft'?'🎨 NFT':(lastMsg.content||'').slice(0,20)):'';
+    const preview=lastMsg?(lastMsg.type==='image'?'📷 Image':lastMsg.type==='stamina'?'💊 Stamina gift':lastMsg.type==='crypto'?'💸 Crypto':lastMsg.type==='nft'?'🎨 NFT':lastMsg.type==='contact'?'👤 Contact':(lastMsg.content||'').slice(0,20)):'';
     return`<div class="msgr-contact ${active}" onclick="msgrSelectContact('${esc(addr)}')">
       <div class="cavatar" style="background:${color}20;border:1px solid ${color}50;">${f.name.slice(0,1).toUpperCase()}</div>
       <div class="cinfo">
@@ -2170,6 +2237,15 @@ function renderMsgrLog(addr){
       const o=m.content;
       const btnHtml=!isMe?`<button onclick="acceptMsgrOffer('${esc(addr)}','${m.type}',${JSON.stringify(o).replace(/"/g,'&quot;')})" class="ibtn btn-green" style="margin-top:5px;font-size:11px;">Accept Offer</button>`:'';
       return`<div class="dm-msg ${cls}"><div class="dm-nft">🏷️ <strong>${m.type==='offer_house'?'🏠 House NFT Offer':'🎓 Skill NFT Offer'}</strong><br/>${esc(o.label)}<br/><span style="color:#fbbf24;">$${o.price} USD</span>${btnHtml}</div></div>`;
+    }
+    if(m.type==='contact'){
+      const c=m.content;
+      // Store contact data in a safe registry keyed by message timestamp to avoid inline XSS
+      const cKey='_mca_'+(m.ts||Date.now());
+      if(!window._msgrContactCache)window._msgrContactCache={};
+      window._msgrContactCache[cKey]={addr:c.addr,name:c.name};
+      const addBtn=!isMe?`<button onclick="msgrAddContactFromMsg('${esc(cKey)}')" class="ibtn" style="margin-top:5px;font-size:11px;background:rgba(20,184,166,.2);border-color:rgba(20,184,166,.4);">＋ Add Contact</button>`:'';
+      return`<div class="dm-msg ${cls}"><div class="dm-nft" style="border-color:rgba(20,184,166,.3);background:rgba(20,184,166,.06);">👤 <strong>Contact Shared</strong><br/><span style="font-size:12px;">${esc(c.name)}</span><br/><span style="font-size:9px;color:#64748b;font-family:monospace;">${esc(c.addr.slice(0,18)+'…')}</span>${addBtn}${m.txHash?`<br/><a class="dm-tx" href="${explorerTx(m.txHash)}" target="_blank">tx: ${m.txHash.slice(0,16)}…</a>`:''}</div></div>`;
     }
     // Default: text
     return`<div class="dm-msg ${cls}">${esc(m.content)}</div>`;
@@ -2458,7 +2534,61 @@ function msgrHandleFile(input){
 }
 window.msgrHandleFile=msgrHandleFile;
 
-/* ─── Add Friend ─── */
+/* ─── Share Contact ─── */
+function msgrShareContact(){
+  const addr=_msgrActive;if(!addr)return logChat('[Messenger] Select a contact first.',false,'#f87171');
+  const contacts=Object.values(_friends).filter(f=>f.addr!==addr);
+  if(!contacts.length)return logChat('[Messenger] No other contacts to share.',false,'#f87171');
+  const f=_friends[addr];
+  // Cache contacts so Share buttons can reference them safely without inline XSS
+  if(!window._msgrShareCache)window._msgrShareCache={};
+  contacts.forEach((c,i)=>{window._msgrShareCache['_sc_'+i]={toAddr:addr,sharedAddr:c.addr,sharedName:c.name};});
+  const modal=document.createElement('div');
+  modal.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(2,6,23,.85);z-index:1100;display:flex;align-items:center;justify-content:center;';
+  modal.innerHTML=`<div style="background:#0f172a;border:1px solid rgba(255,255,255,.18);border-radius:14px;padding:18px;width:290px;max-width:95vw;max-height:80vh;overflow-y:auto;">
+    <div style="font-size:13px;font-weight:bold;margin-bottom:10px;">👤 Share Contact with ${esc((f||{}).name||addr.slice(0,10)+'…')}</div>
+    <div style="font-size:11px;color:#94a3b8;margin-bottom:10px;">Choose a contact to share:</div>
+    ${contacts.map((c,i)=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 9px;border:1px solid rgba(20,184,166,.2);border-radius:8px;margin-bottom:6px;background:rgba(20,184,166,.06);">
+      <div><div style="font-size:12px;font-weight:bold;">${esc(c.name)}</div><div style="font-size:9px;color:#64748b;font-family:monospace;">${esc(c.addr.slice(0,14)+'…')}</div></div>
+      <button onclick="msgrDoShareContact('_sc_${i}');this.closest('[style*=fixed]').remove();" class="ibtn" style="font-size:11px;background:rgba(20,184,166,.2);border-color:rgba(20,184,166,.4);">Share</button>
+    </div>`).join('')}
+    <button onclick="this.closest('[style*=fixed]').remove()" style="width:100%;margin-top:6px;padding:7px;border-radius:8px;background:rgba(100,116,139,.3);border:1px solid rgba(255,255,255,.1);color:#94a3b8;cursor:pointer;">Cancel</button>
+  </div>`;
+  document.body.appendChild(modal);
+}
+window.msgrShareContact=msgrShareContact;
+
+/* Invoked by the Share button in the contact sharing modal (safe — no inline data) */
+async function msgrDoShareContact(cacheKey){
+  const entry=window._msgrShareCache&&window._msgrShareCache[cacheKey];
+  if(!entry)return logChat('[Messenger] Share data not found.',false,'#f87171');
+  await confirmMsgrShareContact(entry.toAddr,entry.sharedAddr,entry.sharedName);
+}
+window.msgrDoShareContact=msgrDoShareContact;
+
+async function confirmMsgrShareContact(toAddr,sharedAddr,sharedName){
+  const f=_friends[toAddr];
+  const msg={type:'contact',from:'me',content:{addr:sharedAddr,name:sharedName},ts:Date.now(),txHash:null};
+  const tx=await onChainTx('CONTACT_SHARE:'+sharedAddr.slice(0,10)+':to:'+toAddr,0.00001);
+  if(tx)msg.txHash=tx.hash;
+  addMsgToThread(toAddr,msg);
+  renderMsgrLog(toAddr);renderMsgrContacts();
+  logChat('[Messenger] 👤 Shared contact '+sharedName+' with '+(f?f.name:toAddr.slice(0,10)+'…')+'!',false,'#14b8a6');
+}
+window.confirmMsgrShareContact=confirmMsgrShareContact;
+
+/* Helper: add a shared contact from a contact message card safely (avoids inline XSS) */
+function msgrAddContactFromMsg(cKey){
+  const entry=window._msgrContactCache&&window._msgrContactCache[cKey];
+  if(!entry)return logChat('[Messenger] Contact data not found.',false,'#f87171');
+  const addr=entry.addr;const name=entry.name;
+  if(!_friends[addr]){
+    _friends[addr]={addr,name,addedAt:Date.now()};
+    saveFriends();renderMsgrContacts();
+    logChat('[Messenger] ✅ '+name+' added to contacts!',false,'#14b8a6');
+  }else{logChat('[Messenger] Already in contacts.',false,'#64748b');}
+}
+window.msgrAddContactFromMsg=msgrAddContactFromMsg;
 function showAddFriend(){
   document.getElementById('msgrAddFriendBox').style.display='block';
 }
@@ -2836,6 +2966,7 @@ function saveProgress(){
       waterFull:S.waterFull,plots:S.plots.map(p=>({...p})),
       fishValueSum:S.fishValueSum||0,
       hotelRentedUntil:S.hotelRentedUntil||0,
+      sleepLockUntil:S.sleepLockUntil||0,
       posX:_phaserScene&&WS.zone==='CITY'?_phaserScene.me.x:(WS.savedPos?.x??32*TILE),
       posY:_phaserScene&&WS.zone==='CITY'?_phaserScene.me.y:(WS.savedPos?.y??32*TILE),
       savedAt:Date.now(),
@@ -2859,6 +2990,9 @@ function loadProgress(){
     S.house=typeof d.house==='number'?d.house:1;
     S.fishValueSum=typeof d.fishValueSum==='number'?d.fishValueSum:0;
     S.hotelRentedUntil=typeof d.hotelRentedUntil==='number'?d.hotelRentedUntil:0;
+    S.sleepLockUntil=typeof d.sleepLockUntil==='number'&&d.sleepLockUntil>Date.now()?d.sleepLockUntil:0;
+    // If sleep lock has expired on load, clear sleeping state
+    if(S.sleepLockUntil===0)S.sleeping=false;
     S.inv=d.inv?{
       apple:d.inv.apple||0,soda:d.inv.soda||0,sandwich:d.inv.sandwich||0,
       fishingRod:d.inv.fishingRod||0,bait:d.inv.bait||0,wateringCan:d.inv.wateringCan||0,
