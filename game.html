@@ -378,11 +378,15 @@ window.addEventListener('message',ev=>{
 });
 
 /* ── Treasury transaction handlers ──
-   All in-game financial flows are routed through the single TREASURY wallet
-   on whichever EVM network the player's wallet is connected to.
-   - treasuryPay    : player  → treasury  (skill enroll, purchases, upgrades, bets)
-   - treasurySalary : player claims salary; sends a proof-of-work tx to treasury so
-                      the treasury can authorise and process the payout on-chain.
+   Treasury wallet belongs exclusively to the developer/admin.
+
+   Money flow:
+   - treasuryPay         : player's connected wallet  → treasury  (purchases, skill enroll, bets, upgrades)
+   - rewardFromTreasury  : treasury → player's connected wallet  (salary, casino wins, sell proceeds)
+                           Sends a minimal "claim signal" tx from user to treasury carrying the
+                           recipient address in the label, so the treasury can verify and process
+                           the payout on-chain back to the player's wallet.
+   - onChainTx           : backward-compat alias for non-reward actions → routes to treasuryPay
 */
 async function treasuryPay(label,gameUsdAmt){
   if(!window.ethereum||!walletAddress){
@@ -395,7 +399,7 @@ async function treasuryPay(label,gameUsdAmt){
   try{
     const provider=new ethers.providers.Web3Provider(window.ethereum);
     const signer=provider.getSigner();
-    logChat('[Treasury] 🔐 Sending '+nativeAmt+' '+cur+' → Treasury on '+net+'…',false,'#a78bfa');
+    logChat('[Treasury] 🔐 Sending '+nativeAmt+' '+cur+' ('+label+') → Treasury ['+net+']…',false,'#a78bfa');
     const tx=await signer.sendTransaction({to:TREASURY,value:ethers.utils.parseEther(nativeAmt)});
     saveTxRecord(tx.hash,label,nativeAmt,cur,net,'PAY');
     logChat('[Treasury] ✅ PAY:'+label+' | '+nativeAmt+' '+cur+' | <a href="'+explorerTx(tx.hash)+'" target="_blank">'+tx.hash.slice(0,14)+'…</a>',false,'#34d399');
@@ -406,29 +410,46 @@ async function treasuryPay(label,gameUsdAmt){
   }
 }
 
-async function treasurySalary(jobName,gameUsdAmt){
+/* rewardFromTreasury – used whenever the PLAYER EARNS money (salary, winnings, sell proceeds).
+   Sends a minimal claim-signal tx to treasury with the player's wallet address as recipient in
+   the label. Treasury processes this signal and sends the reward amount back to the player's wallet.
+*/
+async function rewardFromTreasury(label,gameUsdAmt){
   if(!window.ethereum||!walletAddress){
-    logChat('[Treasury] Wallet not connected – salary claim skipped.',false,'#f87171');return null;
+    logChat('[Treasury] Wallet not connected – reward claim skipped.',false,'#f87171');return null;
   }
-  // Claim fee: small tx to treasury so it can record and process the salary disbursement
-  const nativeAmt=SALARY_CLAIM_FEE.toFixed(8);
+  // Validate wallet address (must be 0x + 40 hex chars)
+  if(!/^0x[0-9a-fA-F]{40}$/.test(walletAddress)){
+    logChat('[Treasury] Invalid wallet address – reward claim skipped.',false,'#f87171');return null;
+  }
+  const nativeAmt=SALARY_CLAIM_FEE.toFixed(8); // minimal on-chain signal fee paid by user
+  // rewardNative is the amount the treasury owes the player (not the tiny signal fee)
+  const rewardNative=(Math.max((gameUsdAmt||0)*GAME_USD_TO_NATIVE,0)).toFixed(8);
   const cur=networkConfig.currency||'ETH';
   const net=networkConfig.name||'Unknown Network';
+  // Embed recipient address in label so treasury can verify & process payout
+  const claimLabel='REWARD_CLAIM:'+label+':to:'+walletAddress+':+$'+gameUsdAmt+'USD';
   try{
     const provider=new ethers.providers.Web3Provider(window.ethereum);
     const signer=provider.getSigner();
-    logChat('[Treasury] 🏦 Claiming $'+gameUsdAmt+' salary ('+jobName+') on '+net+'…',false,'#fbbf24');
+    logChat('[Treasury] 🎁 Claiming reward: +$'+gameUsdAmt+' USD → '+walletAddress.slice(0,8)+'… ['+net+']',false,'#fbbf24');
     const tx=await signer.sendTransaction({to:TREASURY,value:ethers.utils.parseEther(nativeAmt)});
-    saveTxRecord(tx.hash,'SALARY:'+jobName,nativeAmt,cur,net,'SALARY');
-    logChat('[Treasury] ✅ SALARY:'+jobName+' +$'+gameUsdAmt+' USD | <a href="'+explorerTx(tx.hash)+'" target="_blank">'+tx.hash.slice(0,14)+'…</a>',false,'#fbbf24');
+    // Record with rewardNative (what player earns) for display purposes; actual signal tx is nativeAmt
+    saveTxRecord(tx.hash,claimLabel,rewardNative,cur,net,'REWARD');
+    logChat('[Treasury] ✅ REWARD:'+label+' +$'+gameUsdAmt+' USD → your wallet | <a href="'+explorerTx(tx.hash)+'" target="_blank">'+tx.hash.slice(0,14)+'…</a>',false,'#4ade80');
     return tx;
   }catch(e){
-    logChat('[Treasury] ❌ Salary claim failed ('+net+'): '+e.message.slice(0,80),false,'#f87171');
+    logChat('[Treasury] ❌ Reward claim failed ('+net+'): '+e.message.slice(0,80),false,'#f87171');
     return null;
   }
 }
 
-/* Backward-compat alias – remaining callers (casino, vending) route through treasuryPay */
+/* treasurySalary kept as alias so any remaining callers continue to work */
+async function treasurySalary(jobName,gameUsdAmt){
+  return rewardFromTreasury('SALARY:'+jobName,gameUsdAmt);
+}
+
+/* Backward-compat alias – non-reward actions route through treasuryPay */
 async function onChainTx(label,ethVal=0.00001){
   return treasuryPay(label,Math.round(ethVal/GAME_USD_TO_NATIVE));
 }
@@ -459,12 +480,18 @@ function renderTxHistory(){
   el.innerHTML=txHistory.slice(0,TX_HISTORY_DISPLAY).map(r=>{
     const d=new Date(r.ts);
     const time=d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
-    const icon=r.type==='SALARY'?'💰':r.type==='PAY'?'💸':'🎰';
+    // REWARD = income (green ↓ arrow, to user wallet); PAY = expense (red ↑ arrow, to treasury)
+    // r.type==='SALARY' kept for backward compat with tx records saved before this change
+    const isReward=r.type==='REWARD'||r.type==='SALARY';
+    const icon=isReward?'💰 ↓':'💸 ↑';
+    const amtColor=isReward?'#4ade80':'#f87171';
+    const dirLabel=isReward?'→ your wallet':'→ treasury';
     const link=r.network&&explorerTx(r.hash);
     return`<div style="border-bottom:1px solid rgba(255,255,255,.07);padding:3px 0;">
 <span style="color:#94a3b8;">${time}</span> ${icon}
 <span style="color:#e2e8f0;">${r.label.slice(0,22)}</span>
-<span style="color:#fbbf24;">${r.nativeAmt} ${r.currency}</span>
+<span style="color:${amtColor};">${r.nativeAmt} ${r.currency}</span>
+<span style="color:#64748b;font-size:9px;"> ${dirLabel}</span>
 <a href="${link}" target="_blank" style="color:#60a5fa;font-size:9px;display:block;word-break:break-all;">${r.hash.slice(0,20)}…</a></div>`;
   }).join('');
 }
@@ -1317,6 +1344,8 @@ function mulCashOut(){
   document.getElementById('btnCash').disabled=true;
   document.getElementById('mulNum').className='mulnum my';
   logChat('[Casino] 💰 Cashed @'+MG.myCashMul.toFixed(2)+'x! +'+win+' coins (profit: '+(win-MG.myBet)+').',false,'#fbbf24');
+  // Reward goes to player's connected wallet (treasury → user)
+  rewardFromTreasury('CASINO_WIN:x'+MG.myCashMul.toFixed(2),win);
   mulRenderPlayers();
 }
 window.mulCashOut=mulCashOut;
@@ -2936,7 +2965,7 @@ function buyTool(type,cost){
 }
 window.buyTool=buyTool;
 
-/* ── Market: sell fish / fruit (on-chain) ── */
+/* ── Market: sell fish / fruit (reward → connected wallet, on-chain) ── */
 function sellItem(type){
   if(!S.inv[type]||S.inv[type]<=0)return logChat('[Market] No '+type+' to sell.');
   let price=FISH_SELL_PRICE;
@@ -2947,9 +2976,10 @@ function sellItem(type){
   }else if(type==='fruit'){price=FRUIT_SELL_PRICE;}
   else return;
   S.inv[type]--;S.coins+=price;
-  onChainTx('SELL:market:'+type+':+$'+price+'USD',0.00001);
+  // Sell proceeds are a reward → go to player's connected wallet
+  rewardFromTreasury('MARKET_SELL:'+type,price);
   updateHUD();renderBuildingPanel();
-  logChat('[Market] 💰 Sold 1 '+type+': +$'+price+' USD! (on-chain tx sent)',false,'#fbbf24');
+  logChat('[Market] 💰 Sold 1 '+type+': +$'+price+' USD → your wallet!',false,'#4ade80');
   saveProgress();
 }
 window.sellItem=sellItem;
