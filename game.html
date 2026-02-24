@@ -8,6 +8,55 @@ html,body{margin:0;padding:0;height:100%;background:#0b1020;font-family:Arial,sa
 #wrap{display:flex;height:100%;}
 #game{flex:1;position:relative;background:#0b1020;}
 #ui{width:320px;border-left:1px solid rgba(255,255,255,.15);padding:10px;box-sizing:border-box;background:rgba(0,0,0,.5);overflow-y:auto;display:flex;flex-direction:column;gap:8px;}
+/* ── Mobile layout ── */
+@media(max-width:768px){
+  #wrap{flex-direction:column;}
+  #game{height:55vh;min-height:55vh;}
+  #ui{width:100%;height:45vh;min-height:45vh;border-left:none;border-top:1px solid rgba(255,255,255,.15);padding:8px;}
+  #minimap{display:none;}
+  #onlineBar{font-size:10px;padding:3px 7px;}
+}
+/* ── Virtual D-pad ── */
+#dpad{position:absolute;left:10px;bottom:14px;z-index:200;width:150px;height:150px;display:none;pointer-events:auto;}
+#dpad button{position:absolute;width:46px;height:46px;border-radius:10px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);color:#e2e8f0;font-size:22px;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:manipulation;display:flex;align-items:center;justify-content:center;padding:0;}
+#dpad .dup   {top:0;  left:52px;}
+#dpad .ddown {top:102px;left:52px;}
+#dpad .dleft {top:52px;left:0;}
+#dpad .dright{top:52px;left:104px;}
+#dpad .dact  {top:52px;left:52px;font-size:14px;background:rgba(14,165,233,.22);border-color:rgba(14,165,233,.45);}
+@media(pointer:coarse),(max-width:768px){#dpad{display:block;}}
+/* ── Moga Messenger ── */
+#messengerPanel{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:680px;max-width:98vw;height:520px;max-height:96vh;background:#0f172a;border:1px solid rgba(255,255,255,.18);border-radius:16px;z-index:1000;box-shadow:0 12px 48px rgba(0,0,0,.85);overflow:hidden;display:none;flex-direction:column;}
+#msgrTitle{background:linear-gradient(90deg,#1e1b4b,#0c1a2e);padding:11px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,.1);flex-shrink:0;}
+#msgrBody{display:flex;flex:1;overflow:hidden;}
+#msgrContacts{width:190px;border-right:1px solid rgba(255,255,255,.1);background:rgba(0,0,0,.3);display:flex;flex-direction:column;overflow:hidden;}
+#msgrContactsTop{padding:8px;border-bottom:1px solid rgba(255,255,255,.08);}
+#msgrContactsList{flex:1;overflow-y:auto;padding:4px;}
+.msgr-contact{padding:8px 10px;border-radius:9px;cursor:pointer;display:flex;align-items:center;gap:8px;margin-bottom:2px;transition:background .15s;}
+.msgr-contact:hover{background:rgba(255,255,255,.07);}
+.msgr-contact.active{background:rgba(99,102,241,.18);border:1px solid rgba(99,102,241,.3);}
+.msgr-contact .cavatar{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+.msgr-contact .cinfo{overflow:hidden;}
+.msgr-contact .cname{font-size:12px;font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.msgr-contact .caddr{font-size:9px;color:#64748b;font-family:monospace;}
+#msgrChat{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+#msgrChatHeader{padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:10px;background:rgba(0,0,0,.15);flex-shrink:0;}
+#msgrLog{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;}
+.dm-msg{padding:8px 11px;border-radius:12px;max-width:75%;word-break:break-word;font-size:12px;line-height:1.5;}
+.dm-me  {background:rgba(99,102,241,.28);border:1px solid rgba(99,102,241,.35);align-self:flex-end;border-radius:12px 12px 3px 12px;}
+.dm-them{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);align-self:flex-start;border-radius:12px 12px 12px 3px;}
+.dm-img {max-width:180px;border-radius:10px;margin-top:4px;display:block;cursor:pointer;}
+.dm-tx  {font-size:10px;color:#60a5fa;text-decoration:none;display:block;margin-top:3px;word-break:break-all;}
+.dm-sys {font-size:10px;color:#475569;text-align:center;align-self:center;padding:3px 10px;background:rgba(255,255,255,.04);border-radius:999px;}
+.dm-nft {border:1px solid rgba(251,191,36,.3);background:rgba(251,191,36,.06);border-radius:10px;padding:8px;margin-top:4px;}
+.dm-crypto{border:1px solid rgba(34,197,94,.3);background:rgba(34,197,94,.06);border-radius:10px;padding:8px;margin-top:4px;}
+#msgrActions{padding:7px 10px;border-top:1px solid rgba(255,255,255,.07);border-bottom:1px solid rgba(255,255,255,.07);display:flex;gap:5px;flex-wrap:wrap;background:rgba(0,0,0,.15);}
+#msgrInput{padding:8px 10px;display:flex;gap:6px;align-items:center;}
+#msgrInput input{flex:1;padding:8px 12px;border-radius:20px;border:1px solid rgba(255,255,255,.15);background:#1e293b;color:#fff;font-size:12px;}
+/* Modals inside messenger */
+.msgr-modal{position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(2,6,23,.85);z-index:10;display:flex;align-items:center;justify-content:center;}
+.msgr-modal-box{background:#0f172a;border:1px solid rgba(255,255,255,.18);border-radius:12px;padding:18px;width:280px;max-width:90%;}
+@media(max-width:600px){#msgrContacts{width:140px;}#messengerPanel{width:99vw;height:92vh;}}
 .card{border:1px solid rgba(255,255,255,.18);border-radius:10px;padding:10px;background:rgba(255,255,255,.05);}
 .row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
 button,input,select{border-radius:8px;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.08);color:#fff;padding:7px 10px;font-size:12px;}
@@ -77,6 +126,14 @@ kbd{padding:1px 4px;border-radius:4px;border:1px solid rgba(255,255,255,.22);bac
       <div class="zz">😴</div>
       <div class="stxt">Sleeping... zZz</div>
       <div class="spct" id="sleepPct">Energy: 0%</div>
+    </div>
+    <!-- Virtual D-pad for mobile -->
+    <div id="dpad">
+      <button class="dup"   id="dUp">▲</button>
+      <button class="dleft" id="dLeft">◄</button>
+      <button class="dact"  id="dAct" ontouchstart="triggerInteract()" onclick="triggerInteract()">✋</button>
+      <button class="dright"id="dRight">►</button>
+      <button class="ddown" id="dDown">▼</button>
     </div>
   </div>
 
@@ -187,7 +244,7 @@ kbd{padding:1px 4px;border-radius:4px;border:1px solid rgba(255,255,255,.22);bac
     <div class="card">
       <div class="row" style="justify-content:space-between;margin-bottom:5px;">
         <strong>📨 Players Online</strong>
-        <span style="font-size:10px;color:#64748b;">click to PM</span>
+        <button onclick="openMessenger()" style="font-size:10px;padding:3px 9px;background:linear-gradient(90deg,#6366f1,#0ea5e9);border:none;border-radius:6px;">💬 Messenger</button>
       </div>
       <div id="pmList" style="max-height:90px;overflow-y:auto;font-size:11px;"></div>
     </div>
@@ -200,6 +257,57 @@ kbd{padding:1px 4px;border-radius:4px;border:1px solid rgba(255,255,255,.22);bac
       <div id="txHistList" style="max-height:110px;overflow-y:auto;font-size:10px;"></div>
     </div>
   </aside>
+</div>
+
+<!-- ── Moga Messenger ── -->
+<div id="messengerPanel">
+  <div id="msgrTitle">
+    <span style="font-size:14px;font-weight:bold;">💬 Moga Messenger <span style="font-size:10px;color:#64748b;font-weight:normal;">· Web3 Chat &amp; Transactions</span></span>
+    <button onclick="closeMessenger()" style="background:none;border:none;color:#94a3b8;font-size:18px;cursor:pointer;padding:0 4px;line-height:1;">✕</button>
+  </div>
+  <div id="msgrBody">
+    <!-- Contacts sidebar -->
+    <div id="msgrContacts">
+      <div id="msgrContactsTop">
+        <button onclick="showAddFriend()" style="width:100%;padding:6px;border-radius:8px;background:linear-gradient(90deg,#6366f1,#0ea5e9);border:none;color:#fff;font-size:11px;cursor:pointer;font-weight:bold;">＋ Add Friend Wallet</button>
+      </div>
+      <div id="msgrContactsList"><div style="color:#475569;font-size:11px;padding:12px 8px;text-align:center;">No contacts yet.<br/>Add a friend's wallet address.</div></div>
+    </div>
+    <!-- Chat area -->
+    <div id="msgrChat">
+      <div id="msgrChatHeader">
+        <div id="msgrChatAvatar" style="width:34px;height:34px;border-radius:50%;background:rgba(99,102,241,.25);border:1px solid rgba(99,102,241,.4);display:flex;align-items:center;justify-content:center;font-size:16px;">👤</div>
+        <div>
+          <div id="msgrChatName" style="font-size:13px;font-weight:bold;color:#e2e8f0;">Select a contact</div>
+          <div id="msgrChatAddr" style="font-size:10px;color:#64748b;font-family:monospace;"></div>
+        </div>
+      </div>
+      <div id="msgrLog"><div style="color:#475569;font-size:12px;text-align:center;margin-top:60px;">Select a contact to start chatting.<br/><span style="font-size:10px;">You can send text, images, crypto &amp; NFTs 🚀</span></div></div>
+      <div id="msgrActions">
+        <button onclick="msgrSendCrypto()" class="ibtn btn-green" style="font-size:11px;">💸 Send Crypto</button>
+        <button onclick="msgrSendNFT()" class="ibtn btn-yellow" style="font-size:11px;">🎨 Send NFT</button>
+        <button onclick="msgrSendImage()" class="ibtn btn-blue" style="font-size:11px;">📷 Image</button>
+        <button onclick="msgrOfferHouse()" class="ibtn btn-purple" style="font-size:11px;">🏠 Offer House</button>
+        <button onclick="msgrOfferSkill()" class="ibtn btn-indigo" style="font-size:11px;">🎓 Offer Skill</button>
+      </div>
+      <div id="msgrInput">
+        <input id="msgrMsgIn" placeholder="Type a message…" onkeypress="if(event.key==='Enter')msgrSend()"/>
+        <button onclick="msgrSend()" style="padding:8px 14px;border-radius:20px;background:linear-gradient(90deg,#6366f1,#0ea5e9);border:none;color:#fff;font-size:12px;cursor:pointer;white-space:nowrap;">Send</button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Hidden file input for messenger images -->
+<input type="file" id="msgrFileIn" accept="image/*" style="display:none;" onchange="msgrHandleFile(this)"/>
+<!-- Hidden file input for add-friend -->
+<div id="msgrAddFriendBox" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#0f172a;border:1px solid rgba(255,255,255,.18);border-radius:14px;padding:18px;width:300px;max-width:95vw;z-index:1100;box-shadow:0 8px 32px rgba(0,0,0,.8);">
+  <div style="font-size:13px;font-weight:bold;margin-bottom:12px;">👤 Add Friend Wallet</div>
+  <input id="friendAddrIn" placeholder="Wallet address (0x…)" style="width:100%;box-sizing:border-box;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:#1e293b;color:#fff;font-size:12px;margin-bottom:7px;"/>
+  <input id="friendNameIn" placeholder="Nickname (optional)" style="width:100%;box-sizing:border-box;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:#1e293b;color:#fff;font-size:12px;margin-bottom:10px;"/>
+  <div style="display:flex;gap:8px;">
+    <button onclick="confirmAddFriend()" style="flex:1;padding:8px;border-radius:8px;background:linear-gradient(90deg,#059669,#10b981);border:none;color:#fff;cursor:pointer;font-size:12px;">Add Friend</button>
+    <button onclick="document.getElementById('msgrAddFriendBox').style.display='none'" style="flex:1;padding:8px;border-radius:8px;background:rgba(100,116,139,.3);border:1px solid rgba(255,255,255,.1);color:#94a3b8;cursor:pointer;font-size:12px;">Cancel</button>
+  </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
@@ -450,10 +558,10 @@ let houseOwnership={}; // {houseKey: {owner, forSale, price}}
 function loadHouseOwnership(){
   try{const r=localStorage.getItem(HOUSE_OWNERSHIP_KEY);if(r){houseOwnership=JSON.parse(r);return;}}catch{}
   // Pre-populate NPC houses on first load so city feels lived-in (realistic mock addresses)
-  const npcWallets=['0xd8da6bf26964af9d7eed9e03e53415d37aa96045','0xab5801a7d398351b8be11c439e05c5b3259aec9b','0xca35b7d915458ef540ade6068dfe2f44e8fa733c','0x4b0897b0513fdc7c541b6d9d7e929c4e5364d2db','0x583031d1113ad414f02576bd6afabfb302140225'];
-  const npcAllKeys=['House 2','House 3','House 4','House 5','House 6'];
+  const npcWallets=['0xd8da6bf26964af9d7eed9e03e53415d37aa96045','0xab5801a7d398351b8be11c439e05c5b3259aec9b','0xca35b7d915458ef540ade6068dfe2f44e8fa733c','0x4b0897b0513fdc7c541b6d9d7e929c4e5364d2db','0x583031d1113ad414f02576bd6afabfb302140225','0x9f8f72aa9304c8b593d555f12ef6589cc3a579a2','0x2b5ad5c4795c026514f8317c7a215e218dccd6cf'];
+  const npcAllKeys=['House 2','House 3','House 4','House 5','House 6','House 7','House 8'];
   npcWallets.forEach((npc,i)=>{
-    houseOwnership[npcAllKeys[i]]={owner:npc,forSale:i%2===1,price:i%2===1?60+i*15:0};
+    houseOwnership[npcAllKeys[i]]={owner:npc,forSale:i%2===1,price:i%2===1?100+i*5:0};
   });
   saveHouseOwnership();
 }
@@ -489,17 +597,27 @@ const FISHING_ROD_COST=15;       // fishing rod (one-time tool)
 const BAIT_COST=3;               // bait pack (×5 baits per purchase)
 const WATERING_CAN_COST=8;       // watering can (one-time tool)
 const HOE_COST=10;               // hoe/cangkul (one-time tool)
-const SEED_COST=5;               // seeds ×3 per purchase
-const SEED_GROW_MS=120000;       // 2 min from watering to harvest
+const SEED_COST=3;               // seeds ×10 per purchase ($3 USD)
+const SEED_GROW_MS=86400000;     // 24 real hours from watering to harvest (1 day)
 const FISH_ENERGY=25;            // energy restored by eating fish
 const FRUIT_ENERGY=35;           // energy restored by eating fruit
-const FISH_SELL_PRICE=5;         // coins per fish sold
-const FRUIT_SELL_PRICE=4;        // coins per fruit sold
-const HOE_ENERGY_COST=8;         // energy cost to hoe ground
-const FISH_ENERGY_COST=5;        // energy cost per fishing attempt
+const FISH_SELL_PRICE=0.5;       // coins per fish sold ($0.5 USD, all types)
+const FRUIT_SELL_PRICE=0.5;      // coins per fruit sold ($0.5 USD)
+const HOE_ENERGY_COST=20;        // energy cost to hoe ground (heavy labor)
+const FISH_ENERGY_COST=15;       // energy cost per fishing attempt (tiring)
 const FISH_MISS_RATE=0.15;       // 15% chance of catching nothing
 const NPC_FARM_MSG_MS=45000;     // ms interval for NPC farming chat messages
 const NPC_FARM_MSG_CHANCE=0.5;   // probability of NPC farm message firing each interval
+/* Fish types with weighted chances and sell prices */
+const FISH_TYPES=[
+  {name:'🐟 Tilapia',    emoji:'🐟',price:3, chance:.30},
+  {name:'🐠 Clownfish',  emoji:'🐠',price:5, chance:.22},
+  {name:'🐡 Pufferfish', emoji:'🐡',price:4, chance:.18},
+  {name:'🦐 Shrimp',     emoji:'🦐',price:4, chance:.12},
+  {name:'🦑 Squid',      emoji:'🦑',price:7, chance:.08},
+  {name:'🦞 Lobster',    emoji:'🦞',price:12,chance:.06},
+  {name:'🐙 Octopus',    emoji:'🐙',price:9, chance:.04},
+];
 /* NPC farm zones (visual only – other players' plots, not interactable) */
 const _npcPlots=[
   {tx:34,ty:50,state:'watered',owner:'MogaCat42',readyAt:Date.now()+90000},
@@ -521,6 +639,8 @@ const S={
   inv:{apple:1,soda:0,sandwich:0,fishingRod:0,bait:0,wateringCan:0,hoe:0,seeds:0,fish:0,fruit:0},
   waterFull:false,
   plots:[], // [{tx,ty,state:'hoed'|'seeded'|'watered'|'ready',plantedAt,readyAt}]
+  fishValueSum:0, // total accumulated sell value of fish in inventory
+  lastFishType:null, // {name, price} of last caught fish
 };
 
 /* ── World state ── */
@@ -600,13 +720,14 @@ function renderBuildingPanel(){
 }
 
 function renderHome(){
-  const uc=25*S.house;
+  const uc=5; // $5 USD flat per upgrade level
   const hc=getHouseColor();
   const myKey=getMyHouseKey()||'House';
   const ow=houseOwnership[myKey]||{owner:walletAddress,forSale:false,price:0};
+  const suggestedPrice=100+S.house*5; // base $100 + $5 per upgrade level
   const closeBtn=`<button onclick="closeOutdoor()" style="width:100%;margin-top:8px;padding:6px;border-radius:6px;background:rgba(100,116,139,.3);color:#94a3b8;border:1px solid rgba(255,255,255,.1);font-size:11px;cursor:pointer;">Close ✕</button>`;
   return`<strong>🏠 ${myKey} — ${hc.name} House</strong>
-<div style="font-size:11px;color:#94a3b8;margin:5px 0;">Energy: ${Math.round(S.energy)}/${S.energyMax}</div>
+<div style="font-size:11px;color:#94a3b8;margin:5px 0;">Energy: ${Math.round(S.energy)}/${S.energyMax} · Lv ${S.house} · NFT Value ≈ $${suggestedPrice} USD</div>
 <div style="border:1px solid rgba(99,102,241,.35);border-radius:8px;padding:9px;margin:5px 0;background:rgba(99,102,241,.06);">
   <div style="font-size:12px;font-weight:bold;margin-bottom:6px;">🛏️ Bedroom — Click the Bed to Sleep</div>
   <button onclick="sleepAtHome()" ${S.sleeping||S.energy>=S.energyMax?'disabled':''} style="width:100%;padding:8px;border-radius:7px;border:none;background:linear-gradient(90deg,#1d4ed8,#3b82f6);color:white;font-size:12px;cursor:pointer;">
@@ -617,22 +738,24 @@ function renderHome(){
 <div style="border-top:1px solid rgba(255,255,255,.1);margin-top:9px;padding-top:9px;">
   <div style="font-size:11px;color:#64748b;">House Lv ${S.house} · Upgrade: +5 max energy</div>
   <button onclick="upgradeHouse()" ${S.coins<uc?'disabled':''} class="btn-yellow" style="width:100%;margin-top:5px;padding:7px;border-radius:7px;font-size:11px;cursor:pointer;">
-    Upgrade (${uc} USD)
+    Upgrade ($${uc} USD) → Lv ${S.house+1} · NFT value +$5
   </button>
 </div>
 <div style="border-top:1px solid rgba(255,255,255,.1);margin-top:9px;padding-top:9px;">
-  <div style="font-size:11px;font-weight:bold;color:#f0abfc;margin-bottom:6px;">🏷️ House NFT — ${myKey}</div>
+  <div style="font-size:11px;font-weight:bold;color:#f0abfc;margin-bottom:4px;">🏷️ House NFT — ${myKey}</div>
+  <div style="font-size:10px;color:#94a3b8;margin-bottom:6px;">💡 Suggested price based on upgrade level: <strong style="color:#fbbf24;">$${suggestedPrice} USD</strong></div>
   ${ow.forSale
     ?`<div style="color:#22c55e;font-size:11px;margin-bottom:4px;">💰 Listed for $${ow.price} USD</div>
       <button onclick="delistHouse()" class="ibtn btn-red" style="width:100%;padding:7px;">Delist from Market</button>`
     :`<div class="row" style="margin-bottom:5px;gap:5px;">
-        <input id="houseSellPrice" type="number" placeholder="Price (USD)" min="1" style="flex:1;padding:6px;font-size:11px;background:#0f172a;border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:6px;"/>
+        <input id="houseSellPrice" type="number" placeholder="Price (USD)" min="1" value="${suggestedPrice}" style="flex:1;padding:6px;font-size:11px;background:#0f172a;border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:6px;"/>
         <button onclick="listHouseForSale()" class="ibtn btn-green" style="padding:6px 10px;">📋 List for Sale</button>
       </div>
-      <div class="row" style="gap:5px;">
+      <div class="row" style="gap:5px;margin-bottom:4px;">
         <input id="houseTransferTo" placeholder="0x… friend wallet" style="flex:1;padding:6px;font-size:11px;background:#0f172a;border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:6px;"/>
         <button onclick="transferHouseTo()" class="ibtn btn-purple" style="padding:6px 10px;">🎁 Gift</button>
-      </div>`
+      </div>
+      <button onclick="openMessenger()" class="ibtn btn-indigo" style="width:100%;padding:6px;margin-top:3px;">💬 Sell via Messenger</button>`
   }
 </div>`;
 }
@@ -718,15 +841,19 @@ function renderMarket(){
   h+=`<div class="irow"><div class="ileft"><div class="iname">🪓 Hoe (Cangkul)</div>
 <div class="idesc">${S.inv.hoe?'✅ Owned':'One-time · $'+HOE_COST+' USD on-chain'}</div></div>
 <button onclick="buyTool('hoe',${HOE_COST})" ${S.coins<HOE_COST||S.inv.hoe?'disabled':''} class="ibtn btn-brown">${S.inv.hoe?'Owned':'Buy'}</button></div>`;
-  h+=`<div class="irow"><div class="ileft"><div class="iname">🌱 Seeds ×3</div>
+  h+=`<div class="irow"><div class="ileft"><div class="iname">🌱 Seeds ×10</div>
 <div class="idesc">Plant on hoed ground · $${SEED_COST} USD on-chain · ${S.inv.seeds} in stock</div></div>
-<button onclick="buyTool('seeds',${SEED_COST})" ${S.coins<SEED_COST?'disabled':''} class="ibtn btn-green">Buy ×3</button></div>`;
+<button onclick="buyTool('seeds',${SEED_COST})" ${S.coins<SEED_COST?'disabled':''} class="ibtn btn-green">Buy ×10</button></div>`;
   /* Sell */
   if(S.inv.fish>0||S.inv.fruit>0){
     h+=`<div style="font-size:10px;color:#4ade80;font-weight:bold;margin:7px 0 3px;">💰 Sell (on-chain)</div>`;
-    if(S.inv.fish>0)h+=`<div class="irow"><div class="ileft"><div class="iname">🐟 Sell Fish</div>
-<div class="idesc">×${S.inv.fish} available · +$${FISH_SELL_PRICE} USD each</div></div>
+    if(S.inv.fish>0){
+      const avgPrice=S.inv.fish>0&&S.fishValueSum>0?Math.round(S.fishValueSum/S.inv.fish):FISH_SELL_PRICE;
+      const fishLabel=S.lastFishType?S.lastFishType.name:'🐟 Fish';
+      h+=`<div class="irow"><div class="ileft"><div class="iname">${fishLabel}</div>
+<div class="idesc">×${S.inv.fish} in bag · avg $${avgPrice} USD each</div></div>
 <button onclick="sellItem('fish')" class="ibtn btn-green">Sell 1</button></div>`;
+    }
     if(S.inv.fruit>0)h+=`<div class="irow"><div class="ileft"><div class="iname">🍇 Sell Fruit</div>
 <div class="idesc">×${S.inv.fruit} available · +$${FRUIT_SELL_PRICE} USD each</div></div>
 <button onclick="sellItem('fruit')" class="ibtn btn-green">Sell 1</button></div>`;
@@ -890,10 +1017,10 @@ function sleepAtHome(){
 window.sleepAtHome=sleepAtHome;
 
 function upgradeHouse(){
-  const c=25*S.house;if(S.coins<c)return logChat('[Home] Need $'+c+' USD.');
+  const c=5;if(S.coins<c)return logChat('[Home] Need $'+c+' USD to upgrade.');
   S.coins-=c;S.house++;S.energyMax+=5;S.energy=clamp(S.energy+5,0,S.energyMax);
   onChainTx('HOME:UPGRADE:Lv'+S.house+':$'+c+'USD',0.00001);
-  updateHUD();renderBuildingPanel();logChat('[Home] 🏠 Upgraded to Lv '+S.house+'! +5 max energy.',false,'#fbbf24');
+  updateHUD();renderBuildingPanel();logChat('[Home] 🏠 Upgraded to Lv '+S.house+'! +5 max energy. NFT value now $'+(100+S.house*5)+' USD.',false,'#fbbf24');
   awardNFT('House NFT: Lv '+S.house+' '+getHouseColor().name+' House');
   saveProgress();
 }
@@ -1255,19 +1382,28 @@ const BLDGS=[
   {key:'Job Center', tex:'bJob',    ts:2.35,x:60*TILE,y:18*TILE,w:8*TILE,h:6*TILE},
   {key:'Market',     tex:'bMkt',    ts:2.35,x:40*TILE,y:22*TILE,w:8*TILE,h:6*TILE},
   {key:'Bank',       tex:'bBank',   ts:2.1, x:50*TILE,y:22*TILE,w:6*TILE,h:6*TILE},
-  // ── Residential District ── (fills empty city zones)
-  {key:'House',      tex:'bHouse',  ts:2.2, x:14*TILE,y:40*TILE,w:7*TILE,h:6*TILE,isHouse:true},
+  // ── Residential District ── houses placed beside roads (pinggir jalan)
+  // North side of y=28 road (y=29 = just south of road)
+  {key:'House',      tex:'bHouse',  ts:2.2, x:14*TILE,y:29*TILE,w:7*TILE,h:6*TILE,isHouse:true},
   {key:'House 2',    tex:'bHouse',  ts:2.0, x:9*TILE, y:29*TILE,w:7*TILE,h:6*TILE,isHouse:true},
   {key:'House 3',    tex:'bHouse',  ts:2.0, x:31*TILE,y:29*TILE,w:7*TILE,h:6*TILE,isHouse:true},
   {key:'House 4',    tex:'bHouse',  ts:2.0, x:39*TILE,y:29*TILE,w:7*TILE,h:6*TILE,isHouse:true},
   {key:'House 5',    tex:'bHouse',  ts:2.0, x:46*TILE,y:29*TILE,w:7*TILE,h:6*TILE,isHouse:true},
-  {key:'House 6',    tex:'bHouse',  ts:2.0, x:35*TILE,y:37*TILE,w:7*TILE,h:6*TILE,isHouse:true},
-  {key:'House 7',    tex:'bHouse',  ts:2.0, x:43*TILE,y:37*TILE,w:7*TILE,h:6*TILE,isHouse:true},
-  {key:'House 8',    tex:'bHouse',  ts:2.0, x:67*TILE,y:29*TILE,w:7*TILE,h:6*TILE,isHouse:true},
-  {key:'House 9',    tex:'bHouse',  ts:2.0, x:67*TILE,y:37*TILE,w:7*TILE,h:6*TILE,isHouse:true},
-  {key:'Cafe',       tex:'bCafe',   ts:2.35,x:60*TILE,y:40*TILE,w:8*TILE,h:6*TILE},
-  {key:'Gym',        tex:'bGym',    ts:2.1, x:72*TILE,y:40*TILE,w:6*TILE,h:6*TILE},
-  {key:'Hospital',   tex:'bHosp',   ts:2.2, x:26*TILE,y:40*TILE,w:7*TILE,h:6*TILE},
+  {key:'House 6',    tex:'bHouse',  ts:2.0, x:56*TILE,y:29*TILE,w:7*TILE,h:6*TILE,isHouse:true},
+  {key:'House 7',    tex:'bHouse',  ts:2.0, x:67*TILE,y:29*TILE,w:7*TILE,h:6*TILE,isHouse:true},
+  {key:'House 8',    tex:'bHouse',  ts:2.0, x:82*TILE,y:29*TILE,w:7*TILE,h:6*TILE,isHouse:true},
+  // South side of y=44 road (y=45 = just south of road)
+  {key:'House 9',    tex:'bHouse',  ts:2.0, x:9*TILE, y:45*TILE,w:7*TILE,h:6*TILE,isHouse:true},
+  {key:'House 10',   tex:'bHouse',  ts:2.0, x:20*TILE,y:45*TILE,w:7*TILE,h:6*TILE,isHouse:true},
+  {key:'House 11',   tex:'bHouse',  ts:2.0, x:31*TILE,y:45*TILE,w:7*TILE,h:6*TILE,isHouse:true},
+  {key:'House 12',   tex:'bHouse',  ts:2.0, x:39*TILE,y:45*TILE,w:7*TILE,h:6*TILE,isHouse:true},
+  {key:'House 13',   tex:'bHouse',  ts:2.0, x:47*TILE,y:45*TILE,w:7*TILE,h:6*TILE,isHouse:true},
+  {key:'House 14',   tex:'bHouse',  ts:2.0, x:56*TILE,y:45*TILE,w:7*TILE,h:6*TILE,isHouse:true},
+  {key:'House 15',   tex:'bHouse',  ts:2.0, x:82*TILE,y:45*TILE,w:7*TILE,h:6*TILE,isHouse:true},
+  // Community / leisure
+  {key:'Cafe',       tex:'bCafe',   ts:2.35,x:60*TILE,y:37*TILE,w:8*TILE,h:6*TILE},
+  {key:'Gym',        tex:'bGym',    ts:2.1, x:72*TILE,y:37*TILE,w:6*TILE,h:6*TILE},
+  {key:'Hospital',   tex:'bHosp',   ts:2.2, x:26*TILE,y:37*TILE,w:7*TILE,h:6*TILE},
   {key:'Casino',     tex:'bCasino', ts:2.35,x:72*TILE,y:18*TILE,w:8*TILE,h:6*TILE},
 ];
 const IACTS=[
@@ -1778,10 +1914,592 @@ function triggerInteract(sceneRef){
 }
 window.triggerInteract=triggerInteract;
 
-/* ── Private Chat (PM) ──
-   Shows up to 8 online players; clicking a name prefills the chat input
-   with "@Name: " so the message is shown as a private message in the log.
-*/
+/* ── openPM: clicking any player → Messenger directly ── */
+function openPM(name){
+  // Find or create a synthetic contact for NPC/online player
+  const synthAddr='0xnpc_'+name.toLowerCase().replace(/[^a-z0-9]/g,'');
+  if(!_friends[synthAddr]){
+    _friends[synthAddr]={addr:synthAddr,name:name,addedAt:Date.now(),isNPC:true};
+    saveFriends();
+  }
+  openMessengerWith(synthAddr);
+}
+window.openPM=openPM;
+
+/* ─────────────────────────────────────────────────────────────────────────
+   MOGA MESSENGER — full on-chain social + transaction layer
+   • Contacts / Friends (saved by wallet address)
+   • Messages: text, image, stamina-gift, crypto-send, NFT-transfer, system
+   • All on-chain transactions recorded in txHistory
+───────────────────────────────────────────────────────────────────────── */
+function friendsKey(){return'mogaFriends_'+(walletAddress||'guest');}
+function msgsKey(){return'mogaMsgs_'+(walletAddress||'guest');}
+let _friends={};
+let _msgs={};
+let _msgrActive=null; // addr of active chat
+
+function loadFriends(){
+  try{const r=localStorage.getItem(friendsKey());if(r)_friends=JSON.parse(r);}catch{}
+}
+function saveFriends(){
+  try{localStorage.setItem(friendsKey(),JSON.stringify(_friends));}catch{}
+}
+function loadMsgs(){
+  try{const r=localStorage.getItem(msgsKey());if(r)_msgs=JSON.parse(r);}catch{}
+}
+function saveMsgs(){
+  try{localStorage.setItem(msgsKey(),JSON.stringify(_msgs));}catch{}
+}
+loadFriends();loadMsgs();
+
+function addMsgToThread(addr,msg){
+  if(!_msgs[addr])_msgs[addr]=[];
+  _msgs[addr].push(msg);
+  if(_msgs[addr].length>200)_msgs[addr]=_msgs[addr].slice(-200);
+  saveMsgs();
+}
+
+/* ─── Open / Close ─── */
+function openMessenger(){
+  loadFriends();loadMsgs();
+  const p=document.getElementById('messengerPanel');
+  p.style.display='flex';
+  renderMsgrContacts();
+  if(_msgrActive)renderMsgrLog(_msgrActive);
+}
+window.openMessenger=openMessenger;
+
+function closeMessenger(){
+  document.getElementById('messengerPanel').style.display='none';
+}
+window.closeMessenger=closeMessenger;
+
+/* Open messenger and jump straight to a specific contact's conversation */
+function openMessengerWith(addr,nameHint){
+  if(nameHint&&!_friends[addr]){
+    _friends[addr]={addr,name:nameHint,addedAt:Date.now()};
+    saveFriends();
+  }
+  openMessenger();
+  if(_friends[addr]||addr){msgrSelectContact(addr);}
+}
+window.openMessengerWith=openMessengerWith;
+
+/* ─── Contacts ─── */
+function renderMsgrContacts(){
+  const list=document.getElementById('msgrContactsList');if(!list)return;
+  const keys=Object.keys(_friends);
+  if(!keys.length){
+    list.innerHTML='<div style="color:#475569;font-size:11px;padding:12px 8px;text-align:center;">No contacts.<br/>Add a friend\'s wallet.</div>';
+    return;
+  }
+  const avatarColors=['#6366f1','#0ea5e9','#22c55e','#f59e0b','#ec4899','#14b8a6','#a78bfa','#f87171'];
+  list.innerHTML=keys.map((addr,i)=>{
+    const f=_friends[addr];
+    const color=avatarColors[i%avatarColors.length];
+    const active=_msgrActive===addr?'active':'';
+    const lastMsg=(_msgs[addr]&&_msgs[addr].length)?_msgs[addr][_msgs[addr].length-1]:null;
+    const preview=lastMsg?(lastMsg.type==='image'?'📷 Image':lastMsg.type==='stamina'?'💊 Stamina gift':lastMsg.type==='crypto'?'💸 Crypto':lastMsg.type==='nft'?'🎨 NFT':(lastMsg.content||'').slice(0,20)):'';
+    return`<div class="msgr-contact ${active}" onclick="msgrSelectContact('${esc(addr)}')">
+      <div class="cavatar" style="background:${color}20;border:1px solid ${color}50;">${f.name.slice(0,1).toUpperCase()}</div>
+      <div class="cinfo">
+        <div class="cname">${esc(f.name)}</div>
+        <div class="caddr">${f.isNPC?'NPC Player':addr.slice(0,10)+'…'}</div>
+        ${preview?`<div style="font-size:9px;color:#475569;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(preview)}</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function msgrSelectContact(addr){
+  _msgrActive=addr;
+  const f=_friends[addr];
+  if(!f)return;
+  // Update header
+  document.getElementById('msgrChatName').textContent=f.name;
+  document.getElementById('msgrChatAddr').textContent=f.isNPC?'In-game player':addr;
+  // Highlight active contact
+  renderMsgrContacts();
+  renderMsgrLog(addr);
+  document.getElementById('msgrMsgIn').focus();
+}
+window.msgrSelectContact=msgrSelectContact;
+
+/* ─── Message log ─── */
+function esc(s){return String(s).replace(/[<>&"']/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c]));}
+
+function renderMsgrLog(addr){
+  const log=document.getElementById('msgrLog');if(!log)return;
+  const thread=_msgs[addr]||[];
+  if(!thread.length){
+    log.innerHTML=`<div style="color:#475569;font-size:12px;text-align:center;margin-top:50px;">Start a conversation 💬<br/><span style="font-size:10px;">Send text, stamina, crypto or NFTs</span></div>`;
+    return;
+  }
+  log.innerHTML=thread.map(m=>{
+    const isMe=m.from==='me';
+    const cls=isMe?'dm-me':'dm-them';
+    if(m.type==='system')return`<div class="dm-sys">${esc(m.content)}</div>`;
+    if(m.type==='image'){
+      return`<div class="dm-msg ${cls}"><img src="${m.content}" class="dm-img" onclick="window.open(this.src,'_blank')" alt="photo"/></div>`;
+    }
+    if(m.type==='stamina'){
+      const item=m.content;
+      return`<div class="dm-msg ${cls}"><div class="dm-nft">💊 <strong>Stamina Gift</strong><br/>${esc(item.emoji)} ${esc(item.name)} · +${item.energy} energy<br/><span style="font-size:10px;color:#94a3b8;">${isMe?'You sent →':'Received ✅'}</span>${m.txHash?`<a class="dm-tx" href="${explorerTx(m.txHash)}" target="_blank">tx: ${m.txHash.slice(0,16)}…</a>`:''}</div></div>`;
+    }
+    if(m.type==='crypto'){
+      const c=m.content;
+      return`<div class="dm-msg ${cls}"><div class="dm-crypto">💸 <strong>${isMe?'Sent':'Received'} ${c.amount} ${c.currency}</strong>${m.txHash?`<br/><a class="dm-tx" href="${explorerTx(m.txHash)}" target="_blank">tx: ${m.txHash.slice(0,16)}…</a>`:''}</div></div>`;
+    }
+    if(m.type==='nft'){
+      const n=m.content;
+      return`<div class="dm-msg ${cls}"><div class="dm-nft">🎨 <strong>NFT Transfer</strong><br/>${esc(n.label)}<br/><span style="font-size:10px;color:#94a3b8;">${isMe?'Sent →':'Received ✅'}</span>${m.txHash?`<br/><a class="dm-tx" href="${explorerTx(m.txHash)}" target="_blank">tx: ${m.txHash.slice(0,16)}…</a>`:''}</div></div>`;
+    }
+    if(m.type==='offer_house'||m.type==='offer_skill'){
+      const o=m.content;
+      const btnHtml=!isMe?`<button onclick="acceptMsgrOffer('${esc(addr)}','${m.type}',${JSON.stringify(o).replace(/"/g,'&quot;')})" class="ibtn btn-green" style="margin-top:5px;font-size:11px;">Accept Offer</button>`:'';
+      return`<div class="dm-msg ${cls}"><div class="dm-nft">🏷️ <strong>${m.type==='offer_house'?'🏠 House NFT Offer':'🎓 Skill NFT Offer'}</strong><br/>${esc(o.label)}<br/><span style="color:#fbbf24;">$${o.price} USD</span>${btnHtml}</div></div>`;
+    }
+    // Default: text
+    return`<div class="dm-msg ${cls}">${esc(m.content)}</div>`;
+  }).join('');
+  log.scrollTop=log.scrollHeight;
+}
+
+/* ─── Send text ─── */
+function msgrSend(){
+  const addr=_msgrActive;if(!addr)return logChat('[Messenger] Select a contact first.',false,'#f87171');
+  const inp=document.getElementById('msgrMsgIn');
+  const txt=(inp.value||'').trim();if(!txt)return;
+  inp.value='';
+  addMsgToThread(addr,{type:'text',from:'me',content:txt,ts:Date.now()});
+  renderMsgrLog(addr);
+  renderMsgrContacts();
+  // NPC auto-reply
+  const f=_friends[addr];
+  if(f&&f.isNPC){
+    const replies=['👋 Hey! How are you?','Let\'s meet at the Cafe ☕','I\'m farming right now 🌱','Good luck at the Casino 🎰','I just upgraded my house! 🏠','Need any fish? 🎣','Let\'s trade skills! 💼','Energy is low, need food 😅','GG on the round! 🚀','Life in Moga World is great 🌆'];
+    setTimeout(()=>{
+      addMsgToThread(addr,{type:'text',from:addr,content:replies[Math.floor(Math.random()*replies.length)],ts:Date.now()});
+      renderMsgrLog(addr);renderMsgrContacts();
+    },800+Math.random()*1400);
+  }
+}
+window.msgrSend=msgrSend;
+
+/* ─── Send Stamina (food gift) ─── */
+const STAMINA_ITEMS=[
+  {id:'apple',   name:'Apple',    emoji:'🍎',energy:30, inv:'apple'},
+  {id:'sandwich',name:'Sandwich', emoji:'🥪',energy:45, inv:'sandwich'},
+  {id:'soda',    name:'Soda',     emoji:'🥤',energy:20, inv:'soda'},
+  {id:'fish',    name:'Fish',     emoji:'🐟',energy:FISH_ENERGY,inv:'fish'},
+];
+
+function msgrSendStamina(){
+  const addr=_msgrActive;if(!addr)return logChat('[Messenger] Select a contact first.',false,'#f87171');
+  // Build modal
+  const f=_friends[addr];
+  const items=STAMINA_ITEMS.filter(it=>S.inv[it.inv]>0);
+  if(!items.length){
+    logChat('[Messenger] No food items in inventory. Buy at Market first.',false,'#f87171');
+    return;
+  }
+  const modal=document.createElement('div');
+  modal.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(2,6,23,.85);z-index:1100;display:flex;align-items:center;justify-content:center;';
+  modal.innerHTML=`<div style="background:#0f172a;border:1px solid rgba(255,255,255,.18);border-radius:14px;padding:18px;width:280px;max-width:95vw;">
+    <div style="font-size:13px;font-weight:bold;margin-bottom:12px;">💊 Send Stamina to ${esc(f?f.name:addr)}</div>
+    <div style="font-size:11px;color:#94a3b8;margin-bottom:10px;">Choose a food item to gift. It will be deducted from your inventory and sent on-chain.</div>
+    ${items.map(it=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 9px;border:1px solid rgba(255,255,255,.1);border-radius:8px;margin-bottom:6px;background:rgba(255,255,255,.04);">
+      <span style="font-size:13px;">${it.emoji} <strong>${it.name}</strong> <span style="font-size:10px;color:#94a3b8;">×${S.inv[it.inv]} · +${it.energy} ⚡</span></span>
+      <button onclick="confirmMsgrStamina('${addr}','${it.id}');this.closest('[style*=fixed]').remove();" class="ibtn btn-green" style="font-size:11px;">Send</button>
+    </div>`).join('')}
+    <button onclick="this.closest('[style*=fixed]').remove()" style="width:100%;margin-top:6px;padding:7px;border-radius:8px;background:rgba(100,116,139,.3);border:1px solid rgba(255,255,255,.1);color:#94a3b8;cursor:pointer;">Cancel</button>
+  </div>`;
+  document.body.appendChild(modal);
+}
+window.msgrSendStamina=msgrSendStamina;
+
+async function confirmMsgrStamina(addr,itemId){
+  const item=STAMINA_ITEMS.find(it=>it.id===itemId);if(!item)return;
+  if(!S.inv[item.inv]||S.inv[item.inv]<=0)return logChat('[Messenger] No '+item.name+' left.',false,'#f87171');
+  S.inv[item.inv]--;updateHUD();saveProgress();
+  const msg={type:'stamina',from:'me',content:{...item},ts:Date.now(),txHash:null};
+  const f=_friends[addr];
+  logChat('[Messenger] 💊 Sending '+item.emoji+' '+item.name+' to '+(f?f.name:addr)+'…',false,'#a78bfa');
+  const tx=await onChainTx('STAMINA_GIFT:'+item.id+':to:'+addr,0.00001);
+  if(tx)msg.txHash=tx.hash;
+  addMsgToThread(addr,msg);
+  renderMsgrLog(addr);renderMsgrContacts();
+  logChat('[Messenger] ✅ Stamina gift sent!',false,'#22c55e');
+  // NPC receives and reacts
+  if(_friends[addr]&&_friends[addr].isNPC){
+    setTimeout(()=>{
+      const reactions=['Thanks! 🙏 Energy boosted!','Wow, '+item.emoji+' '+item.name+'! You\'re the best!','Needed that! +'+item.energy+' energy 💪','So kind of you! 🥹'];
+      addMsgToThread(addr,{type:'text',from:addr,content:reactions[Math.floor(Math.random()*reactions.length)],ts:Date.now()});
+      renderMsgrLog(addr);renderMsgrContacts();
+    },900);
+  }
+}
+window.confirmMsgrStamina=confirmMsgrStamina;
+
+/* ─── Send Crypto ─── */
+function msgrSendCrypto(){
+  const addr=_msgrActive;if(!addr)return logChat('[Messenger] Select a contact first.',false,'#f87171');
+  const f=_friends[addr];
+  if(f&&f.isNPC)return logChat('[Messenger] Cannot send real crypto to NPCs.',false,'#f87171');
+  const modal=document.createElement('div');
+  modal.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(2,6,23,.85);z-index:1100;display:flex;align-items:center;justify-content:center;';
+  modal.innerHTML=`<div style="background:#0f172a;border:1px solid rgba(255,255,255,.18);border-radius:14px;padding:18px;width:280px;max-width:95vw;">
+    <div style="font-size:13px;font-weight:bold;margin-bottom:12px;">💸 Send Crypto to ${esc(f?f.name:addr.slice(0,12)+'…')}</div>
+    <select id="msgrCryptoType" style="width:100%;margin-bottom:8px;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:#1e293b;color:#fff;font-size:12px;">
+      <option value="ETH">${networkConfig.currency||'ETH'}</option>
+      <option value="USDC">USDC</option>
+    </select>
+    <input id="msgrCryptoAmt" type="number" placeholder="Amount" min="0.000001" step="0.001" style="width:100%;box-sizing:border-box;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:#1e293b;color:#fff;font-size:12px;margin-bottom:10px;"/>
+    <div style="display:flex;gap:8px;">
+      <button onclick="confirmMsgrCrypto('${addr}');this.closest('[style*=fixed]').remove();" class="ibtn btn-green" style="flex:1;padding:8px;">Send 🚀</button>
+      <button onclick="this.closest('[style*=fixed]').remove()" style="flex:1;padding:8px;border-radius:8px;background:rgba(100,116,139,.3);border:1px solid rgba(255,255,255,.1);color:#94a3b8;cursor:pointer;">Cancel</button>
+    </div>
+  </div>`;
+  document.body.appendChild(modal);
+}
+window.msgrSendCrypto=msgrSendCrypto;
+
+async function confirmMsgrCrypto(toAddr){
+  const currency=(document.getElementById('msgrCryptoType')||{}).value||'ETH';
+  const amtStr=(document.getElementById('msgrCryptoAmt')||{}).value||'0';
+  const amount=parseFloat(amtStr);
+  if(!amount||amount<=0)return logChat('[Messenger] Enter a valid amount.',false,'#f87171');
+  const f=_friends[toAddr];
+  logChat('[Messenger] 💸 Sending '+amount+' '+currency+' to '+(f?f.name:toAddr.slice(0,10)+'…')+'…',false,'#fbbf24');
+  let tx=null;
+  try{
+    if(currency==='USDC'){
+      await sendUSDCOnChain(toAddr,String(amount));
+      tx={hash:'usdc_'+Date.now()};
+    }else{
+      if(!window.ethereum||!walletAddress)return logChat('[Messenger] Connect wallet first.',false,'#f87171');
+      const provider=new ethers.providers.Web3Provider(window.ethereum);
+      const signer=provider.getSigner();
+      tx=await signer.sendTransaction({to:toAddr,value:ethers.utils.parseEther(String(amount))});
+      saveTxRecord(tx.hash,'MSG:SEND:'+amount+currency+':to:'+toAddr.slice(0,8),String(amount),currency,networkConfig.name,'PAY');
+    }
+  }catch(e){logChat('[Messenger] ❌ '+e.message.slice(0,60),false,'#f87171');return;}
+  const msg={type:'crypto',from:'me',content:{amount,currency},ts:Date.now(),txHash:tx?tx.hash:null};
+  addMsgToThread(toAddr,msg);
+  renderMsgrLog(toAddr);renderMsgrContacts();
+  logChat('[Messenger] ✅ Sent '+amount+' '+currency+'!',false,'#22c55e');
+}
+window.confirmMsgrCrypto=confirmMsgrCrypto;
+
+/* ─── Send NFT ─── */
+function msgrSendNFT(){
+  const addr=_msgrActive;if(!addr)return logChat('[Messenger] Select a contact first.',false,'#f87171');
+  const myHouse=getMyHouseKey();
+  const skills=S.learnedSkills.map(id=>{const sk=SKILLS.find(s=>s.id===id);return sk?{id,label:sk.icon+' '+sk.name}:null;}).filter(Boolean);
+  if(!myHouse&&!skills.length)return logChat('[Messenger] No NFTs to send. Own a house or learn skills first.',false,'#f87171');
+  const modal=document.createElement('div');
+  modal.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(2,6,23,.85);z-index:1100;display:flex;align-items:center;justify-content:center;';
+  let opts='';
+  if(myHouse)opts+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 9px;border:1px solid rgba(251,191,36,.25);border-radius:8px;margin-bottom:6px;background:rgba(251,191,36,.06);">
+    <span style="font-size:12px;">🏠 <strong>${myHouse}</strong> <span style="font-size:10px;color:#94a3b8;">House NFT</span></span>
+    <button onclick="confirmMsgrNFT('${addr}','house','${myHouse}','${myHouse}');this.closest('[style*=fixed]').remove();" class="ibtn btn-yellow" style="font-size:11px;">Gift</button>
+  </div>`;
+  skills.forEach(sk=>{opts+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 9px;border:1px solid rgba(99,102,241,.25);border-radius:8px;margin-bottom:6px;background:rgba(99,102,241,.06);">
+    <span style="font-size:12px;">${sk.label} <span style="font-size:10px;color:#94a3b8;">Skill NFT</span></span>
+    <button onclick="confirmMsgrNFT('${addr}','skill','${sk.id}','${sk.label}');this.closest('[style*=fixed]').remove();" class="ibtn btn-purple" style="font-size:11px;">Gift</button>
+  </div>`;});
+  modal.innerHTML=`<div style="background:#0f172a;border:1px solid rgba(255,255,255,.18);border-radius:14px;padding:18px;width:290px;max-width:95vw;">
+    <div style="font-size:13px;font-weight:bold;margin-bottom:12px;">🎨 Gift NFT to ${esc((_friends[addr]||{}).name||addr.slice(0,10)+'…')}</div>
+    ${opts}
+    <button onclick="this.closest('[style*=fixed]').remove()" style="width:100%;margin-top:4px;padding:7px;border-radius:8px;background:rgba(100,116,139,.3);border:1px solid rgba(255,255,255,.1);color:#94a3b8;cursor:pointer;">Cancel</button>
+  </div>`;
+  document.body.appendChild(modal);
+}
+window.msgrSendNFT=msgrSendNFT;
+
+async function confirmMsgrNFT(toAddr,nftType,nftId,label){
+  const f=_friends[toAddr];
+  const toLabel=f?f.name:toAddr.slice(0,10)+'…';
+  if(nftType==='house'){
+    const myKey=getMyHouseKey();
+    if(!myKey||myKey!==nftId)return logChat('[Messenger] You no longer own '+nftId+'.',false,'#f87171');
+    if(f&&!f.isNPC&&toAddr.length>=10){
+      houseOwnership[myKey]={owner:toAddr.toLowerCase(),forSale:false,price:0};
+    }else{houseOwnership[myKey]={owner:toAddr,forSale:false,price:0};}
+    saveHouseOwnership();
+    if(_phaserScene&&WS.zone==='CITY')drawCity(_phaserScene);
+    logChat('[Messenger] 🏠 House NFT '+myKey+' gifted to '+toLabel,false,'#fbbf24');
+  }else if(nftType==='skill'){
+    logChat('[Messenger] 🎓 Skill NFT '+label+' shared with '+toLabel,false,'#a78bfa');
+  }
+  const tx=await onChainTx('NFT_GIFT:'+nftType+':'+nftId+':to:'+toAddr,0.00001);
+  const msg={type:'nft',from:'me',content:{nftType,nftId,label},ts:Date.now(),txHash:tx?tx.hash:null};
+  addMsgToThread(toAddr,msg);
+  renderMsgrLog(toAddr);renderMsgrContacts();
+  logChat('[Messenger] ✅ NFT gifted!',false,'#22c55e');
+}
+window.confirmMsgrNFT=confirmMsgrNFT;
+
+/* ─── Offer House for sale via chat ─── */
+function msgrOfferHouse(){
+  const addr=_msgrActive;if(!addr)return logChat('[Messenger] Select a contact first.',false,'#f87171');
+  const myHouse=getMyHouseKey();
+  if(!myHouse)return logChat('[Messenger] You don\'t own a house to offer.',false,'#f87171');
+  const suggestedPrice=100+S.house*5;
+  const modal=document.createElement('div');
+  modal.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(2,6,23,.85);z-index:1100;display:flex;align-items:center;justify-content:center;';
+  modal.innerHTML=`<div style="background:#0f172a;border:1px solid rgba(255,255,255,.18);border-radius:14px;padding:18px;width:280px;max-width:95vw;">
+    <div style="font-size:13px;font-weight:bold;margin-bottom:10px;">🏠 Offer House NFT for Sale</div>
+    <div style="font-size:11px;color:#94a3b8;margin-bottom:8px;">House: <strong style="color:#fbbf24;">${myHouse}</strong> · Lv ${S.house}<br/>Suggested: $${suggestedPrice} USD</div>
+    <input id="msgrHousePrice" type="number" placeholder="Your price (USD)" value="${suggestedPrice}" min="1" style="width:100%;box-sizing:border-box;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:#1e293b;color:#fff;font-size:12px;margin-bottom:10px;"/>
+    <div style="display:flex;gap:8px;">
+      <button onclick="confirmMsgrHouseOffer('${addr}','${myHouse}');this.closest('[style*=fixed]').remove();" class="ibtn btn-green" style="flex:1;padding:8px;">Send Offer</button>
+      <button onclick="this.closest('[style*=fixed]').remove()" style="flex:1;padding:8px;border-radius:8px;background:rgba(100,116,139,.3);border:1px solid rgba(255,255,255,.1);color:#94a3b8;cursor:pointer;">Cancel</button>
+    </div>
+  </div>`;
+  document.body.appendChild(modal);
+}
+window.msgrOfferHouse=msgrOfferHouse;
+
+function confirmMsgrHouseOffer(toAddr,houseKey){
+  const price=parseInt((document.getElementById('msgrHousePrice')||{}).value)||0;
+  if(price<1)return logChat('[Messenger] Enter a valid price.',false,'#f87171');
+  const msg={type:'offer_house',from:'me',content:{label:houseKey+' House NFT · Lv '+S.house,houseKey,price},ts:Date.now()};
+  addMsgToThread(toAddr,msg);
+  renderMsgrLog(toAddr);renderMsgrContacts();
+  onChainTx('HOUSE_OFFER:'+houseKey+':to:'+toAddr+':$'+price,0.00001);
+  logChat('[Messenger] 🏠 House offer sent: '+houseKey+' @ $'+price+' USD',false,'#fbbf24');
+}
+window.confirmMsgrHouseOffer=confirmMsgrHouseOffer;
+
+/* ─── Offer Skill NFT via chat ─── */
+function msgrOfferSkill(){
+  const addr=_msgrActive;if(!addr)return logChat('[Messenger] Select a contact first.',false,'#f87171');
+  if(!S.learnedSkills.length)return logChat('[Messenger] No skills to offer.',false,'#f87171');
+  const modal=document.createElement('div');
+  modal.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(2,6,23,.85);z-index:1100;display:flex;align-items:center;justify-content:center;';
+  const skillOpts=S.learnedSkills.map(id=>{
+    const sk=SKILLS.find(s=>s.id===id);if(!sk)return'';
+    return`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 9px;border:1px solid rgba(99,102,241,.25);border-radius:8px;margin-bottom:6px;">
+      <span>${sk.icon} <strong>${sk.name}</strong></span>
+      <button onclick="confirmMsgrSkillOffer('${addr}','${id}','${sk.icon} ${sk.name}');this.closest('[style*=fixed]').remove();" class="ibtn btn-indigo" style="font-size:11px;">Offer</button>
+    </div>`;
+  }).join('');
+  modal.innerHTML=`<div style="background:#0f172a;border:1px solid rgba(255,255,255,.18);border-radius:14px;padding:18px;width:280px;max-width:95vw;">
+    <div style="font-size:13px;font-weight:bold;margin-bottom:12px;">🎓 Offer Skill NFT</div>
+    ${skillOpts}
+    <button onclick="this.closest('[style*=fixed]').remove()" style="width:100%;margin-top:4px;padding:7px;border-radius:8px;background:rgba(100,116,139,.3);border:1px solid rgba(255,255,255,.1);color:#94a3b8;cursor:pointer;">Cancel</button>
+  </div>`;
+  document.body.appendChild(modal);
+}
+window.msgrOfferSkill=msgrOfferSkill;
+
+function confirmMsgrSkillOffer(toAddr,skillId,label){
+  const price=SKILL_COST_USD;
+  const msg={type:'offer_skill',from:'me',content:{label,skillId,price},ts:Date.now()};
+  addMsgToThread(toAddr,msg);
+  renderMsgrLog(toAddr);renderMsgrContacts();
+  onChainTx('SKILL_OFFER:'+skillId+':to:'+toAddr,0.00001);
+  logChat('[Messenger] 🎓 Skill offer sent: '+label+' @ $'+price+' USD',false,'#a78bfa');
+}
+window.confirmMsgrSkillOffer=confirmMsgrSkillOffer;
+
+/* Accept incoming offer (house or skill) */
+async function acceptMsgrOffer(fromAddr,offerType,offer){
+  if(offerType==='offer_house'){
+    if(S.coins<offer.price)return logChat('[Messenger] Need $'+offer.price+' USD.',false,'#f87171');
+    if(getMyHouseKey())return logChat('[Messenger] You already own a house.',false,'#f87171');
+    S.coins-=offer.price;
+    houseOwnership[offer.houseKey]={owner:walletAddress?walletAddress.toLowerCase():offer.houseKey,forSale:false,price:0};
+    saveHouseOwnership();updateHUD();
+    if(_phaserScene&&WS.zone==='CITY')drawCity(_phaserScene);
+    const tx=await treasuryPay('HOUSE_BUY:'+offer.houseKey+':from:'+fromAddr+':$'+offer.price+'USD',offer.price);
+    addMsgToThread(fromAddr,{type:'system',content:'✅ Deal! '+offer.houseKey+' sold for $'+offer.price+' USD',ts:Date.now()});
+    renderMsgrLog(fromAddr);renderMsgrContacts();
+    logChat('[Messenger] 🎉 You bought '+offer.houseKey+'! Welcome home.',false,'#22c55e');
+    awardNFT('House NFT: '+offer.houseKey+' purchased via Messenger');
+    saveProgress();
+  }else if(offerType==='offer_skill'){
+    logChat('[Messenger] 🎓 Skill offer accepted (contact dev team to finalize).',false,'#a78bfa');
+  }
+}
+window.acceptMsgrOffer=acceptMsgrOffer;
+
+/* ─── Send Image ─── */
+function msgrSendImage(){
+  const addr=_msgrActive;if(!addr)return logChat('[Messenger] Select a contact first.',false,'#f87171');
+  document.getElementById('msgrFileIn').click();
+}
+window.msgrSendImage=msgrSendImage;
+
+function msgrHandleFile(input){
+  const addr=_msgrActive;if(!addr||!input.files[0])return;
+  const file=input.files[0];
+  if(file.size>3*1024*1024){logChat('[Messenger] Image too large (max 3 MB).',false,'#f87171');input.value='';return;}
+  const reader=new FileReader();
+  reader.onload=e=>{
+    addMsgToThread(addr,{type:'image',from:'me',content:e.target.result,ts:Date.now()});
+    renderMsgrLog(addr);renderMsgrContacts();
+    input.value='';
+  };
+  reader.readAsDataURL(file);
+}
+window.msgrHandleFile=msgrHandleFile;
+
+/* ─── Add Friend ─── */
+function showAddFriend(){
+  document.getElementById('msgrAddFriendBox').style.display='block';
+}
+window.showAddFriend=showAddFriend;
+
+function confirmAddFriend(){
+  const rawAddr=((document.getElementById('friendAddrIn')||{}).value||'').trim();
+  const name=((document.getElementById('friendNameIn')||{}).value||'').trim()||rawAddr.slice(0,10)+'…';
+  // Accept wallet address or any identifier (for NPC names too)
+  if(!rawAddr||rawAddr.length<3)return logChat('[Messenger] Enter a valid address or name.',false,'#f87171');
+  const addr=rawAddr.toLowerCase();
+  // Sanitize name (alphanumeric, spaces, basic chars only)
+  const safeName=name.replace(/[<>&"']/g,'').slice(0,30);
+  _friends[addr]={addr,name:safeName,addedAt:Date.now()};
+  saveFriends();
+  document.getElementById('msgrAddFriendBox').style.display='none';
+  if(document.getElementById('friendAddrIn'))document.getElementById('friendAddrIn').value='';
+  if(document.getElementById('friendNameIn'))document.getElementById('friendNameIn').value='';
+  renderMsgrContacts();
+  logChat('[Messenger] ✅ Added: '+safeName,false,'#22c55e');
+}
+window.confirmAddFriend=confirmAddFriend;
+
+/* ─────────────────────────────────────────────────────────────────────────
+   PLAYER PROFILE PANEL — shows when clicking an NPC/player in-world
+───────────────────────────────────────────────────────────────────────── */
+let _profileTarget=null;
+
+function showPlayerProfile(playerData){
+  _profileTarget=playerData;
+  // Generate deterministic stats from player data index
+  const idx=playerData.id||0;
+  const skillCount=1+(idx%3);
+  const playerSkills=SKILLS.slice(0,skillCount);
+  const energy=40+(idx*37+13)%55;
+  const houseLevel=1+(idx%4);
+  const houseColor=['Golden','Emerald','Sapphire','Ruby'][idx%4];
+  const job=SKILLS[idx%SKILLS.length].job;
+  // Build or update profile panel
+  let panel=document.getElementById('playerProfilePanel');
+  if(!panel){
+    panel=document.createElement('div');
+    panel.id='playerProfilePanel';
+    panel.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#0f172a;border:1px solid rgba(255,255,255,.18);border-radius:16px;z-index:1050;box-shadow:0 8px 32px rgba(0,0,0,.8);width:280px;max-width:95vw;overflow:hidden;';
+    document.body.appendChild(panel);
+  }
+  const avatarColors=['#6366f1','#0ea5e9','#22c55e','#f59e0b','#ec4899','#f87171'];
+  const avatarColor=avatarColors[idx%avatarColors.length];
+  const energyPct=Math.round((energy/100)*100);
+  const foodItems=STAMINA_ITEMS.filter(it=>S.inv[it.inv]>0);
+  panel.innerHTML=`
+    <div style="background:linear-gradient(135deg,${avatarColor}22,rgba(14,165,233,.1));padding:16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid rgba(255,255,255,.08);">
+      <div style="width:52px;height:52px;border-radius:50%;background:${avatarColor}30;border:2px solid ${avatarColor}60;display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;">🐱</div>
+      <div style="flex:1;">
+        <div style="font-size:14px;font-weight:bold;color:#e2e8f0;">${esc(playerData.name)}</div>
+        <div style="font-size:10px;color:#64748b;font-family:monospace;">${esc(playerData.addr||'')}</div>
+        <div style="font-size:11px;color:#fbbf24;margin-top:2px;">💼 ${job}</div>
+      </div>
+      <button onclick="document.getElementById('playerProfilePanel').style.display='none'" style="background:none;border:none;color:#94a3b8;font-size:18px;cursor:pointer;align-self:flex-start;padding:0;">✕</button>
+    </div>
+    <div style="padding:14px;">
+      <div style="margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px;"><span>⚡ Stamina</span><span style="color:${energyPct>50?'#22c55e':energyPct>20?'#fbbf24':'#ef4444'};">${energy}/100</span></div>
+        <div style="height:8px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden;"><div style="height:100%;width:${energyPct}%;background:${energyPct>50?'rgba(34,197,94,.8)':energyPct>20?'rgba(251,191,36,.85)':'rgba(239,68,68,.9)'};border-radius:999px;"></div></div>
+      </div>
+      <div style="font-size:11px;color:#94a3b8;margin-bottom:6px;">🏠 House Lv ${houseLevel} · ${houseColor}</div>
+      <div style="font-size:11px;color:#94a3b8;margin-bottom:10px;">✅ Skills: ${playerSkills.map(s=>s.icon+' '+s.name).join(', ')}</div>
+      <div style="border-top:1px solid rgba(255,255,255,.08);padding-top:10px;">
+        <div style="font-size:11px;color:#94a3b8;margin-bottom:7px;">💊 Send Stamina (from your inventory):</div>
+        ${foodItems.length?`<div style="display:flex;flex-wrap:wrap;gap:5px;">${foodItems.map(it=>`<button onclick="confirmMsgrStamina('0xnpc_${playerData.name.toLowerCase().replace(/[^a-z0-9]/g,'')}','${it.id}');document.getElementById('playerProfilePanel').style.display='none';" style="padding:5px 9px;border-radius:8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:#fff;cursor:pointer;font-size:11px;">${it.emoji} ${it.name} ×${S.inv[it.inv]}</button>`).join('')}</div>`:'<div style="font-size:10px;color:#64748b;">No food in inventory. Buy at Market.</div>'}
+      </div>
+      <div style="display:flex;gap:6px;margin-top:10px;">
+        <button onclick="openMessengerWith('0xnpc_${playerData.name.toLowerCase().replace(/[^a-z0-9]/g,'')}','${esc(playerData.name)}');document.getElementById('playerProfilePanel').style.display='none';" style="flex:1;padding:7px;border-radius:8px;background:linear-gradient(90deg,#6366f1,#0ea5e9);border:none;color:#fff;font-size:11px;cursor:pointer;">💬 Chat</button>
+        <button onclick="document.getElementById('playerProfilePanel').style.display='none'" style="flex:1;padding:7px;border-radius:8px;background:rgba(100,116,139,.3);border:1px solid rgba(255,255,255,.1);color:#94a3b8;cursor:pointer;font-size:11px;">Close</button>
+      </div>
+    </div>`;
+  panel.style.display='block';
+}
+window.showPlayerProfile=showPlayerProfile;
+
+/* ─────────────────────────────────────────────────────────────────────────
+   VIRTUAL D-PAD — mobile touch movement
+───────────────────────────────────────────────────────────────────────── */
+const _touch={up:false,down:false,left:false,right:false};
+(function setupDpad(){
+  const map=[['dUp','up'],['dDown','down'],['dLeft','left'],['dRight','right']];
+  map.forEach(([id,dir])=>{
+    const btn=document.getElementById(id);if(!btn)return;
+    const on=e=>{e.preventDefault();_touch[dir]=true;};
+    const off=e=>{e.preventDefault();_touch[dir]=false;};
+    btn.addEventListener('touchstart',on,{passive:false});
+    btn.addEventListener('touchend',off,{passive:false});
+    btn.addEventListener('touchcancel',off,{passive:false});
+    btn.addEventListener('mousedown',on);
+    btn.addEventListener('mouseup',off);
+    btn.addEventListener('mouseleave',off);
+  });
+})();
+
+/* ─────────────────────────────────────────────────────────────────────────
+   BIRDS — animated pixel birds flying across the city sky
+───────────────────────────────────────────────────────────────────────── */
+let _birds=[];
+function spawnBirds(scene){
+  _birds=[];
+  for(let i=0;i<10;i++){
+    const goRight=Math.random()<0.5;
+    const startX=goRight?-40:(CW+4)*TILE;
+    const y=(6+Math.random()*20)*TILE;
+    const spd=(110+Math.random()*90)*(goRight?1:-1);
+    const spr=scene.add.image(startX,y,'bird')
+      .setScale(1.0+Math.random()*0.5).setDepth(16).setFlipX(!goRight);
+    _birds.push({spr,spd,baseY:y,phase:Math.random()*Math.PI*2,
+      resetX:goRight?(CW+6)*TILE:-6*TILE,
+      startX:goRight?-40:(CW+4)*TILE});
+  }
+}
+function updateBirds(dtS){
+  if(WS.zone!=='CITY'){_birds.forEach(b=>b.spr.setVisible(false));return;}
+  _birds.forEach(b=>{
+    b.spr.setVisible(true);
+    b.spr.x+=b.spd*dtS;
+    b.phase+=dtS*4;
+    b.spr.y=b.baseY+Math.sin(b.phase)*5;
+    const gone=b.spd>0?b.spr.x>b.resetX:b.spr.x<b.resetX;
+    if(gone){
+      b.spr.x=b.startX;
+      b.baseY=(6+Math.random()*20)*TILE;
+      b.phase=Math.random()*Math.PI*2;
+    }
+  });
+}
+
+/* ─── Add bird texture (call inside makeTextures) ─── */
+function makeBirdTexture(scene){
+  addTex(scene,'bird',20,10,c=>{
+    const p=(x,y,w,h,col)=>px(c,x,y,w,h,col);
+    // Body
+    p(7,4,6,4,'#334155');
+    // Left wing up
+    p(1,2,7,2,'#475569');p(1,3,3,2,'#475569');
+    // Right wing up
+    p(13,2,6,2,'#475569');p(16,3,3,2,'#475569');
+    // Head + beak
+    p(12,3,3,3,'#334155');p(15,4,2,1,'#f59e0b');
+    // Tail
+    p(4,6,3,2,'#475569');
+  });
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   PM LIST: clicking a player pill → Messenger  
+───────────────────────────────────────────────────────────────────────── */
 function renderPMList(){
   const el=document.getElementById('pmList');if(!el)return;
   const ids=[...onlineIds].slice(0,PM_LIST_MAX);
@@ -1789,13 +2507,8 @@ function renderPMList(){
   el.innerHTML=ids.map(i=>{
     const p=PPOOL[i];
     return`<span onclick="openPM('${p.name}')" style="display:inline-block;margin:2px 3px;padding:2px 7px;border-radius:999px;border:1px solid rgba(99,102,241,.4);background:rgba(99,102,241,.1);color:#a5b4fc;cursor:pointer;font-size:11px;">👤 ${p.name}</span>`;
-  }).join('')+'<div style="font-size:9px;color:#475569;margin-top:4px;">+ '+(onlineIds.size-Math.min(8,onlineIds.size))+' more online</div>';
+  }).join('')+'<div style="font-size:9px;color:#475569;margin-top:4px;">+ '+(onlineIds.size-Math.min(8,onlineIds.size))+' more online · 💬 Messenger for full chat</div>';
 }
-function openPM(name){
-  const inp=document.getElementById('chatIn');if(!inp)return;
-  inp.value='@'+name+': ';inp.focus();
-}
-window.openPM=openPM;
 function getSaveKey(){return'mogaWorld_'+(walletAddress||'guest');}
 
 /* ── Helpers ── */
@@ -1890,10 +2603,17 @@ function goFish(){
   if(!S.inv.bait)return logChat('[River] Need 🪱 Bait. Buy at Market.');
   if(!reqEnergy(FISH_ENERGY_COST,'[River] Too tired to fish. Need '+FISH_ENERGY_COST+' energy.'))return;
   S.inv.bait--;
-  const catches=['🐟 Tilapia','🐠 Clownfish','🐡 Pufferfish','🦐 Shrimp','🦑 Squid','🦞 Lobster','🐙 Octopus'];
   const fail=Math.random()<FISH_MISS_RATE;
-  if(fail){logChat('[River] 🎣 Nothing biting… bait used.',false,'#64748b');}
-  else{S.inv.fish++;logChat('[River] 🎣 Caught: '+catches[Math.floor(Math.random()*catches.length)]+'! (+1 fish)',false,'#34d399');}
+  if(fail){
+    logChat('[River] 🎣 Nothing biting… bait used. (−'+FISH_ENERGY_COST+' ⚡)',false,'#64748b');
+  }else{
+    // Weighted random fish type — all sell for $0.5 USD; variety is for fun
+    let r=Math.random(),acc=0,caught=FISH_TYPES[0];
+    for(const ft of FISH_TYPES){acc+=ft.chance;if(r<=acc){caught=ft;break;}}
+    S.inv.fish++;
+    S.lastFishType=caught;
+    logChat('[River] 🎣 Caught: '+caught.name+'! · Sell for $'+FISH_SELL_PRICE+' USD (−'+FISH_ENERGY_COST+' ⚡)',false,'#34d399');
+  }
   updateHUD();renderBuildingPanel();saveProgress();
 }
 window.goFish=goFish;
@@ -1941,7 +2661,7 @@ function waterSeed(idx){
   if(!S.waterFull)return logChat('[Farm] Watering can empty! Fill at 🏞️ River.',false,'#f87171');
   p.state='watered';p.readyAt=Date.now()+SEED_GROW_MS;S.waterFull=false;
   updateHUD();renderBuildingPanel();redrawFarmPlots();
-  logChat('[Farm] 💧 Watered! Fruit ready in ~'+Math.ceil(SEED_GROW_MS/60000)+'m.',false,'#38bdf8');
+  logChat('[Farm] 💧 Watered! Fruit ready in 24 hours (real time). Come back tomorrow! 🍇',false,'#38bdf8');
   saveProgress();
 }
 window.waterSeed=waterSeed;
@@ -1963,10 +2683,10 @@ function buyTool(type,cost){
   const unique=['fishingRod','wateringCan','hoe'];
   if(unique.includes(type)&&S.inv[type]>0)return logChat('[Market] Already own that item.');
   S.coins-=cost;
-  if(type==='seeds')S.inv.seeds+=3;
+  if(type==='seeds')S.inv.seeds+=10;
   else if(type==='bait')S.inv.bait+=5;
   else S.inv[type]++;
-  const names={fishingRod:'🎣 Fishing Rod',bait:'🪱 Bait ×5',wateringCan:'🪣 Watering Can',hoe:'🪓 Hoe (Cangkul)',seeds:'🌱 Seeds ×3'};
+  const names={fishingRod:'🎣 Fishing Rod',bait:'🪱 Bait ×5',wateringCan:'🪣 Watering Can',hoe:'🪓 Hoe (Cangkul)',seeds:'🌱 Seeds ×10'};
   onChainTx('BUY:market:'+type+':$'+cost+'USD',0.00001);
   updateHUD();renderBuildingPanel();
   logChat('[Market] 🛒 Bought: '+(names[type]||type)+'! (on-chain tx sent)',false,'#34d399');
@@ -1977,8 +2697,12 @@ window.buyTool=buyTool;
 /* ── Market: sell fish / fruit (on-chain) ── */
 function sellItem(type){
   if(!S.inv[type]||S.inv[type]<=0)return logChat('[Market] No '+type+' to sell.');
-  const prices={fish:FISH_SELL_PRICE,fruit:FRUIT_SELL_PRICE};
-  const price=prices[type];if(!price)return;
+  let price=FISH_SELL_PRICE;
+  if(type==='fish'){
+    price=S.inv.fish>0&&S.fishValueSum>0?Math.round(S.fishValueSum/S.inv.fish):FISH_SELL_PRICE;
+    S.fishValueSum=Math.max(0,(S.fishValueSum||0)-price);
+  }else if(type==='fruit'){price=FRUIT_SELL_PRICE;}
+  else return;
   S.inv[type]--;S.coins+=price;
   onChainTx('SELL:market:'+type+':+$'+price+'USD',0.00001);
   updateHUD();renderBuildingPanel();
@@ -1997,6 +2721,7 @@ function saveProgress(){
       job:S.job,energy:S.energy,energyMax:S.energyMax,house:S.house,
       inv:{...S.inv},workCDs:{...workCDs},
       waterFull:S.waterFull,plots:S.plots.map(p=>({...p})),
+      fishValueSum:S.fishValueSum||0,
       posX:_phaserScene&&WS.zone==='CITY'?_phaserScene.me.x:(WS.savedPos?.x??32*TILE),
       posY:_phaserScene&&WS.zone==='CITY'?_phaserScene.me.y:(WS.savedPos?.y??32*TILE),
       savedAt:Date.now(),
@@ -2018,6 +2743,7 @@ function loadProgress(){
     S.energy=typeof d.energy==='number'?d.energy:100;
     S.energyMax=typeof d.energyMax==='number'?d.energyMax:100;
     S.house=typeof d.house==='number'?d.house:1;
+    S.fishValueSum=typeof d.fishValueSum==='number'?d.fishValueSum:0;
     S.inv=d.inv?{
       apple:d.inv.apple||0,soda:d.inv.soda||0,sandwich:d.inv.sandwich||0,
       fishingRod:d.inv.fishingRod||0,bait:d.inv.bait||0,wateringCan:d.inv.wateringCan||0,
@@ -2027,7 +2753,6 @@ function loadProgress(){
     S.waterFull=d.waterFull||false;
     S.plots=Array.isArray(d.plots)?d.plots.filter(p=>p&&p.state):[];
     if(typeof d.posX==='number'&&typeof d.posY==='number')WS.savedPos={x:d.posX,y:d.posY};
-    /* Restore in-progress learning timeout */
     if(S.learningEndTime>Date.now()&&S.learningId){
       const remMs=S.learningEndTime-Date.now(),lid=S.learningId;
       setTimeout(()=>{
