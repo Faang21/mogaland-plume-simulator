@@ -26,7 +26,7 @@ html,body{margin:0;padding:0;height:100%;background:#0b1020;font-family:Arial,sa
 #dpad .dact  {top:52px;left:52px;font-size:14px;background:rgba(14,165,233,.22);border-color:rgba(14,165,233,.45);}
 @media(pointer:coarse),(max-width:768px){#dpad{display:block;}}
 /* ── Moga Messenger ── */
-#messengerPanel{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:680px;max-width:98vw;height:520px;max-height:96vh;background:#0f172a;border:1px solid rgba(255,255,255,.18);border-radius:16px;z-index:1000;box-shadow:0 12px 48px rgba(0,0,0,.85);overflow:hidden;display:none;flex-direction:column;}
+#messengerPanel{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:680px;max-width:98vw;height:520px;max-height:96vh;background:#0f172a;border:1px solid rgba(255,255,255,.18);border-radius:16px;z-index:1000;box-shadow:0 12px 48px rgba(0,0,0,.85);overflow:hidden;flex-direction:column;}
 #msgrTitle{background:linear-gradient(90deg,#1e1b4b,#0c1a2e);padding:11px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,.1);flex-shrink:0;}
 #msgrBody{display:flex;flex:1;overflow:hidden;}
 #msgrContacts{width:190px;border-right:1px solid rgba(255,255,255,.1);background:rgba(0,0,0,.3);display:flex;flex-direction:column;overflow:hidden;}
@@ -186,6 +186,7 @@ kbd{padding:1px 4px;border-radius:4px;border:1px solid rgba(255,255,255,.22);bac
         <div class="pill" id="pillCan" style="display:none;">🪣 Can <span id="elCanState"></span></div>
         <div class="pill" id="pillHoe" style="display:none;">🪓 Hoe ✓</div>
         <div class="pill" id="pillSeeds" style="display:none;">🌱 Seeds <span id="elSeeds">0</span></div>
+        <div class="pill" id="pillHotel" style="display:none;background:rgba(124,58,237,.18);border-color:rgba(124,58,237,.35);color:#a78bfa;">🏨 Hotel ✓</div>
       </div>
       <div class="row" style="margin-top:6px;flex-wrap:wrap;">
         <button onclick="useItem('apple')">🍎 Eat</button>
@@ -599,6 +600,8 @@ const WATERING_CAN_COST=8;       // watering can (one-time tool)
 const HOE_COST=10;               // hoe/cangkul (one-time tool)
 const SEED_COST=3;               // seeds ×10 per purchase ($3 USD)
 const SEED_GROW_MS=86400000;     // 24 real hours from watering to harvest (1 day)
+const HOTEL_RENT_COST=1;         // $1 USD per day hotel room
+const HOTEL_RENT_MS=86400000;    // 24 real hours hotel room validity
 const FISH_ENERGY=25;            // energy restored by eating fish
 const FRUIT_ENERGY=35;           // energy restored by eating fruit
 const FISH_SELL_PRICE=0.5;       // coins per fish sold ($0.5 USD, all types)
@@ -608,15 +611,15 @@ const FISH_ENERGY_COST=15;       // energy cost per fishing attempt (tiring)
 const FISH_MISS_RATE=0.15;       // 15% chance of catching nothing
 const NPC_FARM_MSG_MS=45000;     // ms interval for NPC farming chat messages
 const NPC_FARM_MSG_CHANCE=0.5;   // probability of NPC farm message firing each interval
-/* Fish types with weighted chances and sell prices */
+/* Fish types — weighted random catch for display variety; all sell at flat FISH_SELL_PRICE */
 const FISH_TYPES=[
-  {name:'🐟 Tilapia',    emoji:'🐟',price:3, chance:.30},
-  {name:'🐠 Clownfish',  emoji:'🐠',price:5, chance:.22},
-  {name:'🐡 Pufferfish', emoji:'🐡',price:4, chance:.18},
-  {name:'🦐 Shrimp',     emoji:'🦐',price:4, chance:.12},
-  {name:'🦑 Squid',      emoji:'🦑',price:7, chance:.08},
-  {name:'🦞 Lobster',    emoji:'🦞',price:12,chance:.06},
-  {name:'🐙 Octopus',    emoji:'🐙',price:9, chance:.04},
+  {name:'🐟 Tilapia',    emoji:'🐟',chance:.30},
+  {name:'🐠 Clownfish',  emoji:'🐠',chance:.22},
+  {name:'🐡 Pufferfish', emoji:'🐡',chance:.18},
+  {name:'🦐 Shrimp',     emoji:'🦐',chance:.12},
+  {name:'🦑 Squid',      emoji:'🦑',chance:.08},
+  {name:'🦞 Lobster',    emoji:'🦞',chance:.06},
+  {name:'🐙 Octopus',    emoji:'🐙',chance:.04},
 ];
 /* NPC farm zones (visual only – other players' plots, not interactable) */
 const _npcPlots=[
@@ -641,6 +644,7 @@ const S={
   plots:[], // [{tx,ty,state:'hoed'|'seeded'|'watered'|'ready',plantedAt,readyAt}]
   fishValueSum:0, // total accumulated sell value of fish in inventory
   lastFishType:null, // {name, price} of last caught fish
+  hotelRentedUntil:0, // timestamp when hotel room rental expires
 };
 
 /* ── World state ── */
@@ -677,6 +681,10 @@ function updateHUD(){
   setVis('pillSeeds',S.inv.seeds>0);if(S.inv.seeds>0)document.getElementById('elSeeds').textContent=S.inv.seeds;
   setVis('btnEatFish',S.inv.fish>0);
   setVis('btnEatFruit',S.inv.fruit>0);
+  /* Hotel rental indicator */
+  const hotelRented=S.hotelRentedUntil>Date.now();
+  const hotelEl=document.getElementById('pillHotel');
+  if(hotelEl){hotelEl.style.display=hotelRented?'':'none';}
   /* skill badges */
   const sb=document.getElementById('elSkillBadges');
   if(sb){
@@ -713,16 +721,27 @@ function renderBuildingPanel(){
   if(WS.outdoor){panel.style.display='block';panel.innerHTML=renderVending();return;}
   if(WS.zone!=='INTERIOR'){panel.style.display='none';return;}
   panel.style.display='block';
-  const r={House:renderHome,School:renderSchool,'Job Center':renderJobBoard,Bank:renderBank,Cafe:renderCafe,Market:renderMarket,Gym:renderGym,Hospital:renderHospital,Library:renderLibrary,Office:renderOffice,'Town Hall':renderTownHall};
+  const r={House:renderHome,School:renderSchool,'Job Center':renderJobBoard,Bank:renderBank,Cafe:renderCafe,Market:renderMarket,Gym:renderGym,Hospital:renderHospital,Hotel:renderHotel,Library:renderLibrary,Office:renderOffice,'Town Hall':renderTownHall};
   if(WS.key.startsWith('House'))panel.innerHTML=renderHome();
   else if(r[WS.key])panel.innerHTML=r[WS.key]();
   else panel.style.display='none';
 }
 
 function renderHome(){
+  const myKey=getMyHouseKey();
+  // If player has no house, show a helpful notice instead
+  if(!myKey){
+    return`<strong>🏠 House</strong>
+<div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:12px;margin:8px 0;">
+  <div style="font-size:13px;font-weight:bold;color:#f87171;margin-bottom:6px;">🚫 You don't own a house</div>
+  <div style="font-size:11px;color:#94a3b8;margin-bottom:8px;">You need a house to sleep &amp; restore energy here.<br/>Options:</div>
+  <div style="font-size:11px;color:#e2e8f0;margin-bottom:4px;">🏷️ Buy an NFT house on the market (from $100 USD)</div>
+  <div style="font-size:11px;color:#e2e8f0;margin-bottom:10px;">🏨 Rent a <strong>Hotel</strong> room ($1 USD/day) to sleep</div>
+  <button onclick="exitCity(_phaserScene)" style="width:100%;padding:7px;border-radius:8px;border:none;background:rgba(100,116,139,.3);color:#94a3b8;cursor:pointer;font-size:11px;">Exit Building</button>
+</div>`;
+  }
   const uc=5; // $5 USD flat per upgrade level
   const hc=getHouseColor();
-  const myKey=getMyHouseKey()||'House';
   const ow=houseOwnership[myKey]||{owner:walletAddress,forSale:false,price:0};
   const suggestedPrice=100+S.house*5; // base $100 + $5 per upgrade level
   const closeBtn=`<button onclick="closeOutdoor()" style="width:100%;margin-top:8px;padding:6px;border-radius:6px;background:rgba(100,116,139,.3);color:#94a3b8;border:1px solid rgba(255,255,255,.1);font-size:11px;cursor:pointer;">Close ✕</button>`;
@@ -877,6 +896,36 @@ function renderHospital(){
 <button onclick="heal('premium')" ${S.coins<20?'disabled':''} class="ibtn btn-red">Premium</button></div>`;
 }
 
+function renderHotel(){
+  const now=Date.now();
+  const rented=S.hotelRentedUntil>now;
+  const remaining=rented?S.hotelRentedUntil-now:0;
+  let h=`<strong>🏨 Hotel — Moga Inn</strong>
+<div style="font-size:10px;color:#94a3b8;margin:4px 0;">Rent a room to sleep &amp; restore full energy · $${HOTEL_RENT_COST} USD/day</div>`;
+  if(rented){
+    h+=`<div style="background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.3);border-radius:8px;padding:10px;margin:6px 0;">
+  <div style="font-size:12px;color:#22c55e;font-weight:bold;">✅ Room Active</div>
+  <div style="font-size:10px;color:#94a3b8;margin-top:3px;">⏳ Expires in: ${fmtCountdown(remaining)}</div>
+</div>
+<button onclick="sleepAtHotel()" ${S.sleeping||S.energy>=S.energyMax?'disabled':''} style="width:100%;padding:9px;border-radius:8px;border:none;background:linear-gradient(90deg,#1d4ed8,#3b82f6);color:#fff;font-size:12px;cursor:pointer;margin-bottom:6px;">
+  ${S.sleeping?'😴 Sleeping… zZz':S.energy>=S.energyMax?'✅ Fully Rested':'😴 Sleep in Hotel Room (Restore Energy)'}
+</button>`;
+  }else{
+    h+=`<div style="background:rgba(99,102,241,.07);border:1px solid rgba(99,102,241,.28);border-radius:8px;padding:10px;margin:6px 0;">
+  <div style="font-size:13px;font-weight:bold;margin-bottom:5px;">🛏️ Rent a Room</div>
+  <div style="font-size:11px;color:#94a3b8;margin-bottom:8px;">$${HOTEL_RENT_COST} USD · Valid 24 hours · Restores full energy while rented</div>
+  <button onclick="rentHotelRoom()" ${S.coins<HOTEL_RENT_COST?'disabled':''} style="width:100%;padding:9px;border-radius:8px;border:none;background:linear-gradient(90deg,#7c3aed,#6366f1);color:#fff;font-size:12px;cursor:pointer;">
+    ${S.coins<HOTEL_RENT_COST?'Need $'+HOTEL_RENT_COST+' USD':'🏨 Rent Room — $'+HOTEL_RENT_COST+' USD/day'}
+  </button>
+</div>`;
+  }
+  h+=`<div style="font-size:10px;color:#475569;margin-top:6px;padding:7px;background:rgba(255,255,255,.03);border-radius:7px;">
+  💡 <strong>Own a house?</strong> Sleep for free at home!<br/>
+  No house? Buy one on the NFT market or keep renting here.
+</div>`;
+  return h;
+}
+
 function renderLibrary(){
   let h=`<strong>📚 Library</strong><div style="font-size:10px;color:#94a3b8;margin:3px 0;">Fast-track (1.5× cost, 1h instead of 2h)</div>`;
   const lockRem=S.learningEndTime>Date.now()?S.learningEndTime-Date.now():0;
@@ -1001,20 +1050,55 @@ function useItem(type){
 }
 window.useItem=useItem;
 
-function sleepAtHome(){
-  if(S.sleeping||S.energy>=S.energyMax)return;
+/* ── Shared sleep engine ── */
+function _doSleep(wakeMsg){
   S.sleeping=true;updateHUD();renderBuildingPanel();
   const ov=document.getElementById('sleepOv');ov.style.display='flex';
-  // Sleep for 8 game-hours: 20 steps × 500ms = 10 real seconds (simulated 8h)
   const target=S.energyMax,steps=20,gain=(target-S.energy)/steps;
   let i=0;
   const t=setInterval(()=>{
     i++;S.energy=clamp(S.energy+gain,0,S.energyMax);
     document.getElementById('sleepPct').textContent='Energy: '+Math.round((S.energy/S.energyMax)*100)+'% (restoring…)';
-    if(i>=steps){clearInterval(t);S.energy=S.energyMax;S.sleeping=false;ov.style.display='none';updateHUD();renderBuildingPanel();logChat('[Home] 🌅 Woke up refreshed! Full energy restored.',false,'#fbbf24');saveProgress();}
+    if(i>=steps){
+      clearInterval(t);S.energy=S.energyMax;S.sleeping=false;
+      ov.style.display='none';updateHUD();renderBuildingPanel();
+      logChat(wakeMsg,false,'#fbbf24');saveProgress();
+    }
   },500);
 }
+
+function sleepAtHome(){
+  // Must own a house — sleeping requires a home
+  if(!getMyHouseKey()){
+    logChat('[🏠 Home] You don\'t own a house! Buy one on the NFT market or 🏨 rent a Hotel room ($1 USD/day).',false,'#f87171');
+    return;
+  }
+  if(S.sleeping||S.energy>=S.energyMax)return;
+  _doSleep('[Home] 🌅 Woke up refreshed! Full energy restored.');
+}
 window.sleepAtHome=sleepAtHome;
+
+/* ── Hotel: rent room & sleep ── */
+function rentHotelRoom(){
+  if(S.coins<HOTEL_RENT_COST)return logChat('[Hotel] Need $'+HOTEL_RENT_COST+' USD.',false,'#f87171');
+  S.coins-=HOTEL_RENT_COST;
+  S.hotelRentedUntil=Date.now()+HOTEL_RENT_MS;
+  onChainTx('HOTEL:RENT:24H:$'+HOTEL_RENT_COST+'USD',0.00001);
+  updateHUD();renderBuildingPanel();
+  logChat('[Hotel] 🏨 Room rented for 24 hours! You can sleep here.',false,'#34d399');
+  saveProgress();
+}
+window.rentHotelRoom=rentHotelRoom;
+
+function sleepAtHotel(){
+  if(S.sleeping||S.energy>=S.energyMax)return;
+  if(!S.hotelRentedUntil||Date.now()>S.hotelRentedUntil){
+    logChat('[Hotel] 🏨 Rent a room first ($'+HOTEL_RENT_COST+' USD/day).',false,'#f87171');
+    renderBuildingPanel();return;
+  }
+  _doSleep('[Hotel] 🌅 Woke up refreshed in your hotel room!');
+}
+window.sleepAtHotel=sleepAtHotel;
 
 function upgradeHouse(){
   const c=5;if(S.coins<c)return logChat('[Home] Need $'+c+' USD to upgrade.');
@@ -1401,6 +1485,7 @@ const BLDGS=[
   {key:'House 14',   tex:'bHouse',  ts:2.0, x:56*TILE,y:45*TILE,w:7*TILE,h:6*TILE,isHouse:true},
   {key:'House 15',   tex:'bHouse',  ts:2.0, x:82*TILE,y:45*TILE,w:7*TILE,h:6*TILE,isHouse:true},
   // Community / leisure
+  {key:'Hotel',      tex:'bHosp',   ts:2.2, x:9*TILE, y:37*TILE,w:7*TILE,h:6*TILE},
   {key:'Cafe',       tex:'bCafe',   ts:2.35,x:60*TILE,y:37*TILE,w:8*TILE,h:6*TILE},
   {key:'Gym',        tex:'bGym',    ts:2.1, x:72*TILE,y:37*TILE,w:6*TILE,h:6*TILE},
   {key:'Hospital',   tex:'bHosp',   ts:2.2, x:26*TILE,y:37*TILE,w:7*TILE,h:6*TILE},
@@ -1441,7 +1526,7 @@ const IPal={0:[0x8b5a2b,0x7c4a22],1:[0x94a3b8,0x64748b],2:[0xb91c1c,0x7f1d1d],3:
 function makeInterior(kind){
   const k=kind.startsWith('House')?'House':kind; // all house plots share same interior
   const w=IW,h=IH;
-  const bf=(k==='House'||k==='Cafe'||k==='Casino'||k==='Gym')?IT.FW:IT.FT;
+  const bf=(k==='House'||k==='Cafe'||k==='Casino'||k==='Gym'||k==='Hotel')?IT.FW:IT.FT;
   const bw=(k==='Hospital'||k==='School'||k==='Library'||k==='Bank')?IT.WP:IT.WB;
   const g=Array.from({length:h},()=>Array.from({length:w},()=>bf));
   for(let x=0;x<w;x++){g[0][x]=bw;g[h-1][x]=bw;}for(let y=0;y<h;y++){g[y][0]=bw;g[y][w-1]=bw;}
@@ -1473,6 +1558,15 @@ function makeInterior(kind){
       pr(2,1,30,3,IT.CT);pr(2,5,13,5,IT.RG);pr(19,5,13,5,IT.RG);pr(8,12,18,5,IT.RG);pr(2,18,30,2,IT.CT);break;
     case 'Office':
       pr(2,1,30,2,IT.CT);pr(2,4,13,5,IT.RG);pr(19,4,13,5,IT.RG);pr(4,10,8,5,IT.RG);pr(22,10,8,5,IT.RG);pr(14,10,6,3,IT.RG);pr(2,17,30,2,IT.CT);break;
+    case 'Hotel':
+      // Reception counter at top
+      pr(2,1,30,2,IT.CT);
+      // Corridor down the middle
+      pr(15,3,2,16,IT.FW);
+      // Left wing: 2 rooms
+      pr(2,3,12,7,IT.RG);pr(2,12,12,7,IT.RG);
+      // Right wing: 2 rooms
+      pr(18,3,14,7,IT.RG);pr(18,12,14,7,IT.RG);break;
     case 'Town Hall':
       pr(2,2,30,2,IT.CT);pr(14,4,6,3,IT.CT);pr(4,8,25,3,IT.RG);pr(2,13,8,5,IT.RG);pr(24,13,8,5,IT.RG);pr(12,14,10,3,IT.CT);pr(2,19,30,1,IT.CT);break;
   }
@@ -1550,8 +1644,26 @@ function addFurniture(scene,intr,cont){
       for(const x of[5,12,19,26])add(scene,cont,x,1,'fTable',1.0);
       for(const x of[4,11,18,25])for(let y=5;y<=16;y+=3)add(scene,cont,x,y,'fShelf',1.1);
       for(const x of[5,14,23])add(scene,cont,x,18,'fTable',1.1);break;
+    case 'Hotel':
+      // Reception
+      add(scene,cont,16,1,'fComputer',1.1);add(scene,cont,8,1,'fTable',1.1);add(scene,cont,24,1,'fTable',1.1);
+      add(scene,cont,2,1,'fPlant',0.9);add(scene,cont,31,1,'fPlant',0.9);
+      // Room 1 (top-left)
+      add(scene,cont,5,4,'fBed',1.5);add(scene,cont,9,4,'fBed',1.5);
+      add(scene,cont,3,8,'fTV',1.0);add(scene,cont,10,8,'fShelf',0.9);
+      // Room 2 (bottom-left)
+      add(scene,cont,5,13,'fBed',1.5);add(scene,cont,9,13,'fBed',1.5);
+      add(scene,cont,3,17,'fTV',1.0);add(scene,cont,10,17,'fShelf',0.9);
+      // Room 3 (top-right)
+      add(scene,cont,21,4,'fBed',1.5);add(scene,cont,25,4,'fBed',1.5);
+      add(scene,cont,29,4,'fBed',1.5);
+      add(scene,cont,19,8,'fTV',1.0);add(scene,cont,27,8,'fShelf',0.9);
+      // Room 4 (bottom-right)
+      add(scene,cont,21,13,'fBed',1.5);add(scene,cont,25,13,'fBed',1.5);
+      add(scene,cont,29,13,'fBed',1.5);
+      add(scene,cont,19,17,'fTV',1.0);add(scene,cont,27,17,'fShelf',0.9);
+      add(scene,cont,15,9,'fPlant',0.9);break;
     case 'Gym':
-      for(let x=4;x<=14;x+=4)add(scene,cont,x,3,'fMachine',1.1);
       for(let x=20;x<=30;x+=4)add(scene,cont,x,3,'fMachine',1.1);
       add(scene,cont,9,5,'fTV',1.1);add(scene,cont,24,5,'fTV',1.1);
       for(let x=6;x<=28;x+=7)add(scene,cont,x,11,'fTable',1.0);
@@ -2699,7 +2811,8 @@ function sellItem(type){
   if(!S.inv[type]||S.inv[type]<=0)return logChat('[Market] No '+type+' to sell.');
   let price=FISH_SELL_PRICE;
   if(type==='fish'){
-    price=S.inv.fish>0&&S.fishValueSum>0?Math.round(S.fishValueSum/S.inv.fish):FISH_SELL_PRICE;
+    // Guard: S.inv.fish must be >0 before dividing (already checked above)
+    price=(S.fishValueSum>0&&S.inv.fish>0)?Math.round(S.fishValueSum/S.inv.fish):FISH_SELL_PRICE;
     S.fishValueSum=Math.max(0,(S.fishValueSum||0)-price);
   }else if(type==='fruit'){price=FRUIT_SELL_PRICE;}
   else return;
@@ -2722,6 +2835,7 @@ function saveProgress(){
       inv:{...S.inv},workCDs:{...workCDs},
       waterFull:S.waterFull,plots:S.plots.map(p=>({...p})),
       fishValueSum:S.fishValueSum||0,
+      hotelRentedUntil:S.hotelRentedUntil||0,
       posX:_phaserScene&&WS.zone==='CITY'?_phaserScene.me.x:(WS.savedPos?.x??32*TILE),
       posY:_phaserScene&&WS.zone==='CITY'?_phaserScene.me.y:(WS.savedPos?.y??32*TILE),
       savedAt:Date.now(),
@@ -2744,6 +2858,7 @@ function loadProgress(){
     S.energyMax=typeof d.energyMax==='number'?d.energyMax:100;
     S.house=typeof d.house==='number'?d.house:1;
     S.fishValueSum=typeof d.fishValueSum==='number'?d.fishValueSum:0;
+    S.hotelRentedUntil=typeof d.hotelRentedUntil==='number'?d.hotelRentedUntil:0;
     S.inv=d.inv?{
       apple:d.inv.apple||0,soda:d.inv.soda||0,sandwich:d.inv.sandwich||0,
       fishingRod:d.inv.fishingRod||0,bait:d.inv.bait||0,wateringCan:d.inv.wateringCan||0,
@@ -2834,6 +2949,7 @@ const phaserCfg={
       logChat('[system] 🏫 Visit School to learn skills · 🥤 Vending machine: $1 USD/item · 🛏️ Bed restores energy',false,'#a78bfa');
       logChat('[system] Tap/click near a building to enter · Enter Casino for 100-player game 🎰',false,'#34d399');
       logChat('[system] 🎣 Buy Fishing Rod + Bait at Market · 🪓 Buy Hoe to farm grass tiles · 🏞️ River to fill can & fish',false,'#4ade80');
+      logChat('[system] 🏠 No house? Sleep at 🏨 Hotel ($1 USD/day) · Buy your own house from $100 USD on the NFT market!',false,'#f0abfc');
       this.time.addEvent({delay:200,loop:true,callback:()=>{
         const btn=document.getElementById('btnInteract');
         if(WS.zone==='CITY'){
