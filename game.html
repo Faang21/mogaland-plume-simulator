@@ -250,6 +250,7 @@ async function initChain(){
     document.getElementById('networkBadge').textContent=networkConfig.name;
     document.getElementById('wAddr').textContent=walletAddress?walletAddress.slice(0,6)+'...'+walletAddress.slice(-4):'Not connected';
     loadTxHistory();renderTxHistory();
+    assignHouseToUser();
     window.ethereum.on('chainChanged',()=>initChain());
     window.ethereum.on('accountsChanged',a=>{walletAddress=a[0]?a[0].toLowerCase():'';initChain();});
   }catch(e){console.log('[chain]',e.message);}
@@ -260,6 +261,7 @@ window.addEventListener('message',ev=>{
     walletAddress=ev.data.address||'';
     document.getElementById('wAddr').textContent=walletAddress?walletAddress.slice(0,6)+'...'+walletAddress.slice(-4):'Not connected';
     loadTxHistory();renderTxHistory();
+    assignHouseToUser();
   }
   if(ev.data&&ev.data.type==='networkConfig')Object.assign(networkConfig,ev.data.config);
 });
@@ -419,6 +421,66 @@ const SKILLS=[
   {id:'med',     name:'Medicine',      icon:'🏥',cost:SKILL_COST_USD,time:SKILL_LEARN_MS,teacher:'Dr. Dewi',   job:'Doctor',   wMin:WORK_PAY_USD,wMax:WORK_PAY_USD,cd:WORK_CD_MS},
   {id:'eng',     name:'Engineering',   icon:'⚙️',cost:SKILL_COST_USD,time:SKILL_LEARN_MS,teacher:'Mr. Eko',    job:'Engineer', wMin:WORK_PAY_USD,wMax:WORK_PAY_USD,cd:WORK_CD_MS},
 ];
+
+/* ── Per-user house color ── */
+function getHouseColorByOwner(addr){
+  const colors=[
+    {tint:0xfbbf24,name:'Golden'},{tint:0xef4444,name:'Ruby'},
+    {tint:0x22c55e,name:'Emerald'},{tint:0x3b82f6,name:'Sapphire'},
+    {tint:0xa78bfa,name:'Amethyst'},{tint:0xf97316,name:'Amber'},
+    {tint:0x06b6d4,name:'Cyan'},{tint:0xec4899,name:'Rose'},
+    {tint:0x84cc16,name:'Lime'},{tint:0xf43f5e,name:'Crimson'},
+  ];
+  if(!addr)return colors[0];
+  // Polynomial rolling hash (prime 31) — 32-bit arithmetic for uniform distribution over 10 colors
+  let h=0;for(const c of addr)h=((h*31+c.charCodeAt(0))>>>0);
+  return colors[h%colors.length];
+}
+function getHouseColor(){return getHouseColorByOwner(walletAddress);}
+
+/* ── NFT award notification ── */
+function awardNFT(label){
+  logChat('[🏆 NFT] '+label+' — NFT minted by dev team. Check your wallet!',false,'#f0abfc');
+}
+
+/* ── House Ownership Registry (shared localStorage, NFT-backed) ── */
+const HOUSE_OWNERSHIP_KEY='mogaHouseOwnership';
+let houseOwnership={}; // {houseKey: {owner, forSale, price}}
+
+function loadHouseOwnership(){
+  try{const r=localStorage.getItem(HOUSE_OWNERSHIP_KEY);if(r){houseOwnership=JSON.parse(r);return;}}catch{}
+  // Pre-populate NPC houses on first load so city feels lived-in (realistic mock addresses)
+  const npcWallets=['0xd8da6bf26964af9d7eed9e03e53415d37aa96045','0xab5801a7d398351b8be11c439e05c5b3259aec9b','0xca35b7d915458ef540ade6068dfe2f44e8fa733c','0x4b0897b0513fdc7c541b6d9d7e929c4e5364d2db','0x583031d1113ad414f02576bd6afabfb302140225'];
+  const npcAllKeys=['House 2','House 3','House 4','House 5','House 6'];
+  npcWallets.forEach((npc,i)=>{
+    houseOwnership[npcAllKeys[i]]={owner:npc,forSale:i%2===1,price:i%2===1?60+i*15:0};
+  });
+  saveHouseOwnership();
+}
+function saveHouseOwnership(){
+  try{localStorage.setItem(HOUSE_OWNERSHIP_KEY,JSON.stringify(houseOwnership));}catch{}
+}
+function getMyHouseKey(){
+  if(!walletAddress)return null;
+  return Object.keys(houseOwnership).find(k=>houseOwnership[k]&&houseOwnership[k].owner===walletAddress.toLowerCase())||null;
+}
+function assignHouseToUser(){
+  if(!walletAddress)return;
+  if(getMyHouseKey())return; // already owns one
+  // Find first unclaimed house (no owner entry)
+  const allHouseKeys=BLDGS.filter(b=>b.isHouse).map(b=>b.key);
+  const available=allHouseKeys.find(k=>!houseOwnership[k]||!houseOwnership[k].owner);
+  if(available){
+    houseOwnership[available]={owner:walletAddress.toLowerCase(),forSale:false,price:0};
+    saveHouseOwnership();
+    logChat('[🏠 Housing] 🎉 Welcome! Your house: '+available+' — it\'s yours!',false,'#fbbf24');
+    awardNFT('House NFT: '+available+' — auto-assigned to your wallet');
+    drawMM._k=null;
+    if(_phaserScene&&WS.zone==='CITY')drawCity(_phaserScene);
+  }else{
+    logChat('[🏠 Housing] All '+allHouseKeys.length+' houses are occupied. Walk up to a house with 🏷️ For Sale to buy it.',false,'#f87171');
+  }
+}
 const workCDs={};
 const COINS_TO_USDC=1; // 1 coin = 1 USD (game economy)
 /* ── New feature constants ── */
@@ -527,17 +589,23 @@ function renderBuildingPanel(){
   if(WS.outdoor==='Vending'){panel.style.display='block';panel.innerHTML=renderVending();return;}
   if(WS.outdoor==='River'){panel.style.display='block';panel.innerHTML=renderRiver();return;}
   if(WS.outdoor==='Farm'){panel.style.display='block';panel.innerHTML=renderFarm();return;}
+  if(WS.outdoor&&WS.outdoor.startsWith('HousePlot:')){panel.style.display='block';panel.innerHTML=renderHousePlot(WS.outdoor.slice(10));return;}
   if(WS.outdoor){panel.style.display='block';panel.innerHTML=renderVending();return;}
   if(WS.zone!=='INTERIOR'){panel.style.display='none';return;}
   panel.style.display='block';
   const r={House:renderHome,School:renderSchool,'Job Center':renderJobBoard,Bank:renderBank,Cafe:renderCafe,Market:renderMarket,Gym:renderGym,Hospital:renderHospital,Library:renderLibrary,Office:renderOffice,'Town Hall':renderTownHall};
-  if(r[WS.key])panel.innerHTML=r[WS.key]();
+  if(WS.key.startsWith('House'))panel.innerHTML=renderHome();
+  else if(r[WS.key])panel.innerHTML=r[WS.key]();
   else panel.style.display='none';
 }
 
 function renderHome(){
   const uc=25*S.house;
-  return`<strong>🏠 Home</strong>
+  const hc=getHouseColor();
+  const myKey=getMyHouseKey()||'House';
+  const ow=houseOwnership[myKey]||{owner:walletAddress,forSale:false,price:0};
+  const closeBtn=`<button onclick="closeOutdoor()" style="width:100%;margin-top:8px;padding:6px;border-radius:6px;background:rgba(100,116,139,.3);color:#94a3b8;border:1px solid rgba(255,255,255,.1);font-size:11px;cursor:pointer;">Close ✕</button>`;
+  return`<strong>🏠 ${myKey} — ${hc.name} House</strong>
 <div style="font-size:11px;color:#94a3b8;margin:5px 0;">Energy: ${Math.round(S.energy)}/${S.energyMax}</div>
 <div style="border:1px solid rgba(99,102,241,.35);border-radius:8px;padding:9px;margin:5px 0;background:rgba(99,102,241,.06);">
   <div style="font-size:12px;font-weight:bold;margin-bottom:6px;">🛏️ Bedroom — Click the Bed to Sleep</div>
@@ -551,6 +619,21 @@ function renderHome(){
   <button onclick="upgradeHouse()" ${S.coins<uc?'disabled':''} class="btn-yellow" style="width:100%;margin-top:5px;padding:7px;border-radius:7px;font-size:11px;cursor:pointer;">
     Upgrade (${uc} USD)
   </button>
+</div>
+<div style="border-top:1px solid rgba(255,255,255,.1);margin-top:9px;padding-top:9px;">
+  <div style="font-size:11px;font-weight:bold;color:#f0abfc;margin-bottom:6px;">🏷️ House NFT — ${myKey}</div>
+  ${ow.forSale
+    ?`<div style="color:#22c55e;font-size:11px;margin-bottom:4px;">💰 Listed for $${ow.price} USD</div>
+      <button onclick="delistHouse()" class="ibtn btn-red" style="width:100%;padding:7px;">Delist from Market</button>`
+    :`<div class="row" style="margin-bottom:5px;gap:5px;">
+        <input id="houseSellPrice" type="number" placeholder="Price (USD)" min="1" style="flex:1;padding:6px;font-size:11px;background:#0f172a;border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:6px;"/>
+        <button onclick="listHouseForSale()" class="ibtn btn-green" style="padding:6px 10px;">📋 List for Sale</button>
+      </div>
+      <div class="row" style="gap:5px;">
+        <input id="houseTransferTo" placeholder="0x… friend wallet" style="flex:1;padding:6px;font-size:11px;background:#0f172a;border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:6px;"/>
+        <button onclick="transferHouseTo()" class="ibtn btn-purple" style="padding:6px 10px;">🎁 Gift</button>
+      </div>`
+  }
 </div>`;
 }
 
@@ -730,6 +813,7 @@ function learnSkill(id){
     S.learnedSkills.push(id);S.learningId=null;S.learningEndTime=0;S.job=sk.job;
     updateHUD();renderBuildingPanel();
     logChat('[School] ✅ Graduated: '+sk.name+'! '+sk.job+' job unlocked.',false,'#22c55e');
+    awardNFT('Skill NFT: '+sk.name);
     saveProgress();
   },sk.time);
 }
@@ -748,6 +832,7 @@ function learnSkillFast(id){
     S.learnedSkills.push(id);S.learningId=null;S.learningEndTime=0;S.job=sk.job;
     updateHUD();renderBuildingPanel();
     logChat('[Library] ✅ Graduated fast: '+sk.name+'!',false,'#22c55e');
+    awardNFT('Skill NFT: '+sk.name);
     saveProgress();
   },sk.time/2);
 }
@@ -809,6 +894,7 @@ function upgradeHouse(){
   S.coins-=c;S.house++;S.energyMax+=5;S.energy=clamp(S.energy+5,0,S.energyMax);
   onChainTx('HOME:UPGRADE:Lv'+S.house+':$'+c+'USD',0.00001);
   updateHUD();renderBuildingPanel();logChat('[Home] 🏠 Upgraded to Lv '+S.house+'! +5 max energy.',false,'#fbbf24');
+  awardNFT('House NFT: Lv '+S.house+' '+getHouseColor().name+' House');
   saveProgress();
 }
 window.upgradeHouse=upgradeHouse;
@@ -1169,7 +1255,16 @@ const BLDGS=[
   {key:'Job Center', tex:'bJob',    ts:2.35,x:60*TILE,y:18*TILE,w:8*TILE,h:6*TILE},
   {key:'Market',     tex:'bMkt',    ts:2.35,x:40*TILE,y:22*TILE,w:8*TILE,h:6*TILE},
   {key:'Bank',       tex:'bBank',   ts:2.1, x:50*TILE,y:22*TILE,w:6*TILE,h:6*TILE},
-  {key:'House',      tex:'bHouse',  ts:2.2, x:14*TILE,y:40*TILE,w:7*TILE,h:6*TILE},
+  // ── Residential District ── (fills empty city zones)
+  {key:'House',      tex:'bHouse',  ts:2.2, x:14*TILE,y:40*TILE,w:7*TILE,h:6*TILE,isHouse:true},
+  {key:'House 2',    tex:'bHouse',  ts:2.0, x:9*TILE, y:29*TILE,w:7*TILE,h:6*TILE,isHouse:true},
+  {key:'House 3',    tex:'bHouse',  ts:2.0, x:31*TILE,y:29*TILE,w:7*TILE,h:6*TILE,isHouse:true},
+  {key:'House 4',    tex:'bHouse',  ts:2.0, x:39*TILE,y:29*TILE,w:7*TILE,h:6*TILE,isHouse:true},
+  {key:'House 5',    tex:'bHouse',  ts:2.0, x:46*TILE,y:29*TILE,w:7*TILE,h:6*TILE,isHouse:true},
+  {key:'House 6',    tex:'bHouse',  ts:2.0, x:35*TILE,y:37*TILE,w:7*TILE,h:6*TILE,isHouse:true},
+  {key:'House 7',    tex:'bHouse',  ts:2.0, x:43*TILE,y:37*TILE,w:7*TILE,h:6*TILE,isHouse:true},
+  {key:'House 8',    tex:'bHouse',  ts:2.0, x:67*TILE,y:29*TILE,w:7*TILE,h:6*TILE,isHouse:true},
+  {key:'House 9',    tex:'bHouse',  ts:2.0, x:67*TILE,y:37*TILE,w:7*TILE,h:6*TILE,isHouse:true},
   {key:'Cafe',       tex:'bCafe',   ts:2.35,x:60*TILE,y:40*TILE,w:8*TILE,h:6*TILE},
   {key:'Gym',        tex:'bGym',    ts:2.1, x:72*TILE,y:40*TILE,w:6*TILE,h:6*TILE},
   {key:'Hospital',   tex:'bHosp',   ts:2.2, x:26*TILE,y:40*TILE,w:7*TILE,h:6*TILE},
@@ -1208,16 +1303,19 @@ const IT={FW:0,FT:1,WB:2,WP:3,RG:4,CT:5};
 const IPal={0:[0x8b5a2b,0x7c4a22],1:[0x94a3b8,0x64748b],2:[0xb91c1c,0x7f1d1d],3:[0xe2e8f0,0x94a3b8],4:[0x2563eb,0x1d4ed8],5:[0x475569,0x334155]};
 
 function makeInterior(kind){
+  const k=kind.startsWith('House')?'House':kind; // all house plots share same interior
   const w=IW,h=IH;
-  const bf=(kind==='House'||kind==='Cafe'||kind==='Casino'||kind==='Gym')?IT.FW:IT.FT;
-  const bw=(kind==='Hospital'||kind==='School'||kind==='Library'||kind==='Bank')?IT.WP:IT.WB;
+  const bf=(k==='House'||k==='Cafe'||k==='Casino'||k==='Gym')?IT.FW:IT.FT;
+  const bw=(k==='Hospital'||k==='School'||k==='Library'||k==='Bank')?IT.WP:IT.WB;
   const g=Array.from({length:h},()=>Array.from({length:w},()=>bf));
   for(let x=0;x<w;x++){g[0][x]=bw;g[h-1][x]=bw;}for(let y=0;y<h;y++){g[y][0]=bw;g[y][w-1]=bw;}
   const ex=Math.floor(w/2);g[h-1][ex]=bf;for(let y=h-2;y>=2;y--)g[y][ex]=IT.RG;
   const pr=(x0,y0,ww,hh,tp)=>{for(let y=y0;y<y0+hh;y++)for(let x=x0;x<x0+ww;x++){if(y<=0||x<=0||y>=h-1||x>=w-1)continue;g[y][x]=tp;}};
-  switch(kind){
+  switch(k){
     case 'House':
-      pr(1,1,3,9,IT.CT);pr(20,1,12,3,IT.CT);pr(3,3,12,6,IT.RG);pr(3,12,15,7,IT.RG);pr(20,12,12,7,IT.CT);break;
+      pr(1,1,14,9,IT.RG);pr(15,1,1,9,IT.CT);pr(16,1,17,9,IT.FT);
+      pr(1,10,32,2,IT.FT);
+      pr(1,12,14,8,IT.FW);pr(15,12,1,8,IT.CT);pr(16,12,17,8,IT.RG);break;
     case 'School':
       pr(2,1,30,3,IT.CT);pr(2,5,30,2,IT.RG);pr(2,8,30,2,IT.RG);pr(2,11,30,2,IT.RG);
       pr(1,14,2,6,IT.CT);pr(31,14,2,6,IT.CT);pr(4,15,25,4,IT.RG);break;
@@ -1268,11 +1366,36 @@ function add(scene,cont,tx,ty,key,sc=1.1,dp=20){
 }
 
 function addFurniture(scene,intr,cont){
-  switch(intr.title){
+  const ftitle=intr.title.startsWith('House')?'House':intr.title;
+  switch(ftitle){
     case 'House':
-      add(scene,cont,22,1,'fTV',1.15);add(scene,cont,3,7,'fSofa',1.2);add(scene,cont,9,7,'fSofa',1.2);add(scene,cont,6,4,'fTable',1.1);
-      add(scene,cont,1,4,'fShelf',1.0);add(scene,cont,5,13,'fBed',1.3);add(scene,cont,11,13,'fBed',1.3);
-      add(scene,cont,21,14,'fTable',1.1);add(scene,cont,23,12,'fShelf',1.0);add(scene,cont,26,15,'fPlant',1.0);break;
+      // Living Room (cols 1-14, rows 1-9)
+      add(scene,cont,7,1,'fTV',1.8);
+      add(scene,cont,2,4,'fSofa',1.6);add(scene,cont,9,4,'fSofa',1.6);
+      add(scene,cont,5,6,'fTable',1.5);add(scene,cont,12,6,'fTable',1.4);
+      add(scene,cont,1,2,'fShelf',1.5);add(scene,cont,1,5,'fShelf',1.5);
+      add(scene,cont,1,8,'fPlant',1.4);add(scene,cont,13,1,'fPlant',1.4);add(scene,cont,13,8,'fPlant',1.3);
+      // Kitchen/Dining (cols 16-32, rows 1-9)
+      add(scene,cont,24,3,'fTable',1.8);
+      add(scene,cont,17,1,'fShelf',1.4);add(scene,cont,20,1,'fShelf',1.4);add(scene,cont,23,1,'fShelf',1.4);
+      add(scene,cont,26,1,'fShelf',1.4);add(scene,cont,29,1,'fShelf',1.4);add(scene,cont,32,1,'fShelf',1.4);
+      add(scene,cont,19,5,'fTable',1.5);add(scene,cont,29,5,'fSofa',1.5);
+      add(scene,cont,32,7,'fTV',1.4);add(scene,cont,17,8,'fPlant',1.3);add(scene,cont,32,8,'fPlant',1.3);
+      // Bedroom (cols 1-14, rows 12-20)
+      add(scene,cont,3,13,'fBed',1.9);add(scene,cont,9,13,'fBed',1.9);
+      add(scene,cont,6,12,'fTV',1.6);
+      add(scene,cont,1,16,'fShelf',1.6);add(scene,cont,4,16,'fShelf',1.6);
+      add(scene,cont,8,16,'fShelf',1.6);add(scene,cont,11,16,'fShelf',1.6);
+      add(scene,cont,2,19,'fTable',1.5);add(scene,cont,7,19,'fTable',1.5);add(scene,cont,12,19,'fTable',1.4);
+      add(scene,cont,13,14,'fPlant',1.4);
+      // Study/Den (cols 16-32, rows 12-20)
+      add(scene,cont,18,13,'fComputer',1.7);add(scene,cont,18,14,'fTable',1.6);
+      add(scene,cont,24,13,'fComputer',1.7);add(scene,cont,24,14,'fTable',1.6);
+      add(scene,cont,30,13,'fComputer',1.6);add(scene,cont,30,14,'fTable',1.5);
+      add(scene,cont,17,17,'fShelf',1.6);add(scene,cont,20,17,'fShelf',1.6);
+      add(scene,cont,23,17,'fShelf',1.6);add(scene,cont,26,17,'fShelf',1.6);add(scene,cont,29,17,'fShelf',1.6);
+      add(scene,cont,21,19,'fSofa',1.6);add(scene,cont,27,19,'fSofa',1.6);
+      add(scene,cont,32,19,'fPlant',1.4);add(scene,cont,17,19,'fPlant',1.3);break;
     case 'School':
       add(scene,cont,10,1,'fBoard',1.8);add(scene,cont,22,1,'fBoard',1.5);
       add(scene,cont,16,3,'fTable',1.2);add(scene,cont,2,3,'fPlant',.9);add(scene,cont,31,3,'fPlant',.9);
@@ -1384,7 +1507,12 @@ function drawCity(scene){
   worldCont.add(gr);decorateCity(scene,cityTiles,worldCont);
   for(const b of BLDGS){
     const cx=b.x+b.w/2,cy=b.y+b.h/2;
-    worldCont.add(scene.add.image(cx,cy,b.tex).setScale(b.ts).setDepth(3));
+    const bSpr=scene.add.image(cx,cy,b.tex).setScale(b.ts).setDepth(3);
+    if(b.isHouse){
+      const ow=houseOwnership[b.key];
+      bSpr.setTint(ow&&ow.owner?getHouseColorByOwner(ow.owner).tint:0x94a3b8);
+    }
+    worldCont.add(bSpr);
     worldCont.add(scene.add.text(cx,b.y-8,b.key,{fontSize:'13px',color:'#e2e8f0',fontStyle:'bold',backgroundColor:'rgba(0,0,0,.35)',padding:{x:6,y:3}}).setOrigin(.5,1).setDepth(4));
   }
   for(const i of IACTS){
@@ -1499,6 +1627,99 @@ window.buyVending=buyVending;
 function closeVending(){WS.outdoor=null;renderBuildingPanel();}
 window.closeVending=closeVending;
 
+/* ── House NFT: view, buy, sell, transfer ── */
+function renderHousePlot(key){
+  const ow=houseOwnership[key];
+  const hc=ow&&ow.owner?getHouseColorByOwner(ow.owner):{name:'Empty',tint:0x64748b};
+  const closeBtn=`<button onclick="closeOutdoor()" style="width:100%;margin-top:8px;padding:6px;border-radius:6px;background:rgba(100,116,139,.3);color:#94a3b8;border:1px solid rgba(255,255,255,.1);font-size:11px;cursor:pointer;">Close ✕</button>`;
+  if(!ow||!ow.owner){
+    return`<strong>🏠 ${key} — Unclaimed</strong>
+<div style="font-size:11px;color:#94a3b8;margin:5px 0;">This house has no owner yet.</div>
+<div style="font-size:10px;color:#64748b;padding:6px;background:rgba(255,255,255,.04);border-radius:6px;">Connect your wallet — if you don't have a house yet, one will be auto-assigned to you when you load the game.</div>
+${closeBtn}`;
+  }
+  let h=`<strong>🏠 ${key} — ${hc.name} House</strong>
+<div style="font-size:11px;color:#94a3b8;margin:5px 0;">Owner: <span style="color:#60a5fa;font-family:monospace;font-size:10px;">${ow.owner.slice(0,12)}…</span></div>`;
+  if(ow.forSale){
+    const canAfford=S.coins>=ow.price;
+    const alreadyOwns=!!getMyHouseKey();
+    h+=`<div style="background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.25);border-radius:8px;padding:10px;margin:6px 0;">
+  <div style="font-size:13px;font-weight:bold;color:#22c55e;margin-bottom:6px;">🏷️ For Sale: $${ow.price} USD</div>
+  ${alreadyOwns
+    ?`<div style="font-size:10px;color:#f87171;">You already own a house. Sell yours first.</div>`
+    :`<button onclick="buyHouse('${key}',${ow.price})" ${!canAfford?'disabled':''} class="ibtn btn-green" style="width:100%;padding:8px;font-size:12px;">
+        ${!canAfford?'Need $'+(ow.price-S.coins)+' more':'💰 Buy this House ($'+ow.price+' USD)'}
+     </button>`
+  }
+</div>`;
+  }else{
+    h+=`<div style="font-size:11px;color:#64748b;padding:6px;background:rgba(255,255,255,.04);border-radius:6px;margin:5px 0;">🔒 Not for sale</div>`;
+  }
+  h+=closeBtn;
+  return h;
+}
+window.renderHousePlot=renderHousePlot;
+
+function listHouseForSale(){
+  const myKey=getMyHouseKey();
+  if(!myKey)return logChat('[Housing] You don\'t own a house.',false,'#f87171');
+  const el=document.getElementById('houseSellPrice');
+  const price=parseInt(el&&el.value)||0;
+  if(price<1)return logChat('[Housing] Enter a valid price (min $1 USD).',false,'#f87171');
+  if(!houseOwnership[myKey])houseOwnership[myKey]={owner:walletAddress.toLowerCase(),forSale:false,price:0};
+  houseOwnership[myKey].forSale=true;houseOwnership[myKey].price=price;
+  saveHouseOwnership();renderBuildingPanel();
+  logChat('[🏠 Housing] '+myKey+' listed for $'+price+' USD on NFT market!',false,'#22c55e');
+  onChainTx('HOUSE_LIST:'+myKey+':$'+price+'USD',0.00001);
+}
+window.listHouseForSale=listHouseForSale;
+
+function delistHouse(){
+  const myKey=getMyHouseKey();
+  if(!myKey||!houseOwnership[myKey])return;
+  houseOwnership[myKey].forSale=false;houseOwnership[myKey].price=0;
+  saveHouseOwnership();renderBuildingPanel();
+  logChat('[🏠 Housing] '+myKey+' delisted from NFT market.',false,'#fbbf24');
+}
+window.delistHouse=delistHouse;
+
+function buyHouse(key,price){
+  if(!walletAddress)return logChat('[Housing] Connect wallet first.',false,'#f87171');
+  const ow=houseOwnership[key];
+  if(!ow||!ow.forSale)return logChat('[Housing] This house is not for sale.',false,'#f87171');
+  if(S.coins<price)return logChat('[Housing] Need $'+price+' USD.',false,'#f87171');
+  if(getMyHouseKey())return logChat('[Housing] You already own a house. Sell it first.',false,'#f87171');
+  const prevOwner=ow.owner;
+  S.coins-=price;
+  houseOwnership[key]={owner:walletAddress.toLowerCase(),forSale:false,price:0};
+  saveHouseOwnership();
+  updateHUD();closeOutdoor();
+  logChat('[🏠 Housing] 🎉 You bought '+key+'! Welcome home.',false,'#22c55e');
+  awardNFT('House NFT: '+key+' (purchased from '+prevOwner.slice(0,8)+'…)');
+  // Sale proceeds routed through treasury (on-chain escrow pattern)
+  treasuryPay('HOUSE_BUY:'+key+':from:'+prevOwner+':$'+price+'USD',price);
+  if(_phaserScene&&WS.zone==='CITY')drawCity(_phaserScene);
+  saveProgress();
+}
+window.buyHouse=buyHouse;
+
+function transferHouseTo(){
+  const myKey=getMyHouseKey();
+  if(!myKey)return logChat('[Housing] You don\'t own a house.',false,'#f87171');
+  const el=document.getElementById('houseTransferTo');
+  const to=((el&&el.value)||'').trim().toLowerCase();
+  if(!to||to.length<10)return logChat('[Housing] Enter a valid recipient wallet address.',false,'#f87171');
+  // Enforce one-house-per-wallet rule for the recipient
+  if(Object.values(houseOwnership).find(h=>h.owner===to))
+    return logChat('[Housing] Recipient already owns a house.',false,'#f87171');
+  houseOwnership[myKey]={owner:to,forSale:false,price:0};
+  saveHouseOwnership();renderBuildingPanel();
+  logChat('[🏠 Housing] '+myKey+' transferred to '+to.slice(0,12)+'…',false,'#a78bfa');
+  onChainTx('HOUSE_TRANSFER:'+myKey+':to:'+to,0.00001);
+  if(_phaserScene&&WS.zone==='CITY')drawCity(_phaserScene);
+}
+window.transferHouseTo=transferHouseTo;
+
 /* ── Tap/Click Interact ──
    Called from the Phaser pointerdown event AND from the sidebar Interact button.
    sceneRef is optional – the function reads the global `interior` / WS state.
@@ -1525,8 +1746,23 @@ function triggerInteract(sceneRef){
     }
     /* Priority: building/IACT > own plot > nothing */
     if(poi&&d<IDIST){
-      if(BLDGS.find(b=>b.key===poi.key))enterBuilding(scene,poi.key);
-      else doIAct(poi.key.toLowerCase());
+      const housePlot=poi.key.startsWith('House')&&BLDGS.find(b=>b.key===poi.key);
+      if(housePlot){
+        const myKey=getMyHouseKey();
+        if(myKey===poi.key){
+          enterBuilding(scene,poi.key); // player's own house — enter
+        }else{
+          WS.outdoor='HousePlot:'+poi.key;
+          renderBuildingPanel();
+          const ow=houseOwnership[poi.key];
+          const ownerLabel=ow&&ow.owner?ow.owner.slice(0,10)+'…':'Unclaimed';
+          logChat('[🏠 '+poi.key+'] Owner: '+ownerLabel+(ow&&ow.forSale?' — For Sale: $'+ow.price+' USD':''),false,'#fbbf24');
+        }
+      }else if(BLDGS.find(b=>b.key===poi.key)){
+        enterBuilding(scene,poi.key);
+      }else{
+        doIAct(poi.key.toLowerCase());
+      }
     }else if(plotIdx!==null){
       _nearPlotIdx=plotIdx;WS.outdoor='Farm';renderBuildingPanel();
       logChat('[Farm] 🌱 Your farm plot. Check status & manage.',false,'#4ade80');
@@ -1761,6 +1997,8 @@ function saveProgress(){
       job:S.job,energy:S.energy,energyMax:S.energyMax,house:S.house,
       inv:{...S.inv},workCDs:{...workCDs},
       waterFull:S.waterFull,plots:S.plots.map(p=>({...p})),
+      posX:_phaserScene&&WS.zone==='CITY'?_phaserScene.me.x:(WS.savedPos?.x??32*TILE),
+      posY:_phaserScene&&WS.zone==='CITY'?_phaserScene.me.y:(WS.savedPos?.y??32*TILE),
       savedAt:Date.now(),
     };
     localStorage.setItem(getSaveKey(),JSON.stringify(data));
@@ -1788,6 +2026,7 @@ function loadProgress(){
     if(d.workCDs&&typeof d.workCDs==='object')Object.assign(workCDs,d.workCDs);
     S.waterFull=d.waterFull||false;
     S.plots=Array.isArray(d.plots)?d.plots.filter(p=>p&&p.state):[];
+    if(typeof d.posX==='number'&&typeof d.posY==='number')WS.savedPos={x:d.posX,y:d.posY};
     /* Restore in-progress learning timeout */
     if(S.learningEndTime>Date.now()&&S.learningId){
       const remMs=S.learningEndTime-Date.now(),lid=S.learningId;
@@ -1856,13 +2095,17 @@ const phaserCfg={
       _phaserScene=this;
       /* Tap / click anywhere on the game canvas to interact with nearest POI */
       this.input.on('pointerdown',()=>triggerInteract(this));
+      loadHouseOwnership();
       drawCity(this);populateNav();updateHUD();
       nightOv=this.add.rectangle(0,0,this.scale.width,this.scale.height,0x020617,1).setOrigin(0,0).setScrollFactor(0).setDepth(999);nightOv.setAlpha(.08);
       this.scale.on('resize',sz=>{if(nightOv){nightOv.width=sz.width;nightOv.height=sz.height;}});
       initChain();initOnlinePlayers();
       loadProgress();updateHUD();
+      if(WS.savedPos){this.me.x=clamp(WS.savedPos.x,20,CW*TILE-20);this.me.y=clamp(WS.savedPos.y,20,CH*TILE-20);}
+      assignHouseToUser(); // auto-assign if wallet connected and no house yet
       spawnNPCBots(this);
       logChat('[system] 🎮 Welcome to Moga World! Skills cost $30 USD · Work earns $2 USD/3h shift',false,'#fbbf24');
+      logChat('[system] 🏠 '+BLDGS.filter(b=>b.isHouse).length+' houses in the city — each wallet gets one auto-assigned! Buy/sell on NFT market.',false,'#f0abfc');
       logChat('[system] 🏫 Visit School to learn skills · 🥤 Vending machine: $1 USD/item · 🛏️ Bed restores energy',false,'#a78bfa');
       logChat('[system] Tap/click near a building to enter · Enter Casino for 100-player game 🎰',false,'#34d399');
       logChat('[system] 🎣 Buy Fishing Rod + Bait at Market · 🪓 Buy Hoe to farm grass tiles · 🏞️ River to fill can & fish',false,'#4ade80');
