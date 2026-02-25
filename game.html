@@ -339,6 +339,24 @@ let networkConfig={name:'Unknown',chainId:0,currency:'ETH',explorer:'https://eth
 const params=new URLSearchParams(window.location.search);
 walletAddress=params.get('wallet')||'';
 
+/* ── Character Nickname (shown in pixel world & chat; wallet stays reference) ── */
+let charNickname='';
+function getNickname(){return charNickname||(walletAddress?walletAddress.slice(0,6)+'…':'YOU');}
+function loadNickname(){
+  if(!walletAddress)return;
+  charNickname=localStorage.getItem('mogaNickname_'+walletAddress.toLowerCase())||'';
+}
+function saveNickname(name){
+  const safe=(name||'').replace(/[<>&"']/g,'').trim().slice(0,20);
+  charNickname=safe;
+  if(walletAddress)localStorage.setItem('mogaNickname_'+walletAddress.toLowerCase(),safe);
+  // Update player label in Phaser if scene is active
+  if(_phaserScene&&_phaserScene.meLabel){_phaserScene.meLabel.setText(getNickname());}
+  logChat('[Profile] 👤 Nickname set to: '+(safe||'(wallet address)'),false,'#a5f3fc');
+  return safe;
+}
+window.saveNickname=saveNickname;
+
 function usdcAddress(){return USDC_BY_CHAIN[networkConfig.chainId]||null;}
 function explorerTx(hash){return `${networkConfig.explorer}/tx/${hash}`;}
 
@@ -358,18 +376,20 @@ async function initChain(){
     networkConfig.currency=curs[net.chainId]||'ETH';
     networkConfig.explorer=exps[net.chainId]||'https://etherscan.io';
     if(!walletAddress){const accs=await prov.listAccounts();if(accs[0])walletAddress=accs[0].toLowerCase();}
+    loadNickname();
     document.getElementById('networkBadge').textContent=networkConfig.name;
     document.getElementById('wAddr').textContent=walletAddress?walletAddress.slice(0,6)+'...'+walletAddress.slice(-4):'Not connected';
     loadTxHistory();renderTxHistory();
     assignHouseToUser();
     window.ethereum.on('chainChanged',()=>initChain());
-    window.ethereum.on('accountsChanged',a=>{walletAddress=a[0]?a[0].toLowerCase():'';initChain();});
+    window.ethereum.on('accountsChanged',a=>{walletAddress=a[0]?a[0].toLowerCase():'';loadNickname();initChain();});
   }catch(e){console.log('[chain]',e.message);}
 }
 
 window.addEventListener('message',ev=>{
   if(ev.data&&ev.data.type==='walletUpdate'){
     walletAddress=ev.data.address||'';
+    loadNickname();
     document.getElementById('wAddr').textContent=walletAddress?walletAddress.slice(0,6)+'...'+walletAddress.slice(-4):'Not connected';
     loadTxHistory();renderTxHistory();
     assignHouseToUser();
@@ -915,6 +935,31 @@ function renderMarket(){
 <div class="idesc">×${S.inv.fruit} available · +$${FRUIT_SELL_PRICE} USD each</div></div>
 <button onclick="sellItem('fruit')" class="ibtn btn-green">Sell 1</button></div>`;
   }
+  /* 🏠 House NFT Market — buy expensive, sell cheap */
+  h+=`<div style="font-size:10px;color:#f0abfc;font-weight:bold;margin:7px 0 3px;">🏠 House NFT Market</div>`;
+  const myKey=getMyHouseKey();
+  const forSaleHouses=Object.entries(houseOwnership).filter(([k,v])=>v&&v.forSale&&v.owner!==walletAddress.toLowerCase());
+  if(forSaleHouses.length){
+    forSaleHouses.slice(0,4).forEach(([key,ow])=>{
+      const canBuy=!myKey&&S.coins>=ow.price;
+      h+=`<div class="irow"><div class="ileft"><div class="iname">🏠 ${key}</div>
+<div class="idesc">NFT House · Buy: $${ow.price} USD on-chain</div></div>
+<button onclick="buyHouseFromMarket('${key}',${ow.price})" ${!canBuy?'disabled':''} class="ibtn btn-purple">${myKey?'Own house':'Buy $'+ow.price}</button></div>`;
+    });
+  }else{
+    h+=`<div style="font-size:10px;color:#64748b;margin:5px 0;padding:6px;background:rgba(255,255,255,.03);border-radius:6px;">No houses listed right now. Walk to a house with 🏷️ For Sale tag.</div>`;
+  }
+  if(myKey){
+    const ow=houseOwnership[myKey]||{};
+    const sellPrice=Math.max(50,Math.floor((100+S.house*5)*0.7)); // 70% of buy price
+    if(!ow.forSale){
+      h+=`<div class="irow"><div class="ileft"><div class="iname">💸 Sell Your House</div>
+<div class="idesc">${myKey} · Market buys at $${sellPrice} USD (70% of value)</div></div>
+<button onclick="sellHouseToMarket(${sellPrice})" class="ibtn btn-red">Sell $${sellPrice}</button></div>`;
+    }else{
+      h+=`<div style="font-size:10px;color:#22c55e;margin:5px 0;">✅ ${myKey} listed @ $${ow.price} USD</div>`;
+    }
+  }
   return h;
 }
 
@@ -1007,6 +1052,14 @@ function renderTownHall(){
 <div style="font-size:11px;color:#94a3b8;margin:5px 0;">Community hub for Moga City residents</div>
 <div class="irow"><div class="ileft"><div class="iname">📊 My Stats</div>
 <div class="idesc">Skills: ${S.learnedSkills.length} · Job: ${S.job} · House Lv ${S.house}</div></div></div>
+<div class="irow"><div class="ileft">
+  <div class="iname">👤 Pixel Nickname</div>
+  <div class="idesc">Shown in world & chat · Wallet stays reference</div>
+</div></div>
+<div style="display:flex;gap:5px;margin:4px 0 8px;">
+  <input id="nicknameIn" placeholder="Set display name…" value="${esc(charNickname)}" maxlength="20" style="flex:1;padding:6px;font-size:11px;background:#0f172a;border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:6px;"/>
+  <button onclick="saveNickname(document.getElementById('nicknameIn').value);renderBuildingPanel();" class="ibtn btn-blue" style="padding:5px 9px;">Save</button>
+</div>
 <div class="irow"><div class="ileft"><div class="iname">💾 Save Progress</div>
 <div class="idesc">Save to ${walletAddress?walletAddress.slice(0,8)+'…':'local storage'}</div></div>
 <button onclick="saveProgress();logChat('[Town Hall] 💾 Progress saved!',false,'#34d399');" class="ibtn btn-green">Save</button></div>
@@ -1509,6 +1562,7 @@ function makeTextures(scene){
     p(8,12,4,10,'#374151');p(20,12,4,10,'#374151');p(12,16,8,6,'#111827');
     p(4,16,3,8,'#64748b');p(25,16,3,8,'#64748b');p(3,18,5,2,'#475569');p(24,18,5,2,'#475569');
   });
+  makeBirdTexture(scene);
 }
 
 /* ── World data ── */
@@ -2046,6 +2100,45 @@ function buyHouse(key,price){
   saveProgress();
 }
 window.buyHouse=buyHouse;
+
+/* Buy a house via the Market building (on-chain NFT purchase) */
+function buyHouseFromMarket(key,price){
+  if(!walletAddress)return logChat('[Market] Connect wallet first.',false,'#f87171');
+  const ow=houseOwnership[key];
+  if(!ow||!ow.forSale)return logChat('[Market] This house is no longer for sale.',false,'#f87171');
+  if(S.coins<price)return logChat('[Market] Need $'+price+' USD.',false,'#f87171');
+  if(getMyHouseKey())return logChat('[Market] You already own a house. Sell it first.',false,'#f87171');
+  const prevOwner=ow.owner;
+  S.coins-=price;
+  houseOwnership[key]={owner:walletAddress.toLowerCase(),forSale:false,price:0};
+  saveHouseOwnership();updateHUD();renderBuildingPanel();
+  logChat('[🏠 Market] 🎉 Bought '+key+' for $'+price+' USD! NFT transferred to your wallet.',false,'#22c55e');
+  awardNFT('House NFT: '+key+' — purchased via Market ($'+price+' USD)');
+  treasuryPay('MARKET_HOUSE_BUY:'+key+':from:'+prevOwner+':$'+price+'USD',price);
+  if(_phaserScene&&WS.zone==='CITY')drawCity(_phaserScene);
+  saveProgress();
+}
+window.buyHouseFromMarket=buyHouseFromMarket;
+
+/* Sell your house to the Market at a discounted price (70% of value) */
+function sellHouseToMarket(sellPrice){
+  if(!walletAddress)return logChat('[Market] Connect wallet first.',false,'#f87171');
+  const myKey=getMyHouseKey();
+  if(!myKey)return logChat('[Market] You don\'t own a house.',false,'#f87171');
+  // Market buys at discount — list it as owned by a market wallet (NPC buyer)
+  const marketBuyer='0xmarket_buyer_reserve_wallet';
+  houseOwnership[myKey]={owner:marketBuyer,forSale:true,price:Math.floor(sellPrice/0.7)};
+  saveHouseOwnership();
+  S.coins+=sellPrice;
+  updateHUD();renderBuildingPanel();
+  logChat('[🏠 Market] House '+myKey+' sold for $'+sellPrice+' USD (market rate). It\'s now back on the market.',false,'#fbbf24');
+  awardNFT('House NFT sold: '+myKey+' — proceeds $'+sellPrice+' USD to your wallet');
+  // Market proceeds → player's connected wallet via treasury reward
+  rewardFromTreasury('MARKET_HOUSE_SELL:'+myKey,sellPrice);
+  if(_phaserScene&&WS.zone==='CITY')drawCity(_phaserScene);
+  saveProgress();
+}
+window.sellHouseToMarket=sellHouseToMarket;
 
 function transferHouseTo(){
   const myKey=getMyHouseKey();
@@ -3071,10 +3164,10 @@ document.getElementById('btnSend').onclick=()=>{
   else if(l==='buy sandwich'){if(S.coins<1)logChat('[Vending] Need $1 USD.');else{S.coins-=1;S.inv.sandwich++;updateHUD();logChat('[Vending] Sandwich +1 (+45 energy when used)');}}
   else if(t.startsWith('@')){
     /* Private message: @PlayerName: message */
-    const me=walletAddress?walletAddress.slice(0,6)+'…':'YOU';
+    const me=getNickname();
     logChat('[PM] '+me+' → '+t,true,'#f0abfc');
   }else{
-    const me=walletAddress?walletAddress.slice(0,6)+'…':'YOU';
+    const me=getNickname();
     logChat('['+me+'] '+t,true,'#93c5fd');
   }
 };
@@ -3090,15 +3183,34 @@ const phaserCfg={
     create(){
       document.getElementById('loading').style.display='none';
       this.me=this.add.container(32*TILE,32*TILE).setDepth(10);
-      const meLabel=walletAddress?walletAddress.slice(0,6)+'…':'YOU';
-      this.me.add([this.add.image(0,0,'cat').setScale(2.0).setOrigin(.5,.62),
-                   this.add.text(-24,-52,meLabel,{fontSize:'12px',color:'#a5f3fc',fontStyle:'bold'})]);
+      const meLabel=getNickname();
+      const meLabelObj=this.add.text(-24,-52,meLabel,{fontSize:'12px',color:'#a5f3fc',fontStyle:'bold'});
+      this.meLabel=meLabelObj; // store ref for nickname updates
+      this.me.add([this.add.image(0,0,'cat').setScale(2.0).setOrigin(.5,.62),meLabelObj]);
       this.cameras.main.startFollow(this.me,true,.12,.12);this.cameras.main.setZoom(1.3);
       this.cursors=this.input.keyboard.createCursorKeys();
       this.keys=this.input.keyboard.addKeys('W,A,S,D,SHIFT');
       _phaserScene=this;
-      /* Tap / click anywhere on the game canvas to interact with nearest POI */
-      this.input.on('pointerdown',()=>triggerInteract(this));
+      /* Tap / click anywhere on the game canvas — first check NPC bots, then building POI */
+      this.input.on('pointerdown',(pointer)=>{
+        if(WS.zone==='CITY'){
+          // Get world coordinates of the click
+          const wx=pointer.worldX,wy=pointer.worldY;
+          // Check if we clicked near an NPC bot character
+          for(let i=0;i<npcBots.length;i++){
+            const bot=npcBots[i];
+            if(!bot.obj.visible)continue;
+            const d=Math.hypot(wx-bot.obj.x,wy-bot.obj.y);
+            if(d<40){
+              // Open private chat with this NPC / player
+              const pName=NPC_NAMES[i%NPC_NAMES.length];
+              showPlayerProfile({id:i,name:pName,addr:'0xnpc_'+pName.toLowerCase()});
+              return;
+            }
+          }
+        }
+        triggerInteract(this);
+      });
       loadHouseOwnership();
       drawCity(this);populateNav();updateHUD();
       nightOv=this.add.rectangle(0,0,this.scale.width,this.scale.height,0x020617,1).setOrigin(0,0).setScrollFactor(0).setDepth(999);nightOv.setAlpha(.08);
@@ -3107,13 +3219,13 @@ const phaserCfg={
       loadProgress();updateHUD();
       if(WS.savedPos){this.me.x=clamp(WS.savedPos.x,20,CW*TILE-20);this.me.y=clamp(WS.savedPos.y,20,CH*TILE-20);}
       assignHouseToUser(); // auto-assign if wallet connected and no house yet
-      spawnNPCBots(this);
+      spawnNPCBots(this);spawnBirds(this);
       logChat('[system] 🎮 Welcome to Moga World! Skills cost $30 USD · Work earns $2 USD/3h shift',false,'#fbbf24');
-      logChat('[system] 🏠 '+BLDGS.filter(b=>b.isHouse).length+' houses in the city — each wallet gets one auto-assigned! Buy/sell on NFT market.',false,'#f0abfc');
-      logChat('[system] 🏫 Visit School to learn skills · 🥤 Vending machine: $1 USD/item · 🛏️ Bed restores energy',false,'#a78bfa');
-      logChat('[system] Tap/click near a building to enter · Enter Casino for 100-player game 🎰',false,'#34d399');
+      logChat('[system] 🏠 '+BLDGS.filter(b=>b.isHouse).length+' houses — buy/sell via Market 🛒 or NFT market · Tap NPC to chat 💬',false,'#f0abfc');
+      logChat('[system] 🏫 Visit School to learn skills · 🥤 Vending: $1 USD on-chain · 👤 Set nickname at Town Hall',false,'#a78bfa');
+      logChat('[system] Tap/click near a building to enter · Tap NPC cat to private chat · Casino 🎰',false,'#34d399');
       logChat('[system] 🎣 Buy Fishing Rod + Bait at Market · 🪓 Buy Hoe to farm grass tiles · 🏞️ River to fill can & fish',false,'#4ade80');
-      logChat('[system] 🏠 No house? Sleep at 🏨 Hotel ($1 USD/day) · Buy your own house from $100 USD on the NFT market!',false,'#f0abfc');
+      logChat('[system] 🏠 No house? Sleep at 🏨 Hotel ($1 USD/day) · Buy from Market or walk to a 🏷️ For Sale house!',false,'#f0abfc');
       this.time.addEvent({delay:200,loop:true,callback:()=>{
         const btn=document.getElementById('btnInteract');
         if(WS.zone==='CITY'){
@@ -3174,7 +3286,7 @@ const phaserCfg={
     },
     update(_,dt){
       const dtS=dt/1000;updateDN(dtS);
-      updateNPCBots(dtS);
+      updateNPCBots(dtS);updateBirds(dtS);
       if(S.sleeping)return;
       const spr=this.keys.SHIFT.isDown&&S.energy>0,spd=spr?380:240;
       let vx=0,vy=0;
