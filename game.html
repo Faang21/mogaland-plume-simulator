@@ -155,6 +155,17 @@ kbd{padding:1px 4px;border-radius:4px;border:1px solid rgba(255,255,255,.22);bac
       </small>
     </div>
 
+    <div class="card" style="padding:8px 10px;">
+      <div class="row" style="justify-content:space-between;margin-bottom:5px;">
+        <strong>🌐 City</strong>
+        <span class="pill" id="cityPill">🏙️ Moga City</span>
+      </div>
+      <div class="row" style="gap:4px;">
+        <button id="btnCity1" onclick="switchCity(1)" style="flex:1;font-size:11px;padding:5px;background:linear-gradient(90deg,#0284c7,#0369a1);border:none;">🏙️ Moga City</button>
+        <button id="btnCity2" onclick="switchCity(2)" style="flex:1;font-size:11px;padding:5px;">🏝️ Coastal City</button>
+      </div>
+    </div>
+
     <div class="card stat">
       <div>Coins</div><div id="elCoins">100</div>
       <div>Job</div><div id="elJob">Unemployed</div>
@@ -585,7 +596,69 @@ const SKILLS=[
   {id:'trade',   name:'Trading',       icon:'📈',cost:SKILL_COST_USD,time:SKILL_LEARN_MS,teacher:'Mrs. Hana',  job:'Trader',     wMin:WORK_PAY_USD,wMax:WORK_PAY_USD,cd:WORK_CD_MS,workBuilding:'Bank'},
   {id:'report',  name:'Journalism',    icon:'📰',cost:SKILL_COST_USD,time:SKILL_LEARN_MS,teacher:'Ed. Reza',   job:'Reporter',   wMin:WORK_PAY_USD,wMax:WORK_PAY_USD,cd:WORK_CD_MS,workBuilding:'Library'},
   {id:'fire',    name:'Firefighting',  icon:'🚒',cost:SKILL_COST_USD,time:SKILL_LEARN_MS,teacher:'Chief Agus', job:'Firefighter',wMin:WORK_PAY_USD,wMax:WORK_PAY_USD,cd:WORK_CD_MS,workBuilding:'Town Hall'},
+  {id:'pilot',   name:'Aviation',    icon:'✈️',cost:SKILL_COST_USD,time:SKILL_LEARN_MS,teacher:'Capt. Argo', job:'Pilot',         wMin:WORK_PAY_USD,wMax:WORK_PAY_USD,cd:WORK_CD_MS,workBuilding:'Airport'},
+  {id:'masinis', name:'Rail Ops',    icon:'🚂',cost:SKILL_COST_USD,time:SKILL_LEARN_MS,teacher:'Mr. Loko',   job:'Masinis',       wMin:WORK_PAY_USD,wMax:WORK_PAY_USD,cd:WORK_CD_MS,workBuilding:'Train Station'},
+  {id:'guard',   name:'Lifeguarding',icon:'🏊',cost:SKILL_COST_USD,time:SKILL_LEARN_MS,teacher:'Coach Adi',  job:'Penjaga Pantai',wMin:WORK_PAY_USD,wMax:WORK_PAY_USD,cd:WORK_CD_MS,workBuilding:'Beach Club'},
+  {id:'taxi',    name:'Driving',     icon:'🚕',cost:SKILL_COST_USD,time:SKILL_LEARN_MS,teacher:'Mr. Supir',  job:'Taxi Driver',   wMin:WORK_PAY_USD,wMax:WORK_PAY_USD,cd:WORK_CD_MS,workBuilding:'Job Center C2'},
 ];
+
+/* ── Car NFT System ── */
+const CAR_NFT_PRICE=50;    // $50 USD to buy a car NFT
+const CAR_NFT_KEY='mogaCarOwnership_v1';
+const CAR_TYPES=[
+  {id:'car1',name:'City Coupe',   icon:'🚗',color:0xef4444,speed:200},
+  {id:'car2',name:'Beach Cruiser',icon:'🚙',color:0x3b82f6,speed:190},
+  {id:'car3',name:'Yellow Cab',   icon:'🚕',color:0xfbbf24,speed:180},
+  {id:'car4',name:'Sports Racer', icon:'🏎️',color:0x22c55e,speed:240},
+  {id:'car5',name:'Family Van',   icon:'🚐',color:0xa78bfa,speed:160},
+];
+let carOwnership={};  // {carId: {owner: address, forSale: bool, price: int}}
+function loadCarOwnership(){
+  try{const r=localStorage.getItem(CAR_NFT_KEY);if(r){carOwnership=JSON.parse(r);return;}}catch{}
+  // Pre-populate some NPC cars
+  carOwnership={
+    car1:{owner:'0xd8da6bf26964af9d7eed9e03e53415d37aa96045',forSale:false,price:0},
+    car2:{owner:'0xab5801a7d398351b8be11c439e05c5b3259aec9b',forSale:false,price:0},
+  };
+  saveCarOwnership();
+}
+function saveCarOwnership(){try{localStorage.setItem(CAR_NFT_KEY,JSON.stringify(carOwnership));}catch{}}
+function getMyCarId(){
+  if(!walletAddress)return null;
+  return Object.keys(carOwnership).find(k=>carOwnership[k]&&carOwnership[k].owner===walletAddress.toLowerCase())||null;
+}
+function buyCarNFT(carId){
+  if(!walletAddress)return logChat('[Car] Connect wallet first.',false,'#f87171');
+  if(getMyCarId())return logChat('[Car] You already own a car ('+getMyCarId()+'). Sell it first.',false,'#f87171');
+  if(carOwnership[carId]&&carOwnership[carId].owner)return logChat('[Car] This car is already owned.',false,'#f87171');
+  if(S.coins<CAR_NFT_PRICE)return logChat('[Car] Need $'+CAR_NFT_PRICE+' USD. You have $'+S.coins+'.',false,'#f87171');
+  S.coins-=CAR_NFT_PRICE;
+  carOwnership[carId]={owner:walletAddress.toLowerCase(),forSale:false,price:0};
+  saveCarOwnership();
+  updateHUD();renderBuildingPanel();
+  const ct=CAR_TYPES.find(c=>c.id===carId);
+  logChat('[🚗 Car NFT] 🎉 Bought: '+(ct?ct.name:carId)+'! Your car is parked in City 2.',false,'#22c55e');
+  awardNFT('Car NFT: '+(ct?ct.name:carId)+' — registered to your wallet');
+  treasuryPay('CAR_BUY:'+carId+':$'+CAR_NFT_PRICE+'USD',CAR_NFT_PRICE);
+  saveProgress();
+  // redraw city to show car
+  if(_phaserScene&&currentCity===2)drawCity(_phaserScene);
+}
+window.buyCarNFT=buyCarNFT;
+function sellCarNFT(){
+  const myId=getMyCarId();
+  if(!myId)return logChat('[Car] You don\'t own a car.',false,'#f87171');
+  const sellPrice=Math.floor(CAR_NFT_PRICE*0.6);
+  carOwnership[myId]={owner:null,forSale:true,price:CAR_NFT_PRICE};
+  saveCarOwnership();
+  S.coins+=sellPrice;
+  updateHUD();renderBuildingPanel();
+  logChat('[Car] Sold your car for $'+sellPrice+' USD.',false,'#fbbf24');
+  rewardFromTreasury('CAR_SELL:'+myId,sellPrice);
+  if(_phaserScene&&currentCity===2)drawCity(_phaserScene);
+  saveProgress();
+}
+window.sellCarNFT=sellCarNFT;
 
 /* ── Per-user house color ── */
 function getHouseColorByOwner(addr){
@@ -633,7 +706,7 @@ function assignHouseToUser(){
   if(!walletAddress)return;
   if(getMyHouseKey())return; // already owns one
   // Find first unclaimed house (no owner entry)
-  const allHouseKeys=BLDGS.filter(b=>b.isHouse).map(b=>b.key);
+  const allHouseKeys=[...BLDGS,...BLDGS2].filter(b=>b.isHouse).map(b=>b.key);
   const available=allHouseKeys.find(k=>!houseOwnership[k]||!houseOwnership[k].owner);
   if(available){
     houseOwnership[available]={owner:walletAddress.toLowerCase(),forSale:false,price:0};
@@ -776,10 +849,14 @@ function renderBuildingPanel(){
   if(WS.outdoor==='River'){panel.style.display='block';panel.innerHTML=renderRiver();return;}
   if(WS.outdoor==='Farm'){panel.style.display='block';panel.innerHTML=renderFarm();return;}
   if(WS.outdoor&&WS.outdoor.startsWith('HousePlot:')){panel.style.display='block';panel.innerHTML=renderHousePlot(WS.outdoor.slice(10));return;}
+  if(WS.outdoor==='CarShop'){panel.style.display='block';renderCarShop();return;}
+  if(WS.outdoor==='Waterfall'){panel.style.display='block';panel.innerHTML=`<strong>💦 Waterfall</strong><div style="font-size:11px;color:#7dd3fc;margin:5px 0;">Natural wonder near Mount Moga. +15 energy when visited.</div><button onclick="closeOutdoor()" class="ibtn btn-blue" style="width:100%;margin-top:5px;">Close</button>`;return;}
+  if(WS.outdoor==='Beach'){panel.style.display='block';panel.innerHTML=`<strong>🏖️ Beach</strong><div style="font-size:11px;color:#38bdf8;margin:5px 0;">Moga Beach — crystal clear waters! Walk to Beach Club for swimming &amp; lifeguard jobs.</div><button onclick="closeOutdoor()" class="ibtn btn-blue" style="width:100%;margin-top:5px;">Close</button>`;return;}
   if(WS.outdoor){panel.style.display='block';panel.innerHTML=renderVending();return;}
   if(WS.zone!=='INTERIOR'){panel.style.display='none';return;}
   panel.style.display='block';
-  const r={House:renderHome,School:renderSchool,'Job Center':renderJobBoard,Bank:renderBank,Cafe:renderCafe,Market:renderMarket,Gym:renderGym,Hospital:renderHospital,Hotel:renderHotel,Library:renderLibrary,Office:renderOffice,'Town Hall':renderTownHall};
+  const r={House:renderHome,School:renderSchool,'Job Center':renderJobBoard,Bank:renderBank,Cafe:renderCafe,Market:renderMarket,Gym:renderGym,Hospital:renderHospital,Hotel:renderHotel,Library:renderLibrary,Office:renderOffice,'Town Hall':renderTownHall,
+    Airport:renderAirport,'Train Station':renderTrainStation,'Aviation Academy':renderSchool,'Concert Hall':renderConcertHall,Zoo:renderZoo,'Beach Club':renderBeachClub,'Job Center C2':renderJobBoard,'Bank C2':renderBank,'Cafe C2':renderCafe,'Hospital C2':renderHospital,'Hotel C2':renderHotel,Casino:()=>{initMulGame();return '<strong>🎰 Casino</strong><div style="font-size:11px;color:#94a3b8;margin:5px 0;">Multiplier game panel on the left.</div>';}};
   if(WS.key.startsWith('House'))panel.innerHTML=renderHome();
   else if(r[WS.key])panel.innerHTML=r[WS.key]();
   else panel.style.display='none';
@@ -1067,6 +1144,200 @@ function renderTownHall(){
   💡 All game progress is auto-saved every 30 seconds and on every major action. Progress persists across sessions.
 </div>`;
 }
+
+function renderAirport(){
+  const myCar=getMyCarId();
+  const hasPilot=S.learnedSkills.includes('pilot');
+  return`<strong>✈️ Airport — Moga International</strong>
+<div style="font-size:11px;color:#94a3b8;margin:5px 0;">Destination: International flights daily · Buy Pilot skill at Aviation Academy</div>
+<div style="border:1px solid rgba(99,102,241,.3);border-radius:8px;padding:8px;margin:5px 0;background:rgba(99,102,241,.05);">
+  <div style="font-size:12px;font-weight:bold;margin-bottom:4px;">✈️ Flights</div>
+  <div style="font-size:11px;color:#94a3b8;margin-bottom:6px;">MG-001 → Overseas: Every 60s | MG-002 → Back: Auto-return</div>
+  ${hasPilot?`<button onclick="pilotFly()" class="ibtn btn-blue" style="width:100%;padding:7px;">🛫 Fly as Pilot (Earn $${WORK_PAY_USD} USD)</button>`:`<div style="font-size:11px;color:#f87171;">Learn Aviation skill at Aviation Academy to work as Pilot</div>`}
+</div>
+<div style="border-top:1px solid rgba(255,255,255,.1);margin-top:8px;padding-top:8px;">
+  <div style="font-size:11px;color:#fbbf24;margin-bottom:5px;">🚗 Airport Parking</div>
+  <div style="font-size:11px;color:#94a3b8;">Parking spots visible at 🅿️ near airport</div>
+  ${myCar?`<button onclick="driveMyCar()" class="ibtn btn-green" style="width:100%;margin-top:5px;">${playerDrivingCar?'🅿️ Park Car':'🚗 Drive My Car'}</button>`:`<button onclick="exitCity(_phaserScene);setTimeout(()=>renderCarShop(),200)" class="ibtn btn-yellow" style="width:100%;margin-top:5px;">🚗 Buy Car NFT ($${CAR_NFT_PRICE} USD)</button>`}
+</div>`;
+}
+window.renderAirport=renderAirport;
+
+function pilotFly(){
+  if(!S.learnedSkills.includes('pilot'))return logChat('[Airport] Need Aviation skill.',false,'#f87171');
+  const now=Date.now();const cd=workCDs['pilot']||0;
+  if((now-cd)<WORK_CD_MS)return logChat('[Airport] Cooldown: '+fmtCountdown(WORK_CD_MS-(now-cd))+'.',false,'#fbbf24');
+  if(!reqEnergy(ENERGY_LOW_THRESHOLD,'[Airport] Too tired to fly!'))return;
+  workCDs['pilot']=now;
+  S.coins+=WORK_PAY_USD;
+  updateHUD();renderBuildingPanel();
+  rewardFromTreasury('PILOT_WORK:Airport',WORK_PAY_USD);
+  logChat('[✈️ Pilot] Flight complete! +$'+WORK_PAY_USD+' USD earned. Next flight in 3h.',false,'#22c55e');
+  awardNFT('Pilot Work NFT: flight logged at MG Airport');
+  saveProgress();
+}
+window.pilotFly=pilotFly;
+
+function renderTrainStation(){
+  const hasMasinis=S.learnedSkills.includes('masinis');
+  const atStation=trainState.atStation;
+  return`<strong>🚂 Train Station — Coastal Rail</strong>
+<div style="font-size:11px;color:#94a3b8;margin:5px 0;">Circular route around Coastal City · Stops at all major areas</div>
+<div style="border:1px solid rgba(34,197,94,.25);border-radius:8px;padding:8px;margin:5px 0;">
+  <div style="font-size:12px;font-weight:bold;margin-bottom:4px;">🚆 Train Status</div>
+  <div style="font-size:11px;color:${atStation?'#22c55e':'#fbbf24'};">${atStation?'🟢 Train at station — Board now!':'🟡 Train in transit… wait at platform'}</div>
+  <div style="margin-top:6px;display:flex;gap:5px;">
+    <button onclick="boardTrain()" ${atStation?'':'disabled'} class="ibtn btn-green" style="flex:1;">🎫 Board Train</button>
+    <button onclick="exitTrain()" ${trainState.passengerBoarded?'':'disabled'} class="ibtn btn-red" style="flex:1;">🚪 Exit</button>
+  </div>
+  ${trainState.passengerBoarded?'<div style="color:#22c55e;font-size:11px;margin-top:4px;">🚂 You are on the train!</div>':''}
+</div>
+${hasMasinis?`<button onclick="workMasinis()" class="ibtn btn-blue" style="width:100%;margin-top:5px;">🚂 Work as Masinis (+$${WORK_PAY_USD} USD)</button>`:`<div style="font-size:11px;color:#94a3b8;margin-top:5px;">Learn Rail Ops skill at Aviation Academy to work as Masinis</div>`}`;
+}
+window.renderTrainStation=renderTrainStation;
+
+function workMasinis(){
+  if(!S.learnedSkills.includes('masinis'))return logChat('[Train] Need Rail Ops skill.',false,'#f87171');
+  const now=Date.now();const cd=workCDs['masinis']||0;
+  if((now-cd)<WORK_CD_MS)return logChat('[Train] Cooldown: '+fmtCountdown(WORK_CD_MS-(now-cd))+'.',false,'#fbbf24');
+  if(!reqEnergy(ENERGY_LOW_THRESHOLD,'[Train] Too tired to drive!'))return;
+  workCDs['masinis']=now;S.coins+=WORK_PAY_USD;
+  updateHUD();renderBuildingPanel();
+  rewardFromTreasury('MASINIS_WORK:TrainStation',WORK_PAY_USD);
+  logChat('[🚂 Masinis] Shift done! +$'+WORK_PAY_USD+' USD. NFT work record sent.',false,'#22c55e');
+  awardNFT('Masinis Work NFT: train shift completed');
+  saveProgress();
+}
+window.workMasinis=workMasinis;
+
+function renderBeachClub(){
+  const hasGuard=S.learnedSkills.includes('guard');
+  return`<strong>🏖️ Beach Club — Moga Beach</strong>
+<div style="font-size:11px;color:#94a3b8;margin:5px 0;">Beautiful coastal beach · Swimming · Lifeguard services</div>
+<div class="irow"><div class="ileft"><div class="iname">🏊 Swimming Pass</div><div class="idesc">+40 energy · Refreshing!</div></div>
+<button onclick="beachSwim()" ${S.coins<3?'disabled':''} class="ibtn btn-blue">$3 USD</button></div>
+<div class="irow"><div class="ileft"><div class="iname">🍹 Beach Bar Drink</div><div class="idesc">+30 energy</div></div>
+<button onclick="buyFood('beach','drink',4,30,0)" ${S.coins<4?'disabled':''} class="ibtn btn-green">$4 USD</button></div>
+${hasGuard?`<button onclick="workLifeguard()" class="ibtn btn-teal" style="width:100%;margin-top:6px;">🏊 Work as Lifeguard (+$${WORK_PAY_USD} USD)</button>`:`<div style="font-size:11px;color:#94a3b8;margin-top:6px;">Learn Lifeguarding at Aviation Academy to work here</div>`}`;
+}
+window.renderBeachClub=renderBeachClub;
+
+function beachSwim(){
+  if(S.coins<3)return logChat('[Beach] Need $3 USD.',false,'#f87171');
+  S.coins-=3;S.energy=Math.min(S.energy+40,S.energyMax);
+  updateHUD();renderBuildingPanel();
+  onChainTx('BEACH_SWIM:BeachClub:$3USD',0.00001);
+  logChat('[🏖️ Beach] Refreshing swim! +40 energy 🌊',false,'#38bdf8');
+  saveProgress();
+}
+window.beachSwim=beachSwim;
+
+function workLifeguard(){
+  if(!S.learnedSkills.includes('guard'))return logChat('[Beach] Need Lifeguarding skill.',false,'#f87171');
+  const now=Date.now();const cd=workCDs['guard']||0;
+  if((now-cd)<WORK_CD_MS)return logChat('[Beach] Cooldown: '+fmtCountdown(WORK_CD_MS-(now-cd))+'.',false,'#fbbf24');
+  if(!reqEnergy(ENERGY_LOW_THRESHOLD,'[Beach] Too tired to guard!'))return;
+  workCDs['guard']=now;S.coins+=WORK_PAY_USD;
+  updateHUD();renderBuildingPanel();
+  rewardFromTreasury('LIFEGUARD_WORK:BeachClub',WORK_PAY_USD);
+  logChat('[🏊 Lifeguard] Shift done! +$'+WORK_PAY_USD+' USD. NFT work record sent.',false,'#22c55e');
+  awardNFT('Lifeguard Work NFT: patrol shift at Moga Beach');
+  saveProgress();
+}
+window.workLifeguard=workLifeguard;
+
+function renderConcertHall(){
+  return`<strong>🎵 Concert Hall — Moga Auditorium</strong>
+<div style="font-size:11px;color:#94a3b8;margin:5px 0;">Live music events · Concerts · Shows</div>
+<div class="irow"><div class="ileft"><div class="iname">🎟️ Concert Ticket</div><div class="idesc">Enjoy live performance · +20 mood</div></div>
+<button onclick="buyConcertTicket()" ${S.coins<10?'disabled':''} class="ibtn btn-purple">$10 USD</button></div>
+<div class="irow"><div class="ileft"><div class="iname">🎤 VIP Experience</div><div class="idesc">Backstage pass · NFT collectible</div></div>
+<button onclick="buyVIPConcert()" ${S.coins<50?'disabled':''} class="ibtn btn-indigo">$50 USD</button></div>
+<div style="font-size:10px;color:#64748b;margin-top:5px;">Tonight: MogaFest Live 🎶 · Entry from $10 USD</div>`;
+}
+window.renderConcertHall=renderConcertHall;
+
+function buyConcertTicket(){
+  if(S.coins<10)return logChat('[Concert] Need $10 USD.',false,'#f87171');
+  S.coins-=10;S.energy=Math.min(S.energy+20,S.energyMax);
+  updateHUD();renderBuildingPanel();
+  treasuryPay('CONCERT_TICKET:ConcertHall:$10USD',10);
+  logChat('[🎵 Concert] 🎶 Great show! +20 energy. MogaFest was epic!',false,'#a78bfa');
+  saveProgress();
+}
+window.buyConcertTicket=buyConcertTicket;
+
+function buyVIPConcert(){
+  if(S.coins<50)return logChat('[Concert] Need $50 USD for VIP.',false,'#f87171');
+  S.coins-=50;
+  updateHUD();renderBuildingPanel();
+  treasuryPay('VIP_CONCERT:ConcertHall:$50USD',50);
+  awardNFT('Concert Hall VIP NFT: backstage access MogaFest');
+  logChat('[🎵 VIP Concert] 🌟 VIP experience! NFT collectible minted to your wallet!',false,'#f0abfc');
+  saveProgress();
+}
+window.buyVIPConcert=buyVIPConcert;
+
+function renderZoo(){
+  return`<strong>🦁 Moga Zoo</strong>
+<div style="font-size:11px;color:#94a3b8;margin:5px 0;">Wildlife sanctuary · 50+ animals · Educational tours</div>
+<div class="irow"><div class="ileft"><div class="iname">🎫 Zoo Entry</div><div class="idesc">+25 energy · See all animals</div></div>
+<button onclick="buyZooTicket()" ${S.coins<8?'disabled':''} class="ibtn btn-green">$8 USD</button></div>
+<div class="irow"><div class="ileft"><div class="iname">🦁 Zoo NFT Collectible</div><div class="idesc">Rare animal NFT · Limited edition</div></div>
+<button onclick="buyZooNFT()" ${S.coins<30?'disabled':''} class="ibtn btn-yellow">$30 USD</button></div>
+<div style="font-size:10px;color:#64748b;margin-top:5px;">Animals: 🦁🐘🦒🐆🦜🐊🦓🐬</div>`;
+}
+window.renderZoo=renderZoo;
+
+function buyZooTicket(){
+  if(S.coins<8)return logChat('[Zoo] Need $8 USD.',false,'#f87171');
+  S.coins-=8;S.energy=Math.min(S.energy+25,S.energyMax);
+  updateHUD();renderBuildingPanel();
+  treasuryPay('ZOO_TICKET:Zoo:$8USD',8);
+  logChat('[🦁 Zoo] Amazing wildlife! +25 energy. Saw lions, elephants & dolphins 🐬',false,'#4ade80');
+  saveProgress();
+}
+window.buyZooTicket=buyZooTicket;
+
+function buyZooNFT(){
+  if(S.coins<30)return logChat('[Zoo] Need $30 USD.',false,'#f87171');
+  S.coins-=30;
+  updateHUD();renderBuildingPanel();
+  treasuryPay('ZOO_NFT:Zoo:$30USD',30);
+  const animals=['🦁 Lion','🐘 Elephant','🦒 Giraffe','🐆 Leopard','🦜 Parrot','🐊 Croc','🦓 Zebra','🐬 Dolphin'];
+  const animal=animals[Math.floor(Math.random()*animals.length)];
+  awardNFT('Zoo Animal NFT: '+animal+' — Moga Zoo Collection');
+  logChat('[🦁 Zoo NFT] 🌟 Rare '+animal+' NFT minted to your wallet!',false,'#fbbf24');
+  saveProgress();
+}
+window.buyZooNFT=buyZooNFT;
+
+function renderCarShop(){
+  if(currentCity!==2)return logChat('[Car] Visit City 2 to buy cars.',false,'#f87171');
+  const myId=getMyCarId();
+  let h=`<strong>🚗 Car NFT Shop — Parking Area</strong>
+<div style="font-size:11px;color:#94a3b8;margin:5px 0;">Buy a car NFT · 1 car per wallet · Road-only driving</div>`;
+  if(myId){
+    const ct=CAR_TYPES.find(c=>c.id===myId);
+    h+=`<div style="border:1px solid rgba(34,197,94,.3);border-radius:8px;padding:8px;margin:5px 0;background:rgba(34,197,94,.05);">
+<div style="font-size:12px;font-weight:bold;">✅ You own: ${ct?ct.icon+' '+ct.name:'Car'}</div>
+<div style="font-size:11px;color:#94a3b8;margin:4px 0;">1 car per wallet enforced on-chain</div>
+<button onclick="driveMyCar()" class="ibtn btn-green" style="width:100%;margin-top:5px;">${playerDrivingCar?'🅿️ Park Car':'🚗 Drive My Car'}</button>
+<button onclick="sellCarNFT()" class="ibtn btn-red" style="width:100%;margin-top:4px;">💸 Sell Car (60% value)</button>
+</div>`;
+  }else{
+    h+=`<div style="font-size:11px;color:#fbbf24;margin:5px 0;">🚗 Buy a Car NFT ($${CAR_NFT_PRICE} USD) — limited 1 per wallet</div>`;
+    for(const ct of CAR_TYPES){
+      const owned=carOwnership[ct.id]&&carOwnership[ct.id].owner;
+      h+=`<div class="irow"><div class="ileft"><div class="iname">${ct.icon} ${ct.name}</div><div class="idesc">Speed: ${ct.speed}px/s · NFT</div></div>
+${owned?`<span style="font-size:10px;color:#64748b;">Owned</span>`:`<button onclick="buyCarNFT('${ct.id}')" ${S.coins<CAR_NFT_PRICE?'disabled':''} class="ibtn btn-green">Buy $${CAR_NFT_PRICE}</button>`}</div>`;
+    }
+  }
+  const panel=document.getElementById('buildPanel');
+  if(panel){panel.style.display='block';panel.innerHTML=h;}
+  WS.outdoor='CarShop';
+}
+window.renderCarShop=renderCarShop;
 
 /* ── Economy actions ── */
 function learnSkill(id){
@@ -1605,10 +1876,48 @@ const IACTS=[
   {key:'River',  tex:'vend', ts:1.4,x:68*TILE,y:14*TILE,w:2*TILE,h:2*TILE},
 ];
 
+/* ── City 2 — Coastal City buildings ── */
+const BLDGS2=[
+  /* North zone – above train ring */
+  {key:'Airport',        tex:'bCasino', ts:2.5, x:72*TILE,y:2*TILE, w:10*TILE,h:8*TILE},
+  {key:'Train Station',  tex:'bJob',    ts:2.2, x:44*TILE,y:2*TILE, w:8*TILE, h:6*TILE},
+  {key:'Aviation Academy',tex:'bSchool',ts:2.2,x:24*TILE,y:2*TILE, w:8*TILE, h:6*TILE},
+  {key:'Bank C2',        tex:'bBank',   ts:2.1, x:56*TILE,y:14*TILE,w:6*TILE, h:6*TILE},
+  /* West zone */
+  {key:'Hotel C2',       tex:'bHosp',   ts:2.2, x:8*TILE, y:22*TILE,w:8*TILE, h:6*TILE},
+  {key:'Concert Hall',   tex:'bGym',    ts:2.3, x:22*TILE,y:22*TILE,w:8*TILE, h:7*TILE},
+  {key:'Cafe C2',        tex:'bCafe',   ts:2.2, x:44*TILE,y:22*TILE,w:6*TILE, h:6*TILE},
+  {key:'Job Center C2',  tex:'bJob',    ts:2.2, x:8*TILE, y:36*TILE,w:8*TILE, h:6*TILE},
+  {key:'Hospital C2',    tex:'bHosp',   ts:2.1, x:22*TILE,y:36*TILE,w:7*TILE, h:6*TILE},
+  {key:'Zoo',            tex:'bMkt',    ts:2.4, x:56*TILE,y:36*TILE,w:10*TILE,h:8*TILE},
+  /* Beach zone */
+  {key:'Beach Club',     tex:'bCafe',   ts:2.2, x:40*TILE,y:46*TILE,w:8*TILE, h:6*TILE},
+  /* Houses */
+  {key:'House C2-1',  tex:'bHouse',ts:2.0,x:8*TILE, y:14*TILE,w:6*TILE,h:5*TILE,isHouse:true},
+  {key:'House C2-2',  tex:'bHouse',ts:2.0,x:68*TILE,y:22*TILE,w:6*TILE,h:5*TILE,isHouse:true},
+  {key:'House C2-3',  tex:'bHouse',ts:2.0,x:76*TILE,y:22*TILE,w:6*TILE,h:5*TILE,isHouse:true},
+  {key:'House C2-4',  tex:'bHouse',ts:2.0,x:84*TILE,y:22*TILE,w:6*TILE,h:5*TILE,isHouse:true},
+  {key:'House C2-5',  tex:'bHouse',ts:2.0,x:68*TILE,y:36*TILE,w:6*TILE,h:5*TILE,isHouse:true},
+  {key:'House C2-6',  tex:'bHouse',ts:2.0,x:76*TILE,y:36*TILE,w:6*TILE,h:5*TILE,isHouse:true},
+  {key:'House C2-7',  tex:'bHouse',ts:2.0,x:84*TILE,y:36*TILE,w:6*TILE,h:5*TILE,isHouse:true},
+  {key:'House C2-8',  tex:'bHouse',ts:2.0,x:16*TILE,y:46*TILE,w:6*TILE,h:5*TILE,isHouse:true},
+  {key:'House C2-9',  tex:'bHouse',ts:2.0,x:56*TILE,y:46*TILE,w:6*TILE,h:5*TILE,isHouse:true},
+  {key:'House C2-10', tex:'bHouse',ts:2.0,x:68*TILE,y:46*TILE,w:6*TILE,h:5*TILE,isHouse:true},
+];
+const IACTS2=[
+  {key:'Waterfall',  tex:'vend', ts:1.5, x:14*TILE,y:16*TILE,w:2*TILE,h:2*TILE},
+  {key:'Beach',      tex:'vendor',ts:1.5,x:28*TILE,y:50*TILE,w:4*TILE,h:2*TILE},
+  {key:'Mountain View',tex:'vend',ts:1.4,x:6*TILE, y:6*TILE, w:2*TILE,h:2*TILE},
+  {key:'Parking C2', tex:'vend', ts:1.3, x:72*TILE,y:12*TILE,w:4*TILE,h:2*TILE},
+];
+
 /* ── City tiles ── */
 const TT={G:0,R:1,W:2,S:3,SD:4,CR:5};
 const TC={0:0x14532d,1:0x475569,2:0x0ea5e9,3:0xfde68a,4:0x1f2937,5:0xe5e7eb};
 const BLKT=new Set([TT.W]);
+Object.assign(TT,{MT:6,TR:7,PK:8});
+Object.assign(TC,{6:0x6b7280,7:0x4b5563,8:0x374151});
+BLKT.add(6); // mountain tiles are blocked
 function buildTiles(){
   const t=Array.from({length:CH},()=>Array.from({length:CW},()=>TT.G));
   for(let y=0;y<26;y++){for(let x=70;x<=74;x++)t[y][x]=TT.W;for(let x=68;x<=76;x++)if(t[y][x]!==TT.W)t[y][x]=TT.S;}
@@ -1623,6 +1932,35 @@ function buildTiles(){
   for(const y of[12,28,44])for(const x of[18,54,80])
     for(let i=-2;i<=2;i++){const x2=x+i;if(y>=0&&y<CH&&x2>=0&&x2<CW)t[y][x2]=(i%2===0)?TT.CR:TT.R;}
   for(let x=70;x<=74;x++){t[12][x]=TT.R;t[28][x]=TT.R;}
+  return t;
+}
+function buildTiles2(){
+  const t=Array.from({length:CH},()=>Array.from({length:CW},()=>TT.G));
+  // Mountain area: northwest (rows 0-18, cols 0-18)
+  for(let y=0;y<18;y++)for(let x=0;x<18;x++)t[y][x]=TT.MT;
+  // Waterfall in mountain (water at col 14-16, row 16-22)
+  for(let y=16;y<=22;y++)for(let x=14;x<=16;x++)t[y][x]=TT.W;
+  // Ocean/Beach at south (sand rows 46-49, water rows 50-59)
+  for(let y=46;y<50;y++)for(let x=0;x<CW;x++)t[y][x]=TT.S;
+  for(let y=50;y<CH;y++)for(let x=0;x<CW;x++)t[y][x]=TT.W;
+  // Roads: horizontal
+  for(const ry of[12,20,32,44])for(let x=0;x<CW;x++)if(t[ry][x]!==TT.MT&&t[ry][x]!==TT.W)t[ry][x]=TT.R;
+  // Roads: vertical
+  for(const rx of[20,54,82])for(let y=0;y<CH;y++)if(t[y][rx]!==TT.MT&&t[y][rx]!==TT.W&&t[y][rx]!==TT.S)t[y][rx]=TT.R;
+  // Sidewalk around roads
+  for(let y=0;y<CH;y++)for(let x=0;x<CW;x++)if(t[y][x]===TT.R)
+    for(let oy=-1;oy<=1;oy++)for(let ox=-1;ox<=1;ox++){const ny=y+oy,nx=x+ox;if(ny>=0&&nx>=0&&ny<CH&&nx<CW&&t[ny][nx]===TT.G)t[ny][nx]=TT.SD;}
+  // Crossroads at intersections
+  for(const ry of[12,20,32,44])for(const rx of[20,54,82])
+    for(let i=-2;i<=2;i++){const x2=rx+i;if(ry>=0&&ry<CH&&x2>=0&&x2<CW&&t[ry][x2]!==TT.MT)t[ry][x2]=(i%2===0)?TT.CR:TT.R;}
+  // Circular railroad oval (dedicated TR tiles — no collision block)
+  for(let x=28;x<=72;x++)if(t[17][x]!==TT.MT)t[17][x]=TT.TR;
+  for(let x=28;x<=72;x++)if(t[42][x]!==TT.W&&t[42][x]!==TT.S)t[42][x]=TT.TR;
+  for(let y=17;y<=42;y++)if(t[y][28]!==TT.MT)t[y][28]=TT.TR;
+  for(let y=17;y<=42;y++)if(t[y][72]!==TT.W&&t[y][72]!==TT.S)t[y][72]=TT.TR;
+  // Parking lots (C2)
+  for(let y=12;y<=14;y++)for(let x=72;x<=77;x++)if(t[y][x]===TT.SD||t[y][x]===TT.G)t[y][x]=TT.PK;
+  for(let y=32;y<=34;y++)for(let x=40;x<=43;x++)if(t[y][x]===TT.SD||t[y][x]===TT.G)t[y][x]=TT.PK;
   return t;
 }
 function blocked(x,y,tiles){const tx=Math.floor(x/TILE),ty=Math.floor(y/TILE);return(tx<0||ty<0||tx>=CW||ty>=CH)||BLKT.has(tiles[ty][tx]);}
@@ -1677,6 +2015,19 @@ function makeInterior(kind){
       pr(18,3,14,7,IT.RG);pr(18,12,14,7,IT.RG);break;
     case 'Town Hall':
       pr(2,2,30,2,IT.CT);pr(14,4,6,3,IT.CT);pr(4,8,25,3,IT.RG);pr(2,13,8,5,IT.RG);pr(24,13,8,5,IT.RG);pr(12,14,10,3,IT.CT);pr(2,19,30,1,IT.CT);break;
+    case 'Airport':
+    case 'Aviation Academy':
+      pr(2,1,30,3,IT.CT);pr(4,5,26,5,IT.RG);pr(2,11,12,8,IT.CT);pr(20,11,12,8,IT.CT);pr(14,12,6,6,IT.RG);pr(2,20,30,1,IT.CT);break;
+    case 'Train Station':
+      pr(2,1,30,2,IT.CT);pr(4,4,10,10,IT.RG);pr(20,4,10,10,IT.RG);pr(12,15,10,4,IT.RG);pr(2,20,30,1,IT.CT);break;
+    case 'Concert Hall':
+      pr(2,1,30,1,IT.CT);for(let r2=0;r2<5;r2++)for(let c=0;c<8;c++)pr(2+c*4,3+r2*3,3,2,IT.RG);
+      pr(10,18,14,2,IT.CT);pr(14,15,6,3,IT.FW);break;
+    case 'Zoo':
+      pr(2,1,30,1,IT.CT);for(let r2=0;r2<2;r2++)for(let c=0;c<4;c++)pr(2+c*8,3+r2*9,7,8,IT.RG);
+      pr(2,20,30,1,IT.CT);break;
+    case 'Beach Club':
+      pr(2,1,30,3,IT.CT);pr(4,5,10,8,IT.RG);pr(20,5,10,8,IT.RG);pr(10,15,14,5,IT.FW);break;
   }
   return{g,exitX:ex,exitY:h-1,title:kind};
 }
@@ -1812,6 +2163,26 @@ function addFurniture(scene,intr,cont){
       for(const x of[4,8,12,20,24,28])add(scene,cont,x,9,'fSofa',1.1);
       add(scene,cont,6,15,'fTable',1.2);add(scene,cont,26,15,'fTable',1.2);add(scene,cont,16,15,'fComputer',1.2);
       add(scene,cont,2,4,'fPlant',1.0);add(scene,cont,31,4,'fPlant',1.0);break;
+    case 'Airport':
+    case 'Aviation Academy':
+      add(scene,cont,16,2,'fComputer',1.2);for(const x of[6,10,22,26])add(scene,cont,x,7,'fSofa',1.1);
+      add(scene,cont,3,14,'fShelf',1.0);add(scene,cont,29,14,'fShelf',1.0);
+      add(scene,cont,2,1,'fPlant',1.0);add(scene,cont,31,1,'fPlant',1.0);break;
+    case 'Train Station':
+      add(scene,cont,16,1,'fComputer',1.1);add(scene,cont,10,7,'fSofa',1.2);add(scene,cont,22,7,'fSofa',1.2);
+      add(scene,cont,16,11,'fTable',1.1);add(scene,cont,16,17,'fSofa',1.2);break;
+    case 'Concert Hall':
+      add(scene,cont,16,18,'fTV',2.0);add(scene,cont,16,16,'fTable',1.5);
+      for(let r2=0;r2<5;r2++)for(let c=0;c<8;c++)add(scene,cont,3+c*4,4+r2*3,'fSofa',0.9);
+      add(scene,cont,2,1,'fPlant',1.0);add(scene,cont,31,1,'fPlant',1.0);break;
+    case 'Zoo':
+      for(const x of[5,13,21,29])add(scene,cont,x,7,'fPlant',1.5);
+      for(const x of[5,13,21,29])add(scene,cont,x,16,'fPlant',1.5);
+      add(scene,cont,16,1,'fComputer',1.1);add(scene,cont,3,1,'fPlant',1.0);add(scene,cont,30,1,'fPlant',1.0);break;
+    case 'Beach Club':
+      add(scene,cont,8,7,'fSofa',1.2);add(scene,cont,24,7,'fSofa',1.2);
+      add(scene,cont,16,11,'fTable',1.3);add(scene,cont,8,16,'fTable',1.1);add(scene,cont,24,16,'fTable',1.1);
+      add(scene,cont,2,2,'fPlant',1.0);add(scene,cont,31,2,'fPlant',1.0);break;
   }
 }
 
@@ -1856,7 +2227,7 @@ function decorateCity(scene,tiles,cont){
     for(const c of[{tx:rx-1,ty:y},{tx:rx+1,ty:y}]){if(c.tx<0||c.tx>=CW)continue;if(tiles[c.ty][c.tx]!==TT.SD)continue;placeLamp(c.tx,c.ty);break;}
 }
 
-function drawCity(scene){
+function drawCity1(scene){
   clearWorld(scene);cityTiles=buildTiles();
   const gr=scene.add.graphics().setDepth(-3);
   for(let y=0;y<CH;y++)for(let x=0;x<CW;x++){gr.fillStyle(TC[cityTiles[y][x]],1);gr.fillRect(x*TILE,y*TILE,TILE,TILE);}
@@ -1864,10 +2235,7 @@ function drawCity(scene){
   for(const b of BLDGS){
     const cx=b.x+b.w/2,cy=b.y+b.h/2;
     const bSpr=scene.add.image(cx,cy,b.tex).setScale(b.ts).setDepth(3);
-    if(b.isHouse){
-      const ow=houseOwnership[b.key];
-      bSpr.setTint(ow&&ow.owner?getHouseColorByOwner(ow.owner).tint:0x94a3b8);
-    }
+    if(b.isHouse){const ow=houseOwnership[b.key];bSpr.setTint(ow&&ow.owner?getHouseColorByOwner(ow.owner).tint:0x94a3b8);}
     worldCont.add(bSpr);
     worldCont.add(scene.add.text(cx,b.y-8,b.key,{fontSize:'13px',color:'#e2e8f0',fontStyle:'bold',backgroundColor:'rgba(0,0,0,.35)',padding:{x:6,y:3}}).setOrigin(.5,1).setDepth(4));
   }
@@ -1878,6 +2246,278 @@ function drawCity(scene){
   }
   scene.cameras.main.setBounds(0,0,CW*TILE,CH*TILE);drawMM._k=null;
   redrawFarmPlots();
+}
+
+/* ── Current city state ── */
+let currentCity=1;
+let city2Tiles=null;
+
+/* ── City 2 train system ── */
+const TRAIN_WAYPOINTS=[
+  {x:50*TILE,y:17*TILE},{x:72*TILE,y:17*TILE},
+  {x:72*TILE,y:30*TILE},{x:72*TILE,y:42*TILE},
+  {x:50*TILE,y:42*TILE},{x:28*TILE,y:42*TILE},
+  {x:28*TILE,y:30*TILE},{x:28*TILE,y:17*TILE},
+];
+const trainState={
+  wpIdx:0,x:50*TILE,y:17*TILE,speed:110,spr:null,
+  passengerBoarded:false,stationKeys:['Train Station'],
+  atStation:false,stationDwell:0,DWELL_MS:4000
+};
+function updateTrain(dtS){
+  if(!trainState.spr||currentCity!==2)return;
+  if(trainState.stationDwell>0){trainState.stationDwell-=dtS*1000;return;}
+  const wp=TRAIN_WAYPOINTS[trainState.wpIdx];
+  const dx=wp.x-trainState.x,dy=wp.y-trainState.y,dist=Math.hypot(dx,dy);
+  if(dist<6){
+    trainState.x=wp.x;trainState.y=wp.y;
+    trainState.wpIdx=(trainState.wpIdx+1)%TRAIN_WAYPOINTS.length;
+    if(trainState.wpIdx===0){trainState.stationDwell=trainState.DWELL_MS;trainState.atStation=true;}
+    else trainState.atStation=false;
+  }else{
+    trainState.x+=dx/dist*trainState.speed*dtS;
+    trainState.y+=dy/dist*trainState.speed*dtS;
+    trainState.atStation=false;
+  }
+  trainState.spr.setPosition(trainState.x,trainState.y);
+  if(trainState.passengerBoarded&&_phaserScene){
+    _phaserScene.me.x=trainState.x;_phaserScene.me.y=trainState.y+20;
+  }
+}
+function boardTrain(){
+  if(currentCity!==2)return logChat('[Train] Only in Coastal City.',false,'#f87171');
+  if(trainState.passengerBoarded)return logChat('[Train] You\'re already on the train.',false,'#fbbf24');
+  if(!trainState.atStation)return logChat('[Train] 🚂 Wait for the train at the station! (dwell time)',false,'#fbbf24');
+  trainState.passengerBoarded=true;
+  logChat('[🚂 Train] Boarded! The train will take you around Coastal City. Tap Exit to disembark.',false,'#22c55e');
+  onChainTx('TRAIN_BOARD:city2',0.00001);
+}
+window.boardTrain=boardTrain;
+function exitTrain(){
+  trainState.passengerBoarded=false;
+  logChat('[🚂 Train] Disembarked at '+fmtTime(CLK.min)+'.',false,'#93c5fd');
+}
+window.exitTrain=exitTrain;
+
+/* ── City 2 traffic light system ── */
+const TRAFFIC_LIGHT_INTERSECTIONS=[
+  {x:20*TILE,y:12*TILE},{x:54*TILE,y:12*TILE},{x:82*TILE,y:12*TILE},
+  {x:20*TILE,y:32*TILE},{x:54*TILE,y:32*TILE},{x:82*TILE,y:32*TILE},
+  {x:20*TILE,y:44*TILE},{x:54*TILE,y:44*TILE},
+];
+let trafficLightState={phase:0,timer:0}; // phase: 0=green,1=yellow,2=red
+const TLIGHT_DURATIONS=[6,1.5,5]; // seconds for green,yellow,red
+const TLIGHT_COLORS=[0x22c55e,0xfbbf24,0xef4444];
+let _tlightGfx=null;
+function updateTrafficLights(dtS){
+  if(currentCity!==2||!_phaserScene||WS.zone!=='CITY')return;
+  trafficLightState.timer+=dtS;
+  if(trafficLightState.timer>=TLIGHT_DURATIONS[trafficLightState.phase]){
+    trafficLightState.timer=0;
+    trafficLightState.phase=(trafficLightState.phase+1)%3;
+  }
+  if(!_tlightGfx||!_tlightGfx.active)return;
+  _tlightGfx.clear();
+  const col=TLIGHT_COLORS[trafficLightState.phase];
+  for(const pos of TRAFFIC_LIGHT_INTERSECTIONS){
+    _tlightGfx.fillStyle(0x475569,1);_tlightGfx.fillRect(pos.x-2,pos.y-32,4,28);
+    _tlightGfx.fillStyle(0x1f2937,1);_tlightGfx.fillRect(pos.x-6,pos.y-36,12,16);
+    _tlightGfx.fillStyle(col,0.95);
+    const r=4;_tlightGfx.fillCircle(pos.x,pos.y-28,r);
+  }
+}
+function isTrafficRed(){return trafficLightState.phase===2;}
+
+/* ── City 2 car system (NFT-based, road-restricted) ── */
+const PARKING_SPOTS_C2=[
+  {x:73*TILE,y:13*TILE},{x:74*TILE,y:13*TILE},{x:75*TILE,y:13*TILE},
+  {x:73*TILE,y:14*TILE},{x:74*TILE,y:14*TILE},{x:75*TILE,y:14*TILE},
+  {x:41*TILE,y:33*TILE},{x:42*TILE,y:33*TILE},
+  {x:41*TILE,y:34*TILE},{x:42*TILE,y:34*TILE},
+];
+let _carSprites={};
+let playerDrivingCar=false;
+let playerCarSprite=null;
+const CAR_ROAD_TILES=new Set([TT.R,TT.CR,TT.PK]);
+
+const NPC_CARS=[
+  {x:20*TILE,y:0,dir:'down', speed:120,road:'v20',spr:null,color:0xef4444},
+  {x:54*TILE,y:0,dir:'down', speed:100,road:'v54',spr:null,color:0x3b82f6},
+  {x:0,y:12*TILE,dir:'right',speed:130,road:'h12',spr:null,color:0x22c55e},
+  {x:0,y:32*TILE,dir:'right',speed:110,road:'h32',spr:null,color:0xfbbf24},
+  {x:82*TILE,y:0,dir:'down', speed:95, road:'v82',spr:null,color:0xa78bfa},
+];
+function updateNPCCars(dtS){
+  if(currentCity!==2||WS.zone!=='CITY')return;
+  for(const c of NPC_CARS){
+    if(!c.spr)continue;
+    const nearRed=isTrafficRed()&&c.road.startsWith('h')&&
+      TRAFFIC_LIGHT_INTERSECTIONS.some(tl=>Math.abs(c.x-tl.x)<40&&Math.abs(c.y-tl.y)<TILE*2);
+    if(nearRed){c.spr.setVisible(true);continue;}
+    if(c.dir==='right'){c.x+=c.speed*dtS;if(c.x>CW*TILE)c.x=-TILE;}
+    else if(c.dir==='left'){c.x-=c.speed*dtS;if(c.x<-TILE)c.x=CW*TILE;}
+    else if(c.dir==='down'){c.y+=c.speed*dtS;if(c.y>44*TILE)c.y=0;}
+    else if(c.dir==='up'){c.y-=c.speed*dtS;if(c.y<0)c.y=44*TILE;}
+    c.spr.setPosition(c.x,c.y);c.spr.setVisible(true);
+  }
+}
+function driveMyCar(){
+  if(currentCity!==2)return logChat('[Car] Cars only available in Coastal City (City 2).',false,'#f87171');
+  const myId=getMyCarId();
+  if(!myId)return logChat('[Car] 🚗 You don\'t own a car. Buy a Car NFT at the parking area!',false,'#f87171');
+  if(playerDrivingCar){
+    playerDrivingCar=false;
+    logChat('[🚗 Car] Parked your car. You\'re on foot.',false,'#94a3b8');
+    return;
+  }
+  const tx=Math.floor(_phaserScene.me.x/TILE),ty=Math.floor(_phaserScene.me.y/TILE);
+  if(!CAR_ROAD_TILES.has(city2Tiles&&city2Tiles[ty]&&city2Tiles[ty][tx]?city2Tiles[ty][tx]:TT.G))
+    return logChat('[Car] Must be on a road or parking lot to drive.',false,'#f87171');
+  if(isTrafficRed()&&TRAFFIC_LIGHT_INTERSECTIONS.some(tl=>Math.hypot(_phaserScene.me.x-tl.x,_phaserScene.me.y-tl.y)<3*TILE))
+    return logChat('[🚦 Traffic] Red light! Wait for green.',false,'#ef4444');
+  playerDrivingCar=true;
+  logChat('[🚗 Car] Driving your '+CAR_TYPES.find(c=>c.id===myId)?.name+'! Stay on roads. Tap Drive to park.',false,'#22c55e');
+  onChainTx('CAR_DRIVE:'+myId,0.00001);
+}
+window.driveMyCar=driveMyCar;
+
+function drawCity2(scene){
+  clearWorld(scene);city2Tiles=buildTiles2();
+  const gr=scene.add.graphics().setDepth(-3);
+  for(let y=0;y<CH;y++)for(let x=0;x<CW;x++){
+    const tt=city2Tiles[y][x];
+    if(tt===TT.TR){gr.fillStyle(0x374151,1);gr.fillRect(x*TILE,y*TILE,TILE,TILE);gr.fillStyle(0x9ca3af,1);gr.fillRect(x*TILE+TILE/2-2,y*TILE,4,TILE);gr.fillRect(x*TILE,y*TILE+TILE/2-2,TILE,4);continue;}
+    if(tt===TT.PK){gr.fillStyle(0x334155,1);gr.fillRect(x*TILE,y*TILE,TILE,TILE);gr.lineStyle(1,0x6b7280,0.4);gr.strokeRect(x*TILE+2,y*TILE+2,TILE-4,TILE-4);continue;}
+    gr.fillStyle(TC[tt]??0x14532d,1);gr.fillRect(x*TILE,y*TILE,TILE,TILE);
+  }
+  worldCont.add(gr);
+  // Mountain detail
+  const mGr=scene.add.graphics().setDepth(-1);
+  for(let y=0;y<18;y++)for(let x=0;x<18;x++){
+    if(city2Tiles[y][x]!==TT.MT)continue;
+    const n=(x*31337^y*92717)>>>0;
+    if(n%3===0){mGr.fillStyle(0x4b5563,1);mGr.fillRect(x*TILE+4,y*TILE+4,TILE-8,TILE-8);}
+    if(n%5===0){mGr.fillStyle(0x9ca3af,0.4);mGr.fillRect(x*TILE+10,y*TILE+8,8,6);}
+  }
+  worldCont.add(mGr);
+  // Waterfall effect
+  const wfGr=scene.add.graphics().setDepth(1);
+  for(let y=16;y<=22;y++)for(let x=14;x<=16;x++){
+    wfGr.fillStyle(0x7dd3fc,0.85);wfGr.fillRect(x*TILE,y*TILE,TILE,TILE);
+    wfGr.fillStyle(0xffffff,0.3);wfGr.fillRect(x*TILE+4,y*TILE,4,TILE);
+  }
+  worldCont.add(wfGr);
+  // Beach sand details
+  const bGr=scene.add.graphics().setDepth(-1);
+  for(let x=0;x<CW;x++)for(let y=46;y<50;y++){
+    const n=(x*73856093^y*19349663)>>>0;
+    if(n%8===0){bGr.fillStyle(0xfef08a,0.4);bGr.fillCircle(x*TILE+n%TILE,y*TILE+n%20,3+n%4);}
+  }
+  worldCont.add(bGr);
+  // Ocean waves
+  const wGr=scene.add.graphics().setDepth(0);
+  for(let y=50;y<CH;y++)for(let x=0;x<CW;x++){
+    const n=(x*1299709^y*9999991)>>>0;
+    if(n%12===0){wGr.fillStyle(0xbae6fd,0.5);wGr.fillRect(x*TILE+4,y*TILE+4,TILE-8,3);}
+  }
+  worldCont.add(wGr);
+  // Labels
+  worldCont.add(scene.add.text(9*TILE,9*TILE,'⛰️\nMount\nMoga',{fontSize:'11px',color:'#e2e8f0',align:'center',backgroundColor:'rgba(0,0,0,.4)',padding:{x:4,y:3}}).setOrigin(.5).setDepth(5));
+  worldCont.add(scene.add.text(15*TILE,19*TILE,'💦\nWaterfall',{fontSize:'10px',color:'#bae6fd',align:'center',backgroundColor:'rgba(0,0,0,.4)',padding:{x:3,y:2}}).setOrigin(.5).setDepth(5));
+  // Buildings
+  for(const b of BLDGS2){
+    const cx=b.x+b.w/2,cy=b.y+b.h/2;
+    const bSpr=scene.add.image(cx,cy,b.tex).setScale(b.ts).setDepth(3);
+    if(b.isHouse){const ow=houseOwnership[b.key];bSpr.setTint(ow&&ow.owner?getHouseColorByOwner(ow.owner).tint:0x94a3b8);}
+    worldCont.add(bSpr);
+    worldCont.add(scene.add.text(cx,b.y-8,b.key,{fontSize:'12px',color:'#e2e8f0',fontStyle:'bold',backgroundColor:'rgba(0,0,0,.38)',padding:{x:5,y:3}}).setOrigin(.5,1).setDepth(4));
+  }
+  for(const i of IACTS2){
+    const cx=i.x+i.w/2,cy=i.y+i.h/2;
+    worldCont.add(scene.add.image(cx,cy,i.tex).setScale(i.ts).setDepth(3));
+    worldCont.add(scene.add.text(cx,i.y-8,i.key,{fontSize:'11px',color:'#e2e8f0',backgroundColor:'rgba(0,0,0,.35)',padding:{x:4,y:2}}).setOrigin(.5,1).setDepth(4));
+  }
+  // Parking labels
+  worldCont.add(scene.add.text(75*TILE,12.5*TILE,'🅿️',{fontSize:'14px'}).setOrigin(.5).setDepth(4));
+  worldCont.add(scene.add.text(41.5*TILE,33.5*TILE,'🅿️',{fontSize:'14px'}).setOrigin(.5).setDepth(4));
+  scene.cameras.main.setBounds(0,0,CW*TILE,CH*TILE);drawMM._k=null;
+  // Train sprite
+  if(!trainState.spr||!trainState.spr.active){
+    trainState.spr=scene.add.text(trainState.x,trainState.y,'🚂',{fontSize:'28px'}).setOrigin(.5).setDepth(8);
+    worldCont.add(trainState.spr);
+  }else{trainState.spr.setPosition(trainState.x,trainState.y);worldCont.add(trainState.spr);}
+  // Traffic light graphics layer
+  if(!_tlightGfx||!_tlightGfx.active){_tlightGfx=scene.add.graphics().setDepth(7);}
+  worldCont.add(_tlightGfx);
+  // NPC cars
+  for(const c of NPC_CARS){
+    if(!c.spr||!c.spr.active){c.spr=scene.add.text(c.x,c.y,'🚗',{fontSize:'18px'}).setOrigin(.5).setDepth(6);}
+    else{c.spr.setPosition(c.x,c.y);}
+    worldCont.add(c.spr);
+  }
+  // Player's car (parked if not driving)
+  const myCarId=getMyCarId();
+  if(myCarId){
+    const ct=CAR_TYPES.find(c=>c.id===myCarId);
+    const spot=PARKING_SPOTS_C2[0];
+    if(!playerCarSprite||!playerCarSprite.active){
+      playerCarSprite=scene.add.text(spot.x+TILE/2,spot.y+TILE/2,ct?ct.icon:'🚗',{fontSize:'20px'}).setOrigin(.5).setDepth(6);
+    }else playerCarSprite.setPosition(spot.x+TILE/2,spot.y+TILE/2);
+    worldCont.add(playerCarSprite);
+  }
+  // Airplane parked at airport
+  const plane=scene.add.text(80*TILE,5*TILE,'✈️',{fontSize:'32px'}).setOrigin(.5).setDepth(6);
+  worldCont.add(plane);
+  scene.time.addEvent({delay:60000,loop:true,callback:()=>{
+    if(currentCity!==2||WS.zone!=='CITY')return;
+    logChat('[✈️ Airport] Flight MG-001 departing overseas! ✈️✨',false,'#93c5fd');
+    onChainTx('FLIGHT_DEPART:Airport:overseas',0.00001);
+    scene.tweens.add({targets:plane,x:CW*TILE+200,y:-200,duration:4000,ease:'Quad.easeIn',
+      onComplete:()=>{plane.setPosition(80*TILE,5*TILE);}});
+  }});
+  redrawFarmPlots();
+}
+
+function switchCity(n){
+  if(n===currentCity)return;
+  if(WS.zone==='INTERIOR')return logChat('[City] Exit building first.',false,'#f87171');
+  currentCity=n;
+  const btn1=document.getElementById('btnCity1'),btn2=document.getElementById('btnCity2');
+  const pill=document.getElementById('cityPill');
+  if(btn1)btn1.style.background=n===1?'linear-gradient(90deg,#0284c7,#0369a1)':'rgba(255,255,255,.08)';
+  if(btn2)btn2.style.background=n===2?'linear-gradient(90deg,#0f766e,#14b8a6)':'rgba(255,255,255,.08)';
+  if(pill)pill.textContent=n===1?'🏙️ Moga City':'🏝️ Coastal City';
+  WS.savedPos={x:32*TILE,y:32*TILE};
+  trainState.passengerBoarded=false;playerDrivingCar=false;
+  if(_tlightGfx&&_tlightGfx.active){_tlightGfx.clear();_tlightGfx=null;}
+  if(_phaserScene){
+    drawCity(_phaserScene);
+    _phaserScene.me.x=WS.savedPos.x;_phaserScene.me.y=WS.savedPos.y;
+    if(n===2){
+      spawnBirds2(_phaserScene);
+      logChat('[🏝️ Coastal City] Welcome to City 2! Beach🏖️ · Airport✈️ · Train🚂 · Zoo🦁 · Concert🎵 · Waterfall💦',false,'#fbbf24');
+      loadCarOwnership();
+    }
+  }
+  updateHUD();
+  const nav=document.getElementById('navSel');if(nav)nav.innerHTML='<option value="">Choose...</option>';populateNav();
+}
+window.switchCity=switchCity;
+
+function spawnBirds2(scene){
+  for(let i=0;i<5;i++){
+    const startX=Math.random()*CW*TILE;
+    const y=(44+Math.random()*4)*TILE;
+    const spd=(80+Math.random()*60)*(Math.random()<.5?1:-1);
+    const spr=scene.add.image(startX,y,'bird').setScale(0.8+Math.random()*0.4).setDepth(16).setTint(0xe0f2fe);
+    _birds.push({spr,spd,baseY:y,phase:Math.random()*Math.PI*2,
+      resetX:spd>0?(CW+6)*TILE:-6*TILE,startX:spd>0?-40:(CW+4)*TILE});
+  }
+}
+
+function drawCity(scene){
+  if(currentCity===2)drawCity2(scene);
+  else drawCity1(scene);
 }
 
 function drawInterior(scene,bk){
@@ -1924,9 +2564,12 @@ function drawMM(pos){
   if(drawMM._k!==ck){
     drawMM._k=ck;
     const bg=document.createElement('canvas');bg.width=mmCanvas.width;bg.height=mmCanvas.height;const ic=bg.getContext('2d');
-    if(WS.zone==='CITY')for(let y=0;y<mmCanvas.height;y++)for(let x=0;x<mmCanvas.width;x++){
-      const t=cityTiles[Math.floor((y/mmCanvas.height)*CH)][Math.floor((x/mmCanvas.width)*CW)];
-      ic.fillStyle=t===TT.R||t===TT.CR?'#64748b':t===TT.SD?'#334155':t===TT.W?'#0284c7':t===TT.S?'#fde68a':'#1f7a3a';ic.fillRect(x,y,1,1);
+    if(WS.zone==='CITY'){
+      const mmTiles=currentCity===2?city2Tiles:cityTiles;
+      for(let y=0;y<mmCanvas.height;y++)for(let x=0;x<mmCanvas.width;x++){
+        const t=(mmTiles&&mmTiles[Math.floor((y/mmCanvas.height)*CH)])?mmTiles[Math.floor((y/mmCanvas.height)*CH)][Math.floor((x/mmCanvas.width)*CW)]:TT.G;
+        ic.fillStyle=t===TT.R||t===TT.CR?'#64748b':t===TT.SD?'#334155':t===TT.W?'#0284c7':t===TT.S?'#fde68a':t===TT.TR?'#374151':t===TT.MT?'#4b5563':t===TT.PK?'#1e293b':'#1f7a3a';ic.fillRect(x,y,1,1);
+      }
     }else for(let y=0;y<mmCanvas.height;y++)for(let x=0;x<mmCanvas.width;x++){
       const t=interior.g[Math.floor((y/mmCanvas.height)*IH)][Math.floor((x/mmCanvas.width)*IW)];
       ic.fillStyle=t===IT.FW?'#8b5a2b':t===IT.FT?'#94a3b8':t===IT.WB?'#7f1d1d':t===IT.WP?'#cbd5e1':t===IT.RG?'#1d4ed8':'#475569';ic.fillRect(x,y,1,1);
@@ -1941,7 +2584,8 @@ function drawMM(pos){
     if(drawMM._job!==S.job){drawMM._job=S.job;const sk=S.job&&S.job!=='Unemployed'?SKILLS.find(s=>s.job===S.job):null;drawMM._workBldg=sk?sk.workBuilding:null;}
     const myWorkBldg=drawMM._workBldg;
     const wP=CW*TILE,hP=CH*TILE;
-    for(const b of BLDGS){
+    const activeBldgs=currentCity===2?BLDGS2:BLDGS;
+    for(const b of activeBldgs){
       const mx=(b.x+b.w/2)/wP*mmCanvas.width;
       const my=(b.y+b.h/2)/hP*mmCanvas.height;
       const isMyHouse=b.isHouse&&b.key===myHouseKey;
@@ -1975,9 +2619,12 @@ function drawMM(pos){
   const p=w2mm(pos.x,pos.y);mmCtx2.fillStyle='#22c55e';mmCtx2.beginPath();mmCtx2.arc(p.mx,p.my,3,0,Math.PI*2);mmCtx2.fill();
 }
 
-function nearPOI(px,py){let best=null,bd=Infinity;
-  for(const b of BLDGS){const d=Math.hypot(px-b.x-b.w/2,py-b.y-b.h/2);if(d<bd){bd=d;best=b;}}
-  for(const i of IACTS){const d=Math.hypot(px-i.x-i.w/2,py-i.y-i.h/2);if(d<bd){bd=d;best=i;}}
+function nearPOI(px,py){
+  let best=null,bd=Infinity;
+  const bldgs=currentCity===2?BLDGS2:BLDGS;
+  const iacts=currentCity===2?IACTS2:IACTS;
+  for(const b of bldgs){const d=Math.hypot(px-b.x-b.w/2,py-b.y-b.h/2);if(d<bd){bd=d;best=b;}}
+  for(const i of iacts){const d=Math.hypot(px-i.x-i.w/2,py-i.y-i.h/2);if(d<bd){bd=d;best=i;}}
   return{poi:best,d:bd};
 }
 
@@ -1994,6 +2641,24 @@ function doIAct(action){
       logChat('[River] 🏞️ River bank — fill watering can or go fishing!',false,'#38bdf8');
       break;
     case 'vendor':if(S.coins<4)return logChat('[Vendor] Need 4 USD.');S.coins-=4;if(Math.random()<.55)S.inv.soda++;else S.inv.sandwich++;updateHUD();logChat('[Vendor] Got random item!');break;
+    case 'waterfall':
+      WS.outdoor='Waterfall';
+      renderBuildingPanel();
+      logChat('[💦 Waterfall] Stunning! A natural wonder. Energy +15.',false,'#7dd3fc');
+      S.energy=Math.min(S.energy+15,S.energyMax);updateHUD();
+      break;
+    case 'beach':
+      WS.outdoor='Beach';
+      renderBuildingPanel();
+      logChat('[🏖️ Beach] Beautiful beach! Swim at Beach Club for energy.',false,'#38bdf8');
+      break;
+    case 'mountain view':
+      logChat('[⛰️ Mountain] Breathtaking view of Moga Coast from Mount Moga!',false,'#9ca3af');
+      break;
+    case 'parking c2':
+      renderCarShop();
+      logChat('[🅿️ Parking] Car NFT marketplace — buy your car here!',false,'#fbbf24');
+      break;
     default:logChat('[info] Tap to enter '+action+' building.');
   }
 }
@@ -2183,7 +2848,8 @@ function triggerInteract(sceneRef){
     }
     /* Priority: building/IACT > own plot > nothing */
     if(poi&&d<IDIST){
-      const housePlot=poi.key.startsWith('House')&&BLDGS.find(b=>b.key===poi.key);
+      const bldgList=currentCity===2?BLDGS2:BLDGS;
+      const housePlot=poi.key.startsWith('House')&&bldgList.find(b=>b.key===poi.key);
       if(housePlot){
         const myKey=getMyHouseKey();
         if(myKey===poi.key){
@@ -2195,7 +2861,7 @@ function triggerInteract(sceneRef){
           const ownerLabel=ow&&ow.owner?ow.owner.slice(0,10)+'…':'Unclaimed';
           logChat('[🏠 '+poi.key+'] Owner: '+ownerLabel+(ow&&ow.forSale?' — For Sale: $'+ow.price+' USD':''),false,'#fbbf24');
         }
-      }else if(BLDGS.find(b=>b.key===poi.key)){
+      }else if(bldgList.find(b=>b.key===poi.key)){
         enterBuilding(scene,poi.key);
       }else{
         doIAct(poi.key.toLowerCase());
@@ -3144,13 +3810,18 @@ function loadProgress(){
 /* nav */
 function populateNav(){
   const sel=document.getElementById('navSel');
-  BLDGS.forEach(b=>{const o=document.createElement('option');o.value=b.key;o.textContent=b.key;sel.appendChild(o);});
-  IACTS.forEach(i=>{const o=document.createElement('option');o.value=i.key;o.textContent=i.key;sel.appendChild(o);});
+  sel.innerHTML='<option value="">Choose...</option>';
+  const bldgs=currentCity===2?BLDGS2:BLDGS;
+  const iacts=currentCity===2?IACTS2:IACTS;
+  bldgs.forEach(b=>{const o=document.createElement('option');o.value=b.key;o.textContent=b.key;sel.appendChild(o);});
+  iacts.forEach(i=>{const o=document.createElement('option');o.value=i.key;o.textContent=i.key;sel.appendChild(o);});
 }
 document.getElementById('btnGo').onclick=()=>{
   if(WS.zone!=='CITY')return logChat('[nav] Only in CITY.');
   const k=document.getElementById('navSel').value;if(!k)return;
-  const all=[...BLDGS.map(b=>({key:b.key,x:b.x+b.w/2,y:b.y+b.h/2})),...IACTS.map(i=>({key:i.key,x:i.x+i.w/2,y:i.y+i.h/2}))];
+  const activeBldgs2=currentCity===2?BLDGS2:BLDGS;
+  const activeIacts2=currentCity===2?IACTS2:IACTS;
+  const all=[...activeBldgs2.map(b=>({key:b.key,x:b.x+b.w/2,y:b.y+b.h/2})),...activeIacts2.map(i=>({key:i.key,x:i.x+i.w/2,y:i.y+i.h/2}))];
   const f=all.find(t=>t.key===k);if(!f)return;
   NAV.key=k;NAV.pos={x:f.x,y:f.y};document.getElementById('mmTgt').textContent=k;logChat('[nav] Target: '+k);
 };
@@ -3212,6 +3883,7 @@ const phaserCfg={
         triggerInteract(this);
       });
       loadHouseOwnership();
+      loadCarOwnership();
       drawCity(this);populateNav();updateHUD();
       nightOv=this.add.rectangle(0,0,this.scale.width,this.scale.height,0x020617,1).setOrigin(0,0).setScrollFactor(0).setDepth(999);nightOv.setAlpha(.08);
       this.scale.on('resize',sz=>{if(nightOv){nightOv.width=sz.width;nightOv.height=sz.height;}});
@@ -3226,6 +3898,7 @@ const phaserCfg={
       logChat('[system] Tap/click near a building to enter · Tap NPC cat to private chat · Casino 🎰',false,'#34d399');
       logChat('[system] 🎣 Buy Fishing Rod + Bait at Market · 🪓 Buy Hoe to farm grass tiles · 🏞️ River to fill can & fish',false,'#4ade80');
       logChat('[system] 🏠 No house? Sleep at 🏨 Hotel ($1 USD/day) · Buy from Market or walk to a 🏷️ For Sale house!',false,'#f0abfc');
+      logChat('[system] 🏝️ Switch to Coastal City (City 2) for: ✈️ Airport · 🚂 Train · 🦁 Zoo · 🎵 Concert · 🏖️ Beach · 🚗 Cars!',false,'#38bdf8');
       this.time.addEvent({delay:200,loop:true,callback:()=>{
         const btn=document.getElementById('btnInteract');
         if(WS.zone==='CITY'){
@@ -3287,6 +3960,7 @@ const phaserCfg={
     update(_,dt){
       const dtS=dt/1000;updateDN(dtS);
       updateNPCBots(dtS);updateBirds(dtS);
+      if(currentCity===2){updateTrain(dtS);updateNPCCars(dtS);updateTrafficLights(dtS);}
       if(S.sleeping)return;
       const spr=this.keys.SHIFT.isDown&&S.energy>0,spd=spr?380:240;
       let vx=0,vy=0;
@@ -3297,9 +3971,16 @@ const phaserCfg={
       if(vx&&vy){vx*=.7071;vy*=.7071;}
       const mv=(vx||vy),nx=this.me.x+vx*spd*dtS,ny=this.me.y+vy*spd*dtS;
       if(WS.zone==='CITY'){
+        const activeTiles=currentCity===2?city2Tiles:cityTiles;
         const cx=clamp(nx,20,CW*TILE-20),cy=clamp(ny,20,CH*TILE-20);
-        if(!blocked(cx,cy,cityTiles)){this.me.x=cx;this.me.y=cy;}
-        else{if(!blocked(cx,this.me.y,cityTiles))this.me.x=cx;if(!blocked(this.me.x,cy,cityTiles))this.me.y=cy;}
+        // If driving a car: must stay on road tiles
+        if(playerDrivingCar&&activeTiles){
+          const tx=Math.floor(cx/TILE),ty=Math.floor(cy/TILE);
+          const onRoad=tx>=0&&ty>=0&&tx<CW&&ty<CH&&CAR_ROAD_TILES.has(activeTiles[ty][tx]);
+          const nRed=isTrafficRed()&&TRAFFIC_LIGHT_INTERSECTIONS.some(tl=>Math.hypot(cx-tl.x,cy-tl.y)<2*TILE);
+          if(onRoad&&!nRed){this.me.x=cx;this.me.y=cy;if(playerCarSprite&&playerCarSprite.active)playerCarSprite.setPosition(cx,cy);}
+        }else if(!blocked(cx,cy,activeTiles)){this.me.x=cx;this.me.y=cy;}
+        else{if(!blocked(cx,this.me.y,activeTiles))this.me.x=cx;if(!blocked(this.me.x,cy,activeTiles))this.me.y=cy;}
       }else{this.me.x=clamp(nx,20,IW*TILE-20);this.me.y=clamp(ny,20,IH*TILE-20);}
       /* Passive energy drain: depletes over 1 real hour (3600 real seconds).
          Rate: 100/3600 ≈ 0.028 per real second. Sprint adds extra drain. */
