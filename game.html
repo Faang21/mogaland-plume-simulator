@@ -209,6 +209,7 @@ kbd{padding:1px 4px;border-radius:4px;border:1px solid rgba(255,255,255,.22);bac
         <div class="pill" id="pillHoe" style="display:none;">🪓 Hoe ✓</div>
         <div class="pill" id="pillSeeds" style="display:none;">🌱 Seeds <span id="elSeeds">0</span></div>
         <div class="pill" id="pillHotel" style="display:none;background:rgba(124,58,237,.18);border-color:rgba(124,58,237,.35);color:#a78bfa;">🏨 Hotel ✓</div>
+        <div class="pill" id="pillFuel" style="display:none;background:rgba(251,191,36,.12);border-color:rgba(251,191,36,.35);color:#fbbf24;">⛽ <span id="elFuel">100</span>/<span id="elFuelMax">100</span></div>
       </div>
       <div class="row" style="margin-top:6px;flex-wrap:wrap;">
         <button onclick="useItem('apple')">🍎 Eat</button>
@@ -866,7 +867,7 @@ const _npcPlots=[
 const S={
   coins:100, learnedSkills:[], learningId:null, learningEndTime:0,
   workLockId:null, workLockEnd:0,
-  job:'Unemployed', energy:100, energyMax:100,
+  job:'Unemployed', energy:100, energyMax:100, fuel:100, fuelMax:100,
   house:1, sleeping:false,
   inv:{apple:1,soda:0,sandwich:0,fishingRod:0,bait:0,wateringCan:0,hoe:0,seeds:0,fish:0,fruit:0},
   waterFull:false,
@@ -916,6 +917,10 @@ function updateHUD(){
   const hotelRented=S.hotelRentedUntil>Date.now();
   const hotelEl=document.getElementById('pillHotel');
   if(hotelEl){hotelEl.style.display=hotelRented?'':'none';}
+  /* Fuel indicator */
+  const hasCar=!!getMyCarId();
+  const fuelEl=document.getElementById('pillFuel');
+  if(fuelEl){fuelEl.style.display=hasCar?'':'none';if(hasCar){document.getElementById('elFuel').textContent=Math.round(S.fuel);document.getElementById('elFuelMax').textContent=S.fuelMax;}}
   /* skill badges */
   const sb=document.getElementById('elSkillBadges');
   if(sb){
@@ -952,13 +957,14 @@ function renderBuildingPanel(){
   if(WS.outdoor==='CarShop'){panel.style.display='block';renderCarShop();return;}
   if(WS.outdoor==='Waterfall'){panel.style.display='block';panel.innerHTML=`<strong>💦 Waterfall</strong><div style="font-size:11px;color:#7dd3fc;margin:5px 0;">Natural wonder near Mount Moga. +15 energy when visited.</div><button onclick="closeOutdoor()" class="ibtn btn-blue" style="width:100%;margin-top:5px;">Close</button>`;return;}
   if(WS.outdoor==='Boat'){panel.style.display='block';panel.innerHTML=renderBoat();return;}
-  if(WS.outdoor==='FlightTerminal'){panel.style.display='block';panel.innerHTML=`<strong>✈️ Flight Terminal — Moga City</strong><div style="font-size:11px;color:#93c5fd;margin:5px 0;">Return flight to Coastal City (City 2).</div><button onclick="flyToCity2()" class="ibtn btn-blue" style="width:100%;padding:7px;margin-top:4px;">🛫 Fly to Coastal City (City 2)</button><button onclick="closeOutdoor()" class="ibtn btn-blue" style="width:100%;margin-top:5px;">Close</button>`;return;}
+  if(WS.outdoor==='GasStation'){panel.style.display='block';panel.innerHTML=renderGasStation();return;}
+  if(WS.outdoor==='TrainHalte'){panel.style.display='block';panel.innerHTML=renderTrainHalte();return;}
   if(WS.outdoor==='Beach'){panel.style.display='block';panel.innerHTML=`<strong>🏖️ Beach</strong><div style="font-size:11px;color:#38bdf8;margin:5px 0;">Moga Beach — crystal clear waters! Walk to Beach Club or board the ⛵ Boat at the dock.</div><button onclick="boardBoat()" class="ibtn btn-teal" style="width:100%;margin-top:5px;">⛵ Board Boat at Dock</button><button onclick="closeOutdoor()" class="ibtn btn-blue" style="width:100%;margin-top:5px;">Close</button>`;return;}
   if(WS.outdoor){panel.style.display='block';panel.innerHTML=renderVending();return;}
   if(WS.zone!=='INTERIOR'){panel.style.display='none';return;}
   panel.style.display='block';
   const r={House:renderHome,School:renderSchool,'Job Center':renderJobBoard,Bank:renderBank,Cafe:renderCafe,Market:renderMarket,Gym:renderGym,Hospital:renderHospital,Hotel:renderHotel,Library:renderLibrary,Office:renderOffice,'Town Hall':renderTownHall,
-    Airport:renderAirport,'Train Station':renderTrainStation,'Aviation Academy':renderSchool,'Concert Hall':renderConcertHall,Zoo:renderZoo,'Beach Club':renderBeachClub,'Job Center C2':renderJobBoard,'Bank C2':renderBank,'Cafe C2':renderCafe,'Hospital C2':renderHospital,'Hotel C2':renderHotel,
+    Airport:renderAirport,'Airport C1':renderAirportC1,'Train Station':renderTrainStation,'Aviation Academy':renderSchool,'Concert Hall':renderConcertHall,Zoo:renderZoo,'Beach Club':renderBeachClub,'Job Center C2':renderJobBoard,'Bank C2':renderBank,'Cafe C2':renderCafe,'Hospital C2':renderHospital,'Hotel C2':renderHotel,
     'Clothing Store':renderClothingStore,'Clothing Store C2':renderClothingStore,
     Casino:()=>{initMulGame();return '<strong>🎰 Casino</strong><div style="font-size:11px;color:#94a3b8;margin:5px 0;">Multiplier game panel on the left.</div>';}};  if(WS.key.startsWith('House'))panel.innerHTML=renderHome();
   else if(r[WS.key])panel.innerHTML=r[WS.key]();
@@ -1329,6 +1335,61 @@ function renderAirport(){
 </div>`;
 }
 window.renderAirport=renderAirport;
+
+function renderAirportC1(){
+  return`<strong>✈️ Moga City International Airport</strong>
+<div style="font-size:11px;color:#94a3b8;margin:5px 0;">City 1 Airport · Return flights to Coastal City (City 2)</div>
+<div style="border:1px solid rgba(99,102,241,.3);border-radius:8px;padding:8px;margin:5px 0;background:rgba(99,102,241,.05);">
+  <div style="font-size:12px;font-weight:bold;margin-bottom:4px;">✈️ Departure Lounge</div>
+  <div style="font-size:11px;color:#93c5fd;margin-bottom:6px;">Board a return flight to Coastal City</div>
+  <button onclick="flyToCity2()" class="ibtn btn-blue" style="width:100%;padding:8px;margin-top:4px;">🛫 Fly to Coastal City (City 2)</button>
+</div>`;
+}
+window.renderAirportC1=renderAirportC1;
+
+function renderGasStation(){
+  const canFill=S.fuel<S.fuelMax;
+  const needed=Math.max(0,S.fuelMax-S.fuel);
+  const cost=Math.max(1,Math.ceil(needed*0.5));
+  const fuelPct=Math.round((S.fuel/S.fuelMax)*100);
+  return`<strong>⛽ Gas Station — Moga Fuel</strong>
+<div style="font-size:11px;color:#94a3b8;margin:5px 0;">Fill up your car's fuel tank · $0.50 per unit</div>
+<div style="font-size:12px;margin:5px 0;">⛽ Fuel: <b>${Math.round(S.fuel)}/${S.fuelMax}</b> (${fuelPct}%)</div>
+<div class="ebar" style="margin:4px 0;"><div style="width:${fuelPct}%;height:100%;background:rgba(251,191,36,.8);border-radius:999px;transition:width .2s;"></div></div>
+<button onclick="fillFuel()" ${!canFill||S.coins<1?'disabled':''} class="ibtn btn-yellow" style="width:100%;margin-top:8px;padding:8px;">⛽ Fill Tank (-$${canFill?cost:0} USD)</button>
+<button onclick="closeOutdoor()" style="width:100%;margin-top:5px;padding:6px;border-radius:6px;background:rgba(100,116,139,.3);color:#94a3b8;border:1px solid rgba(255,255,255,.1);font-size:11px;cursor:pointer;">Close ✕</button>`;
+}
+window.renderGasStation=renderGasStation;
+
+function fillFuel(){
+  if(!getMyCarId())return logChat('[⛽] You need a car first! Buy a Car NFT.',false,'#f87171');
+  const needed=S.fuelMax-S.fuel;
+  if(needed<=0)return logChat('[⛽] Tank is already full!',false,'#fbbf24');
+  const cost=Math.max(1,Math.ceil(needed*0.5));
+  if(S.coins<cost)return logChat('[⛽] Need $'+cost+' USD. You have $'+S.coins+'.',false,'#f87171');
+  S.coins-=cost;S.fuel=S.fuelMax;
+  updateHUD();renderBuildingPanel();
+  treasuryPay('FUEL_FILL:'+Math.round(needed)+'L',cost);
+  logChat('[⛽ Gas Station] Tank filled! ⛽ '+Math.round(S.fuel)+'/'+S.fuelMax+' · -$'+cost+' USD',false,'#fbbf24');
+  saveProgress();
+}
+window.fillFuel=fillFuel;
+
+function renderTrainHalte(){
+  const atStation=trainState.atStation;
+  const{stop:nearStop,dist:stopDist}=nearestTrainStop();
+  const canBoard=atStation&&stopDist<TRAIN_STOP_RADIUS&&!trainState.passengerBoarded;
+  return`<strong>🚉 Train Halte</strong>
+<div style="font-size:11px;color:#94a3b8;margin:5px 0;">Wait for the train · Free · No energy used</div>
+<div style="font-size:11px;color:${atStation?'#22c55e':'#fbbf24'};margin:4px 0;">${atStation?'🟢 Train at stop: <b>'+trainState.stopLabel+'</b>':'🟡 Train in transit — wait at platform…'}</div>
+<div style="display:flex;gap:5px;margin-top:6px;">
+  <button onclick="boardTrain()" ${canBoard?'':'disabled'} class="ibtn btn-green" style="flex:1;">🎫 Board</button>
+  <button onclick="exitTrain()" ${trainState.passengerBoarded?'':'disabled'} class="ibtn btn-red" style="flex:1;">🚪 Exit</button>
+  <button onclick="closeOutdoor()" class="ibtn btn-blue" style="flex:1;">✕ Close</button>
+</div>
+${trainState.passengerBoarded?'<div style="color:#22c55e;font-size:11px;margin-top:4px;">🚂 Riding: '+trainState.stopLabel+'</div>':''}`;
+}
+window.renderTrainHalte=renderTrainHalte;
 
 function pilotFly(){
   if(!S.learnedSkills.includes('pilot'))return logChat('[Airport] Need Aviation skill.',false,'#f87171');
@@ -2080,12 +2141,12 @@ const BLDGS=[
   {key:'Hospital',   tex:'bHosp',   ts:2.2, x:26*TILE,y:37*TILE,w:7*TILE,h:6*TILE},
   {key:'Casino',     tex:'bCasino', ts:2.35,x:72*TILE,y:18*TILE,w:8*TILE,h:6*TILE},
   {key:'Clothing Store',tex:'bMkt',ts:2.1, x:58*TILE,y:10*TILE,w:6*TILE,h:6*TILE},
+  {key:'Airport C1',    tex:'bCasino',ts:2.5,x:82*TILE,y:1*TILE, w:10*TILE,h:7*TILE},
 ];
 const IACTS=[
   {key:'Vending',tex:'vend',ts:1.6,x:52*TILE,y:30*TILE,w:2*TILE,h:2*TILE},
   {key:'Vendor', tex:'vendor',ts:1.7,x:22*TILE,y:32*TILE,w:2*TILE,h:2*TILE},
   {key:'River',  tex:'vend', ts:1.4,x:68*TILE,y:14*TILE,w:2*TILE,h:2*TILE},
-  {key:'Flight Terminal',tex:'vend',ts:1.5,x:80*TILE,y:5*TILE,w:3*TILE,h:2*TILE},
 ];
 
 /* ── City 2 — Coastal City buildings ── */
@@ -2123,6 +2184,10 @@ const IACTS2=[
   {key:'Mountain View',tex:'vend',ts:1.4,x:6*TILE, y:6*TILE, w:2*TILE,h:2*TILE},
   {key:'Parking C2', tex:'vend', ts:1.3, x:72*TILE,y:12*TILE,w:4*TILE,h:2*TILE},
   {key:'Boat Dock',  tex:'vend', ts:1.3, x:24*TILE,y:49*TILE,w:2*TILE,h:2*TILE},
+  {key:'Gas Station',tex:'vend', ts:1.8, x:64*TILE,y:14*TILE,w:3*TILE,h:2*TILE},
+  {key:'Halte Pantai',tex:'vend',ts:1.0, x:48*TILE,y:44*TILE,w:2*TILE,h:2*TILE},
+  {key:'Halte Zoo',  tex:'vend', ts:1.0, x:62*TILE,y:44*TILE,w:2*TILE,h:2*TILE},
+  {key:'Halte Barat',tex:'vend', ts:1.0, x:18*TILE,y:28*TILE,w:2*TILE,h:2*TILE},
 ];
 
 /* ── City tiles ── */
@@ -2230,6 +2295,7 @@ function makeInterior(kind){
     case 'Town Hall':
       pr(2,2,30,2,IT.CT);pr(14,4,6,3,IT.CT);pr(4,8,25,3,IT.RG);pr(2,13,8,5,IT.RG);pr(24,13,8,5,IT.RG);pr(12,14,10,3,IT.CT);pr(2,19,30,1,IT.CT);break;
     case 'Airport':
+    case 'Airport C1':
     case 'Aviation Academy':
       pr(2,1,30,3,IT.CT);pr(4,5,26,5,IT.RG);pr(2,11,12,8,IT.CT);pr(20,11,12,8,IT.CT);pr(14,12,6,6,IT.RG);pr(2,20,30,1,IT.CT);break;
     case 'Train Station':
@@ -2577,9 +2643,9 @@ function updatePlane(dtS){
       if(planeState.passengerBoarded){
         planeState.passengerBoarded=false;
         const dest=planeState.destCity;
-        logChat('[✈️ Plane] Landed! Arriving at '+(dest===1?'Moga City (City 1)':'Coastal City (City 2)')+'.',false,'#93c5fd');
+        logChat('[✈️ Plane] Landed! Arriving at '+(dest===1?'Moga City Airport (City 1)':'Coastal City Airport (City 2)')+'.',false,'#93c5fd');
         onChainTx('PLANE_LAND:city'+dest,0.00001);
-        switchCity(dest);
+        switchCity(dest,true);
       }else{
         logChat('[✈️ Airport] Flight MG-001 back at gate.',false,'#93c5fd');
       }
@@ -2617,7 +2683,7 @@ function flyToCity2(){
   closeOutdoor();
   logChat('[✈️ Return Flight] Boarding return flight MG-002 → Coastal City (City 2)! 🛫',false,'#22c55e');
   onChainTx('PLANE_RETURN:city1_to_city2',0.00001);
-  setTimeout(()=>switchCity(2),2000);
+  setTimeout(()=>switchCity(2,true),2000);
 }
 window.flyToCity2=flyToCity2;
 
@@ -2861,9 +2927,11 @@ function drawCity2(scene){
   // Train stop markers near key venues
   for(const wp of TRAIN_WAYPOINTS){
     if(!wp.stop)continue;
-    worldCont.add(scene.add.text(wp.x,wp.y-18,'🚉',{fontSize:'16px'}).setOrigin(.5).setDepth(4));
-    worldCont.add(scene.add.text(wp.x,wp.y-38,wp.label,{fontSize:'9px',color:'#fbbf24',backgroundColor:'rgba(0,0,0,.55)',padding:{x:3,y:2}}).setOrigin(.5).setDepth(4));
+    worldCont.add(scene.add.text(wp.x,wp.y-18,'🚉',{fontSize:'20px'}).setOrigin(.5).setDepth(4));
+    worldCont.add(scene.add.text(wp.x,wp.y-42,wp.label,{fontSize:'9px',color:'#fbbf24',backgroundColor:'rgba(0,0,0,.65)',padding:{x:4,y:2}}).setOrigin(.5).setDepth(4));
   }
+  // Gas station icon
+  worldCont.add(scene.add.text(65.5*TILE,15*TILE,'⛽',{fontSize:'22px'}).setOrigin(.5).setDepth(5));
   // Buildings
   for(const b of BLDGS2){
     const cx=b.x+b.w/2,cy=b.y+b.h/2;
@@ -2898,7 +2966,7 @@ function drawCity2(scene){
   worldCont.add(_tlightGfx);
   // NPC cars
   for(const c of NPC_CARS){
-    if(!c.spr||!c.spr.active){c.spr=scene.add.text(c.x,c.y,'🚗',{fontSize:'30px'}).setOrigin(.5).setDepth(6);}
+    if(!c.spr||!c.spr.active){c.spr=scene.add.text(c.x,c.y,'🚗',{fontSize:'46px'}).setOrigin(.5).setDepth(6);}
     else{c.spr.setPosition(c.x,c.y);}
     worldCont.add(c.spr);
   }
@@ -2908,7 +2976,7 @@ function drawCity2(scene){
     const ct=CAR_TYPES.find(c=>c.id===myCarId);
     const spot=PARKING_SPOTS_C2[0];
     if(!playerCarSprite||!playerCarSprite.active){
-      playerCarSprite=scene.add.text(spot.x+TILE/2,spot.y+TILE/2,ct?ct.icon:'🚖',{fontSize:'38px'}).setOrigin(.5).setDepth(6);
+      playerCarSprite=scene.add.text(spot.x+TILE/2,spot.y+TILE/2,ct?ct.icon:'🚖',{fontSize:'52px'}).setOrigin(.5).setDepth(6);
     }else playerCarSprite.setPosition(spot.x+TILE/2,spot.y+TILE/2);
     worldCont.add(playerCarSprite);
   }
@@ -2927,7 +2995,7 @@ function drawCity2(scene){
   redrawFarmPlots();
 }
 
-function switchCity(n){
+function switchCity(n,fromFlight){
   if(n===currentCity)return;
   if(WS.zone==='INTERIOR')return logChat('[City] Exit building first.',false,'#f87171');
   currentCity=n;
@@ -2936,7 +3004,13 @@ function switchCity(n){
   if(btn1)btn1.style.background=n===1?'linear-gradient(90deg,#0284c7,#0369a1)':'rgba(255,255,255,.08)';
   if(btn2)btn2.style.background=n===2?'linear-gradient(90deg,#0f766e,#14b8a6)':'rgba(255,255,255,.08)';
   if(pill)pill.textContent=n===1?'🏙️ Moga City':'🏝️ Coastal City';
-  WS.savedPos={x:32*TILE,y:32*TILE};
+  if(fromFlight&&n===1){
+    WS.savedPos={x:87*TILE,y:5*TILE}; // arrive at City 1 Airport
+  }else if(fromFlight&&n===2){
+    WS.savedPos={x:77*TILE,y:6*TILE}; // arrive at City 2 Airport
+  }else{
+    WS.savedPos={x:32*TILE,y:32*TILE};
+  }
   trainState.passengerBoarded=false;playerDrivingCar=false;
   planeState.passengerBoarded=false;boatState.passengerBoarded=false;
   if(WS.outdoor==='Boat')WS.outdoor=null;
@@ -2947,8 +3021,10 @@ function switchCity(n){
     _phaserScene.me.x=WS.savedPos.x;_phaserScene.me.y=WS.savedPos.y;
     if(n===2){
       spawnBirds2(_phaserScene);
-      logChat('[🏝️ Coastal City] Welcome to City 2! Beach🏖️ · Airport✈️ · Train🚂 · Zoo🦁 · Concert🎵 · Waterfall💦',false,'#fbbf24');
+      logChat('[🏝️ Coastal City] Welcome to City 2! Beach🏖️ · Airport✈️ · Train🚂 · Zoo🦁 · Concert🎵 · Waterfall💦 · Gas Station⛽',false,'#fbbf24');
       loadCarOwnership();
+    }else{
+      logChat('[🏙️ Moga City] Welcome to City 1! ✈️ Airport C1 in NE · Use Airport to fly to City 2',false,'#fbbf24');
     }
   }
   updateHUD();
@@ -3112,10 +3188,17 @@ function doIAct(action){
       renderBuildingPanel();
       logChat('[⚓ Dock] Boat dock — board the ⛵ boat to sail the ocean and fish!',false,'#38bdf8');
       break;
-    case 'flight terminal':
-      WS.outdoor='FlightTerminal';
+    case 'gas station':
+      WS.outdoor='GasStation';
       renderBuildingPanel();
-      logChat('[✈️ Terminal] Flight terminal — take a return flight to Coastal City (City 2)!',false,'#93c5fd');
+      logChat('[⛽ Gas Station] Fill up your car fuel here!',false,'#fbbf24');
+      break;
+    case 'halte pantai':
+    case 'halte zoo':
+    case 'halte barat':
+      WS.outdoor='TrainHalte';
+      renderBuildingPanel();
+      logChat('[🚉 Halte] Train halte — wait for the train · Riding the train is FREE and uses no energy!',false,'#fbbf24');
       break;
   }
   const items=[
@@ -4250,7 +4333,7 @@ function saveProgress(){
   try{
     const data={
       coins:S.coins,learnedSkills:S.learnedSkills,learningId:S.learningId,learningEndTime:S.learningEndTime,
-      job:S.job,energy:S.energy,energyMax:S.energyMax,house:S.house,
+      job:S.job,energy:S.energy,energyMax:S.energyMax,house:S.house,fuel:S.fuel,fuelMax:S.fuelMax,
       inv:{...S.inv},workCDs:{...workCDs},
       waterFull:S.waterFull,plots:S.plots.map(p=>({...p})),
       fishValueSum:S.fishValueSum||0,
@@ -4277,6 +4360,8 @@ function loadProgress(){
     S.job=d.job||'Unemployed';
     S.energy=typeof d.energy==='number'?d.energy:100;
     S.energyMax=typeof d.energyMax==='number'?d.energyMax:100;
+    S.fuel=typeof d.fuel==='number'?d.fuel:100;
+    S.fuelMax=typeof d.fuelMax==='number'?d.fuelMax:100;
     S.house=typeof d.house==='number'?d.house:1;
     S.fishValueSum=typeof d.fishValueSum==='number'?d.fishValueSum:0;
     S.hotelRentedUntil=typeof d.hotelRentedUntil==='number'?d.hotelRentedUntil:0;
@@ -4405,7 +4490,8 @@ const phaserCfg={
       logChat('[system] Tap/click near a building to enter · Tap NPC to chat · Casino 🎰',false,'#34d399');
       logChat('[system] 🎣 Buy Fishing Rod + Bait at Market · 🪓 Buy Hoe to farm grass tiles · 🏞️ River to fill can & fish',false,'#4ade80');
       logChat('[system] 🏠 No house? Sleep at 🏨 Hotel ($1 USD/day) · Buy from Market or walk to a 🏷️ For Sale house!',false,'#f0abfc');
-      logChat('[system] 🏝️ Switch to Coastal City (City 2) for: ✈️ Airport · 🚂 Train · 🦁 Zoo · 🎵 Concert · 🏖️ Beach · 🚗 Cars · ⛵ Boat!',false,'#38bdf8');
+      logChat('[system] 🏝️ Switch to Coastal City (City 2) for: ✈️ Airport · 🚂 Train · 🦁 Zoo · 🎵 Concert · 🏖️ Beach · 🚗 Cars · ⛵ Boat · ⛽ Gas Station!',false,'#38bdf8');
+      logChat('[system] ✈️ City 1 has Airport C1 (NE corner) — fly to City 2 from there! Cars drain ⛽ fuel not energy. Train 🚂 is free!',false,'#93c5fd');
       this.time.addEvent({delay:200,loop:true,callback:()=>{
         const btn=document.getElementById('btnInteract');
         if(WS.zone==='CITY'){
@@ -4489,10 +4575,24 @@ const phaserCfg={
         }else if(!blocked(cx,cy,activeTiles)){this.me.x=cx;this.me.y=cy;}
         else{if(!blocked(cx,this.me.y,activeTiles))this.me.x=cx;if(!blocked(this.me.x,cy,activeTiles))this.me.y=cy;}
       }else{this.me.x=clamp(nx,20,IW*TILE-20);this.me.y=clamp(ny,20,IH*TILE-20);}
-      /* Passive energy drain: depletes over 1 real hour (3600 real seconds).
-         Rate: 100/3600 ≈ 0.028 per real second. Sprint adds extra drain. */
-      const drainRate=spr&&mv?ENERGY_DRAIN_SPRINT:ENERGY_DRAIN_PASSIVE;
-      S.energy=clamp(S.energy-drainRate*dtS,0,S.energyMax);
+      /* Energy/fuel drain logic:
+         - Riding train: no energy drain (transit is free)
+         - Driving car: fuel drains instead of energy
+         - Otherwise: normal energy drain */
+      if(trainState.passengerBoarded){
+        // No drain while on train
+      }else if(playerDrivingCar){
+        const fuelDrain=mv?ENERGY_DRAIN_PASSIVE*12:ENERGY_DRAIN_PASSIVE*2;
+        S.fuel=clamp(S.fuel-fuelDrain*dtS,0,S.fuelMax);
+        if(S.fuel<=0){
+          playerDrivingCar=false;
+          if(_phaserScene&&_phaserScene.me)_phaserScene.me.setVisible(true);
+          logChat('[⛽] Out of fuel! Visit the Gas Station in City 2 to refuel.',false,'#f87171');
+        }
+      }else{
+        const drainRate=spr&&mv?ENERGY_DRAIN_SPRINT:ENERGY_DRAIN_PASSIVE;
+        S.energy=clamp(S.energy-drainRate*dtS,0,S.energyMax);
+      }
       /* Throttle heavy DOM/canvas updates: run at ~10fps instead of every frame */
       this._hudTick=(this._hudTick||0)+1;
       if(this._hudTick>=6){this._hudTick=0;updateHUD();drawMM({x:this.me.x,y:this.me.y});}
