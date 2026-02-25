@@ -2681,6 +2681,8 @@ function flyToCity2(){
   // Direct return flight from City 1 to City 2 (simplified — no plane animation in City 1)
   if(currentCity!==1)return logChat('[Terminal] Already in Coastal City!',false,'#fbbf24');
   closeOutdoor();
+  // Exit interior so switchCity is not blocked by INTERIOR zone check
+  if(WS.zone==='INTERIOR'){WS.zone='CITY';WS.key='';interior=null;stopMulGame();}
   logChat('[✈️ Return Flight] Boarding return flight MG-002 → Coastal City (City 2)! 🛫',false,'#22c55e');
   onChainTx('PLANE_RETURN:city1_to_city2',0.00001);
   setTimeout(()=>switchCity(2,true),2000);
