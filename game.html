@@ -606,10 +606,10 @@ const SKILLS=[
 const CAR_NFT_PRICE=50;    // $50 USD to buy a car NFT
 const CAR_NFT_KEY='mogaCarOwnership_v1';
 const CAR_TYPES=[
-  {id:'car1',name:'City Coupe',   icon:'🚗',color:0xef4444,speed:200},
+  {id:'car1',name:'GoCar Sedan',  icon:'🚖',color:0x22c55e,speed:200},
   {id:'car2',name:'Beach Cruiser',icon:'🚙',color:0x3b82f6,speed:190},
   {id:'car3',name:'Yellow Cab',   icon:'🚕',color:0xfbbf24,speed:180},
-  {id:'car4',name:'Sports Racer', icon:'🏎️',color:0x22c55e,speed:240},
+  {id:'car4',name:'Sports Racer', icon:'🏎️',color:0xef4444,speed:240},
   {id:'car5',name:'Family Van',   icon:'🚐',color:0xa78bfa,speed:160},
 ];
 let carOwnership={};  // {carId: {owner: address, forSale: bool, price: int}}
@@ -1953,11 +1953,11 @@ function buildTiles2(){
   // Crossroads at intersections
   for(const ry of[12,20,32,44])for(const rx of[20,54,82])
     for(let i=-2;i<=2;i++){const x2=rx+i;if(ry>=0&&ry<CH&&x2>=0&&x2<CW&&t[ry][x2]!==TT.MT)t[ry][x2]=(i%2===0)?TT.CR:TT.R;}
-  // Circular railroad oval (dedicated TR tiles — no collision block)
-  for(let x=28;x<=72;x++)if(t[17][x]!==TT.MT)t[17][x]=TT.TR;
-  for(let x=28;x<=72;x++)if(t[42][x]!==TT.W&&t[42][x]!==TT.S)t[42][x]=TT.TR;
-  for(let y=17;y<=42;y++)if(t[y][28]!==TT.MT)t[y][28]=TT.TR;
-  for(let y=17;y<=42;y++)if(t[y][72]!==TT.W&&t[y][72]!==TT.S)t[y][72]=TT.TR;
+  // Outer railroad ring surrounding the entire city (dedicated TR tiles — no collision block)
+  for(let x=18;x<=93;x++)if(t[3][x]!==TT.MT&&t[3][x]!==TT.W)t[3][x]=TT.TR;
+  for(let x=18;x<=93;x++)if(t[44][x]!==TT.MT&&t[44][x]!==TT.W&&t[44][x]!==TT.S)t[44][x]=TT.TR;
+  for(let y=3;y<=44;y++)if(t[y][18]!==TT.MT&&t[y][18]!==TT.W&&t[y][18]!==TT.S)t[y][18]=TT.TR;
+  for(let y=3;y<=44;y++)if(t[y][93]!==TT.MT&&t[y][93]!==TT.W&&t[y][93]!==TT.S)t[y][93]=TT.TR;
   // Parking lots (C2)
   for(let y=12;y<=14;y++)for(let x=72;x<=77;x++)if(t[y][x]===TT.SD||t[y][x]===TT.G)t[y][x]=TT.PK;
   for(let y=32;y<=34;y++)for(let x=40;x<=43;x++)if(t[y][x]===TT.SD||t[y][x]===TT.G)t[y][x]=TT.PK;
@@ -2254,13 +2254,12 @@ let city2Tiles=null;
 
 /* ── City 2 train system ── */
 const TRAIN_WAYPOINTS=[
-  {x:50*TILE,y:17*TILE},{x:72*TILE,y:17*TILE},
-  {x:72*TILE,y:30*TILE},{x:72*TILE,y:42*TILE},
-  {x:50*TILE,y:42*TILE},{x:28*TILE,y:42*TILE},
-  {x:28*TILE,y:30*TILE},{x:28*TILE,y:17*TILE},
+  {x:48*TILE,y:3*TILE},{x:93*TILE,y:3*TILE},
+  {x:93*TILE,y:44*TILE},{x:48*TILE,y:44*TILE},
+  {x:18*TILE,y:44*TILE},{x:18*TILE,y:3*TILE},
 ];
 const trainState={
-  wpIdx:0,x:50*TILE,y:17*TILE,speed:110,spr:null,
+  wpIdx:0,x:48*TILE,y:3*TILE,speed:140,spr:null,
   passengerBoarded:false,stationKeys:['Train Station'],
   atStation:false,stationDwell:0,DWELL_MS:4000
 };
@@ -2393,11 +2392,64 @@ function drawCity2(scene){
   worldCont.add(gr);
   // Mountain detail
   const mGr=scene.add.graphics().setDepth(-1);
+  // Base mountain terrain gradient
   for(let y=0;y<18;y++)for(let x=0;x<18;x++){
     if(city2Tiles[y][x]!==TT.MT)continue;
     const n=(x*31337^y*92717)>>>0;
-    if(n%3===0){mGr.fillStyle(0x4b5563,1);mGr.fillRect(x*TILE+4,y*TILE+4,TILE-8,TILE-8);}
-    if(n%5===0){mGr.fillStyle(0x9ca3af,0.4);mGr.fillRect(x*TILE+10,y*TILE+8,8,6);}
+    const elev=1-(y/17);// higher elevation = lighter base
+    const base=Math.floor(0x37+(elev*0x14));
+    const shade=(base<<16)|(Math.floor(base*0.75)<<8)|Math.floor(base*0.65);
+    mGr.fillStyle(shade,1);mGr.fillRect(x*TILE,y*TILE,TILE,TILE);
+    if(n%4===0){mGr.fillStyle(0x4b5563,0.7);mGr.fillRect(x*TILE+2,y*TILE+2,TILE-4,TILE-4);}
+  }
+  // Realistic mountain peaks (triangular shapes)
+  const peaks=[
+    {cx:9.5,cy:2.5,hw:7,h:11,shadow:.45},// Main peak (Mount Moga)
+    {cx:5,  cy:6,  hw:4,h:7, shadow:.4}, // NW sub-peak
+    {cx:14, cy:4.5,hw:5,h:8, shadow:.4}, // NE sub-peak
+    {cx:3,  cy:10, hw:3,h:5, shadow:.35},// Far west ridge
+    {cx:12, cy:8,  hw:3.5,h:6,shadow:.38},// SE ridge
+    {cx:7.5,cy:12, hw:2.5,h:4.5,shadow:.3},// South foothill
+  ];
+  for(const p of peaks){
+    const bx=p.cx*TILE,by=p.cy*TILE;
+    const hw=p.hw*TILE,hh=p.h*TILE;
+    const apex=by-hh;
+    // Left face (darker)
+    mGr.fillStyle(0x374151,1);
+    mGr.fillTriangle(bx-hw,by+TILE,bx,apex,bx,by+TILE);
+    // Right face (mid)
+    mGr.fillStyle(0x4b5563,1);
+    mGr.fillTriangle(bx,apex,bx+hw,by+TILE,bx,by+TILE);
+    // Shadow cast (left side darker)
+    mGr.fillStyle(0x1f2937,p.shadow);
+    mGr.fillTriangle(bx-hw,by+TILE,bx,apex,bx-hw*0.3,by+TILE);
+    // Snow cap (top 20% of peak)
+    const snowH=hh*0.22;
+    mGr.fillStyle(0xf1f5f9,0.92);
+    mGr.fillTriangle(bx-hw*0.18,apex+snowH*1.6,bx,apex-TILE*0.15,bx+hw*0.18,apex+snowH*1.6);
+    // Snow highlight
+    mGr.fillStyle(0xffffff,0.55);
+    mGr.fillTriangle(bx-hw*0.06,apex+snowH*0.8,bx,apex-TILE*0.1,bx+hw*0.06,apex+snowH*0.8);
+  }
+  // Contour/elevation lines across mountain area
+  for(let y=2;y<17;y+=3){
+    const lineY=y*TILE+TILE/2;
+    for(let x=1;x<17;x++){
+      if(city2Tiles[y][x]!==TT.MT)continue;
+      const n=(x*7919^y*6271)>>>0;
+      if(n%3===0){mGr.lineStyle(1,0x6b7280,0.35);mGr.strokeRect(x*TILE+3,lineY,TILE-6,2);}
+    }
+  }
+  // Rocky outcrops/boulders
+  for(let y=4;y<17;y+=2)for(let x=2;x<17;x+=3){
+    const n=(x*17389^y*11527)>>>0;
+    if(city2Tiles[y][x]!==TT.MT)continue;
+    if(n%5<2){
+      const rx=x*TILE+(n%20)+4,ry=y*TILE+(n%16)+4;
+      mGr.fillStyle(0x374151,0.9);mGr.fillRect(rx,ry,6+n%8,5+n%6);
+      mGr.fillStyle(0x9ca3af,0.4);mGr.fillRect(rx+1,ry+1,3,2);
+    }
   }
   worldCont.add(mGr);
   // Waterfall effect
@@ -2422,7 +2474,7 @@ function drawCity2(scene){
   }
   worldCont.add(wGr);
   // Labels
-  worldCont.add(scene.add.text(9*TILE,9*TILE,'⛰️\nMount\nMoga',{fontSize:'11px',color:'#e2e8f0',align:'center',backgroundColor:'rgba(0,0,0,.4)',padding:{x:4,y:3}}).setOrigin(.5).setDepth(5));
+  worldCont.add(scene.add.text(9.5*TILE,7*TILE,'⛰️\nMount\nMoga',{fontSize:'13px',color:'#f1f5f9',align:'center',fontStyle:'bold',backgroundColor:'rgba(0,0,0,.5)',padding:{x:5,y:4}}).setOrigin(.5).setDepth(5));
   worldCont.add(scene.add.text(15*TILE,19*TILE,'💦\nWaterfall',{fontSize:'10px',color:'#bae6fd',align:'center',backgroundColor:'rgba(0,0,0,.4)',padding:{x:3,y:2}}).setOrigin(.5).setDepth(5));
   // Buildings
   for(const b of BLDGS2){
@@ -2443,7 +2495,7 @@ function drawCity2(scene){
   scene.cameras.main.setBounds(0,0,CW*TILE,CH*TILE);drawMM._k=null;
   // Train sprite
   if(!trainState.spr||!trainState.spr.active){
-    trainState.spr=scene.add.text(trainState.x,trainState.y,'🚂',{fontSize:'28px'}).setOrigin(.5).setDepth(8);
+    trainState.spr=scene.add.text(trainState.x,trainState.y,'🚂',{fontSize:'48px'}).setOrigin(.5).setDepth(8);
     worldCont.add(trainState.spr);
   }else{trainState.spr.setPosition(trainState.x,trainState.y);worldCont.add(trainState.spr);}
   // Traffic light graphics layer
@@ -2451,7 +2503,7 @@ function drawCity2(scene){
   worldCont.add(_tlightGfx);
   // NPC cars
   for(const c of NPC_CARS){
-    if(!c.spr||!c.spr.active){c.spr=scene.add.text(c.x,c.y,'🚗',{fontSize:'18px'}).setOrigin(.5).setDepth(6);}
+    if(!c.spr||!c.spr.active){c.spr=scene.add.text(c.x,c.y,'🚗',{fontSize:'30px'}).setOrigin(.5).setDepth(6);}
     else{c.spr.setPosition(c.x,c.y);}
     worldCont.add(c.spr);
   }
@@ -2461,12 +2513,12 @@ function drawCity2(scene){
     const ct=CAR_TYPES.find(c=>c.id===myCarId);
     const spot=PARKING_SPOTS_C2[0];
     if(!playerCarSprite||!playerCarSprite.active){
-      playerCarSprite=scene.add.text(spot.x+TILE/2,spot.y+TILE/2,ct?ct.icon:'🚗',{fontSize:'20px'}).setOrigin(.5).setDepth(6);
+      playerCarSprite=scene.add.text(spot.x+TILE/2,spot.y+TILE/2,ct?ct.icon:'🚖',{fontSize:'38px'}).setOrigin(.5).setDepth(6);
     }else playerCarSprite.setPosition(spot.x+TILE/2,spot.y+TILE/2);
     worldCont.add(playerCarSprite);
   }
   // Airplane parked at airport
-  const plane=scene.add.text(80*TILE,5*TILE,'✈️',{fontSize:'32px'}).setOrigin(.5).setDepth(6);
+  const plane=scene.add.text(80*TILE,5*TILE,'✈️',{fontSize:'54px'}).setOrigin(.5).setDepth(6);
   worldCont.add(plane);
   scene.time.addEvent({delay:60000,loop:true,callback:()=>{
     if(currentCity!==2||WS.zone!=='CITY')return;
