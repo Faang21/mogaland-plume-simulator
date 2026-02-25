@@ -851,7 +851,9 @@ function renderBuildingPanel(){
   if(WS.outdoor&&WS.outdoor.startsWith('HousePlot:')){panel.style.display='block';panel.innerHTML=renderHousePlot(WS.outdoor.slice(10));return;}
   if(WS.outdoor==='CarShop'){panel.style.display='block';renderCarShop();return;}
   if(WS.outdoor==='Waterfall'){panel.style.display='block';panel.innerHTML=`<strong>💦 Waterfall</strong><div style="font-size:11px;color:#7dd3fc;margin:5px 0;">Natural wonder near Mount Moga. +15 energy when visited.</div><button onclick="closeOutdoor()" class="ibtn btn-blue" style="width:100%;margin-top:5px;">Close</button>`;return;}
-  if(WS.outdoor==='Beach'){panel.style.display='block';panel.innerHTML=`<strong>🏖️ Beach</strong><div style="font-size:11px;color:#38bdf8;margin:5px 0;">Moga Beach — crystal clear waters! Walk to Beach Club for swimming &amp; lifeguard jobs.</div><button onclick="closeOutdoor()" class="ibtn btn-blue" style="width:100%;margin-top:5px;">Close</button>`;return;}
+  if(WS.outdoor==='Boat'){panel.style.display='block';panel.innerHTML=renderBoat();return;}
+  if(WS.outdoor==='FlightTerminal'){panel.style.display='block';panel.innerHTML=`<strong>✈️ Flight Terminal — Moga City</strong><div style="font-size:11px;color:#93c5fd;margin:5px 0;">Return flight to Coastal City (City 2).</div><button onclick="flyToCity2()" class="ibtn btn-blue" style="width:100%;padding:7px;margin-top:4px;">🛫 Fly to Coastal City (City 2)</button><button onclick="closeOutdoor()" class="ibtn btn-blue" style="width:100%;margin-top:5px;">Close</button>`;return;}
+  if(WS.outdoor==='Beach'){panel.style.display='block';panel.innerHTML=`<strong>🏖️ Beach</strong><div style="font-size:11px;color:#38bdf8;margin:5px 0;">Moga Beach — crystal clear waters! Walk to Beach Club or board the ⛵ Boat at the dock.</div><button onclick="boardBoat()" class="ibtn btn-teal" style="width:100%;margin-top:5px;">⛵ Board Boat at Dock</button><button onclick="closeOutdoor()" class="ibtn btn-blue" style="width:100%;margin-top:5px;">Close</button>`;return;}
   if(WS.outdoor){panel.style.display='block';panel.innerHTML=renderVending();return;}
   if(WS.zone!=='INTERIOR'){panel.style.display='none';return;}
   panel.style.display='block';
@@ -1148,16 +1150,21 @@ function renderTownHall(){
 function renderAirport(){
   const myCar=getMyCarId();
   const hasPilot=S.learnedSkills.includes('pilot');
+  const onPlane=planeState.passengerBoarded;
+  const planeReady=planeState.atGate&&!planeState.flying;
   return`<strong>✈️ Airport — Moga International</strong>
-<div style="font-size:11px;color:#94a3b8;margin:5px 0;">Destination: International flights daily · Buy Pilot skill at Aviation Academy</div>
+<div style="font-size:11px;color:#94a3b8;margin:5px 0;">City 2 ↔ City 1 flights · Circles city before landing</div>
 <div style="border:1px solid rgba(99,102,241,.3);border-radius:8px;padding:8px;margin:5px 0;background:rgba(99,102,241,.05);">
-  <div style="font-size:12px;font-weight:bold;margin-bottom:4px;">✈️ Flights</div>
-  <div style="font-size:11px;color:#94a3b8;margin-bottom:6px;">MG-001 → Overseas: Every 60s | MG-002 → Back: Auto-return</div>
-  ${hasPilot?`<button onclick="pilotFly()" class="ibtn btn-blue" style="width:100%;padding:7px;">🛫 Fly as Pilot (Earn $${WORK_PAY_USD} USD)</button>`:`<div style="font-size:11px;color:#f87171;">Learn Aviation skill at Aviation Academy to work as Pilot</div>`}
+  <div style="font-size:12px;font-weight:bold;margin-bottom:4px;">✈️ Passenger Flight</div>
+  <div style="font-size:11px;color:${planeReady?'#22c55e':planeState.flying?'#f59e0b':'#94a3b8'};margin-bottom:6px;">${onPlane?'🛫 You are on the plane! Circling city...':planeReady?'🟢 Plane at gate — board now!':planeState.flying?'🟡 In the air — wait for landing':'⏳ Plane on standby'}</div>
+  <div style="display:flex;gap:5px;">
+    <button onclick="boardPlane()" ${planeReady&&!onPlane?'':'disabled'} class="ibtn btn-blue" style="flex:1;">🛫 Board (→ City 1)</button>
+    <button onclick="exitPlane()" ${onPlane?'':'disabled'} class="ibtn btn-red" style="flex:1;">🚪 Exit</button>
+  </div>
+  ${hasPilot?`<button onclick="pilotFly()" class="ibtn btn-indigo" style="width:100%;margin-top:5px;">🧑‍✈️ Work as Pilot (+$${WORK_PAY_USD} USD)</button>`:`<div style="font-size:10px;color:#64748b;margin-top:5px;">Learn Aviation at Aviation Academy to work as Pilot</div>`}
 </div>
 <div style="border-top:1px solid rgba(255,255,255,.1);margin-top:8px;padding-top:8px;">
   <div style="font-size:11px;color:#fbbf24;margin-bottom:5px;">🚗 Airport Parking</div>
-  <div style="font-size:11px;color:#94a3b8;">Parking spots visible at 🅿️ near airport</div>
   ${myCar?`<button onclick="driveMyCar()" class="ibtn btn-green" style="width:100%;margin-top:5px;">${playerDrivingCar?'🅿️ Park Car':'🚗 Drive My Car'}</button>`:`<button onclick="exitCity(_phaserScene);setTimeout(()=>renderCarShop(),200)" class="ibtn btn-yellow" style="width:100%;margin-top:5px;">🚗 Buy Car NFT ($${CAR_NFT_PRICE} USD)</button>`}
 </div>`;
 }
@@ -1181,18 +1188,21 @@ window.pilotFly=pilotFly;
 function renderTrainStation(){
   const hasMasinis=S.learnedSkills.includes('masinis');
   const atStation=trainState.atStation;
+  const{dist:stopDist}=nearestTrainStop();
+  const nearStop=stopDist<TRAIN_STOP_RADIUS;
   return`<strong>🚂 Train Station — Coastal Rail</strong>
-<div style="font-size:11px;color:#94a3b8;margin:5px 0;">Circular route around Coastal City · Stops at all major areas</div>
+<div style="font-size:11px;color:#94a3b8;margin:5px 0;">City ring route · 12 stops · Board at any stop</div>
 <div style="border:1px solid rgba(34,197,94,.25);border-radius:8px;padding:8px;margin:5px 0;">
   <div style="font-size:12px;font-weight:bold;margin-bottom:4px;">🚆 Train Status</div>
-  <div style="font-size:11px;color:${atStation?'#22c55e':'#fbbf24'};">${atStation?'🟢 Train at station — Board now!':'🟡 Train in transit… wait at platform'}</div>
+  <div style="font-size:11px;color:${atStation?'#22c55e':'#fbbf24'};">${atStation?'🟢 Train at stop: <b>'+trainState.stopLabel+'</b>':'🟡 Train in transit…'}</div>
+  <div style="font-size:10px;color:#64748b;margin:3px 0;">You are ${nearStop?'near a stop 📍':'not near a stop ⬜'}</div>
   <div style="margin-top:6px;display:flex;gap:5px;">
-    <button onclick="boardTrain()" ${atStation?'':'disabled'} class="ibtn btn-green" style="flex:1;">🎫 Board Train</button>
+    <button onclick="boardTrain()" ${atStation&&nearStop?'':'disabled'} class="ibtn btn-green" style="flex:1;">🎫 Board</button>
     <button onclick="exitTrain()" ${trainState.passengerBoarded?'':'disabled'} class="ibtn btn-red" style="flex:1;">🚪 Exit</button>
   </div>
-  ${trainState.passengerBoarded?'<div style="color:#22c55e;font-size:11px;margin-top:4px;">🚂 You are on the train!</div>':''}
+  ${trainState.passengerBoarded?'<div style="color:#22c55e;font-size:11px;margin-top:4px;">🚂 Riding: '+trainState.stopLabel+'</div>':''}
 </div>
-${hasMasinis?`<button onclick="workMasinis()" class="ibtn btn-blue" style="width:100%;margin-top:5px;">🚂 Work as Masinis (+$${WORK_PAY_USD} USD)</button>`:`<div style="font-size:11px;color:#94a3b8;margin-top:5px;">Learn Rail Ops skill at Aviation Academy to work as Masinis</div>`}`;
+${hasMasinis?`<button onclick="workMasinis()" class="ibtn btn-blue" style="width:100%;margin-top:5px;">🚂 Work as Masinis (+$${WORK_PAY_USD} USD)</button>`:`<div style="font-size:11px;color:#94a3b8;margin-top:5px;">Learn Rail Ops skill at Aviation Academy</div>`}`;
 }
 window.renderTrainStation=renderTrainStation;
 
@@ -1874,6 +1884,7 @@ const IACTS=[
   {key:'Vending',tex:'vend',ts:1.6,x:52*TILE,y:30*TILE,w:2*TILE,h:2*TILE},
   {key:'Vendor', tex:'vendor',ts:1.7,x:22*TILE,y:32*TILE,w:2*TILE,h:2*TILE},
   {key:'River',  tex:'vend', ts:1.4,x:68*TILE,y:14*TILE,w:2*TILE,h:2*TILE},
+  {key:'Flight Terminal',tex:'vend',ts:1.5,x:80*TILE,y:5*TILE,w:3*TILE,h:2*TILE},
 ];
 
 /* ── City 2 — Coastal City buildings ── */
@@ -1909,6 +1920,7 @@ const IACTS2=[
   {key:'Beach',      tex:'vendor',ts:1.5,x:28*TILE,y:50*TILE,w:4*TILE,h:2*TILE},
   {key:'Mountain View',tex:'vend',ts:1.4,x:6*TILE, y:6*TILE, w:2*TILE,h:2*TILE},
   {key:'Parking C2', tex:'vend', ts:1.3, x:72*TILE,y:12*TILE,w:4*TILE,h:2*TILE},
+  {key:'Boat Dock',  tex:'vend', ts:1.3, x:24*TILE,y:49*TILE,w:2*TILE,h:2*TILE},
 ];
 
 /* ── City tiles ── */
@@ -2254,51 +2266,201 @@ let city2Tiles=null;
 
 /* ── City 2 train system ── */
 const TRAIN_WAYPOINTS=[
-  {x:48*TILE,y:3*TILE},{x:93*TILE,y:3*TILE},
-  {x:93*TILE,y:44*TILE},{x:48*TILE,y:44*TILE},
-  {x:18*TILE,y:44*TILE},{x:18*TILE,y:3*TILE},
+  {x:48*TILE,y:3*TILE,  stop:true, label:'Train Station'},    // WP 0 – main station
+  {x:77*TILE,y:3*TILE,  stop:true, label:'Airport Stop'},     // WP 1 – airport area
+  {x:93*TILE,y:3*TILE,  stop:false},                          // WP 2 – NE corner
+  {x:93*TILE,y:22*TILE, stop:true, label:'East Residences'},  // WP 3 – houses east
+  {x:93*TILE,y:44*TILE, stop:false},                          // WP 4 – SE corner
+  {x:62*TILE,y:44*TILE, stop:true, label:'Zoo Stop'},         // WP 5 – zoo/south-east
+  {x:48*TILE,y:44*TILE, stop:true, label:'Beach Stop'},       // WP 6 – beach club
+  {x:23*TILE,y:44*TILE, stop:true, label:'West South Stop'},  // WP 7 – hospital/job center
+  {x:18*TILE,y:44*TILE, stop:false},                          // WP 8 – SW corner
+  {x:18*TILE,y:28*TILE, stop:true, label:'West Stop'},        // WP 9 – concert/hotel
+  {x:18*TILE,y:3*TILE,  stop:false},                          // WP 10 – NW corner
+  {x:28*TILE,y:3*TILE,  stop:true, label:'Academy Stop'},     // WP 11 – aviation academy
 ];
+const TRAIN_STOP_RADIUS=5*TILE; // player must be within this radius to board
 const trainState={
   wpIdx:0,x:48*TILE,y:3*TILE,speed:140,spr:null,
-  passengerBoarded:false,stationKeys:['Train Station'],
-  atStation:false,stationDwell:0,DWELL_MS:4000
+  passengerBoarded:false,
+  atStation:false,stopLabel:'Train Station',stationDwell:0,DWELL_MS:3500
 };
 function updateTrain(dtS){
   if(!trainState.spr||currentCity!==2)return;
-  if(trainState.stationDwell>0){trainState.stationDwell-=dtS*1000;return;}
+  if(trainState.stationDwell>0){trainState.stationDwell-=dtS*1000;if(trainState.stationDwell<=0)trainState.atStation=false;return;}
   const wp=TRAIN_WAYPOINTS[trainState.wpIdx];
   const dx=wp.x-trainState.x,dy=wp.y-trainState.y,dist=Math.hypot(dx,dy);
   if(dist<6){
     trainState.x=wp.x;trainState.y=wp.y;
     trainState.wpIdx=(trainState.wpIdx+1)%TRAIN_WAYPOINTS.length;
-    if(trainState.wpIdx===0){trainState.stationDwell=trainState.DWELL_MS;trainState.atStation=true;}
-    else trainState.atStation=false;
+    const nwp=TRAIN_WAYPOINTS[(trainState.wpIdx-1+TRAIN_WAYPOINTS.length)%TRAIN_WAYPOINTS.length];
+    if(nwp.stop){trainState.stationDwell=trainState.DWELL_MS;trainState.atStation=true;trainState.stopLabel=nwp.label;}
+    else{trainState.atStation=false;}
   }else{
     trainState.x+=dx/dist*trainState.speed*dtS;
     trainState.y+=dy/dist*trainState.speed*dtS;
-    trainState.atStation=false;
   }
   trainState.spr.setPosition(trainState.x,trainState.y);
   if(trainState.passengerBoarded&&_phaserScene){
     _phaserScene.me.x=trainState.x;_phaserScene.me.y=trainState.y+20;
   }
 }
+function nearestTrainStop(){
+  // Returns the nearest TRAIN_WAYPOINTS stop and its distance from player
+  if(!_phaserScene)return{stop:null,dist:Infinity};
+  let best=null,bd=Infinity;
+  for(const wp of TRAIN_WAYPOINTS){
+    if(!wp.stop)continue;
+    const d=Math.hypot(_phaserScene.me.x-wp.x,_phaserScene.me.y-wp.y);
+    if(d<bd){bd=d;best=wp;}
+  }
+  return{stop:best,dist:bd};
+}
 function boardTrain(){
-  if(currentCity!==2)return logChat('[Train] Only in Coastal City.',false,'#f87171');
+  if(currentCity!==2)return logChat('[Train] Only available in Coastal City.',false,'#f87171');
   if(trainState.passengerBoarded)return logChat('[Train] You\'re already on the train.',false,'#fbbf24');
-  if(!trainState.atStation)return logChat('[Train] 🚂 Wait for the train at the station! (dwell time)',false,'#fbbf24');
+  const{dist:pdist}=nearestTrainStop();
+  if(pdist>TRAIN_STOP_RADIUS)return logChat('[Train] 🚂 Walk closer to a train stop first!',false,'#f87171');
+  if(!trainState.atStation)return logChat('[Train] 🚂 Train is in transit — wait at the platform!',false,'#fbbf24');
   trainState.passengerBoarded=true;
-  logChat('[🚂 Train] Boarded! The train will take you around Coastal City. Tap Exit to disembark.',false,'#22c55e');
-  onChainTx('TRAIN_BOARD:city2',0.00001);
+  logChat('[🚂 Train] Boarded at '+trainState.stopLabel+'! Riding the city ring. Tap Exit to disembark.',false,'#22c55e');
+  onChainTx('TRAIN_BOARD:'+trainState.stopLabel,0.00001);
 }
 window.boardTrain=boardTrain;
 function exitTrain(){
   trainState.passengerBoarded=false;
-  logChat('[🚂 Train] Disembarked at '+fmtTime(CLK.min)+'.',false,'#93c5fd');
+  logChat('[🚂 Train] Disembarked at '+trainState.stopLabel+'.',false,'#93c5fd');
 }
 window.exitTrain=exitTrain;
 
-/* ── City 2 traffic light system ── */
+/* ── City 2 plane system ── */
+const PLANE_CITY_WAYPOINTS=[ // circular tour around city
+  {x:80*TILE,y:5*TILE},   // Airport (depart/arrive)
+  {x:93*TILE,y:5*TILE},   // NE
+  {x:93*TILE,y:40*TILE},  // SE
+  {x:50*TILE,y:40*TILE},  // S mid
+  {x:5*TILE, y:40*TILE},  // SW
+  {x:5*TILE, y:5*TILE},   // NW
+  {x:50*TILE,y:5*TILE},   // N mid
+  {x:80*TILE,y:5*TILE},   // back to Airport
+];
+const planeState={
+  spr:null,wpIdx:0,x:80*TILE,y:5*TILE,speed:260,
+  passengerBoarded:false,laps:0,destCity:1, // destCity flips after landing
+  flying:false,atGate:true
+};
+function updatePlane(dtS){
+  if(!planeState.spr||!planeState.flying)return;
+  const wp=PLANE_CITY_WAYPOINTS[planeState.wpIdx];
+  const dx=wp.x-planeState.x,dy=wp.y-planeState.y,dist=Math.hypot(dx,dy);
+  if(dist<8){
+    planeState.x=wp.x;planeState.y=wp.y;
+    planeState.wpIdx=(planeState.wpIdx+1)%PLANE_CITY_WAYPOINTS.length;
+    if(planeState.wpIdx===0){
+      // completed one lap — land at airport
+      planeState.flying=false;planeState.atGate=true;planeState.wpIdx=0;
+      if(planeState.passengerBoarded){
+        planeState.passengerBoarded=false;
+        const dest=planeState.destCity;
+        logChat('[✈️ Plane] Landed! Arriving at '+(dest===1?'Moga City (City 1)':'Coastal City (City 2)')+'.',false,'#93c5fd');
+        onChainTx('PLANE_LAND:city'+dest,0.00001);
+        switchCity(dest);
+      }else{
+        logChat('[✈️ Airport] Flight MG-001 back at gate.',false,'#93c5fd');
+      }
+    }
+  }else{
+    planeState.x+=dx/dist*planeState.speed*dtS;
+    planeState.y+=dy/dist*planeState.speed*dtS;
+  }
+  if(planeState.spr&&planeState.spr.active)planeState.spr.setPosition(planeState.x,planeState.y);
+  if(planeState.passengerBoarded&&_phaserScene){
+    _phaserScene.me.x=planeState.x;_phaserScene.me.y=planeState.y+30;
+  }
+}
+function boardPlane(){
+  if(currentCity!==2)return logChat('[Airport] Board the plane in Coastal City (City 2).',false,'#f87171');
+  if(planeState.passengerBoarded)return logChat('[Airport] You are already on the plane!',false,'#fbbf24');
+  if(planeState.flying)return logChat('[Airport] ✈️ Plane is in the air — wait for it to land.',false,'#fbbf24');
+  if(!planeState.atGate)return logChat('[Airport] Plane not at gate.',false,'#f87171');
+  planeState.passengerBoarded=true;planeState.flying=true;planeState.atGate=false;
+  planeState.wpIdx=1;planeState.destCity=1; // City 2 → City 1
+  planeState.x=PLANE_CITY_WAYPOINTS[0].x;planeState.y=PLANE_CITY_WAYPOINTS[0].y;
+  logChat('[✈️ Airport] Boarded MG-001! Plane will circle Coastal City then fly to Moga City (City 1). Hold on! 🛫',false,'#22c55e');
+  onChainTx('PLANE_BOARD:city2_to_city1',0.00001);
+}
+window.boardPlane=boardPlane;
+function exitPlane(){
+  if(!planeState.passengerBoarded)return;
+  planeState.passengerBoarded=false;
+  logChat('[✈️ Plane] Emergency exit — disembarked mid-flight. Stay safe!',false,'#f87171');
+}
+window.exitPlane=exitPlane;
+function flyToCity2(){
+  // Direct return flight from City 1 to City 2 (simplified — no plane animation in City 1)
+  if(currentCity!==1)return logChat('[Terminal] Already in Coastal City!',false,'#fbbf24');
+  closeOutdoor();
+  logChat('[✈️ Return Flight] Boarding return flight MG-002 → Coastal City (City 2)! 🛫',false,'#22c55e');
+  onChainTx('PLANE_RETURN:city1_to_city2',0.00001);
+  setTimeout(()=>switchCity(2),2000);
+}
+window.flyToCity2=flyToCity2;
+
+
+const BOAT_WAYPOINTS=[
+  {x:25*TILE,y:52*TILE, dock:true},  // Beach dock (boarding point)
+  {x:50*TILE,y:56*TILE, dock:false}, // Mid ocean
+  {x:80*TILE,y:54*TILE, dock:false}, // East coast
+  {x:70*TILE,y:58*TILE, dock:false}, // SE ocean
+  {x:40*TILE,y:58*TILE, dock:false}, // SW ocean
+  {x:25*TILE,y:54*TILE, dock:false}, // Back west
+];
+const BOAT_DOCK_RADIUS=6*TILE;
+const boatState={
+  spr:null,wpIdx:0,x:25*TILE,y:52*TILE,speed:90,
+  passengerBoarded:false,atDock:true,dockDwell:0,DWELL_MS:5000
+};
+function updateBoat(dtS){
+  if(!boatState.spr||currentCity!==2)return;
+  if(boatState.dockDwell>0){boatState.dockDwell-=dtS*1000;if(boatState.dockDwell<=0)boatState.atDock=false;return;}
+  const wp=BOAT_WAYPOINTS[boatState.wpIdx];
+  const dx=wp.x-boatState.x,dy=wp.y-boatState.y,dist=Math.hypot(dx,dy);
+  if(dist<6){
+    boatState.x=wp.x;boatState.y=wp.y;
+    boatState.wpIdx=(boatState.wpIdx+1)%BOAT_WAYPOINTS.length;
+    const nwp=BOAT_WAYPOINTS[(boatState.wpIdx-1+BOAT_WAYPOINTS.length)%BOAT_WAYPOINTS.length];
+    if(nwp.dock){boatState.dockDwell=boatState.DWELL_MS;boatState.atDock=true;}
+    else boatState.atDock=false;
+  }else{
+    boatState.x+=dx/dist*boatState.speed*dtS;
+    boatState.y+=dy/dist*boatState.speed*dtS;
+  }
+  if(boatState.spr&&boatState.spr.active)boatState.spr.setPosition(boatState.x,boatState.y);
+  if(boatState.passengerBoarded&&_phaserScene){
+    _phaserScene.me.x=boatState.x;_phaserScene.me.y=boatState.y-20;
+  }
+}
+function boardBoat(){
+  if(currentCity!==2)return logChat('[Boat] Only available in Coastal City.',false,'#f87171');
+  if(boatState.passengerBoarded)return logChat('[Boat] Already on board!',false,'#fbbf24');
+  if(!boatState.atDock)return logChat('[Boat] ⛵ Boat is out at sea — wait for it to dock at the beach!',false,'#fbbf24');
+  if(!_phaserScene)return;
+  const d=Math.hypot(_phaserScene.me.x-boatState.x,_phaserScene.me.y-boatState.y);
+  if(d>BOAT_DOCK_RADIUS)return logChat('[Boat] Walk closer to the dock first!',false,'#f87171');
+  boatState.passengerBoarded=true;
+  logChat('[⛵ Boat] Boarded! Sailing the Moga Ocean. You can fish while on board 🎣',false,'#22c55e');
+  onChainTx('BOAT_BOARD:ocean',0.00001);
+  WS.outdoor='Boat';renderBuildingPanel();
+}
+window.boardBoat=boardBoat;
+function exitBoat(){
+  boatState.passengerBoarded=false;
+  if(WS.outdoor==='Boat'){WS.outdoor=null;renderBuildingPanel();}
+  logChat('[⛵ Boat] Disembarked. Back on dry land!',false,'#38bdf8');
+}
+window.exitBoat=exitBoat;
+
+
 const TRAFFIC_LIGHT_INTERSECTIONS=[
   {x:20*TILE,y:12*TILE},{x:54*TILE,y:12*TILE},{x:82*TILE,y:12*TILE},
   {x:20*TILE,y:32*TILE},{x:54*TILE,y:32*TILE},{x:82*TILE,y:32*TILE},
@@ -2366,6 +2528,7 @@ function driveMyCar(){
   if(!myId)return logChat('[Car] 🚗 You don\'t own a car. Buy a Car NFT at the parking area!',false,'#f87171');
   if(playerDrivingCar){
     playerDrivingCar=false;
+    if(_phaserScene&&_phaserScene.me)_phaserScene.me.setVisible(true);
     logChat('[🚗 Car] Parked your car. You\'re on foot.',false,'#94a3b8');
     return;
   }
@@ -2375,7 +2538,11 @@ function driveMyCar(){
   if(isTrafficRed()&&TRAFFIC_LIGHT_INTERSECTIONS.some(tl=>Math.hypot(_phaserScene.me.x-tl.x,_phaserScene.me.y-tl.y)<3*TILE))
     return logChat('[🚦 Traffic] Red light! Wait for green.',false,'#ef4444');
   playerDrivingCar=true;
-  logChat('[🚗 Car] Driving your '+CAR_TYPES.find(c=>c.id===myId)?.name+'! Stay on roads. Tap Drive to park.',false,'#22c55e');
+  // Move car sprite to player position and hide player avatar
+  if(playerCarSprite&&playerCarSprite.active)playerCarSprite.setPosition(_phaserScene.me.x,_phaserScene.me.y);
+  if(_phaserScene&&_phaserScene.me)_phaserScene.me.setVisible(false);
+  const ct=CAR_TYPES.find(c=>c.id===myId);
+  logChat('[🚗 GoCar] Driving your '+(ct?ct.name:'car')+'! Stay on roads 🛣️ Arrow keys to steer. Tap Drive again to park.',false,'#22c55e');
   onChainTx('CAR_DRIVE:'+myId,0.00001);
 }
 window.driveMyCar=driveMyCar;
@@ -2476,6 +2643,12 @@ function drawCity2(scene){
   // Labels
   worldCont.add(scene.add.text(9.5*TILE,7*TILE,'⛰️\nMount\nMoga',{fontSize:'13px',color:'#f1f5f9',align:'center',fontStyle:'bold',backgroundColor:'rgba(0,0,0,.5)',padding:{x:5,y:4}}).setOrigin(.5).setDepth(5));
   worldCont.add(scene.add.text(15*TILE,19*TILE,'💦\nWaterfall',{fontSize:'10px',color:'#bae6fd',align:'center',backgroundColor:'rgba(0,0,0,.4)',padding:{x:3,y:2}}).setOrigin(.5).setDepth(5));
+  // Train stop markers near key venues
+  for(const wp of TRAIN_WAYPOINTS){
+    if(!wp.stop)continue;
+    worldCont.add(scene.add.text(wp.x,wp.y-18,'🚉',{fontSize:'16px'}).setOrigin(.5).setDepth(4));
+    worldCont.add(scene.add.text(wp.x,wp.y-38,wp.label,{fontSize:'9px',color:'#fbbf24',backgroundColor:'rgba(0,0,0,.55)',padding:{x:3,y:2}}).setOrigin(.5).setDepth(4));
+  }
   // Buildings
   for(const b of BLDGS2){
     const cx=b.x+b.w/2,cy=b.y+b.h/2;
@@ -2517,16 +2690,18 @@ function drawCity2(scene){
     }else playerCarSprite.setPosition(spot.x+TILE/2,spot.y+TILE/2);
     worldCont.add(playerCarSprite);
   }
-  // Airplane parked at airport
-  const plane=scene.add.text(80*TILE,5*TILE,'✈️',{fontSize:'54px'}).setOrigin(.5).setDepth(6);
-  worldCont.add(plane);
-  scene.time.addEvent({delay:60000,loop:true,callback:()=>{
-    if(currentCity!==2||WS.zone!=='CITY')return;
-    logChat('[✈️ Airport] Flight MG-001 departing overseas! ✈️✨',false,'#93c5fd');
-    onChainTx('FLIGHT_DEPART:Airport:overseas',0.00001);
-    scene.tweens.add({targets:plane,x:CW*TILE+200,y:-200,duration:4000,ease:'Quad.easeIn',
-      onComplete:()=>{plane.setPosition(80*TILE,5*TILE);}});
-  }});
+  // Airplane — uses planeState for boarding/city travel
+  if(!planeState.spr||!planeState.spr.active){
+    planeState.spr=scene.add.text(planeState.x,planeState.y,'✈️',{fontSize:'54px'}).setOrigin(.5).setDepth(9);
+  }else{planeState.spr.setPosition(planeState.x,planeState.y);}
+  worldCont.add(planeState.spr);
+  // Boat/ship in ocean — uses boatState
+  if(!boatState.spr||!boatState.spr.active){
+    boatState.spr=scene.add.text(boatState.x,boatState.y,'⛵',{fontSize:'50px'}).setOrigin(.5).setDepth(8);
+  }else{boatState.spr.setPosition(boatState.x,boatState.y);}
+  worldCont.add(boatState.spr);
+  // Dock label near beach
+  worldCont.add(scene.add.text(25*TILE,50*TILE,'⚓ Dock',{fontSize:'11px',color:'#fbbf24',backgroundColor:'rgba(0,0,0,.45)',padding:{x:4,y:2}}).setOrigin(.5).setDepth(5));
   redrawFarmPlots();
 }
 
@@ -2541,8 +2716,11 @@ function switchCity(n){
   if(pill)pill.textContent=n===1?'🏙️ Moga City':'🏝️ Coastal City';
   WS.savedPos={x:32*TILE,y:32*TILE};
   trainState.passengerBoarded=false;playerDrivingCar=false;
+  planeState.passengerBoarded=false;boatState.passengerBoarded=false;
+  if(WS.outdoor==='Boat')WS.outdoor=null;
   if(_tlightGfx&&_tlightGfx.active){_tlightGfx.clear();_tlightGfx=null;}
   if(_phaserScene){
+    if(_phaserScene.me)_phaserScene.me.setVisible(true); // restore avatar after car/plane
     drawCity(_phaserScene);
     _phaserScene.me.x=WS.savedPos.x;_phaserScene.me.y=WS.savedPos.y;
     if(n===2){
@@ -2707,15 +2885,16 @@ function doIAct(action){
     case 'mountain view':
       logChat('[⛰️ Mountain] Breathtaking view of Moga Coast from Mount Moga!',false,'#9ca3af');
       break;
-    case 'parking c2':
-      renderCarShop();
-      logChat('[🅿️ Parking] Car NFT marketplace — buy your car here!',false,'#fbbf24');
+    case 'boat dock':
+      WS.outdoor='Boat';
+      renderBuildingPanel();
+      logChat('[⚓ Dock] Boat dock — board the ⛵ boat to sail the ocean and fish!',false,'#38bdf8');
       break;
-    default:logChat('[info] Tap to enter '+action+' building.');
-  }
-}
-
-function renderVending(){
+    case 'flight terminal':
+      WS.outdoor='FlightTerminal';
+      renderBuildingPanel();
+      logChat('[✈️ Terminal] Flight terminal — take a return flight to Coastal City (City 2)!',false,'#93c5fd');
+      break;
   const items=[
     {id:'drink',  n:'Energy Drink ⚡', c:1, e:50},
     {id:'burger', n:'Burger 🍔',       c:1, e:40},
@@ -3624,6 +3803,30 @@ function redrawFarmPlots(){
 }
 
 /* ── River panel ── */
+/* ── Boat panel ── */
+function renderBoat(){
+  const onBoat=boatState.passengerBoarded;
+  let h=`<strong>⛵ Moga Ocean Boat</strong><div style="font-size:10px;color:#38bdf8;margin:3px 0;">Sail the ocean · Fish from the boat</div>`;
+  h+=`<div style="border:1px solid rgba(56,189,248,.25);border-radius:8px;padding:8px;margin:5px 0;">
+  <div style="font-size:11px;color:${onBoat?'#22c55e':boatState.atDock?'#22c55e':'#fbbf24'};">${onBoat?'⛵ You\'re sailing the ocean!':boatState.atDock?'🟢 Boat docked — board now!':'🟡 Boat out at sea — wait for dock'}</div>
+  <div style="display:flex;gap:5px;margin-top:6px;">
+    <button onclick="boardBoat()" ${!onBoat&&boatState.atDock?'':'disabled'} class="ibtn btn-teal" style="flex:1;">⛵ Board</button>
+    <button onclick="exitBoat()" ${onBoat?'':'disabled'} class="ibtn btn-red" style="flex:1;">🚪 Disembark</button>
+  </div></div>`;
+  if(onBoat){
+    if(S.inv.fishingRod){
+      h+=`<div class="irow"><div class="ileft"><div class="iname">🎣 Fish from Boat</div>
+<div class="idesc">Ocean fishing! −${FISH_ENERGY_COST} energy · ${S.inv.bait} bait</div></div>
+<button onclick="goFishBoat()" ${S.energy<FISH_ENERGY_COST||!S.inv.bait?'disabled':''} class="ibtn btn-teal">Fish</button></div>`;
+      if(!S.inv.bait)h+=`<div style="font-size:10px;color:#f87171;margin:3px 0;">🪱 No bait! Buy at Market first.</div>`;
+    }else{
+      h+=`<div style="font-size:10px;color:#64748b;margin:5px 0;">🎣 Need a Fishing Rod + Bait (buy at Market).</div>`;
+    }
+  }
+  h+=`<button onclick="closeOutdoor();" style="width:100%;margin-top:8px;padding:6px;border-radius:6px;background:rgba(100,116,139,.3);color:#94a3b8;border:1px solid rgba(255,255,255,.1);font-size:11px;">Close ✕</button>`;
+  return h;
+}
+
 function renderRiver(){
   let h=`<strong>🏞️ River</strong><div style="font-size:10px;color:#94a3b8;margin:3px 0;">Fill watering can · Go fishing</div>`;
   /* Watering can */
@@ -3700,7 +3903,27 @@ function goFish(){
 }
 window.goFish=goFish;
 
-/* ── Watering can ── */
+/* ── Ocean boat fishing (higher catch rate, same mechanics) ── */
+function goFishBoat(){
+  if(!boatState.passengerBoarded)return logChat('[Boat] Must be on the boat to fish in the ocean!',false,'#f87171');
+  if(!S.inv.fishingRod)return logChat('[Boat] Need a 🎣 Fishing Rod. Buy at Market.');
+  if(!S.inv.bait)return logChat('[Boat] Need 🪱 Bait. Buy at Market.');
+  if(!reqEnergy(FISH_ENERGY_COST,'[Boat] Too tired to fish. Need '+FISH_ENERGY_COST+' energy.'))return;
+  S.inv.bait--;
+  const fail=Math.random()<(FISH_MISS_RATE*0.5); // 50% lower miss rate in ocean
+  if(fail){
+    logChat('[⛵ Boat] 🎣 Nothing biting in the ocean… bait used. (−'+FISH_ENERGY_COST+' ⚡)',false,'#64748b');
+  }else{
+    let r=Math.random(),acc=0,caught=FISH_TYPES[0];
+    for(const ft of FISH_TYPES){acc+=ft.chance;if(r<=acc){caught=ft;break;}}
+    S.inv.fish++;S.lastFishType=caught;
+    logChat('[⛵ Ocean] 🎣 Caught: '+caught.name+'! Ocean fishing gives better odds! · $'+FISH_SELL_PRICE+' USD (−'+FISH_ENERGY_COST+' ⚡)',false,'#34d399');
+  }
+  updateHUD();renderBuildingPanel();saveProgress();
+}
+window.goFishBoat=goFishBoat;
+
+
 function fillWateringCan(){
   if(!S.inv.wateringCan)return logChat('[River] Need a 🪣 Watering Can. Buy at Market.');
   if(S.waterFull)return logChat('[River] Watering can already full!');
@@ -3950,7 +4173,7 @@ const phaserCfg={
       logChat('[system] Tap/click near a building to enter · Tap NPC cat to private chat · Casino 🎰',false,'#34d399');
       logChat('[system] 🎣 Buy Fishing Rod + Bait at Market · 🪓 Buy Hoe to farm grass tiles · 🏞️ River to fill can & fish',false,'#4ade80');
       logChat('[system] 🏠 No house? Sleep at 🏨 Hotel ($1 USD/day) · Buy from Market or walk to a 🏷️ For Sale house!',false,'#f0abfc');
-      logChat('[system] 🏝️ Switch to Coastal City (City 2) for: ✈️ Airport · 🚂 Train · 🦁 Zoo · 🎵 Concert · 🏖️ Beach · 🚗 Cars!',false,'#38bdf8');
+      logChat('[system] 🏝️ Switch to Coastal City (City 2) for: ✈️ Airport · 🚂 Train · 🦁 Zoo · 🎵 Concert · 🏖️ Beach · 🚗 Cars · ⛵ Boat!',false,'#38bdf8');
       this.time.addEvent({delay:200,loop:true,callback:()=>{
         const btn=document.getElementById('btnInteract');
         if(WS.zone==='CITY'){
@@ -4012,7 +4235,7 @@ const phaserCfg={
     update(_,dt){
       const dtS=dt/1000;updateDN(dtS);
       updateNPCBots(dtS);updateBirds(dtS);
-      if(currentCity===2){updateTrain(dtS);updateNPCCars(dtS);updateTrafficLights(dtS);}
+      if(currentCity===2){updateTrain(dtS);updateNPCCars(dtS);updateTrafficLights(dtS);updatePlane(dtS);updateBoat(dtS);}
       if(S.sleeping)return;
       const spr=this.keys.SHIFT.isDown&&S.energy>0,spd=spr?380:240;
       let vx=0,vy=0;
