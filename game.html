@@ -124,7 +124,7 @@ kbd{padding:1px 4px;border-radius:4px;border:1px solid rgba(255,255,255,.22);bac
       <div id="loadingBar"><div id="loadingFill"></div></div>
     </div>
     <div id="errOv"></div>
-    <div id="onlineBar">👥 Online: <span id="onlineCnt">0</span>/100</div>
+    <div id="onlineBar">👥 Online: <span id="onlineCnt">0</span>/<span id="onlineMax">200</span></div>
     <div id="minimap">
       <div class="mmtitle"><span id="mmLoc">CITY</span><span id="mmTgt" style="opacity:.8;">—</span></div>
       <canvas id="mmC" width="128" height="128"></canvas>
@@ -352,6 +352,51 @@ const USDC_BY_CHAIN={
   84532:'0x036CbD53842c5426634e7929541eC2318f3dCF7e',    // Base Sepolia
 };
 const USDC_ABI=['function balanceOf(address) view returns (uint256)','function transfer(address,uint256) returns (bool)'];
+
+/* ── NFT Contracts (replace with deployed addresses per network) ── */
+const NFT_CONTRACTS={
+  SKILL:'0x0000000000000000000000000000000000000000', // MogalandSkillNFT — deploy and replace
+  HOUSE:'0x0000000000000000000000000000000000000000', // MogalandHouseNFT — deploy and replace
+  CAR:  '0x0000000000000000000000000000000000000000', // MogalandCarNFT   — deploy and replace
+};
+const SKILL_NFT_ABI=['function mintSkill(address to,string calldata skillId,string calldata tokenURI) external returns (uint256)'];
+const HOUSE_NFT_ABI=['function mintHouse(address to,string calldata houseKey,string calldata tokenURI) external returns (uint256)'];
+const CAR_NFT_ABI  =['function mintCar(address to,string calldata carId,string calldata tokenURI) external returns (uint256)'];
+
+/**
+ * Attempt to mint a game NFT on-chain.
+ * Falls back to off-chain notification when the contract address is the zero address
+ * (i.e. not yet deployed) or when the user's wallet is not connected.
+ *
+ * @param {string} contractAddress  Deployed NFT contract address
+ * @param {Array}  abi              Minimal ABI array
+ * @param {string} fnName           Contract function name (e.g. 'mintSkill')
+ * @param {Array}  fnArgs           Arguments to pass to the function (excluding 'to' — added automatically)
+ * @param {string} label            Human-readable label for logging / tx history
+ */
+async function mintGameNFT(contractAddress,abi,fnName,fnArgs,label){
+  if(!window.ethereum||!walletAddress){
+    logChat('[NFT] '+label+' — connect wallet to mint on-chain.',false,'#f0abfc');
+    return null;
+  }
+  const isZero=!contractAddress||contractAddress==='0x0000000000000000000000000000000000000000';
+  if(isZero){
+    logChat('[NFT] '+label+' — contract not yet deployed. NFT will be minted by dev team after treasury confirms.',false,'#f0abfc');
+    return null;
+  }
+  try{
+    const signer=new ethers.providers.Web3Provider(window.ethereum).getSigner();
+    const contract=new ethers.Contract(contractAddress,abi,signer);
+    logChat('[NFT] ⛏️ Minting '+label+' on-chain…',false,'#a78bfa');
+    const tx=await contract[fnName](walletAddress,...fnArgs);
+    saveTxRecord(tx.hash,'NFT_MINT:'+label,'0',networkConfig.currency||'ETH',networkConfig.name||'Unknown','NFT');
+    logChat('[NFT] ✅ '+label+' minted! <a href="'+explorerTx(tx.hash)+'" target="_blank">'+tx.hash.slice(0,14)+'…</a>',false,'#f0abfc');
+    return tx;
+  }catch(e){
+    logChat('[NFT] Mint failed ('+label+'): '+e.message.slice(0,80)+'. NFT queued for dev-team mint.',false,'#f87171');
+    return null;
+  }
+}
 const TILE=32,CW=96,CH=60,IW=34,IH=22,IDIST=135;
 
 /* ── Network & wallet ── */
@@ -590,8 +635,9 @@ const GAME_USD_TO_NATIVE=0.000003; // e.g. 30 USD → 0.00009 ETH
 const SALARY_CLAIM_FEE=0.00001;   // fixed native-token fee for salary claim tx
 const TX_HISTORY_MAX=50;          // max tx records stored in localStorage
 const TX_HISTORY_DISPLAY=10;      // max records shown in the UI
-const ONLINE_PLAYERS_MIN=65;      // minimum simulated players online
-const ONLINE_PLAYERS_MAX=84;      // starting maximum (hard cap is 100 slots)
+const ONLINE_PLAYERS_MIN=100;     // minimum simulated players online (supports >100 wallets)
+const ONLINE_PLAYERS_MAX=180;     // starting maximum (pool is 200 slots)
+const ONLINE_PLAYERS_POOL=200;    // total player pool size
 const PM_LIST_MAX=8;              // players shown in the private-chat panel
 const SKILLS=[
   {id:'basic',   name:'Basic Labor',   icon:'🔨',cost:SKILL_COST_USD,time:SKILL_LEARN_MS,teacher:'Ms. Ana',    job:'Laborer',    wMin:WORK_PAY_USD,wMax:WORK_PAY_USD,cd:WORK_CD_MS,workBuilding:'Job Center'},
@@ -650,6 +696,7 @@ function buyCarNFT(carId){
   logChat('[🚗 Car NFT] 🎉 Bought: '+(ct?ct.name:carId)+'! Your car is parked in City 2.',false,'#22c55e');
   awardNFT('Car NFT: '+(ct?ct.name:carId)+' — registered to your wallet');
   treasuryPay('CAR_BUY:'+carId+':$'+CAR_NFT_PRICE+'USD',CAR_NFT_PRICE);
+  mintGameNFT(NFT_CONTRACTS.CAR,CAR_NFT_ABI,'mintCar',[carId,'ipfs://mogaland/cars/'+carId+'.json'],'Car NFT: '+(ct?ct.name:carId));
   saveProgress();
   // redraw city to show car
   if(_phaserScene&&currentCity===2)drawCity(_phaserScene);
@@ -1373,6 +1420,7 @@ function learnSkill(id){
     updateHUD();renderBuildingPanel();
     logChat('[School] ✅ Graduated: '+sk.name+'! '+sk.job+' job unlocked.',false,'#22c55e');
     awardNFT('Skill NFT: '+sk.name);
+    mintGameNFT(NFT_CONTRACTS.SKILL,SKILL_NFT_ABI,'mintSkill',[id,'ipfs://mogaland/skills/'+id+'.json'],'Skill NFT: '+sk.name);
     saveProgress();
   },sk.time);
 }
@@ -1392,6 +1440,7 @@ function learnSkillFast(id){
     updateHUD();renderBuildingPanel();
     logChat('[Library] ✅ Graduated fast: '+sk.name+'!',false,'#22c55e');
     awardNFT('Skill NFT: '+sk.name);
+    mintGameNFT(NFT_CONTRACTS.SKILL,SKILL_NFT_ABI,'mintSkill',[id,'ipfs://mogaland/skills/'+id+'.json'],'Skill NFT: '+sk.name);
     saveProgress();
   },sk.time/2);
 }
@@ -1538,7 +1587,7 @@ window.convertCoins=convertCoins;
 const PPOOL=(()=>{
   const pf=['Moga','Plume','Tiger','Neon','Crypto','Star','Moon','Fire','Ice','Gold','Sky','Deep','Wild','Cyber','Pixel','Dark','Bright','Swift','Sharp','Zen'];
   const ps=['Cat','Fox','Wolf','Bear','Eagle','Shark','Lion','Panda','Dragon','Whale','Hawk','Owl','Raven','Titan','Storm','Flash','Blade','Ghost','Pulse','Wave'];
-  return Array.from({length:100},(_,i)=>{
+  return Array.from({length:200},(_,i)=>{
     const n=pf[i%pf.length]+ps[Math.floor(i/pf.length)%ps.length]+(10+(i*7+13)%90);
     const st=i%3===0?'cons':i%3===1?'mod':'agg';
     const ct=st==='cons'?1.1+Math.random()*.5:st==='mod'?1.5+Math.random()*1.5:2.5+Math.random()*3;
@@ -1552,21 +1601,22 @@ function updateOnlineCount(){
   const c=onlineIds.size;
   document.getElementById('onlineCnt').textContent=c;
   const el2=document.getElementById('onlineCnt2');if(el2)el2.textContent=c;
+  const elMax=document.getElementById('onlineMax');if(elMax)elMax.textContent=ONLINE_PLAYERS_POOL;
 }
 
 function initOnlinePlayers(){
-  /* Start with 65–84 players (pool is exactly 100 slots, indices 0-99) */
+  /* Start with 100–180 players (pool is 200 slots, indices 0-199) */
   const n=ONLINE_PLAYERS_MIN+Math.floor(Math.random()*(ONLINE_PLAYERS_MAX-ONLINE_PLAYERS_MIN+1));
-  const sh=[...Array(100).keys()].sort(()=>Math.random()-.5);
+  const sh=[...Array(ONLINE_PLAYERS_POOL).keys()].sort(()=>Math.random()-.5);
   sh.slice(0,n).forEach(i=>onlineIds.add(i));
   updateOnlineCount();renderPMList();
   setInterval(()=>{
     const d=Math.floor(Math.random()*5)-2;
     if(d>0){
-      /* Never exceed 100 (all 100 slots are already the universe) */
-      const off=[...Array(100).keys()].filter(i=>!onlineIds.has(i));
-      for(let k=0;k<d&&off.length&&onlineIds.size<100;k++)onlineIds.add(off[Math.floor(Math.random()*off.length)]);
-    }else{const on=[...onlineIds];for(let k=0;k<-d&&on.length>50;k++)onlineIds.delete(on[Math.floor(Math.random()*on.length)]);}
+      /* Never exceed ONLINE_PLAYERS_POOL */
+      const off=[...Array(ONLINE_PLAYERS_POOL).keys()].filter(i=>!onlineIds.has(i));
+      for(let k=0;k<d&&off.length&&onlineIds.size<ONLINE_PLAYERS_POOL;k++)onlineIds.add(off[Math.floor(Math.random()*off.length)]);
+    }else{const on=[...onlineIds];for(let k=0;k<-d&&on.length>80;k++)onlineIds.delete(on[Math.floor(Math.random()*on.length)]);}
     updateOnlineCount();renderPMList();
   },7000);
   setInterval(()=>{
@@ -3002,6 +3052,7 @@ function buyHouse(key,price){
   awardNFT('House NFT: '+key+' (purchased from '+prevOwner.slice(0,8)+'…)');
   // Sale proceeds routed through treasury (on-chain escrow pattern)
   treasuryPay('HOUSE_BUY:'+key+':from:'+prevOwner+':$'+price+'USD',price);
+  mintGameNFT(NFT_CONTRACTS.HOUSE,HOUSE_NFT_ABI,'mintHouse',[key,'ipfs://mogaland/houses/'+encodeURIComponent(key)+'.json'],'House NFT: '+key);
   if(_phaserScene&&WS.zone==='CITY')drawCity(_phaserScene);
   saveProgress();
 }
@@ -3021,6 +3072,7 @@ function buyHouseFromMarket(key,price){
   logChat('[🏠 Market] 🎉 Bought '+key+' for $'+price+' USD! NFT transferred to your wallet.',false,'#22c55e');
   awardNFT('House NFT: '+key+' — purchased via Market ($'+price+' USD)');
   treasuryPay('MARKET_HOUSE_BUY:'+key+':from:'+prevOwner+':$'+price+'USD',price);
+  mintGameNFT(NFT_CONTRACTS.HOUSE,HOUSE_NFT_ABI,'mintHouse',[key,'ipfs://mogaland/houses/'+encodeURIComponent(key)+'.json'],'House NFT: '+key);
   if(_phaserScene&&WS.zone==='CITY')drawCity(_phaserScene);
   saveProgress();
 }
