@@ -108,6 +108,8 @@ kbd{padding:1px 4px;border-radius:4px;border:1px solid rgba(255,255,255,.22);bac
 .btn-red{background:linear-gradient(90deg,#9f1239,#ef4444);}
 .btn-yellow{background:rgba(251,191,36,.2);border:1px solid rgba(251,191,36,.3);color:#fbbf24;}
 .btn-indigo{background:linear-gradient(90deg,#4338ca,#6366f1);}
+.btn-pink{background:linear-gradient(90deg,#be185d,#ec4899);}
+.btn-dark{background:rgba(100,116,139,.3);border:1px solid rgba(255,255,255,.1);color:#94a3b8;}
 .sitem{border:1px solid rgba(255,255,255,.1);border-radius:7px;padding:7px;margin:5px 0;background:rgba(255,255,255,.03);}
 .sitem.learned{border-color:rgba(34,197,94,.3);background:rgba(34,197,94,.05);}
 .btn-brown{background:linear-gradient(90deg,#78350f,#b45309);color:#fef3c7;}
@@ -423,6 +425,46 @@ function saveNickname(name){
 }
 window.saveNickname=saveNickname;
 
+/* ── Character Gender & Outfit ── */
+let charGender='male'; // 'male' | 'female'
+let charOutfit='default'; // currently equipped outfit id
+let _playerImg=null; // ref to player Phaser image for texture updates
+
+function getPlayerTexture(){
+  const g=charGender==='female'?'f':'m';
+  const key='human_'+g+'_'+charOutfit;
+  // Fallback to default if outfit texture not available yet
+  if(_phaserScene&&!_phaserScene.textures.exists(key))return 'human_'+g+'_default';
+  return key;
+}
+function loadGender(){
+  if(!walletAddress)return;
+  charGender=localStorage.getItem('mogaGender_'+walletAddress.toLowerCase())||'male';
+  charOutfit=localStorage.getItem('mogaOutfit_'+walletAddress.toLowerCase())||'default';
+}
+function saveGenderChoice(g){
+  charGender=g==='female'?'female':'male';
+  if(walletAddress)localStorage.setItem('mogaGender_'+walletAddress.toLowerCase(),charGender);
+  updatePlayerTexture();
+  logChat('[Profile] 👤 Gender set to: '+(charGender==='female'?'Female':'Male'),false,'#a5f3fc');
+  renderBuildingPanel();
+}
+function wearOutfit(id){
+  charOutfit=id;
+  if(walletAddress)localStorage.setItem('mogaOutfit_'+walletAddress.toLowerCase(),id);
+  updatePlayerTexture();
+  logChat('[Clothing] 👕 Wearing: '+id,false,'#f0abfc');
+  renderBuildingPanel();
+}
+function updatePlayerTexture(){
+  if(_playerImg){
+    const t=getPlayerTexture();
+    _playerImg.setTexture(t);
+  }
+}
+window.saveGenderChoice=saveGenderChoice;
+window.wearOutfit=wearOutfit;
+
 function usdcAddress(){return USDC_BY_CHAIN[networkConfig.chainId]||null;}
 function explorerTx(hash){return `${networkConfig.explorer}/tx/${hash}`;}
 
@@ -442,20 +484,20 @@ async function initChain(){
     networkConfig.currency=curs[net.chainId]||'ETH';
     networkConfig.explorer=exps[net.chainId]||'https://etherscan.io';
     if(!walletAddress){const accs=await prov.listAccounts();if(accs[0])walletAddress=accs[0].toLowerCase();}
-    loadNickname();
+    loadNickname();loadGender();
     document.getElementById('networkBadge').textContent=networkConfig.name;
     document.getElementById('wAddr').textContent=walletAddress?walletAddress.slice(0,6)+'...'+walletAddress.slice(-4):'Not connected';
     loadTxHistory();renderTxHistory();
     assignHouseToUser();
     window.ethereum.on('chainChanged',()=>initChain());
-    window.ethereum.on('accountsChanged',a=>{walletAddress=a[0]?a[0].toLowerCase():'';loadNickname();initChain();});
+    window.ethereum.on('accountsChanged',a=>{walletAddress=a[0]?a[0].toLowerCase():'';loadNickname();loadGender();initChain();});
   }catch(e){console.log('[chain]',e.message);}
 }
 
 window.addEventListener('message',ev=>{
   if(ev.data&&ev.data.type==='walletUpdate'){
     walletAddress=ev.data.address||'';
-    loadNickname();
+    loadNickname();loadGender();
     document.getElementById('wAddr').textContent=walletAddress?walletAddress.slice(0,6)+'...'+walletAddress.slice(-4):'Not connected';
     loadTxHistory();renderTxHistory();
     assignHouseToUser();
@@ -833,6 +875,7 @@ const S={
   lastFishType:null, // {name, price} of last caught fish
   hotelRentedUntil:0, // timestamp when hotel room rental expires
   sleepLockUntil:0,   // timestamp when sleep lock expires (cannot leave for 8h after sleeping)
+  outfits:[],         // array of purchased outfit IDs
 };
 
 /* ── World state ── */
@@ -915,8 +958,9 @@ function renderBuildingPanel(){
   if(WS.zone!=='INTERIOR'){panel.style.display='none';return;}
   panel.style.display='block';
   const r={House:renderHome,School:renderSchool,'Job Center':renderJobBoard,Bank:renderBank,Cafe:renderCafe,Market:renderMarket,Gym:renderGym,Hospital:renderHospital,Hotel:renderHotel,Library:renderLibrary,Office:renderOffice,'Town Hall':renderTownHall,
-    Airport:renderAirport,'Train Station':renderTrainStation,'Aviation Academy':renderSchool,'Concert Hall':renderConcertHall,Zoo:renderZoo,'Beach Club':renderBeachClub,'Job Center C2':renderJobBoard,'Bank C2':renderBank,'Cafe C2':renderCafe,'Hospital C2':renderHospital,'Hotel C2':renderHotel,Casino:()=>{initMulGame();return '<strong>🎰 Casino</strong><div style="font-size:11px;color:#94a3b8;margin:5px 0;">Multiplier game panel on the left.</div>';}};
-  if(WS.key.startsWith('House'))panel.innerHTML=renderHome();
+    Airport:renderAirport,'Train Station':renderTrainStation,'Aviation Academy':renderSchool,'Concert Hall':renderConcertHall,Zoo:renderZoo,'Beach Club':renderBeachClub,'Job Center C2':renderJobBoard,'Bank C2':renderBank,'Cafe C2':renderCafe,'Hospital C2':renderHospital,'Hotel C2':renderHotel,
+    'Clothing Store':renderClothingStore,'Clothing Store C2':renderClothingStore,
+    Casino:()=>{initMulGame();return '<strong>🎰 Casino</strong><div style="font-size:11px;color:#94a3b8;margin:5px 0;">Multiplier game panel on the left.</div>';}};  if(WS.key.startsWith('House'))panel.innerHTML=renderHome();
   else if(r[WS.key])panel.innerHTML=r[WS.key]();
   else panel.style.display='none';
 }
@@ -1189,12 +1233,16 @@ function renderTownHall(){
 <div class="irow"><div class="ileft"><div class="iname">📊 My Stats</div>
 <div class="idesc">Skills: ${S.learnedSkills.length} · Job: ${S.job} · House Lv ${S.house}</div></div></div>
 <div class="irow"><div class="ileft">
-  <div class="iname">👤 Pixel Nickname</div>
-  <div class="idesc">Shown in world & chat · Wallet stays reference</div>
+  <div class="iname">👤 Nickname &amp; Gender</div>
+  <div class="idesc">Set your display name and gender — changes your character appearance</div>
 </div></div>
-<div style="display:flex;gap:5px;margin:4px 0 8px;">
+<div style="display:flex;gap:5px;margin:4px 0 6px;">
   <input id="nicknameIn" placeholder="Set display name…" value="${esc(charNickname)}" maxlength="20" style="flex:1;padding:6px;font-size:11px;background:#0f172a;border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:6px;"/>
   <button onclick="saveNickname(document.getElementById('nicknameIn').value);renderBuildingPanel();" class="ibtn btn-blue" style="padding:5px 9px;">Save</button>
+</div>
+<div style="display:flex;gap:6px;margin-bottom:10px;">
+  <button onclick="saveGenderChoice('male')" class="ibtn ${charGender==='male'?'btn-blue':'btn-dark'}" style="flex:1;padding:7px;font-size:12px;">👦 Male${charGender==='male'?' ✓':''}</button>
+  <button onclick="saveGenderChoice('female')" class="ibtn ${charGender==='female'?'btn-pink':'btn-dark'}" style="flex:1;padding:7px;font-size:12px;">👧 Female${charGender==='female'?' ✓':''}</button>
 </div>
 <div class="irow"><div class="ileft"><div class="iname">💾 Save Progress</div>
 <div class="idesc">Save to ${walletAddress?walletAddress.slice(0,8)+'…':'local storage'}</div></div>
@@ -1203,6 +1251,61 @@ function renderTownHall(){
   💡 All game progress is auto-saved every 30 seconds and on every major action. Progress persists across sessions.
 </div>`;
 }
+
+/* ── Clothing Store ── */
+const OUTFITS_MALE=[
+  {id:'default',name:'Casual Shirt',emoji:'👕',desc:'Blue casual shirt + dark jeans',price:0},
+  {id:'suit',   name:'Business Suit',emoji:'🤵',desc:'Sharp suit for the office',price:25},
+  {id:'sport',  name:'Sportswear',emoji:'🏃',desc:'Yellow tracksuit, great for the gym',price:15},
+  {id:'casual', name:'Street Casual',emoji:'😎',desc:'Green tee + dark pants, chill vibes',price:10},
+  {id:'formal', name:'Formal Wear',emoji:'🎩',desc:'Dark formal attire for special events',price:30},
+];
+const OUTFITS_FEMALE=[
+  {id:'default',name:'Pink Dress',emoji:'👗',desc:'Elegant pink dress, everyday chic',price:0},
+  {id:'suit',   name:'Pantsuit',emoji:'💼',desc:'Professional pantsuit for work',price:25},
+  {id:'sport',  name:'Sportswear',emoji:'🤸',desc:'Purple activewear, gym ready',price:15},
+  {id:'casual', name:'Summer Outfit',emoji:'🌸',desc:'Golden top + pink skirt, casual',price:10},
+  {id:'formal', name:'Evening Gown',emoji:'👑',desc:'Purple gown for special occasions',price:30},
+];
+function renderClothingStore(){
+  const outfits=charGender==='female'?OUTFITS_FEMALE:OUTFITS_MALE;
+  let h=`<strong>👗 Clothing Store</strong>
+<div style="font-size:11px;color:#f0abfc;margin:5px 0;">Buy &amp; wear outfits — your character changes appearance instantly!</div>
+<div style="font-size:11px;color:#94a3b8;margin-bottom:6px;">Gender: <strong style="color:${charGender==='female'?'#f0abfc':'#60a5fa'};">${charGender==='female'?'👧 Female':'👦 Male'}</strong> · Change at: <strong style="color:#fbbf24;">Town Hall → Nickname &amp; Gender</strong></div>`;
+  for(const o of outfits){
+    const owned=S.outfits.includes(o.id)||o.price===0;
+    const wearing=charOutfit===o.id;
+    h+=`<div style="border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:8px;margin:4px 0;background:${wearing?'rgba(99,102,241,.15)':'rgba(255,255,255,.03)'};">
+<div style="display:flex;align-items:center;gap:8px;">
+  <span style="font-size:22px;">${o.emoji}</span>
+  <div style="flex:1;">
+    <div style="font-size:12px;font-weight:bold;color:#e2e8f0;">${o.name}${wearing?' <span style="color:#22c55e;">✓ Wearing</span>':''}</div>
+    <div style="font-size:10px;color:#64748b;">${o.desc}</div>
+    <div style="font-size:10px;color:${o.price===0?'#22c55e':'#fbbf24'};">${o.price===0?'Free':'$'+o.price+' USD'}</div>
+  </div>
+  ${owned
+    ?(wearing?`<span style="font-size:11px;color:#22c55e;">Wearing</span>`:`<button onclick="wearOutfit('${o.id}')" class="ibtn btn-indigo" style="padding:5px 9px;font-size:11px;">Wear</button>`)
+    :`<button onclick="buyOutfit('${o.id}')" ${S.coins<o.price?'disabled':''} class="ibtn btn-pink" style="padding:5px 9px;font-size:11px;">${S.coins<o.price?'Need $'+(o.price-S.coins)+' more':'Buy $'+o.price}</button>`}
+</div></div>`;
+  }
+  return h;
+}
+function buyOutfit(id){
+  const outfits=charGender==='female'?OUTFITS_FEMALE:OUTFITS_MALE;
+  const o=outfits.find(x=>x.id===id);
+  if(!o)return;
+  if(S.outfits.includes(id))return wearOutfit(id);
+  if(S.coins<o.price)return logChat('[Clothing] Not enough coins!',false,'#f87171');
+  S.coins-=o.price;
+  S.outfits.push(id);
+  treasuryPay('CLOTHING:'+id,o.price);
+  wearOutfit(id);
+  updateHUD();
+  logChat('[Clothing] 🛍️ Bought & wearing: '+o.name+'!',false,'#f0abfc');
+  saveProgress();
+}
+window.buyOutfit=buyOutfit;
+window.renderClothingStore=renderClothingStore;
 
 function renderAirport(){
   const myCar=getMyCarId();
@@ -1594,7 +1697,7 @@ const PPOOL=(()=>{
     return{id:i,name:n,addr:'0x'+n.toLowerCase().slice(0,8)+'…',strat:st,cashTarget:ct};
   });
 })();
-const CHAT_POOL=['won big at Casino! 🎰','just graduated 🎓','sending USDC to a friend 💸','Developer wages are 🔥','who beat 10x? 🚀','sleeping at Home restores everything 😴','Cafe coffee hits different ☕','bought Protein Shake at Gym 💪','Doctor job = best salary','the on-chain confirmation is satisfying','upgraded house to Lv3 🏠','Market is always stocked 🛒','Hospital saved me ⚕️','School skill costs $30 USD — worth it!','Bank USDC send worked perfectly','anyone near Library? 📚','GG on the multiplier round','Engineering skill unlocked big wages ⚙️','this game goes hard on-chain 🔗','just refilled energy at vending machine 🥤','earned $2 USD from my 8-hour work shift 💼','energy drained fast today, time to eat! 🍔','cat bots are walking everywhere 🐱','Chef job at Cafe = best life 👨‍🍳','Farmer harvested big today 🌾','Teacher salary just hit on-chain 📚','Security patrol done, $2 USD earned 🚔','Trader just closed a 3h shift at Bank 📈','Reporter broke a story at Library 📰','Firefighter training done 🚒','check the map — my house is the gold dot 🏠','Hotel room is just $1 USD — sleep & earn 🏨','contact share is so useful in Messenger 👤'];
+const CHAT_POOL=['won big at Casino! 🎰','just graduated 🎓','sending USDC to a friend 💸','Developer wages are 🔥','who beat 10x? 🚀','sleeping at Home restores everything 😴','Cafe coffee hits different ☕','bought Protein Shake at Gym 💪','Doctor job = best salary','the on-chain confirmation is satisfying','upgraded house to Lv3 🏠','Market is always stocked 🛒','Hospital saved me ⚕️','School skill costs $30 USD — worth it!','Bank USDC send worked perfectly','anyone near Library? 📚','GG on the multiplier round','Engineering skill unlocked big wages ⚙️','this game goes hard on-chain 🔗','just refilled energy at vending machine 🥤','earned $2 USD from my 8-hour work shift 💼','energy drained fast today, time to eat! 🍔','new outfit from Clothing Store 👗','Chef job at Cafe = best life 👨‍🍳','Farmer harvested big today 🌾','Teacher salary just hit on-chain 📚','Security patrol done, $2 USD earned 🚔','Trader just closed a 3h shift at Bank 📈','Reporter broke a story at Library 📰','Firefighter training done 🚒','check the map — my house is the gold dot 🏠','Hotel room is just $1 USD — sleep & earn 🏨','contact share is so useful in Messenger 👤'];
 let onlineIds=new Set();
 
 function updateOnlineCount(){
@@ -1768,8 +1871,11 @@ function spawnNPCBots(scene){
     const sx=clamp((12+Math.floor(Math.random()*70))*TILE,10*TILE,(CW-10)*TILE);
     const sy=clamp((14+Math.floor(Math.random()*40))*TILE,10*TILE,(CH-10)*TILE);
     const cont=scene.add.container(sx,sy).setDepth(8);
-    const img=scene.add.image(0,0,'cat').setScale(1.6).setOrigin(.5,.62).setTint(NPC_TINTS[i%NPC_TINTS.length]);
-    const lbl=scene.add.text(-18,-36,NPC_NAMES[i%NPC_NAMES.length],{fontSize:'9px',color:'#94a3b8'});
+    const npcGender=i%3===0?'f':'m'; // mix of male/female NPCs
+    const npcOutfits=['default','casual','sport','formal','suit'];
+    const npcTex='human_'+npcGender+'_'+npcOutfits[i%npcOutfits.length];
+    const img=scene.add.image(0,0,npcTex).setScale(1.1).setOrigin(.5,.78);
+    const lbl=scene.add.text(-18,-34,NPC_NAMES[i%NPC_NAMES.length],{fontSize:'9px',color:'#94a3b8'});
     cont.add([img,lbl]);
     npcBots.push({obj:cont,tx:sx,ty:sy,speed:50+Math.random()*60,wait:Math.random()*4});
   }
@@ -1801,7 +1907,42 @@ function addTex(scene,key,w,h,fn){const c=document.createElement('canvas');c.wid
 function px(ctx,x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(x,y,w,h);}
 
 function makeTextures(scene){
-  /* player */
+  /* Helper: draw a pixel-art human (32x32) with given colors */
+  function makeHuman(key,skinC,hairC,topC,btmC,shoeC,isDress,lipC){
+    addTex(scene,key,32,32,c=>{const p=(x,y,w,h,col)=>px(c,x,y,w,h,col);
+      p(8,27,16,4,'rgba(0,0,0,.20)'); // shadow
+      p(10,24,5,4,shoeC);p(17,24,5,4,shoeC); // shoes
+      if(isDress){
+        p(9,15,14,10,btmC);p(8,17,16,6,btmC); // dress/skirt
+        p(10,9,12,8,topC); // bodice
+        p(7,10,3,8,skinC);p(22,10,3,8,skinC); // bare arms
+      } else {
+        p(10,17,5,8,btmC);p(17,17,5,8,btmC);p(14,17,4,3,btmC); // pants
+        p(10,16,12,2,'#78350f'); // belt
+        p(9,9,14,8,topC); // shirt
+        p(7,10,3,7,topC);p(22,10,3,7,topC); // shirt sleeves
+        p(7,17,3,2,skinC);p(22,17,3,2,skinC); // hands
+      }
+      p(14,7,4,3,skinC); // neck
+      p(12,2,8,8,skinC); // head
+      p(11,1,10,4,hairC);p(11,2,2,4,hairC);p(19,2,2,4,hairC); // hair top+sides
+      if(isDress){p(11,8,2,4,hairC);p(19,8,2,4,hairC);} // long hair
+      p(13,5,2,2,'#111827');p(17,5,2,2,'#111827'); // eyes
+      p(14,8,4,1,lipC||'#c2410c'); // mouth
+    });
+  }
+  /* Player & NPC textures — male & female, multiple outfits */
+  makeHuman('human_m_default','#fde68a','#92400e','#2563eb','#1e3a5f','#1f2937',false);
+  makeHuman('human_m_suit',   '#fde68a','#111827','#1f2937','#111827','#0f172a',false);
+  makeHuman('human_m_sport',  '#fde68a','#92400e','#f59e0b','#0ea5e9','#374151',false);
+  makeHuman('human_m_casual', '#fde68a','#b45309','#22c55e','#334155','#1f2937',false);
+  makeHuman('human_m_formal', '#fde68a','#0f172a','#374151','#111827','#0f172a',false);
+  makeHuman('human_f_default','#fde68a','#111827','#ec4899','#db2777','#7c3aed',true,'#f87171');
+  makeHuman('human_f_suit',   '#fde68a','#0f172a','#475569','#334155','#1f2937',false,'#f87171');
+  makeHuman('human_f_sport',  '#fde68a','#111827','#f0abfc','#a855f7','#6d28d9',true,'#f87171');
+  makeHuman('human_f_casual', '#fde68a','#92400e','#fbbf24','#ec4899','#be185d',true,'#f87171');
+  makeHuman('human_f_formal', '#fde68a','#0f172a','#a78bfa','#6d28d9','#4c1d95',true,'#f87171');
+  /* Legacy cat texture kept for NPC bots with tinting */
   addTex(scene,'cat',32,32,c=>{const p=(x,y,w,h,col)=>px(c,x,y,w,h,col);
     p(7,26,18,4,'rgba(0,0,0,.22)');p(24,18,5,2,'#f59e0b');p(26,16,3,2,'#f59e0b');p(27,14,3,2,'#f59e0b');
     p(9,14,14,12,'#f59e0b');p(8,16,2,8,'#f59e0b');p(23,16,2,8,'#f59e0b');p(10,6,12,10,'#f59e0b');
@@ -1938,6 +2079,7 @@ const BLDGS=[
   {key:'Gym',        tex:'bGym',    ts:2.1, x:72*TILE,y:37*TILE,w:6*TILE,h:6*TILE},
   {key:'Hospital',   tex:'bHosp',   ts:2.2, x:26*TILE,y:37*TILE,w:7*TILE,h:6*TILE},
   {key:'Casino',     tex:'bCasino', ts:2.35,x:72*TILE,y:18*TILE,w:8*TILE,h:6*TILE},
+  {key:'Clothing Store',tex:'bMkt',ts:2.1, x:58*TILE,y:10*TILE,w:6*TILE,h:6*TILE},
 ];
 const IACTS=[
   {key:'Vending',tex:'vend',ts:1.6,x:52*TILE,y:30*TILE,w:2*TILE,h:2*TILE},
@@ -1960,6 +2102,7 @@ const BLDGS2=[
   {key:'Job Center C2',  tex:'bJob',    ts:2.2, x:8*TILE, y:36*TILE,w:8*TILE, h:6*TILE},
   {key:'Hospital C2',    tex:'bHosp',   ts:2.1, x:22*TILE,y:36*TILE,w:7*TILE, h:6*TILE},
   {key:'Zoo',            tex:'bMkt',    ts:2.4, x:56*TILE,y:36*TILE,w:10*TILE,h:8*TILE},
+  {key:'Clothing Store C2',tex:'bMkt',  ts:2.1, x:34*TILE,y:14*TILE,w:6*TILE, h:6*TILE},
   /* Beach zone */
   {key:'Beach Club',     tex:'bCafe',   ts:2.2, x:40*TILE,y:46*TILE,w:8*TILE, h:6*TILE},
   /* Houses */
@@ -2342,7 +2485,9 @@ const TRAIN_STOP_RADIUS=5*TILE; // player must be within this radius to board
 const trainState={
   wpIdx:0,x:48*TILE,y:3*TILE,speed:140,spr:null,
   passengerBoarded:false,
-  atStation:false,stopLabel:'Train Station',stationDwell:0,DWELL_MS:3500
+  atStation:false,stopLabel:'Train Station',stationDwell:0,DWELL_MS:3500,
+  carSprs:[], // trailing passenger car sprites
+  posHistory:[], // position history for trailing car placement
 };
 function updateTrain(dtS){
   if(!trainState.spr||currentCity!==2)return;
@@ -2359,7 +2504,18 @@ function updateTrain(dtS){
     trainState.x+=dx/dist*trainState.speed*dtS;
     trainState.y+=dy/dist*trainState.speed*dtS;
   }
+  // Track position history for trailing cars
+  trainState.posHistory.push({x:trainState.x,y:trainState.y});
+  if(trainState.posHistory.length>90)trainState.posHistory.shift();
   trainState.spr.setPosition(trainState.x,trainState.y);
+  // Update trailing car positions (each car lags behind the locomotive)
+  const CAR_LAG=20; // frames per car
+  trainState.carSprs.forEach((car,i)=>{
+    if(!car.active)return;
+    const histIdx=Math.max(0,trainState.posHistory.length-1-(i+1)*CAR_LAG);
+    const pos=trainState.posHistory[histIdx];
+    if(pos){car.setPosition(pos.x,pos.y);car.setVisible(true);}
+  });
   if(trainState.passengerBoarded&&_phaserScene){
     _phaserScene.me.x=trainState.x;_phaserScene.me.y=trainState.y+20;
   }
@@ -2725,11 +2881,18 @@ function drawCity2(scene){
   worldCont.add(scene.add.text(75*TILE,12.5*TILE,'🅿️',{fontSize:'14px'}).setOrigin(.5).setDepth(4));
   worldCont.add(scene.add.text(41.5*TILE,33.5*TILE,'🅿️',{fontSize:'14px'}).setOrigin(.5).setDepth(4));
   scene.cameras.main.setBounds(0,0,CW*TILE,CH*TILE);drawMM._k=null;
-  // Train sprite
+  // Train sprite (locomotive)
   if(!trainState.spr||!trainState.spr.active){
-    trainState.spr=scene.add.text(trainState.x,trainState.y,'🚂',{fontSize:'48px'}).setOrigin(.5).setDepth(8);
+    trainState.spr=scene.add.text(trainState.x,trainState.y,'🚂',{fontSize:'40px'}).setOrigin(.5).setDepth(8);
     worldCont.add(trainState.spr);
   }else{trainState.spr.setPosition(trainState.x,trainState.y);worldCont.add(trainState.spr);}
+  // Train passenger cars (trailing behind locomotive)
+  trainState.carSprs=[];
+  for(let ci=0;ci<4;ci++){
+    const car=scene.add.text(trainState.x,trainState.y,'🚃',{fontSize:'38px'}).setOrigin(.5).setDepth(7);
+    worldCont.add(car);
+    trainState.carSprs.push(car);
+  }
   // Traffic light graphics layer
   if(!_tlightGfx||!_tlightGfx.active){_tlightGfx=scene.add.graphics().setDepth(7);}
   worldCont.add(_tlightGfx);
@@ -3722,7 +3885,7 @@ function showPlayerProfile(playerData){
   const foodItems=STAMINA_ITEMS.filter(it=>S.inv[it.inv]>0);
   panel.innerHTML=`
     <div style="background:linear-gradient(135deg,${avatarColor}22,rgba(14,165,233,.1));padding:16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid rgba(255,255,255,.08);">
-      <div style="width:52px;height:52px;border-radius:50%;background:${avatarColor}30;border:2px solid ${avatarColor}60;display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;">🐱</div>
+      <div style="width:52px;height:52px;border-radius:50%;background:${avatarColor}30;border:2px solid ${avatarColor}60;display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;">${idx%3===0?'👧':'👦'}</div>
       <div style="flex:1;">
         <div style="font-size:14px;font-weight:bold;color:#e2e8f0;">${esc(playerData.name)}</div>
         <div style="font-size:10px;color:#64748b;font-family:monospace;">${esc(playerData.addr||'')}</div>
@@ -4093,6 +4256,7 @@ function saveProgress(){
       fishValueSum:S.fishValueSum||0,
       hotelRentedUntil:S.hotelRentedUntil||0,
       sleepLockUntil:S.sleepLockUntil||0,
+      outfits:S.outfits||[],
       posX:_phaserScene&&WS.zone==='CITY'?_phaserScene.me.x:(WS.savedPos?.x??32*TILE),
       posY:_phaserScene&&WS.zone==='CITY'?_phaserScene.me.y:(WS.savedPos?.y??32*TILE),
       savedAt:Date.now(),
@@ -4127,6 +4291,7 @@ function loadProgress(){
     if(d.workCDs&&typeof d.workCDs==='object')Object.assign(workCDs,d.workCDs);
     S.waterFull=d.waterFull||false;
     S.plots=Array.isArray(d.plots)?d.plots.filter(p=>p&&p.state):[];
+    S.outfits=Array.isArray(d.outfits)?d.outfits:[];
     if(typeof d.posX==='number'&&typeof d.posY==='number')WS.savedPos={x:d.posX,y:d.posY};
     if(S.learningEndTime>Date.now()&&S.learningId){
       const remMs=S.learningEndTime-Date.now(),lid=S.learningId;
@@ -4193,9 +4358,12 @@ const phaserCfg={
       document.getElementById('loading').style.display='none';
       this.me=this.add.container(32*TILE,32*TILE).setDepth(10);
       const meLabel=getNickname();
-      const meLabelObj=this.add.text(-24,-52,meLabel,{fontSize:'12px',color:'#a5f3fc',fontStyle:'bold'});
+      const meLabelObj=this.add.text(-18,-44,meLabel,{fontSize:'12px',color:'#a5f3fc',fontStyle:'bold'});
       this.meLabel=meLabelObj; // store ref for nickname updates
-      this.me.add([this.add.image(0,0,'cat').setScale(2.0).setOrigin(.5,.62),meLabelObj]);
+      const initTex=getPlayerTexture();
+      const playerImg=this.add.image(0,0,initTex).setScale(1.3).setOrigin(.5,.78);
+      _playerImg=playerImg; // store ref for outfit/gender updates
+      this.me.add([playerImg,meLabelObj]);
       this.cameras.main.startFollow(this.me,true,.12,.12);this.cameras.main.setZoom(1.3);
       this.cursors=this.input.keyboard.createCursorKeys();
       this.keys=this.input.keyboard.addKeys('W,A,S,D,SHIFT');
@@ -4232,8 +4400,9 @@ const phaserCfg={
       spawnNPCBots(this);spawnBirds(this);
       logChat('[system] 🎮 Welcome to Moga World! Skills cost $30 USD · Work earns $2 USD/3h shift',false,'#fbbf24');
       logChat('[system] 🏠 '+BLDGS.filter(b=>b.isHouse).length+' houses — buy/sell via Market 🛒 or NFT market · Tap NPC to chat 💬',false,'#f0abfc');
-      logChat('[system] 🏫 Visit School to learn skills · 🥤 Vending: $1 USD on-chain · 👤 Set nickname at Town Hall',false,'#a78bfa');
-      logChat('[system] Tap/click near a building to enter · Tap NPC cat to private chat · Casino 🎰',false,'#34d399');
+      logChat('[system] 🏫 Visit School to learn skills · 🥤 Vending: $1 USD on-chain · 👤 Set Nickname &amp; Gender at Town Hall',false,'#a78bfa');
+      logChat('[system] 👗 New: Clothing Store in the city! Buy outfits for your character · Male &amp; Female styles available',false,'#f0abfc');
+      logChat('[system] Tap/click near a building to enter · Tap NPC to chat · Casino 🎰',false,'#34d399');
       logChat('[system] 🎣 Buy Fishing Rod + Bait at Market · 🪓 Buy Hoe to farm grass tiles · 🏞️ River to fill can & fish',false,'#4ade80');
       logChat('[system] 🏠 No house? Sleep at 🏨 Hotel ($1 USD/day) · Buy from Market or walk to a 🏷️ For Sale house!',false,'#f0abfc');
       logChat('[system] 🏝️ Switch to Coastal City (City 2) for: ✈️ Airport · 🚂 Train · 🦁 Zoo · 🎵 Concert · 🏖️ Beach · 🚗 Cars · ⛵ Boat!',false,'#38bdf8');
