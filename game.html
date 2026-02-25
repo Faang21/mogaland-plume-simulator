@@ -1552,7 +1552,6 @@ function updateOnlineCount(){
   const c=onlineIds.size;
   document.getElementById('onlineCnt').textContent=c;
   const el2=document.getElementById('onlineCnt2');if(el2)el2.textContent=c;
-  renderPMList(); // keep Players Online card in sync
 }
 
 function initOnlinePlayers(){
@@ -1560,7 +1559,7 @@ function initOnlinePlayers(){
   const n=ONLINE_PLAYERS_MIN+Math.floor(Math.random()*(ONLINE_PLAYERS_MAX-ONLINE_PLAYERS_MIN+1));
   const sh=[...Array(100).keys()].sort(()=>Math.random()-.5);
   sh.slice(0,n).forEach(i=>onlineIds.add(i));
-  updateOnlineCount();
+  updateOnlineCount();renderPMList();
   setInterval(()=>{
     const d=Math.floor(Math.random()*5)-2;
     if(d>0){
@@ -1568,7 +1567,7 @@ function initOnlinePlayers(){
       const off=[...Array(100).keys()].filter(i=>!onlineIds.has(i));
       for(let k=0;k<d&&off.length&&onlineIds.size<100;k++)onlineIds.add(off[Math.floor(Math.random()*off.length)]);
     }else{const on=[...onlineIds];for(let k=0;k<-d&&on.length>50;k++)onlineIds.delete(on[Math.floor(Math.random()*on.length)]);}
-    updateOnlineCount();
+    updateOnlineCount();renderPMList();
   },7000);
   setInterval(()=>{
     if(Math.random()<.25){
@@ -4134,6 +4133,7 @@ const phaserCfg={
   type:Phaser.AUTO,parent:'game',
   width:Math.max(400,window.innerWidth-320),height:Math.max(300,window.innerHeight),
   backgroundColor:'#0b1020',pixelArt:true,
+  fps:{target:30,forceSetTimeOut:false},
   scene:{
     preload(){var t=document.getElementById('loadingText'),f=document.getElementById('loadingFill');if(t)t.textContent='Loading assets...';if(f)f.style.width='90%';makeTextures(this);},
     create(){
@@ -4271,7 +4271,9 @@ const phaserCfg={
          Rate: 100/3600 ≈ 0.028 per real second. Sprint adds extra drain. */
       const drainRate=spr&&mv?ENERGY_DRAIN_SPRINT:ENERGY_DRAIN_PASSIVE;
       S.energy=clamp(S.energy-drainRate*dtS,0,S.energyMax);
-      updateHUD();drawMM({x:this.me.x,y:this.me.y});
+      /* Throttle heavy DOM/canvas updates: run at ~10fps instead of every frame */
+      this._hudTick=(this._hudTick||0)+1;
+      if(this._hudTick>=6){this._hudTick=0;updateHUD();drawMM({x:this.me.x,y:this.me.y});}
     }
   }
 };
