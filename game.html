@@ -152,6 +152,9 @@ kbd{padding:1px 4px;border-radius:4px;border:1px solid rgba(255,255,255,.22);bac
       <span class="waddr" id="wAddr">Not connected</span>
       <span id="networkBadge">—</span>
     </div>
+    <div id="connectPrompt" style="display:none;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.35);border-radius:8px;padding:7px 10px;font-size:11px;color:#fbbf24;text-align:center;">
+      🎮 Guest mode – connect wallet in the app for on-chain features
+    </div>
 
     <div class="card">
       <div class="row" style="justify-content:space-between;">
@@ -400,6 +403,7 @@ async function initChain(){
     loadNickname();
     document.getElementById('networkBadge').textContent=networkConfig.name;
     document.getElementById('wAddr').textContent=walletAddress?walletAddress.slice(0,6)+'...'+walletAddress.slice(-4):'Not connected';
+    const cp=document.getElementById('connectPrompt');if(cp)cp.style.display=walletAddress?'none':'block';
     loadTxHistory();renderTxHistory();
     assignHouseToUser();
     window.ethereum.on('chainChanged',()=>initChain());
@@ -412,6 +416,7 @@ window.addEventListener('message',ev=>{
     walletAddress=ev.data.address||'';
     loadNickname();
     document.getElementById('wAddr').textContent=walletAddress?walletAddress.slice(0,6)+'...'+walletAddress.slice(-4):'Not connected';
+    const cp=document.getElementById('connectPrompt');if(cp)cp.style.display=walletAddress?'none':'block';
     loadTxHistory();renderTxHistory();
     assignHouseToUser();
   }
@@ -431,7 +436,7 @@ window.addEventListener('message',ev=>{
 */
 async function treasuryPay(label,gameUsdAmt){
   if(!window.ethereum||!walletAddress){
-    logChat('[Treasury] Wallet not connected – connect first to pay.',false,'#f87171');return null;
+    logChat('[⚠️ On-chain] Connect your wallet in the main app to pay for: '+label,false,'#fbbf24');return null;
   }
   // Amount: proportional to game-USD, minimum 0.000010 native token
   const nativeAmt=Math.max((gameUsdAmt||0)*GAME_USD_TO_NATIVE,0.00001).toFixed(8);
@@ -457,7 +462,7 @@ async function treasuryPay(label,gameUsdAmt){
 */
 async function rewardFromTreasury(label,gameUsdAmt){
   if(!window.ethereum||!walletAddress){
-    logChat('[Treasury] Wallet not connected – reward claim skipped.',false,'#f87171');return null;
+    logChat('[⚠️ On-chain] Connect your wallet in the main app to claim: '+label,false,'#fbbf24');return null;
   }
   // Validate wallet address (must be 0x + 40 hex chars)
   if(!/^0x[0-9a-fA-F]{40}$/.test(walletAddress)){
@@ -4174,6 +4179,8 @@ const phaserCfg={
       nightOv=this.add.rectangle(0,0,this.scale.width,this.scale.height,0x020617,1).setOrigin(0,0).setScrollFactor(0).setDepth(999);nightOv.setAlpha(.08);
       this.scale.on('resize',sz=>{if(nightOv){nightOv.width=sz.width;nightOv.height=sz.height;}});
       initChain();initOnlinePlayers();
+      // Show guest-mode prompt if no wallet connected
+      if(!walletAddress){const cp=document.getElementById('connectPrompt');if(cp)cp.style.display='block';}
       loadProgress();updateHUD();
       if(WS.savedPos){this.me.x=clamp(WS.savedPos.x,20,CW*TILE-20);this.me.y=clamp(WS.savedPos.y,20,CH*TILE-20);}
       assignHouseToUser(); // auto-assign if wallet connected and no house yet
