@@ -9015,5 +9015,255 @@
       initializeApp();
     }
   </script>
+
+  <!-- Chatbot Widget -->
+  <style>
+    #chatbotToggle {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      color: white;
+      border: none;
+      font-size: 1.6em;
+      cursor: pointer;
+      box-shadow: 0 4px 20px rgba(99,102,241,0.5);
+      z-index: 9999;
+      transition: transform 0.2s, box-shadow 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #chatbotToggle:hover { transform: scale(1.1); box-shadow: 0 6px 28px rgba(99,102,241,0.7); }
+    #chatbotWindow {
+      position: fixed;
+      bottom: 90px;
+      right: 24px;
+      width: 360px;
+      max-width: calc(100vw - 48px);
+      height: 480px;
+      background: #1a1d2e;
+      border: 1px solid rgba(99,102,241,0.4);
+      border-radius: 16px;
+      display: flex;
+      flex-direction: column;
+      z-index: 9998;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+      overflow: hidden;
+      transition: opacity 0.2s, transform 0.2s;
+    }
+    #chatbotWindow.chatbot-hidden { opacity: 0; pointer-events: none; transform: translateY(16px) scale(0.97); }
+    .chatbot-header {
+      padding: 14px 16px;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+    .chatbot-header-icon { font-size: 1.4em; }
+    .chatbot-header-title { font-weight: bold; color: white; font-size: 1em; flex: 1; }
+    .chatbot-header-close { background: none; border: none; color: rgba(255,255,255,0.8); font-size: 1.3em; cursor: pointer; padding: 0; line-height: 1; }
+    .chatbot-header-close:hover { color: white; }
+    #chatbotMessages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(99,102,241,0.3) transparent;
+    }
+    .chat-bubble {
+      max-width: 85%;
+      padding: 10px 14px;
+      border-radius: 14px;
+      font-size: 0.88em;
+      line-height: 1.5;
+      word-break: break-word;
+    }
+    .chat-bubble.bot { background: rgba(99,102,241,0.15); color: #e2e8f0; border-bottom-left-radius: 4px; align-self: flex-start; border: 1px solid rgba(99,102,241,0.2); }
+    .chat-bubble.user { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; border-bottom-right-radius: 4px; align-self: flex-end; }
+    .chat-suggestions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 0 14px 10px;
+      flex-shrink: 0;
+    }
+    .chat-suggestion-btn {
+      background: rgba(99,102,241,0.12);
+      border: 1px solid rgba(99,102,241,0.3);
+      color: #a5b4fc;
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 0.78em;
+      cursor: pointer;
+      transition: background 0.15s;
+      white-space: nowrap;
+    }
+    .chat-suggestion-btn:hover { background: rgba(99,102,241,0.3); color: white; }
+    .chatbot-input-row {
+      display: flex;
+      gap: 8px;
+      padding: 10px 14px 14px;
+      flex-shrink: 0;
+      border-top: 1px solid rgba(255,255,255,0.07);
+    }
+    #chatbotInput {
+      flex: 1;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(99,102,241,0.3);
+      border-radius: 10px;
+      color: white;
+      padding: 8px 12px;
+      font-size: 0.88em;
+      outline: none;
+    }
+    #chatbotInput::placeholder { color: #64748b; }
+    #chatbotInput:focus { border-color: rgba(99,102,241,0.7); }
+    #chatbotSend {
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      border: none;
+      color: white;
+      border-radius: 10px;
+      padding: 8px 14px;
+      cursor: pointer;
+      font-size: 1em;
+      transition: opacity 0.15s;
+    }
+    #chatbotSend:hover { opacity: 0.85; }
+  </style>
+
+  <button id="chatbotToggle" onclick="toggleChatbot()" title="Ask Moga AI">🤖</button>
+
+  <div id="chatbotWindow" class="chatbot-hidden">
+    <div class="chatbot-header">
+      <span class="chatbot-header-icon">🤖</span>
+      <span class="chatbot-header-title">Moga AI — Portal Assistant</span>
+      <button class="chatbot-header-close" onclick="toggleChatbot()">×</button>
+    </div>
+    <div id="chatbotMessages"></div>
+    <div class="chat-suggestions" id="chatSuggestions"></div>
+    <div class="chatbot-input-row">
+      <input id="chatbotInput" type="text" placeholder="Ask anything about Mogaland..." autocomplete="off" onkeydown="if(event.key==='Enter')sendChatMessage()" />
+      <button id="chatbotSend" onclick="sendChatMessage()">➤</button>
+    </div>
+  </div>
+
+  <script>
+    (function(){
+      const CHATBOT_KB = [
+        { keys: ['fly','flight','airport','plane','terbang','city 2','city2','coastal'], answer: '✈️ <b>Flying between cities</b>: In <b>City 1</b> — visit the Airport (NE corner) → click "Fly to Coastal City (City 2)". In <b>City 2</b> — go to Airport → board the plane → it will circle and land at City 1. A small gas fee is charged for each flight.' },
+        { keys: ['city 1','moga city','city1'], answer: '🏙️ <b>Moga City (City 1)</b>: The main city with School, Hospital, Bank, Casino, Library, Market, and more. Fly to City 2 via the Airport in the NE corner of the map.' },
+        { keys: ['swap','exchange','trade token','token swap'], answer: '🔄 <b>Swap</b>: Go to the <b>Swap</b> tab to exchange tokens (ETH, WBTC, USDC, etc.) on Sepolia testnet. Select your input/output tokens, enter an amount, and click Swap. Gas fees are charged in ETH.' },
+        { keys: ['bridge','cross chain','cross-chain','multichain'], answer: '🌉 <b>Bridge</b>: Use the <b>Bridge</b> tab to transfer tokens between networks (e.g. Sepolia ↔ Base ↔ EDU Chain). Select from/to chains, token, and amount, then click Bridge Now.' },
+        { keys: ['nft','staking','stake nft','unstake','claim reward'], answer: '🏦 <b>NFT Staking</b>: In the <b>NFT Staking</b> tab you can stake your MOGA NFTs to earn rewards. Select NFTs, click Stake, wait for rewards to accumulate, then Claim. Rarer NFTs earn more.' },
+        { keys: ['learning','learn','quiz','study','course','skill','education'], answer: '🎓 <b>Learning</b>: The <b>Learning</b> tab has blockchain quizzes and courses. Answer correctly to earn Mogaland Points, which you can convert to USDC rewards.' },
+        { keys: ['market','prediction','bet','trading','leverage','forex','stock','sports'], answer: '📈 <b>Market Prediction</b>: Predict price movements for crypto, stocks, commodities, forex, or sports. Use leverage (1×–100×) and trade USDC. Open and close positions to earn or lose based on real price changes.' },
+        { keys: ['game','moga world','open world','rpg','play game'], answer: '🎮 <b>Moga World</b>: An open-world blockchain RPG. Connect your wallet to play. Work, learn skills, earn USDC, travel between City 1 (Moga City) and City 2 (Coastal City), and compete in the multiplier game!' },
+        { keys: ['wallet','connect wallet','metamask','okx','trust wallet'], answer: '🔗 <b>Wallet</b>: Click the wallet icon to connect MetaMask, OKX, or Trust Wallet. You\'ll need a Sepolia ETH wallet for full functionality. You can also login via Email or X (Twitter).' },
+        { keys: ['usdc','balance','coin','money','fund'], answer: '💵 <b>USDC</b>: The in-game currency. Earn by working, winning trades, or claiming rewards. Use it for skills, housing, items, and more in Moga World. On-chain USDC is on Sepolia testnet.' },
+        { keys: ['reward','earn','income','salary','wage'], answer: '💰 <b>Rewards</b>: You can earn through: NFT Staking rewards, Trading Volume rewards, Learning Points (converted to USDC), in-game work salaries, and Casino winnings. All rewards are claimable on-chain.' },
+        { keys: ['point','mogaland point','learning point'], answer: '⭐ <b>Mogaland Points</b>: Earned by answering quiz questions correctly in the Learning section. Accumulate points and convert them to USDC at the Learning tab.' },
+        { keys: ['volume','trading volume','leaderboard'], answer: '📊 <b>Trading Volume</b>: Your total trade volume across all markets. Higher volume earns you USDC rewards. Check the leaderboard in the NFT Staking section.' },
+        { keys: ['gas','fee','transaction fee'], answer: '⛽ <b>Gas Fees</b>: Every on-chain action (swap, bridge, flight, work) requires a small gas fee in ETH (about 0.00001 ETH). Make sure your wallet has Sepolia ETH.' },
+        { keys: ['profile','account','address'], answer: '👤 <b>Profile</b>: Click the Profile button in the top-right corner to view your wallet addresses, ETH and USDC balances, and transaction history.' },
+        { keys: ['transaction','history','tx','hash'], answer: '📋 <b>Transactions</b>: All on-chain transactions are recorded with their hash. You can view them in your Profile panel or on the Sepolia explorer.' },
+        { keys: ['network','chain','sepolia','testnet','mainnet'], answer: '🌐 <b>Networks</b>: Mogaland currently operates on Sepolia testnet. Use the network switcher in the top bar to switch between supported networks. Get free Sepolia ETH from a faucet.' },
+        { keys: ['faucet','testnet eth','get eth','free eth'], answer: '🚰 <b>Sepolia Faucet</b>: You need Sepolia ETH to pay gas fees. Get free test ETH at: <a href="https://sepoliafaucet.com" target="_blank" style="color:#60a5fa;">sepoliafaucet.com</a> or <a href="https://faucet.quicknode.com/ethereum/sepolia" target="_blank" style="color:#60a5fa;">QuickNode Faucet</a>.' },
+        { keys: ['casino','multiplier','gamble','bet casino'], answer: '🎰 <b>Casino</b>: Located inside Moga City. Play the multiplier game against up to 100 players. Place bets and watch the multiplier grow — cash out before it crashes to win big!' },
+        { keys: ['car','car nft','drive','vehicle'], answer: '🚗 <b>Car NFT</b>: Available in Coastal City (City 2). Buy a Car NFT at the Car Shop. Drive on city roads. Fill up at the Gas Station. Cars are stored as NFTs in your wallet.' },
+        { keys: ['train','halte','station'], answer: '🚂 <b>Train</b>: Available in City 2. Board at Train Haltes around the city. The train circles the city automatically — it\'s free to ride!' },
+        { keys: ['boat','ocean','dock'], answer: '⛵ <b>Boat</b>: Available at the Beach dock in City 2. Board the boat to cruise around the ocean.' },
+        { keys: ['help','how to','start','begin','what is mogaland','about','mogaland'], answer: '👋 <b>Welcome to Mogaland!</b> This is a blockchain simulator portal. You can: 💱 Swap/Bridge tokens · 📈 Trade markets · 🎓 Learn blockchain · 🏦 Stake NFTs · 🎮 Play Moga World RPG. Connect your wallet to get started!' },
+      ];
+
+      const SUGGESTIONS = ['How do I swap?','What is Moga World?','How to fly to City 2?','How to earn rewards?','What is NFT Staking?'];
+
+      let chatOpen = false;
+      let chatInitialized = false;
+
+      function toggleChatbot() {
+        chatOpen = !chatOpen;
+        const win = document.getElementById('chatbotWindow');
+        const btn = document.getElementById('chatbotToggle');
+        if (chatOpen) {
+          win.classList.remove('chatbot-hidden');
+          btn.textContent = '✕';
+          if (!chatInitialized) { initChat(); chatInitialized = true; }
+          setTimeout(() => { const input = document.getElementById('chatbotInput'); if(input) input.focus(); }, 150);
+        } else {
+          win.classList.add('chatbot-hidden');
+          btn.textContent = '🤖';
+        }
+      }
+      window.toggleChatbot = toggleChatbot;
+
+      function initChat() {
+        appendBotMessage('👋 Hi! I\'m <b>Moga AI</b>, your Mogaland portal assistant. Ask me anything — swapping, bridging, the game, rewards, and more!');
+        renderSuggestions(SUGGESTIONS);
+      }
+
+      function appendBotMessage(html) {
+        const msgs = document.getElementById('chatbotMessages');
+        if (!msgs) return;
+        const div = document.createElement('div');
+        div.className = 'chat-bubble bot';
+        div.innerHTML = html;
+        msgs.appendChild(div);
+        msgs.scrollTop = msgs.scrollHeight;
+      }
+
+      function appendUserMessage(text) {
+        const msgs = document.getElementById('chatbotMessages');
+        if (!msgs) return;
+        const div = document.createElement('div');
+        div.className = 'chat-bubble user';
+        div.textContent = text;
+        msgs.appendChild(div);
+        msgs.scrollTop = msgs.scrollHeight;
+      }
+
+      function renderSuggestions(items) {
+        const el = document.getElementById('chatSuggestions');
+        if (!el) return;
+        el.innerHTML = items.map(s =>
+          `<button class="chat-suggestion-btn" onclick="sendChatText(this.dataset.q)" data-q="${s.replace(/"/g,'&quot;')}">${s}</button>`
+        ).join('');
+      }
+
+      function getBotAnswer(text) {
+        const lower = text.toLowerCase();
+        for (const entry of CHATBOT_KB) {
+          if (entry.keys.some(k => lower.includes(k))) return entry.answer;
+        }
+        return '🤔 I\'m not sure about that. Try asking about: swapping, bridging, NFT staking, the game, flying between cities, rewards, or how to earn USDC!';
+      }
+
+      function sendChatMessage() {
+        const input = document.getElementById('chatbotInput');
+        if (!input) return;
+        const text = input.value.trim();
+        if (!text) return;
+        input.value = '';
+        sendChatText(text);
+      }
+      window.sendChatMessage = sendChatMessage;
+
+      function sendChatText(text) {
+        appendUserMessage(text);
+        document.getElementById('chatSuggestions').innerHTML = '';
+        setTimeout(() => {
+          appendBotMessage(getBotAnswer(text));
+        }, 350);
+      }
+      window.sendChatText = sendChatText;
+    })();
+  </script>
 </body>
 </html>
