@@ -5,16 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Mogaland-Plume Simulator</title>
   <!-- Node.js Polyfills for WalletConnect v2 - MUST BE FIRST -->
-  <script src="https://cdn.jsdelivr.net/npm/buffer@6.0.3/index.min.js"></script>
   <script>
     // Polyfills for Node.js globals required by WalletConnect v2
     (function() {
-      // Use buffer library loaded above
-      if (typeof buffer !== 'undefined' && buffer.Buffer) {
-        window.Buffer = buffer.Buffer;
-      } else {
-        // Fallback minimal Buffer implementation
-        window.Buffer = window.Buffer || { 
+      // Minimal Buffer implementation for browser compatibility
+      window.Buffer = window.Buffer || { 
           isBuffer: () => false,
           from: function(data, encoding) {
             if (typeof data === 'string') {
@@ -27,7 +22,6 @@
           alloc: (size) => new Uint8Array(size),
           toString: function() { return '[Buffer]'; }
         };
-      }
       
       // Mock process.env for WalletConnect
       window.process = window.process || { 
