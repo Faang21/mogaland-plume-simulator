@@ -171,8 +171,8 @@ kbd{padding:1px 4px;border-radius:4px;border:1px solid rgba(255,255,255,.22);bac
         <span class="pill" id="cityPill">🏙️ Moga City</span>
       </div>
       <div class="row" style="gap:4px;">
-        <button id="btnCity1" onclick="switchCity(1)" style="flex:1;font-size:11px;padding:5px;background:linear-gradient(90deg,#0284c7,#0369a1);border:none;">🏙️ Moga City</button>
-        <button id="btnCity2" onclick="switchCity(2)" style="flex:1;font-size:11px;padding:5px;">🏝️ Coastal City</button>
+        <button id="btnCity1" onclick="logChat('[✈️ Travel] Visit the Airport to fly to Moga City (City 1).',false,'#f87171')" style="flex:1;font-size:11px;padding:5px;background:linear-gradient(90deg,#0284c7,#0369a1);border:none;">🏙️ Moga City</button>
+        <button id="btnCity2" onclick="logChat('[✈️ Travel] Visit the Airport to fly to Coastal City (City 2).',false,'#f87171')" style="flex:1;font-size:11px;padding:5px;">🏝️ Coastal City</button>
       </div>
     </div>
 
@@ -2999,6 +2999,7 @@ function drawCity2(scene){
 
 function switchCity(n,fromFlight){
   if(n===currentCity)return;
+  if(!fromFlight)return logChat('[✈️ Travel] You must board a plane at the Airport to travel between cities! On-chain transaction required.',false,'#f87171');
   if(WS.zone==='INTERIOR')return logChat('[City] Exit building first.',false,'#f87171');
   currentCity=n;
   const btn1=document.getElementById('btnCity1'),btn2=document.getElementById('btnCity2');
