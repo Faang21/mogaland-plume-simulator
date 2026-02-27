@@ -172,8 +172,8 @@ kbd{padding:1px 4px;border-radius:4px;border:1px solid rgba(255,255,255,.22);bac
         <span class="pill" id="cityPill">🏙️ Moga City</span>
       </div>
       <div class="row" style="gap:4px;">
-        <button id="btnCity1" onclick="logChat('[✈️ Travel] Visit the Airport to fly to Moga City (City 1).',false,'#f87171')" style="flex:1;font-size:11px;padding:5px;background:linear-gradient(90deg,#0284c7,#0369a1);border:none;">🏙️ Moga City</button>
-        <button id="btnCity2" onclick="logChat('[✈️ Travel] Visit the Airport to fly to Coastal City (City 2).',false,'#f87171')" style="flex:1;font-size:11px;padding:5px;">🏝️ Coastal City</button>
+        <div id="btnCity1" style="flex:1;font-size:11px;padding:5px;background:linear-gradient(90deg,#0284c7,#0369a1);border-radius:6px;text-align:center;cursor:default;">🏙️ Moga City</div>
+        <div id="btnCity2" style="flex:1;font-size:11px;padding:5px;background:rgba(255,255,255,.08);border-radius:6px;text-align:center;cursor:default;">🏝️ Coastal City</div>
       </div>
     </div>
 
@@ -701,6 +701,8 @@ const SKILLS=[
   {id:'guard',   name:'Lifeguarding',icon:'🏊',cost:SKILL_COST_USD,time:SKILL_LEARN_MS,teacher:'Coach Adi',  job:'Penjaga Pantai',wMin:WORK_PAY_USD,wMax:WORK_PAY_USD,cd:WORK_CD_MS,workBuilding:'Beach Club'},
   {id:'taxi',    name:'Driving',     icon:'🚕',cost:SKILL_COST_USD,time:SKILL_LEARN_MS,teacher:'Mr. Supir',  job:'Taxi Driver',   wMin:WORK_PAY_USD,wMax:WORK_PAY_USD,cd:WORK_CD_MS,workBuilding:'Job Center C2'},
 ];
+
+const FLIGHT_COST_USD=5;   // $5 USD per flight between cities
 
 /* ── Car NFT System ── */
 const CAR_NFT_PRICE=50;    // $50 USD to buy a car NFT
@@ -1320,12 +1322,13 @@ function renderAirport(){
   const onPlane=planeState.passengerBoarded;
   const planeReady=planeState.atGate&&!planeState.flying;
   return`<strong>✈️ Airport — Moga International</strong>
-<div style="font-size:11px;color:#94a3b8;margin:5px 0;">City 2 ↔ City 1 flights · Circles city before landing</div>
+<div style="font-size:11px;color:#94a3b8;margin:5px 0;">City 2 ↔ City 1 flights · On-chain tx required</div>
 <div style="border:1px solid rgba(99,102,241,.3);border-radius:8px;padding:8px;margin:5px 0;background:rgba(99,102,241,.05);">
   <div style="font-size:12px;font-weight:bold;margin-bottom:4px;">✈️ Passenger Flight</div>
   <div style="font-size:11px;color:${planeReady?'#22c55e':planeState.flying?'#f59e0b':'#94a3b8'};margin-bottom:6px;">${onPlane?'🛫 You are on the plane! Circling city...':planeReady?'🟢 Plane at gate — board now!':planeState.flying?'🟡 In the air — wait for landing':'⏳ Plane on standby'}</div>
+  <div style="font-size:11px;color:#fbbf24;margin-bottom:6px;">✈️ Flight cost: <b>$${FLIGHT_COST_USD} USD</b> · On-chain tx required</div>
   <div style="display:flex;gap:5px;">
-    <button onclick="boardPlane()" ${planeReady&&!onPlane?'':'disabled'} class="ibtn btn-blue" style="flex:1;">🛫 Board (→ City 1)</button>
+    <button onclick="boardPlane()" ${planeReady&&!onPlane?'':'disabled'} class="ibtn btn-blue" style="flex:1;">🛫 Fly to City 1 ($${FLIGHT_COST_USD})</button>
     <button onclick="exitPlane()" ${onPlane?'':'disabled'} class="ibtn btn-red" style="flex:1;">🚪 Exit</button>
   </div>
   ${hasPilot?`<button onclick="pilotFly()" class="ibtn btn-indigo" style="width:100%;margin-top:5px;">🧑‍✈️ Work as Pilot (+$${WORK_PAY_USD} USD)</button>`:`<div style="font-size:10px;color:#64748b;margin-top:5px;">Learn Aviation at Aviation Academy to work as Pilot</div>`}
@@ -1342,8 +1345,9 @@ function renderAirportC1(){
 <div style="font-size:11px;color:#94a3b8;margin:5px 0;">City 1 Airport · Return flights to Coastal City (City 2)</div>
 <div style="border:1px solid rgba(99,102,241,.3);border-radius:8px;padding:8px;margin:5px 0;background:rgba(99,102,241,.05);">
   <div style="font-size:12px;font-weight:bold;margin-bottom:4px;">✈️ Departure Lounge</div>
-  <div style="font-size:11px;color:#93c5fd;margin-bottom:6px;">Board a return flight to Coastal City</div>
-  <button onclick="flyToCity2()" class="ibtn btn-blue" style="width:100%;padding:8px;margin-top:4px;">🛫 Fly to Coastal City (City 2)</button>
+  <div style="font-size:11px;color:#93c5fd;margin-bottom:4px;">Board a return flight to Coastal City</div>
+  <div style="font-size:11px;color:#fbbf24;margin-bottom:6px;">✈️ Flight cost: <b>$${FLIGHT_COST_USD} USD</b> · On-chain tx required</div>
+  <button onclick="flyToCity2()" class="ibtn btn-blue" style="width:100%;padding:8px;margin-top:4px;">🛫 Fly to Coastal City (City 2) — $${FLIGHT_COST_USD}</button>
 </div>`;
 }
 window.renderAirportC1=renderAirportC1;
@@ -2660,16 +2664,23 @@ function updatePlane(dtS){
     _phaserScene.me.x=planeState.x;_phaserScene.me.y=planeState.y+30;
   }
 }
-function boardPlane(){
+async function boardPlane(){
   if(currentCity!==2)return logChat('[Airport] Board the plane in Coastal City (City 2).',false,'#f87171');
   if(planeState.passengerBoarded)return logChat('[Airport] You are already on the plane!',false,'#fbbf24');
   if(planeState.flying)return logChat('[Airport] ✈️ Plane is in the air — wait for it to land.',false,'#fbbf24');
   if(!planeState.atGate)return logChat('[Airport] Plane not at gate.',false,'#f87171');
-  planeState.passengerBoarded=true;planeState.flying=true;planeState.atGate=false;
-  planeState.wpIdx=1;planeState.destCity=1; // City 2 → City 1
-  planeState.x=PLANE_CITY_WAYPOINTS[0].x;planeState.y=PLANE_CITY_WAYPOINTS[0].y;
-  logChat('[✈️ Airport] Boarded MG-001! Plane will circle Coastal City then fly to Moga City (City 1). Hold on! 🛫',false,'#22c55e');
-  onChainTx('PLANE_BOARD:city2_to_city1',0.00001);
+  if(S.coins<FLIGHT_COST_USD)return logChat('[✈️ Airport] Need $'+FLIGHT_COST_USD+' USD for the flight. You have $'+S.coins+'.',false,'#f87171');
+  S.coins-=FLIGHT_COST_USD;
+  updateHUD();
+  logChat('[✈️ Airport] Departure: Coastal City → Moga City (City 1). Processing on-chain payment… 🛫',false,'#22c55e');
+  const tx=await treasuryPay('FLIGHT:city2_to_city1:$'+FLIGHT_COST_USD+'USD',FLIGHT_COST_USD);
+  if(tx){
+    logChat('[✈️ Flight] ✅ Tx hash released! Arriving at Moga City Airport (City 1)… 🛬',false,'#34d399');
+    switchCity(1,true);
+  }else{
+    S.coins+=FLIGHT_COST_USD;
+    updateHUD();
+  }
 }
 window.boardPlane=boardPlane;
 function exitPlane(){
@@ -2678,15 +2689,24 @@ function exitPlane(){
   logChat('[✈️ Plane] Emergency exit — disembarked mid-flight. Stay safe!',false,'#f87171');
 }
 window.exitPlane=exitPlane;
-function flyToCity2(){
-  // Direct return flight from City 1 to City 2 (simplified — no plane animation in City 1)
+async function flyToCity2(){
+  // Direct flight from City 1 to City 2 — on-chain tx required
   if(currentCity!==1)return logChat('[Terminal] Already in Coastal City!',false,'#fbbf24');
+  if(S.coins<FLIGHT_COST_USD)return logChat('[✈️ Airport] Need $'+FLIGHT_COST_USD+' USD for the flight. You have $'+S.coins+'.',false,'#f87171');
   closeOutdoor();
   // Exit interior so switchCity is not blocked by INTERIOR zone check
   if(WS.zone==='INTERIOR'){WS.zone='CITY';WS.key='';interior=null;stopMulGame();}
-  logChat('[✈️ Return Flight] Boarding return flight MG-002 → Coastal City (City 2)! 🛫',false,'#22c55e');
-  onChainTx('PLANE_RETURN:city1_to_city2',0.00001);
-  setTimeout(()=>switchCity(2,true),2000);
+  S.coins-=FLIGHT_COST_USD;
+  updateHUD();
+  logChat('[✈️ Airport] Departure: Moga City → Coastal City (City 2). Processing on-chain payment… 🛫',false,'#22c55e');
+  const tx=await treasuryPay('FLIGHT:city1_to_city2:$'+FLIGHT_COST_USD+'USD',FLIGHT_COST_USD);
+  if(tx){
+    logChat('[✈️ Flight] ✅ Tx hash released! Arriving at Coastal City Airport (City 2)… 🛬',false,'#34d399');
+    switchCity(2,true);
+  }else{
+    S.coins+=FLIGHT_COST_USD;
+    updateHUD();
+  }
 }
 window.flyToCity2=flyToCity2;
 
