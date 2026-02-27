@@ -2170,18 +2170,39 @@ function makeTextures(scene){
     p(21,20,6,3,'#e0f2fe');
     p(22,21,4,1,'rgba(0,0,0,.3)');
   });
-  /* decor */
+  /* decor — Ronin-quality detailed sprites */
   addTex(scene,'tree',32,32,c=>{const p=(x,y,w,h,col)=>px(c,x,y,w,h,col);
-    p(8,26,16,4,'rgba(0,0,0,.15)');p(14,16,4,10,'#92400e');p(13,20,6,6,'#78350f');
-    p(8,8,16,10,'#22c55e');p(10,6,12,4,'#16a34a');p(9,12,14,6,'#4ade80');
+    // Shadow
+    p(6,27,20,4,'rgba(0,0,0,.2)');
+    // Trunk with bark detail
+    p(13,18,6,12,'#78350f');p(14,18,2,12,'rgba(255,255,255,.12)');p(15,24,3,6,'#92400e');
+    // Foliage layers — depth through color bands (Ronin art style)
+    p(5,16,22,10,'#166534');p(5,20,6,5,'#14532d');p(21,18,6,6,'#14532d'); // depth shadows
+    p(7,11,18,8,'#15803d');p(9,7,14,6,'#16a34a');p(11,3,10,6,'#22c55e'); // mid layers
+    // Bright highlight & rim light (Ronin cel-shading)
+    p(10,8,6,4,'#4ade80');p(14,4,4,3,'#86efac');
+    p(8,14,4,2,'rgba(255,255,255,.18)');p(22,13,3,2,'rgba(0,0,0,.18)');
   });
   addTex(scene,'lamp',32,32,c=>{const p=(x,y,w,h,col)=>px(c,x,y,w,h,col);
-    p(10,28,12,3,'rgba(0,0,0,.15)');p(15,8,2,20,'#94a3b8');p(14,26,4,2,'#64748b');
-    p(16,10,8,2,'#94a3b8');p(22,10,4,3,'#475569');p(22,13,4,2,'#fbbf24');
+    p(10,28,12,3,'rgba(0,0,0,.2)');
+    // Post
+    p(15,8,2,20,'#94a3b8');p(14,26,4,2,'#64748b');p(14,25,4,1,'rgba(255,255,255,.15)');
+    // Arm
+    p(16,8,8,2,'#94a3b8');p(23,8,1,5,'#94a3b8');
+    // Lamp head with glow ring
+    p(21,8,6,4,'#475569');p(21,10,6,3,'#fbbf24');p(21,11,6,1,'rgba(255,255,255,.5)');
+    p(20,9,8,1,'rgba(255,255,255,.3)');
   });
   addTex(scene,'bench',32,32,c=>{const p=(x,y,w,h,col)=>px(c,x,y,w,h,col);
-    p(6,26,20,3,'rgba(0,0,0,.15)');p(8,18,3,8,'#78350f');p(21,18,3,8,'#78350f');
+    p(6,26,20,3,'rgba(0,0,0,.2)');
+    // Legs
+    p(8,18,3,8,'#78350f');p(21,18,3,8,'#78350f');
+    p(9,19,1,6,'rgba(255,255,255,.12)');p(22,19,1,6,'rgba(255,255,255,.12)');
+    // Seat planks with wood grain
     p(7,16,20,3,'#a16207');p(7,14,20,2,'#b45309');p(7,10,20,3,'#92400e');
+    p(8,11,2,1,'rgba(255,255,255,.2)');p(12,11,2,1,'rgba(255,255,255,.15)');p(16,11,2,1,'rgba(255,255,255,.15)');
+    // Backrest
+    p(7,10,20,1,'rgba(0,0,0,.2)');p(7,15,20,1,'rgba(0,0,0,.15)');
   });
   addTex(scene,'vend',32,32,c=>{const p=(x,y,w,h,col)=>px(c,x,y,w,h,col);
     p(9,26,14,3,'rgba(0,0,0,.15)');p(9,8,14,18,'#0ea5e9');p(9,8,14,3,'#0284c7');p(11,12,10,7,'#111827');p(19,20,2,4,'#334155');
@@ -2197,7 +2218,23 @@ function makeTextures(scene){
     p(5,26,22,3,'rgba(0,0,0,.18)');p(6,16,20,8,'#cbd5e1');p(6,14,20,3,'#94a3b8');p(6,24,20,2,'#64748b');p(7,15,6,2,'#e2e8f0');p(15,15,6,2,'#e2e8f0');
   });
   addTex(scene,'fTV',32,32,c=>{const p=(x,y,w,h,col)=>px(c,x,y,w,h,col);
-    p(8,26,16,3,'rgba(0,0,0,.18)');p(8,10,16,10,'#0f172a');p(10,12,12,6,'#111827');p(7,20,18,3,'#334155');p(14,23,4,3,'#475569');
+    p(8,26,16,3,'rgba(0,0,0,.18)');p(7,9,18,12,'#0f172a');p(7,9,18,1,'#1e293b'); // frame top
+    p(9,11,14,8,'#0ea5e9'); // screen glow
+    p(9,11,5,3,'rgba(255,255,255,.3)');p(9,13,8,1,'rgba(255,255,255,.2)'); // glare
+    p(9,16,6,1,'rgba(255,255,255,.35)');p(16,12,4,1,'rgba(255,255,255,.25)');
+    p(7,21,18,3,'#1e293b');p(7,22,18,1,'#334155'); // stand
+    p(14,24,4,3,'#475569');p(11,27,10,1,'#334155');
+  });
+  addTex(scene,'fPlant',32,32,c=>{const p=(x,y,w,h,col)=>px(c,x,y,w,h,col);
+    p(10,26,12,3,'rgba(0,0,0,.2)');
+    // Pot with rim detail
+    p(12,20,8,7,'#92400e');p(13,18,6,4,'#78350f');p(14,22,4,2,'#b45309');
+    p(12,20,8,1,'rgba(255,255,255,.15)'); // pot rim highlight
+    // Foliage — Ronin cel-shaded layered leaves
+    p(7,10,18,10,'#15803d');p(6,13,8,6,'#14532d');p(18,11,8,7,'#14532d'); // depth
+    p(9,7,14,7,'#16a34a');p(11,4,10,5,'#22c55e');
+    p(10,9,5,3,'#4ade80');p(17,7,5,3,'#4ade80'); // bright highlights
+    p(13,5,3,2,'#86efac'); // top shimmer
   });
   addTex(scene,'fShelf',32,32,c=>{const p=(x,y,w,h,col)=>px(c,x,y,w,h,col);
     p(8,26,16,3,'rgba(0,0,0,.18)');p(8,10,16,14,'#92400e');p(9,12,14,2,'#78350f');p(9,16,14,2,'#78350f');p(9,20,14,2,'#78350f');
@@ -2218,10 +2255,6 @@ function makeTextures(scene){
   });
   addTex(scene,'fSofa',32,32,c=>{const p=(x,y,w,h,col)=>px(c,x,y,w,h,col);
     p(4,26,24,3,'rgba(0,0,0,.18)');p(4,18,24,6,'#4338ca');p(4,12,4,10,'#3730a3');p(24,12,4,10,'#3730a3');p(4,10,24,4,'#3730a3');p(14,18,2,6,'#312e81');p(6,11,20,2,'rgba(255,255,255,.15)');
-  });
-  addTex(scene,'fPlant',32,32,c=>{const p=(x,y,w,h,col)=>px(c,x,y,w,h,col);
-    p(10,26,12,3,'rgba(0,0,0,.18)');p(12,20,8,6,'#92400e');p(13,18,6,4,'#78350f');p(14,22,4,2,'#b45309');
-    p(8,8,16,12,'#16a34a');p(6,12,10,6,'#15803d');p(16,10,10,8,'#22c55e');p(10,6,12,6,'#4ade80');
   });
   addTex(scene,'fATM',32,32,c=>{const p=(x,y,w,h,col)=>px(c,x,y,w,h,col);
     p(5,26,22,3,'rgba(0,0,0,.18)');p(5,4,22,22,'#1e293b');p(5,4,22,3,'#0f172a');p(8,8,16,8,'#0284c7');
@@ -2334,7 +2367,7 @@ const IACTS2=[
 
 /* ── City tiles ── */
 const TT={G:0,R:1,W:2,S:3,SD:4,CR:5};
-const TC={0:0x14532d,1:0x475569,2:0x0ea5e9,3:0xfde68a,4:0x1f2937,5:0xe5e7eb};
+const TC={0:0x166534,1:0x374151,2:0x0369a1,3:0xfcd34d,4:0x1e293b,5:0xf0f0f0};
 const BLKT=new Set([TT.W]);
 Object.assign(TT,{MT:6,TR:7,PK:8});
 Object.assign(TC,{6:0x6b7280,7:0x4b5563,8:0x374151});
@@ -2353,6 +2386,12 @@ function buildTiles(){
   for(const y of[12,28,44])for(const x of[18,54,80])
     for(let i=-2;i<=2;i++){const x2=x+i;if(y>=0&&y<CH&&x2>=0&&x2<CW)t[y][x2]=(i%2===0)?TT.CR:TT.R;}
   for(let x=70;x<=74;x++){t[12][x]=TT.R;t[28][x]=TT.R;}
+  // ── NW Mountain range (Mount West) ──
+  for(let my=0;my<=11;my++)for(let mx=0;mx<=7;mx++)t[my][mx]=TT.MT;
+  // ── West Lake (scenic water feature, center x=13 y=20) ──
+  for(let ly=14;ly<=26;ly++)for(let lx=9;lx<=17;lx++){const dx=lx-13,dy=ly-20;if(dx*dx/9+dy*dy/16<=1&&t[ly][lx]!==TT.R)t[ly][lx]=TT.W;else if(dx*dx/16+dy*dy/25<=1&&(t[ly][lx]===TT.G||t[ly][lx]===TT.SD))t[ly][lx]=TT.S;}
+  // ── Cache water tiles for wave animation ──
+  _city1WaterTiles=[];for(let y=0;y<CH;y++)for(let x=0;x<CW;x++)if(t[y][x]===TT.W)_city1WaterTiles.push({x,y});
   return t;
 }
 function buildTiles2(){
@@ -2459,12 +2498,47 @@ function drawInteriorTiles(scene,intr,cont){
   for(let y=0;y<IH;y++)for(let x=0;x<IW;x++){
     const t=intr.g[y][x];const[c1,c2]=IPal[t]||[0x0f172a,0x111827];
     gr.fillStyle(c1,1);gr.fillRect(x*TILE,y*TILE,TILE,TILE);
-    if(t===IT.FT){gr.fillStyle(((x+y)%2===0)?c2:c1,.55);gr.fillRect(x*TILE+2,y*TILE+2,TILE-4,TILE-4);}
-    else if(t===IT.FW){gr.fillStyle(c2,.32);gr.fillRect(x*TILE+2,y*TILE+6,TILE-4,2);gr.fillRect(x*TILE+2,y*TILE+18,TILE-4,2);}
-    else if(t===IT.RG){gr.fillStyle(0xffffff,.07);gr.fillRect(x*TILE+6,y*TILE+6,2,2);gr.fillRect(x*TILE+22,y*TILE+18,2,2);}
-    else if(t===IT.CT){gr.fillStyle(0xffffff,.09);gr.fillRect(x*TILE+3,y*TILE+3,TILE-6,3);}
-    else if(t===IT.WB){gr.fillStyle(c2,.32);gr.fillRect(x*TILE+2,y*TILE+10,TILE-4,2);}
-    else if(t===IT.WP){gr.fillStyle(c2,.15);gr.fillRect(x*TILE+4,y*TILE+4,TILE-8,TILE-8);}
+    if(t===IT.FT){
+      // Checkerboard tile floor with grout lines + corner shine
+      gr.fillStyle(((x+y)%2===0)?c2:c1,.55);gr.fillRect(x*TILE+2,y*TILE+2,TILE-4,TILE-4);
+      gr.fillStyle(0x000000,.12);gr.fillRect(x*TILE,y*TILE,TILE,1);gr.fillRect(x*TILE,y*TILE,1,TILE);
+      gr.fillStyle(0xffffff,.07);gr.fillRect(x*TILE+2,y*TILE+2,5,3);
+    } else if(t===IT.FW){
+      // Wood floor: multiple grain lines + plank edges + knot
+      gr.fillStyle(c2,.45);gr.fillRect(x*TILE+1,y*TILE+3,TILE-2,3);
+      gr.fillStyle(c2,.38);gr.fillRect(x*TILE+1,y*TILE+9,TILE-2,2);
+      gr.fillStyle(c2,.28);gr.fillRect(x*TILE+1,y*TILE+15,TILE-2,3);
+      gr.fillStyle(c2,.22);gr.fillRect(x*TILE+1,y*TILE+22,TILE-2,2);
+      gr.fillStyle(0x000000,.1);gr.fillRect(x*TILE,y*TILE,TILE,1);
+      gr.fillStyle(0xffffff,.09);gr.fillRect(x*TILE+2,y*TILE+1,TILE-4,1);
+      const nk=(x*47+y*31)>>>0;if(nk%7===0){gr.fillStyle(c2,.5);gr.fillCircle(x*TILE+(nk%22)+4,y*TILE+(nk>>4&12)+4,2);}
+    } else if(t===IT.RG){
+      // Carpet/rug with border frame + diamond inner pattern
+      gr.fillStyle(0x1d4ed8,.14);gr.fillRect(x*TILE+2,y*TILE+2,TILE-4,TILE-4);
+      gr.fillStyle(0xffffff,.1);gr.fillRect(x*TILE+3,y*TILE+3,TILE-6,2);
+      gr.fillStyle(0xffffff,.07);gr.fillRect(x*TILE+3,y*TILE+TILE-5,TILE-6,2);
+      gr.fillStyle(0xffffff,.07);gr.fillRect(x*TILE+3,y*TILE+3,2,TILE-6);
+      gr.fillStyle(0xffffff,.07);gr.fillRect(x*TILE+TILE-5,y*TILE+3,2,TILE-6);
+      if((x+y)%4===0){gr.fillStyle(0x3b82f6,.11);gr.fillRect(x*TILE+12,y*TILE+12,8,8);}
+    } else if(t===IT.CT){
+      // Ceiling tile: grid + recessed panel + edge shadow
+      gr.fillStyle(0x000000,.14);gr.fillRect(x*TILE,y*TILE,TILE,1);gr.fillRect(x*TILE,y*TILE,1,TILE);
+      gr.fillStyle(0xffffff,.1);gr.fillRect(x*TILE+3,y*TILE+3,TILE-6,TILE-6);
+      gr.fillStyle(0x000000,.1);gr.fillRect(x*TILE+3,y*TILE+3,TILE-6,1);gr.fillRect(x*TILE+3,y*TILE+3,1,TILE-6);
+    } else if(t===IT.WB){
+      // Brick wall: staggered rows + mortar lines + highlight
+      const bOff=(y%2===0)?0:16;
+      gr.fillStyle(c2,.42);gr.fillRect(x*TILE+bOff%TILE,y*TILE+2,14,12);gr.fillRect(x*TILE+(bOff+16)%TILE,y*TILE+2,Math.min(14,TILE-(bOff+16)%TILE),12);
+      gr.fillStyle(c2,.35);gr.fillRect(x*TILE+(bOff+8)%TILE,y*TILE+16,14,12);
+      gr.fillStyle(0x000000,.18);gr.fillRect(x*TILE,y*TILE+14,TILE,2);gr.fillRect(x*TILE,y*TILE,TILE,1);
+      gr.fillStyle(0xffffff,.09);gr.fillRect(x*TILE+bOff%TILE+1,y*TILE+3,4,2);
+    } else if(t===IT.WP){
+      // Wallpaper: decorative vertical stripes + dot pattern + shadow edge
+      gr.fillStyle(c2,.18);gr.fillRect(x*TILE+4,y*TILE+4,TILE-8,TILE-8);
+      gr.fillStyle(c2,.12);gr.fillRect(x*TILE+8,y*TILE,4,TILE);gr.fillRect(x*TILE+20,y*TILE,4,TILE);
+      if((x+y)%3===0){gr.fillStyle(c2,.26);gr.fillCircle(x*TILE+16,y*TILE+8,3);gr.fillCircle(x*TILE+16,y*TILE+24,3);}
+      gr.fillStyle(0x000000,.1);gr.fillRect(x*TILE,y*TILE,TILE,1);
+    }
   }
   cont.add(gr);
   cont.add(scene.add.text((IW*TILE)/2,10,intr.title,{fontSize:'18px',color:'#e2e8f0',fontStyle:'bold',backgroundColor:'rgba(0,0,0,.38)',padding:{x:8,y:4}}).setOrigin(.5,0).setDepth(50));
@@ -2473,7 +2547,17 @@ function drawInteriorTiles(scene,intr,cont){
 }
 
 function add(scene,cont,tx,ty,key,sc=1.1,dp=20){
-  const spr=scene.add.image((tx+.5)*TILE,(ty+.5)*TILE,key).setScale(sc).setDepth(dp);cont.add(spr);
+  const spr=scene.add.image((tx+.5)*TILE,(ty+.5)*TILE,key).setScale(sc).setDepth(dp);
+  cont.add(spr);
+  // ── Ronin-style auto-animations for interior items ──
+  if(key==='fPlant'){
+    scene.tweens.add({targets:spr,scaleX:sc*1.05,angle:3,duration:1800+Math.floor(Math.random()*600),yoyo:true,repeat:-1,ease:'Sine.easeInOut',delay:Math.floor(Math.random()*800)});
+  } else if(key==='fTV'){
+    scene.tweens.add({targets:spr,alpha:0.86,duration:120+Math.floor(Math.random()*80),yoyo:true,repeat:-1,ease:'Linear',delay:Math.floor(Math.random()*3000)});
+  } else if(key==='fSlot'){
+    scene.tweens.add({targets:spr,scaleY:sc*1.03,duration:300+Math.floor(Math.random()*200),yoyo:true,repeat:-1,ease:'Sine.easeInOut',delay:Math.floor(Math.random()*500)});
+  }
+  return spr;
 }
 
 function addFurniture(scene,intr,cont){
@@ -2611,6 +2695,7 @@ function addFurniture(scene,intr,cont){
 /* ── Day/night, world render, minimap, Phaser ── */
 let nightOv=null,lampGlows=[],cityTiles=null,interior=null,worldCont=null;
 let _nearPlotIdx=null,_farmGfx=null; // farm plot state
+let _waveGfx=null,_waveGfx2=null,_waveTime=0,_city1WaterTiles=[]; // Ronin-quality wave animation
 function clearWorld(scene){if(worldCont)worldCont.destroy(true);worldCont=scene.add.container(0,0);lampGlows=[];}
 
 function updateDN(dtS){
@@ -2629,19 +2714,31 @@ function updateDN(dtS){
 
 function decorateCity(scene,tiles,cont){
   for(let y=0;y<CH;y++)for(let x=0;x<CW;x++){
-    if(tiles[y][x]!==TT.SD)continue;const px=x*TILE+TILE/2,py=y*TILE+TILE/2;
+    if(tiles[y][x]!==TT.SD)continue;const spx=x*TILE+TILE/2,spy=y*TILE+TILE/2;
     let inLot=false;
-    for(const b of BLDGS)if(px>=b.x&&px<=b.x+b.w&&py>=b.y&&py<=b.y+b.h){inLot=true;break;}
-    if(!inLot)for(const i of IACTS)if(px>=i.x&&px<=i.x+i.w&&py>=i.y&&py<=i.y+i.h){inLot=true;break;}
+    for(const b of BLDGS)if(spx>=b.x&&spx<=b.x+b.w&&spy>=b.y&&spy<=b.y+b.h){inLot=true;break;}
+    if(!inLot)for(const i of IACTS)if(spx>=i.x&&spx<=i.x+i.w&&spy>=i.y&&spy<=i.y+i.h){inLot=true;break;}
     if(inLot)continue;
     const n=(x*83492791^y*29765723)>>>0;
-    if(n%13===0)cont.add(scene.add.image(px,py,'tree').setScale(1.35).setDepth(1));
-    else if(n%29===0)cont.add(scene.add.image(px,py,'bench').setScale(1.2).setDepth(1));
+    if(n%13===0){
+      // ── Ronin-style tree sway tween ──
+      const treeSpr=scene.add.image(spx,spy,'tree').setScale(1.35).setDepth(1);
+      scene.tweens.add({targets:treeSpr,x:spx+(2+(n&3)),scaleY:1.28,duration:1400+(n&599),yoyo:true,repeat:-1,ease:'Sine.easeInOut',delay:n%900});
+      cont.add(treeSpr);
+    } else if(n%29===0){
+      // ── Bench subtle breathe ──
+      const benchSpr=scene.add.image(spx,spy,'bench').setScale(1.2).setDepth(1);
+      scene.tweens.add({targets:benchSpr,scaleY:1.22,duration:2400+(n&499),yoyo:true,repeat:-1,ease:'Sine.easeInOut',delay:n%1200});
+      cont.add(benchSpr);
+    }
   }
   const placeLamp=(tx,ty)=>{
-    const x=tx*TILE+TILE/2,y=ty*TILE+TILE/2;
-    cont.add(scene.add.image(x,y,'lamp').setScale(1.2).setDepth(1.2));
-    const g=scene.add.circle(x+6,y-8,14,0xfbbf24,.06).setDepth(1.1);cont.add(g);lampGlows.push(g);
+    const lx=tx*TILE+TILE/2,ly=ty*TILE+TILE/2;
+    cont.add(scene.add.image(lx,ly,'lamp').setScale(1.2).setDepth(1.2));
+    const g=scene.add.circle(lx+6,ly-8,14,0xfbbf24,.06).setDepth(1.1);
+    // ── Lamp glow pulse ──
+    scene.tweens.add({targets:g,alpha:0.15,radius:18,duration:2200+(Math.random()*500|0),yoyo:true,repeat:-1,ease:'Sine.easeInOut',delay:Math.random()*1200|0});
+    cont.add(g);lampGlows.push(g);
   };
   for(const ry of[12,28,44,8,CH-8])for(let x=10;x<CW-10;x+=6)
     for(const c of[{tx:x,ty:ry-1},{tx:x,ty:ry+1}]){if(c.ty<0||c.ty>=CH)continue;if(tiles[c.ty][c.tx]!==TT.SD)continue;placeLamp(c.tx,c.ty);break;}
@@ -2653,7 +2750,85 @@ function drawCity1(scene){
   clearWorld(scene);cityTiles=buildTiles();
   const gr=scene.add.graphics().setDepth(-3);
   for(let y=0;y<CH;y++)for(let x=0;x<CW;x++){gr.fillStyle(TC[cityTiles[y][x]],1);gr.fillRect(x*TILE,y*TILE,TILE,TILE);}
-  worldCont.add(gr);decorateCity(scene,cityTiles,worldCont);
+  worldCont.add(gr);
+  // ── Ronin-quality detail pass ──
+  const dGr=scene.add.graphics().setDepth(-2);
+  for(let y=0;y<CH;y++)for(let x=0;x<CW;x++){
+    const tt=cityTiles[y][x];const n=(x*7483+y*6823)>>>0;
+    if(tt===TT.G){
+      if(n%7===0){dGr.fillStyle(0x15803d,0.5);dGr.fillRect(x*TILE+(n%20),y*TILE+(n>>4&15),10,5);}
+      if(n%11===0){dGr.fillStyle(0x4ade80,0.2);dGr.fillRect(x*TILE+(n>>3&23),y*TILE+(n>>7&23),4,4);}
+      if(n%19===0){dGr.fillStyle(0x052e16,0.3);dGr.fillRect(x*TILE+(n>>5&25),y*TILE+(n>>9&25),3,3);}
+      if(n%31===0){dGr.fillStyle(0xfde68a,0.6);dGr.fillCircle(x*TILE+(n>>2&28),y*TILE+(n>>6&28),2);}
+    } else if(tt===TT.R){
+      dGr.fillStyle(0x1e293b,0.2);dGr.fillRect(x*TILE+1,y*TILE+1,TILE-2,TILE-2);
+      const hR=x>0&&x<CW-1&&cityTiles[y][x-1]===TT.R&&cityTiles[y][x+1]===TT.R;
+      const vR=y>0&&y<CH-1&&cityTiles[y-1][x]===TT.R&&cityTiles[y+1][x]===TT.R;
+      if(hR&&!vR&&n%3===0){dGr.fillStyle(0xf1f5f9,0.7);dGr.fillRect(x*TILE+2,y*TILE+14,TILE-4,2);}
+      if(vR&&!hR&&n%3===0){dGr.fillStyle(0xf1f5f9,0.7);dGr.fillRect(x*TILE+14,y*TILE+2,2,TILE-4);}
+      dGr.fillStyle(0xfbbf24,0.13);dGr.fillRect(x*TILE,y*TILE,3,TILE);
+      dGr.fillStyle(0xfbbf24,0.13);dGr.fillRect(x*TILE+TILE-3,y*TILE,3,TILE);
+    } else if(tt===TT.CR){
+      for(let s=2;s<TILE;s+=6){dGr.fillStyle(0xfafafa,0.58);dGr.fillRect(x*TILE+s,y*TILE+1,3,TILE-2);}
+      dGr.fillStyle(0xfbbf24,0.28);dGr.fillRect(x*TILE+TILE/2-1,y*TILE,2,TILE);
+    } else if(tt===TT.W){
+      dGr.fillStyle(0x1e40af,0.2);dGr.fillRect(x*TILE,y*TILE,TILE,8);
+      dGr.fillStyle(0x0c4a6e,0.18);dGr.fillRect(x*TILE,y*TILE+TILE-5,TILE,5);
+    } else if(tt===TT.SD){
+      if(n%2===0){dGr.fillStyle(0x475569,0.18);dGr.fillRect(x*TILE,y*TILE,TILE,1);}
+      if(n%2===0){dGr.fillStyle(0x475569,0.18);dGr.fillRect(x*TILE,y*TILE,1,TILE);}
+      dGr.fillStyle(0x94a3b8,0.1);dGr.fillRect(x*TILE+2,y*TILE+2,TILE-4,TILE-4);
+    } else if(tt===TT.S){
+      if(n%5===0){dGr.fillStyle(0xfbbf24,0.42);dGr.fillCircle(x*TILE+(n%28),y*TILE+(n>>4&28),2+n%2);}
+      if(n%8===0){dGr.fillStyle(0xa16207,0.22);dGr.fillRect(x*TILE+(n>>3&26),y*TILE+(n>>6&26),3,1);}
+    }
+  }
+  worldCont.add(dGr);
+  // ── NW Mountain range detail (Ronin-style peaks) ──
+  const m1Gr=scene.add.graphics().setDepth(-1);
+  for(let y=0;y<=11;y++)for(let x=0;x<=7;x++){
+    if(cityTiles[y][x]!==TT.MT)continue;
+    const n=(x*31337^y*92717)>>>0;const elev=1-(y/10);
+    const base=Math.floor(0x32+(elev*0x12));
+    const shade=(base<<16)|(Math.floor(base*0.75)<<8)|Math.floor(base*0.65);
+    m1Gr.fillStyle(shade,1);m1Gr.fillRect(x*TILE,y*TILE,TILE,TILE);
+    if(n%4===0){m1Gr.fillStyle(0x4b5563,0.65);m1Gr.fillRect(x*TILE+2,y*TILE+2,TILE-4,TILE-4);}
+  }
+  const c1Peaks=[
+    {cx:3.5,cy:3,hw:4.5,h:9,shadow:.42},{cx:7,cy:5.5,hw:3,h:6,shadow:.38},{cx:1,cy:7.5,hw:2.5,h:5,shadow:.32},
+  ];
+  for(const p of c1Peaks){
+    const bx=p.cx*TILE,by=p.cy*TILE,hw=p.hw*TILE,hh=p.h*TILE,apex=by-hh;
+    m1Gr.fillStyle(0x374151,1);m1Gr.fillTriangle(bx-hw,by+TILE,bx,apex,bx,by+TILE);
+    m1Gr.fillStyle(0x4b5563,1);m1Gr.fillTriangle(bx,apex,bx+hw,by+TILE,bx,by+TILE);
+    m1Gr.fillStyle(0x1f2937,p.shadow);m1Gr.fillTriangle(bx-hw,by+TILE,bx,apex,bx-hw*0.3,by+TILE);
+    const snowH=hh*0.22;
+    m1Gr.fillStyle(0xf1f5f9,0.92);m1Gr.fillTriangle(bx-hw*0.18,apex+snowH*1.6,bx,apex-TILE*0.15,bx+hw*0.18,apex+snowH*1.6);
+    m1Gr.fillStyle(0xffffff,0.55);m1Gr.fillTriangle(bx-hw*0.06,apex+snowH*0.8,bx,apex-TILE*0.1,bx+hw*0.06,apex+snowH*0.8);
+  }
+  for(let y=4;y<12;y+=2)for(let x=1;x<8;x+=3){
+    const n=(x*17389^y*11527)>>>0;if(cityTiles[y][x]!==TT.MT)continue;
+    if(n%5<2){const rx=x*TILE+(n%20)+4,ry=y*TILE+(n%16)+4;m1Gr.fillStyle(0x374151,0.9);m1Gr.fillRect(rx,ry,6+n%6,5+n%5);m1Gr.fillStyle(0x9ca3af,0.4);m1Gr.fillRect(rx+1,ry+1,3,2);}
+  }
+  worldCont.add(m1Gr);
+  worldCont.add(scene.add.text(3.5*TILE,8.5*TILE,'⛰️\nMount\nWest',{fontSize:'11px',color:'#f1f5f9',align:'center',fontStyle:'bold',backgroundColor:'rgba(0,0,0,.52)',padding:{x:4,y:3}}).setOrigin(.5).setDepth(5));
+  // ── West Lake detail ──
+  const lkGr=scene.add.graphics().setDepth(-1);
+  for(let y=14;y<=26;y++)for(let x=9;x<=17;x++){
+    const tt2=cityTiles[y][x];const n=(x*73856093^y*19349663)>>>0;
+    if(tt2===TT.W){
+      lkGr.fillStyle(0x0c4a6e,0.22);lkGr.fillRect(x*TILE,y*TILE,TILE,8);
+      lkGr.fillStyle(0x1e40af,0.14);lkGr.fillRect(x*TILE,y*TILE+TILE-6,TILE,6);
+    } else if(tt2===TT.S){
+      if(n%5===0){lkGr.fillStyle(0xfbbf24,0.42);lkGr.fillCircle(x*TILE+(n%28),y*TILE+(n>>4&28),2+n%2);}
+    }
+  }
+  worldCont.add(lkGr);
+  worldCont.add(scene.add.text(13*TILE,20*TILE,'🏞️\nWest\nLake',{fontSize:'10px',color:'#bae6fd',align:'center',backgroundColor:'rgba(0,0,0,.42)',padding:{x:3,y:2}}).setOrigin(.5).setDepth(5));
+  // ── Animated wave layer (updated each frame by updateWaves) ──
+  if(_waveGfx2&&_waveGfx2.active)_waveGfx2.destroy();
+  _waveGfx2=scene.add.graphics().setDepth(0);worldCont.add(_waveGfx2);
+  decorateCity(scene,cityTiles,worldCont);
   for(const b of BLDGS){
     const cx=b.x+b.w/2,cy=b.y+b.h/2;
     const bSpr=scene.add.image(cx,cy,b.tex).setScale(b.ts).setDepth(3);
@@ -2998,6 +3173,35 @@ function drawCity2(scene){
     gr.fillStyle(TC[tt]??0x14532d,1);gr.fillRect(x*TILE,y*TILE,TILE,TILE);
   }
   worldCont.add(gr);
+  // ── Ronin-quality detail pass for City 2 ──
+  const dGr2=scene.add.graphics().setDepth(-2);
+  for(let y=0;y<CH;y++)for(let x=0;x<CW;x++){
+    const tt=city2Tiles[y][x];const n=(x*7483+y*6823)>>>0;
+    if(tt===TT.G){
+      if(n%7===0){dGr2.fillStyle(0x15803d,0.5);dGr2.fillRect(x*TILE+(n%20),y*TILE+(n>>4&15),10,5);}
+      if(n%11===0){dGr2.fillStyle(0x4ade80,0.2);dGr2.fillRect(x*TILE+(n>>3&23),y*TILE+(n>>7&23),4,4);}
+      if(n%31===0){dGr2.fillStyle(0xfde68a,0.55);dGr2.fillCircle(x*TILE+(n>>2&28),y*TILE+(n>>6&28),2);}
+    } else if(tt===TT.R){
+      dGr2.fillStyle(0x1e293b,0.2);dGr2.fillRect(x*TILE+1,y*TILE+1,TILE-2,TILE-2);
+      const hR=x>0&&x<CW-1&&city2Tiles[y][x-1]===TT.R&&city2Tiles[y][x+1]===TT.R;
+      const vR=y>0&&y<CH-1&&city2Tiles[y-1][x]===TT.R&&city2Tiles[y+1][x]===TT.R;
+      if(hR&&!vR&&n%3===0){dGr2.fillStyle(0xf1f5f9,0.65);dGr2.fillRect(x*TILE+2,y*TILE+14,TILE-4,2);}
+      if(vR&&!hR&&n%3===0){dGr2.fillStyle(0xf1f5f9,0.65);dGr2.fillRect(x*TILE+14,y*TILE+2,2,TILE-4);}
+      dGr2.fillStyle(0xfbbf24,0.12);dGr2.fillRect(x*TILE,y*TILE,3,TILE);
+      dGr2.fillStyle(0xfbbf24,0.12);dGr2.fillRect(x*TILE+TILE-3,y*TILE,3,TILE);
+    } else if(tt===TT.CR){
+      for(let s=2;s<TILE;s+=6){dGr2.fillStyle(0xfafafa,0.55);dGr2.fillRect(x*TILE+s,y*TILE+1,3,TILE-2);}
+    } else if(tt===TT.SD){
+      if(n%2===0){dGr2.fillStyle(0x475569,0.18);dGr2.fillRect(x*TILE,y*TILE,TILE,1);}
+      if(n%2===0){dGr2.fillStyle(0x475569,0.18);dGr2.fillRect(x*TILE,y*TILE,1,TILE);}
+    } else if(tt===TT.S&&y<50){
+      if(n%5===0){dGr2.fillStyle(0xfbbf24,0.42);dGr2.fillCircle(x*TILE+(n%28),y*TILE+(n>>4&28),2+n%2);}
+      if(n%8===0){dGr2.fillStyle(0xa16207,0.22);dGr2.fillRect(x*TILE+(n>>3&26),y*TILE+(n>>6&26),3,1);}
+    } else if(tt===TT.W&&y<50){
+      dGr2.fillStyle(0x0c4a6e,0.2);dGr2.fillRect(x*TILE,y*TILE,TILE,8);
+    }
+  }
+  worldCont.add(dGr2);
   // Mountain detail
   const mGr=scene.add.graphics().setDepth(-1);
   // Base mountain terrain gradient
@@ -3074,13 +3278,9 @@ function drawCity2(scene){
     if(n%8===0){bGr.fillStyle(0xfef08a,0.4);bGr.fillCircle(x*TILE+n%TILE,y*TILE+n%20,3+n%4);}
   }
   worldCont.add(bGr);
-  // Ocean waves
-  const wGr=scene.add.graphics().setDepth(0);
-  for(let y=50;y<CH;y++)for(let x=0;x<CW;x++){
-    const n=(x*1299709^y*9999991)>>>0;
-    if(n%12===0){wGr.fillStyle(0xbae6fd,0.5);wGr.fillRect(x*TILE+4,y*TILE+4,TILE-8,3);}
-  }
-  worldCont.add(wGr);
+  // ── Animated ocean wave layer (updated each frame by updateWaves) ──
+  if(_waveGfx&&_waveGfx.active)_waveGfx.destroy();
+  _waveGfx=scene.add.graphics().setDepth(1);worldCont.add(_waveGfx);
   // Labels
   worldCont.add(scene.add.text(9.5*TILE,7*TILE,'⛰️\nMount\nMoga',{fontSize:'13px',color:'#f1f5f9',align:'center',fontStyle:'bold',backgroundColor:'rgba(0,0,0,.5)',padding:{x:5,y:4}}).setOrigin(.5).setDepth(5));
   worldCont.add(scene.add.text(15*TILE,19*TILE,'💦\nWaterfall',{fontSize:'10px',color:'#bae6fd',align:'center',backgroundColor:'rgba(0,0,0,.4)',padding:{x:3,y:2}}).setOrigin(.5).setDepth(5));
@@ -3207,6 +3407,57 @@ function spawnBirds2(scene){
 function drawCity(scene){
   if(currentCity===2)drawCity2(scene);
   else drawCity1(scene);
+}
+
+/* ── Ronin-quality animated wave update (called every frame) ── */
+function updateWaves(dtS){
+  _waveTime+=dtS;
+  if(!_phaserScene||WS.zone!=='CITY')return;
+  const t=_waveTime;
+  // ── City 2: Animated ocean waves with sinusoidal crests ──
+  if(currentCity===2&&_waveGfx&&_waveGfx.active){
+    _waveGfx.clear();
+    for(let y=50;y<CH;y++){
+      const waveRow=y-50;
+      for(let x=0;x<CW;x++){
+        const n=(x*1299709^y*9999991)>>>0;
+        const phase=(t*2.2+x*0.18+waveRow*0.28)%(Math.PI*2);
+        const wOff=Math.floor(Math.sin(phase)*13+13);
+        _waveGfx.fillStyle(0xbae6fd,0.42);
+        _waveGfx.fillRect(x*TILE+wOff,y*TILE+5,6,2);
+        if(n%4===0){
+          const phase2=(t*1.6+x*0.22+waveRow*0.2)%(Math.PI*2);
+          const wOff2=Math.floor(Math.sin(phase2)*10+10);
+          _waveGfx.fillStyle(0xffffff,0.18);
+          _waveGfx.fillRect(x*TILE+wOff2,y*TILE+14,4,1);
+        }
+        // Deep rolling wave on every 8th tile row
+        if(waveRow%8===0){
+          const dp=(t*1.1+x*0.14)%(Math.PI*2);
+          const dOff=Math.floor(Math.sin(dp)*16+16);
+          _waveGfx.fillStyle(0x38bdf8,0.22);
+          _waveGfx.fillRect(x*TILE+dOff,y*TILE+20,10,3);
+        }
+      }
+    }
+  }
+  // ── City 1: Animated lake + river waves ──
+  if(currentCity===1&&_waveGfx2&&_waveGfx2.active&&_city1WaterTiles.length){
+    _waveGfx2.clear();
+    for(const{x,y}of _city1WaterTiles){
+      const n=(x*1299709^y*9999991)>>>0;
+      const phase=(t*1.8+x*0.2+y*0.3)%(Math.PI*2);
+      const wOff=Math.floor(Math.sin(phase)*10+10);
+      _waveGfx2.fillStyle(0x7dd3fc,0.38);
+      _waveGfx2.fillRect(x*TILE+wOff,y*TILE+(n>>4&12),5,2);
+      if(n%9===0){
+        const phase2=(t*1.2+x*0.25)%(Math.PI*2);
+        const wOff2=Math.floor(Math.sin(phase2)*8+8);
+        _waveGfx2.fillStyle(0xbae6fd,0.24);
+        _waveGfx2.fillRect(x*TILE+wOff2,y*TILE+(n>>6&18),3,1);
+      }
+    }
+  }
 }
 
 function drawInterior(scene,bk){
@@ -4373,37 +4624,53 @@ function makeBirdTexture(scene){
 
 function makeCar(c,bodyC,glassC){
   const p=(x,y,w,h,col)=>px(c,x,y,w,h,col);
-  // Shadow
-  p(4,24,40,3,'rgba(0,0,0,.25)');
-  // Wheels
-  p(5,18,9,8,'#1f2937');p(34,18,9,8,'#1f2937'); // tires
-  p(7,19,5,6,'#374151');p(36,19,5,6,'#374151'); // inner tire
-  p(8,20,3,4,'#94a3b8');p(37,20,3,4,'#94a3b8'); // hub
-  // Car body (main)
-  p(3,12,42,11,bodyC); // lower body
-  p(3,11,42,2,'rgba(0,0,0,.15)'); // body top shadow
-  p(3,22,42,1,'rgba(0,0,0,.2)'); // body bottom
-  // Bumpers
-  p(1,16,3,7,'rgba(0,0,0,.3)');p(44,16,3,7,'rgba(0,0,0,.3)');
-  // Headlights
-  p(1,14,4,4,'#fbbf24');p(1,14,4,1,'rgba(255,255,255,.5)');
-  p(43,14,4,4,'#fbbf24');p(43,14,4,1,'rgba(255,255,255,.5)');
-  // Cabin/roof
+  // Drop shadow
+  p(4,24,40,3,'rgba(0,0,0,.28)');
+  // Wheels — spoked hub detail
+  p(5,18,9,8,'#1f2937');p(34,18,9,8,'#1f2937');
+  p(7,19,5,6,'#374151');p(36,19,5,6,'#374151');
+  p(8,20,3,4,'#94a3b8');p(37,20,3,4,'#94a3b8'); // hub cap
+  p(9,19,1,6,'rgba(0,0,0,.35)');p(38,19,1,6,'rgba(0,0,0,.35)'); // vertical spoke
+  p(7,21,5,1,'rgba(0,0,0,.3)');p(36,21,5,1,'rgba(0,0,0,.3)'); // horizontal spoke
+  p(8,20,1,1,'rgba(255,255,255,.3)');p(37,20,1,1,'rgba(255,255,255,.3)'); // hub glint
+  // Wheel arches
+  p(4,15,11,4,'rgba(0,0,0,.2)');p(33,15,11,4,'rgba(0,0,0,.2)');
+  // Car body main + panel crease
+  p(3,12,42,11,bodyC);
+  p(3,11,42,2,'rgba(0,0,0,.14)'); // body top shadow
+  p(3,22,42,1,'rgba(0,0,0,.2)');  // body bottom edge
+  p(4,16,40,1,'rgba(0,0,0,.08)'); // horizontal body crease
+  // Door seam + door handle
+  p(24,12,1,11,'rgba(0,0,0,.18)');
+  p(26,16,4,1,'rgba(0,0,0,.28)');p(27,15,2,1,'#94a3b8'); // handle
+  // Bumpers + chrome trim
+  p(0,15,4,8,'rgba(0,0,0,.3)');p(44,15,4,8,'rgba(0,0,0,.3)');
+  p(1,16,2,6,'#94a3b8');p(45,16,2,6,'#94a3b8'); // chrome
+  // Front grille
+  p(0,18,4,3,'#1e293b');p(1,19,2,1,'rgba(255,255,255,.2)');
+  // Headlights with lens glare
+  p(1,13,5,5,'#fbbf24');p(1,13,5,1,'rgba(255,255,255,.6)');p(2,14,2,2,'rgba(255,255,255,.4)');
+  p(42,13,5,5,'#fbbf24');p(42,13,5,1,'rgba(255,255,255,.6)');p(43,14,2,2,'rgba(255,255,255,.4)');
+  // Tail lights
+  p(43,18,4,3,'#ef4444');p(43,18,4,1,'rgba(255,255,255,.3)');
+  // Cabin/roof with side mirrors
   p(10,4,28,9,bodyC);
-  p(10,4,28,1,'rgba(255,255,255,.2)'); // roof highlight
-  p(9,4,2,9,'rgba(0,0,0,.15)');p(38,4,2,9,'rgba(0,0,0,.15)'); // cabin side shadow
-  // Windshield (front)
-  p(11,5,10,7,glassC);p(11,5,10,1,'rgba(255,255,255,.4)');p(11,5,2,6,'rgba(255,255,255,.3)');
+  p(10,4,28,1,'rgba(255,255,255,.22)'); // roof highlight
+  p(9,4,2,9,'rgba(0,0,0,.14)');p(38,4,2,9,'rgba(0,0,0,.14)');
+  p(7,7,3,3,bodyC);p(38,7,3,3,bodyC); // mirrors
+  p(7,8,3,1,'rgba(0,0,0,.22)');p(38,8,3,1,'rgba(0,0,0,.22)'); // mirror shadow
+  // Windshield with glare streak
+  p(11,5,10,7,glassC);p(11,5,10,1,'rgba(255,255,255,.45)');p(11,5,2,6,'rgba(255,255,255,.3)');
+  p(13,6,2,2,'rgba(255,255,255,.55)'); // glare spot
   // Rear window
   p(27,5,10,7,glassC);p(27,5,10,1,'rgba(255,255,255,.35)');
   // Side windows
-  p(21,5,6,6,glassC);
-  // Door seam
-  p(24,12,1,11,'rgba(0,0,0,.2)');
-  // Exhaust
-  p(43,20,3,2,'#4b5563');
-  // Body shine
-  p(4,13,38,2,'rgba(255,255,255,.12)');
+  p(22,5,5,6,glassC);p(22,5,5,1,'rgba(255,255,255,.28)');
+  // Exhaust + undercarriage hint
+  p(42,21,4,2,'#475569');p(43,21,2,1,'rgba(0,0,0,.35)');
+  // Body paint shine
+  p(4,13,38,2,'rgba(255,255,255,.15)');
+  p(12,4,12,1,'rgba(255,255,255,.12)'); // roof shine
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -4896,7 +5163,7 @@ const phaserCfg={
     },
     update(_,dt){
       const dtS=dt/1000;updateDN(dtS);
-      updateNPCBots(dtS);updateBirds(dtS);
+      updateNPCBots(dtS);updateBirds(dtS);updateWaves(dtS);
       if(currentCity===2){updateTrain(dtS);updateNPCCars(dtS);updateTrafficLights(dtS);updatePlane(dtS);updateBoat(dtS);}
       if(S.sleeping)return;
       const spr=this.keys.SHIFT.isDown&&S.energy>0,spd=spr?380:240;
