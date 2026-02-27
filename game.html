@@ -1,18 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
 <title>Moga World</title>
 <style>
-html,body{margin:0;padding:0;height:100%;background:#0b1020;font-family:Arial,sans-serif;color:#e8e8e8;overflow:hidden;}
+html,body{margin:0;padding:0;height:100%;background:#0b1020;font-family:Arial,sans-serif;color:#e8e8e8;overflow:hidden;touch-action:none;}
 #wrap{display:flex;height:100%;}
-#game{flex:1;position:relative;background:#0b1020;}
-#ui{width:320px;border-left:1px solid rgba(255,255,255,.15);padding:10px;box-sizing:border-box;background:rgba(0,0,0,.5);overflow-y:auto;display:flex;flex-direction:column;gap:8px;}
+#game{flex:1;position:relative;background:#0b1020;touch-action:none;}
+#game canvas{touch-action:none;user-select:none;-webkit-user-select:none;}
+#ui{width:320px;border-left:1px solid rgba(255,255,255,.15);padding:10px;box-sizing:border-box;background:rgba(0,0,0,.5);overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;display:flex;flex-direction:column;gap:8px;}
 /* ── Mobile layout ── */
 @media(max-width:768px){
   #wrap{flex-direction:column;}
   #game{height:55vh;min-height:55vh;}
-  #ui{width:100%;height:45vh;min-height:45vh;border-left:none;border-top:1px solid rgba(255,255,255,.15);padding:8px;}
+  #ui{width:100%;height:45vh;min-height:45vh;border-left:none;border-top:1px solid rgba(255,255,255,.15);padding:8px;padding-bottom:calc(8px + env(safe-area-inset-bottom));}
   #minimap{display:none;}
   #onlineBar{font-size:10px;padding:3px 7px;}
 }
@@ -4435,9 +4436,12 @@ document.getElementById('btnSend').onclick=()=>{
 document.getElementById('chatIn').addEventListener('keypress',e=>{if(e.key==='Enter')document.getElementById('btnSend').click();});
 
 /* Phaser */
+const MOBILE_BREAKPOINT=768; // matches CSS @media(max-width:768px) and #game{height:55vh}
+const MOBILE_GAME_HEIGHT_RATIO=0.55; // matches CSS #game{height:55vh}
 const phaserCfg={
   type:Phaser.AUTO,parent:'game',
-  width:Math.max(400,window.innerWidth-320),height:Math.max(300,window.innerHeight),
+  width:(window.innerWidth<=MOBILE_BREAKPOINT)?window.innerWidth:Math.max(400,window.innerWidth-320),
+  height:(window.innerWidth<=MOBILE_BREAKPOINT)?Math.floor(window.innerHeight*MOBILE_GAME_HEIGHT_RATIO):Math.max(300,window.innerHeight),
   backgroundColor:'#0b1020',pixelArt:true,
   fps:{target:30,forceSetTimeOut:false},
   scene:{
@@ -4603,7 +4607,12 @@ const phaserCfg={
   }
 };
 const game=new Phaser.Game(phaserCfg);
-window.addEventListener('resize',()=>{game.scale.resize(Math.max(400,window.innerWidth-320),Math.max(300,window.innerHeight));});
+window.addEventListener('resize',()=>{
+  const isMobile=window.innerWidth<=MOBILE_BREAKPOINT;
+  const w=isMobile?window.innerWidth:Math.max(400,window.innerWidth-320);
+  const h=isMobile?Math.floor(window.innerHeight*MOBILE_GAME_HEIGHT_RATIO):Math.max(300,window.innerHeight);
+  game.scale.resize(w,h);
+});
 updateHUD();
 renderTxHistory();
 })();
