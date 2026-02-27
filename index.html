@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
   <title>Mogaland-Plume Simulator</title>
   <!-- Node.js Polyfills for WalletConnect v2 - MUST BE FIRST -->
   <script>
@@ -510,6 +510,8 @@
       box-shadow: 0 8px 30px rgba(0,0,0,0.5);
       border: 1px solid rgba(255,255,255,0.1);
       z-index: 100;
+      -webkit-overflow-scrolling: touch;
+      touch-action: pan-x;
     }
     .nav-btn {
       background: rgba(13,110,253,0.2);
@@ -521,9 +523,11 @@
       cursor: pointer;
       transition: all 0.3s;
       white-space: nowrap;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
     }
     .nav-btn:hover, .nav-btn.active { background: var(--primary); transform: scale(1.08); }
-    .content { flex: 1; padding: 20px; padding-bottom: 100px; text-align: center; }
+    .content { flex: 1; padding: 20px; padding-bottom: 100px; text-align: center; -webkit-overflow-scrolling: touch; }
     .hidden { display: none !important; }
     .notification {
       position: fixed;
@@ -1170,12 +1174,17 @@
         width: 100%;
         border-radius: 0;
         padding: 10px 8px;
+        padding-bottom: calc(10px + env(safe-area-inset-bottom));
         gap: 6px;
         overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        touch-action: pan-x;
         justify-content: flex-start;
+        scrollbar-width: none;
       }
-      .nav-btn { padding: 10px 14px; font-size: 0.85em; white-space: nowrap; }
-      .content { padding-bottom: 70px; }
+      .nav-bar::-webkit-scrollbar { display: none; }
+      .nav-btn { padding: 10px 14px; font-size: 0.85em; white-space: nowrap; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+      .content { padding-bottom: calc(70px + env(safe-area-inset-bottom)); -webkit-overflow-scrolling: touch; }
 
       /* Profile panel full width on mobile */
       .profile-slide-panel { width: 100%; max-width: 100vw; }
@@ -1229,6 +1238,15 @@
       nav { padding: 10px 14px; }
       .nav-btn { padding: 8px 10px; font-size: 0.82em; }
       .login-container { padding: 30px 16px; }
+    }
+    /* Ensure all buttons respond to touch without delay */
+    button, a, input, select, textarea, label {
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+    /* Game iframe container on mobile */
+    @media (max-width: 768px) {
+      #gameFrame { height: 100% !important; }
     }
   </style>
 </head>
@@ -7549,10 +7567,11 @@
         } else {
           const gameUrl = `game.html?wallet=${encodeURIComponent(gameWallet)}`;
           content.innerHTML = `
-            <div style="position:relative; width:100%; height:calc(100vh - 160px); min-height:480px; border-radius:12px; overflow:hidden; border:1px solid var(--border);">
+            <div style="position:relative; width:100%; height:calc(100vh - 160px); min-height:480px; border-radius:12px; overflow:hidden; border:1px solid var(--border); -webkit-overflow-scrolling:touch; touch-action:none;">
               <iframe id="gameFrame" src="${gameUrl}"
-                style="width:100%; height:100%; border:none; display:block;"
+                style="width:100%; height:100%; border:none; display:block; touch-action:none;"
                 allow="ethereum; web3"
+                scrolling="no"
                 title="Moga World Game">
               </iframe>
             </div>
