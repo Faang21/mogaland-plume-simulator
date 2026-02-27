@@ -1956,12 +1956,38 @@ function stopMulGame(){clearInterval(MG.tickInt);clearInterval(MG.cdInt);MG.run=
 const NPC_TINTS=[0xfda4af,0x86efac,0x93c5fd,0xfde68a,0xc4b5fd,0xfbbf24,0xf87171,0x34d399,0x60a5fa,0xa78bfa,0xfb923c,0x4ade80,0xf0abfc,0x6ee7b7,0xfdba74];
 const NPC_NAMES=['MogaBot','PlumeAI','CatNPC','StarBot','NeonBot','CyberCat','PixelBot','SwiftAI','ZenCat','DarkBot','BladeNPC','GhostBot','TigerBot','MoonCat','FireBot'];
 let npcBots=[];
+// Service-building standby positions per city (5 bots, one per service building)
+const NPC_STANDBY_POSITIONS={
+  1:[
+    {x:(26+3.5)*TILE,y:(37+3)*TILE}, // Hospital C1
+    {x:(60+4)*TILE,  y:(18+3)*TILE}, // Job Center C1
+    {x:(50+3)*TILE,  y:(22+3)*TILE}, // Bank C1
+    {x:(14+3.5)*TILE,y:(10+3)*TILE}, // School C1
+    {x:(60+4)*TILE,  y:(37+3)*TILE}, // Cafe C1
+  ],
+  2:[
+    {x:(22+3.5)*TILE,y:(36+3)*TILE}, // Hospital C2
+    {x:(8+4)*TILE,   y:(36+3)*TILE}, // Job Center C2
+    {x:(56+3)*TILE,  y:(14+3)*TILE}, // Bank C2
+    {x:(24+4)*TILE,  y:(2+3)*TILE},  // Aviation Academy C2
+    {x:(44+3)*TILE,  y:(22+3)*TILE}, // Cafe C2
+  ],
+};
 
 function spawnNPCBots(scene){
   npcBots=[];
+  const STANDBY_COUNT=5;
   for(let i=0;i<15;i++){
-    const sx=clamp((12+Math.floor(Math.random()*70))*TILE,10*TILE,(CW-10)*TILE);
-    const sy=clamp((14+Math.floor(Math.random()*40))*TILE,10*TILE,(CH-10)*TILE);
+    const isStandby=i>=(15-STANDBY_COUNT);
+    const standbyIdx=isStandby?i-(15-STANDBY_COUNT):0;
+    let sx,sy;
+    if(isStandby){
+      const sp=NPC_STANDBY_POSITIONS[1][standbyIdx];
+      sx=sp.x;sy=sp.y;
+    }else{
+      sx=clamp((12+Math.floor(Math.random()*70))*TILE,10*TILE,(CW-10)*TILE);
+      sy=clamp((14+Math.floor(Math.random()*40))*TILE,10*TILE,(CH-10)*TILE);
+    }
     const cont=scene.add.container(sx,sy).setDepth(8);
     const npcGender=i%3===0?'f':'m'; // mix of male/female NPCs
     const npcOutfits=['default','casual','sport','formal','suit'];
@@ -1969,28 +1995,59 @@ function spawnNPCBots(scene){
     const img=scene.add.image(0,0,npcTex).setScale(1.1).setOrigin(.5,.78);
     const lbl=scene.add.text(-18,-34,NPC_NAMES[i%NPC_NAMES.length],{fontSize:'9px',color:'#94a3b8'});
     cont.add([img,lbl]);
-    npcBots.push({obj:cont,tx:sx,ty:sy,speed:50+Math.random()*60,wait:Math.random()*4});
+    npcBots.push({obj:cont,tx:sx,ty:sy,speed:50+Math.random()*60,wait:Math.random()*4,standby:isStandby,standbyCity:1,standbyIdx});
   }
 }
 
 function updateNPCBots(dtS){
   if(WS.zone!=='CITY'){npcBots.forEach(b=>b.obj.setVisible(false));return;}
-  npcBots.forEach(b=>b.obj.setVisible(true));
-  const roads=[{axis:'x',vals:[18,54,80]},{axis:'y',vals:[12,28,44]}];
+  const activeTiles=currentCity===2?city2Tiles:cityTiles;
+  const roads=currentCity===2
+    ?[{axis:'x',vals:[20,54,82]},{axis:'y',vals:[12,20,32,44]}]
+    :[{axis:'x',vals:[18,54,80]},{axis:'y',vals:[12,28,44]}];
   for(const bot of npcBots){
+    // Standby bots: stay at fixed positions inside service buildings
+    if(bot.standby){
+      if(bot.standbyCity!==currentCity){
+        const sps=NPC_STANDBY_POSITIONS[currentCity];
+        if(sps&&sps[bot.standbyIdx]){
+          const sp=sps[bot.standbyIdx];
+          bot.obj.x=sp.x;bot.obj.y=sp.y;bot.standbyCity=currentCity;
+        }
+      }
+      bot.obj.setVisible(true);
+      continue;
+    }
+    bot.obj.setVisible(true);
     if(bot.wait>0){bot.wait-=dtS;
       if(bot.wait<=0){
         // Pick new target: prefer road tiles for realism
         const r=Math.random();
-        if(r<0.4){const ry=roads[1].vals[Math.floor(Math.random()*3)];bot.tx=clamp((8+Math.floor(Math.random()*75))*TILE,8*TILE,(CW-8)*TILE);bot.ty=ry*TILE;}
-        else if(r<0.7){const rx=roads[0].vals[Math.floor(Math.random()*3)];bot.tx=rx*TILE;bot.ty=clamp((8+Math.floor(Math.random()*45))*TILE,8*TILE,(CH-8)*TILE);}
-        else{bot.tx=clamp(bot.obj.x+(Math.random()-.5)*NPC_MAX_WANDER,8*TILE,(CW-8)*TILE);bot.ty=clamp(bot.obj.y+(Math.random()-.5)*NPC_MAX_WANDER,8*TILE,(CH-8)*TILE);}
+        let ntx,nty;
+        if(r<0.4){const ry=roads[1].vals[Math.floor(Math.random()*roads[1].vals.length)];ntx=clamp((8+Math.floor(Math.random()*75))*TILE,8*TILE,(CW-8)*TILE);nty=ry*TILE;}
+        else if(r<0.7){const rx=roads[0].vals[Math.floor(Math.random()*roads[0].vals.length)];ntx=rx*TILE;nty=clamp((8+Math.floor(Math.random()*45))*TILE,8*TILE,(CH-8)*TILE);}
+        else{ntx=clamp(bot.obj.x+(Math.random()-.5)*NPC_MAX_WANDER,8*TILE,(CW-8)*TILE);nty=clamp(bot.obj.y+(Math.random()-.5)*NPC_MAX_WANDER,8*TILE,(CH-8)*TILE);}
+        // Reject target if on blocked terrain (water, mountain, ocean)
+        if(activeTiles&&!blocked(ntx,nty,activeTiles)){bot.tx=ntx;bot.ty=nty;}
+        else{bot.wait=0.5+Math.random()*2;}
       }
       continue;
     }
     const dx=bot.tx-bot.obj.x,dy=bot.ty-bot.obj.y,dist=Math.sqrt(dx*dx+dy*dy);
     if(dist<6){bot.wait=1+Math.random()*3;}
-    else{const mx=(dx/dist)*bot.speed*dtS,my=(dy/dist)*bot.speed*dtS;bot.obj.x+=mx;bot.obj.y+=my;}
+    else{
+      const mx=(dx/dist)*bot.speed*dtS,my=(dy/dist)*bot.speed*dtS;
+      const nx=bot.obj.x+mx,ny=bot.obj.y+my;
+      // Block movement into terrain (water, mountain, ocean)
+      if(activeTiles&&blocked(nx,ny,activeTiles)){bot.tx=bot.obj.x;bot.ty=bot.obj.y;bot.wait=0.5+Math.random()*1.5;continue;}
+      // Block movement into player (collision with user)
+      if(_phaserScene&&_phaserScene.me&&Math.hypot(nx-_phaserScene.me.x,ny-_phaserScene.me.y)<TILE){bot.tx=bot.obj.x;bot.ty=bot.obj.y;bot.wait=0.5+Math.random();continue;}
+      // Block movement into other bots (bot-to-bot collision)
+      let botCollide=false;
+      for(const other of npcBots){if(other===bot||other.standby)continue;if(Math.hypot(nx-other.obj.x,ny-other.obj.y)<TILE){botCollide=true;break;}}
+      if(botCollide){bot.tx=bot.obj.x;bot.ty=bot.obj.y;bot.wait=0.5+Math.random();continue;}
+      bot.obj.x=nx;bot.obj.y=ny;
+    }
   }
 }
 
@@ -3378,15 +3435,17 @@ function switchCity(n,fromFlight){
   if(_tlightGfx&&_tlightGfx.active){_tlightGfx.clear();_tlightGfx=null;}
   if(_phaserScene){
     if(_phaserScene.me)_phaserScene.me.setVisible(true); // restore avatar after car/plane
-    drawCity(_phaserScene);
     _phaserScene.me.x=WS.savedPos.x;_phaserScene.me.y=WS.savedPos.y;
-    if(n===2){
-      spawnBirds2(_phaserScene);
-      logChat('[🏝️ Coastal City] Welcome to City 2! Beach🏖️ · Airport✈️ · Train🚂 · Zoo🦁 · Concert🎵 · Waterfall💦 · Gas Station⛽',false,'#fbbf24');
-      loadCarOwnership();
-    }else{
-      logChat('[🏙️ Moga City] Welcome to City 1! ✈️ Airport C1 in NE · Use Airport to fly to City 2',false,'#fbbf24');
-    }
+    requestAnimationFrame(()=>{
+      drawCity(_phaserScene);
+      if(n===2){
+        spawnBirds2(_phaserScene);
+        logChat('[🏝️ Coastal City] Welcome to City 2! Beach🏖️ · Airport✈️ · Train🚂 · Zoo🦁 · Concert🎵 · Waterfall💦 · Gas Station⛽',false,'#fbbf24');
+        loadCarOwnership();
+      }else{
+        logChat('[🏙️ Moga City] Welcome to City 1! ✈️ Airport C1 in NE · Use Airport to fly to City 2',false,'#fbbf24');
+      }
+    });
   }
   updateHUD();
   const nav=document.getElementById('navSel');if(nav)nav.innerHTML='<option value="">Choose...</option>';populateNav();
@@ -3470,12 +3529,16 @@ function drawInterior(scene,bk){
 function enterBuilding(scene,bk){
   WS.outdoor=null;WS.savedPos={x:scene.me.x,y:scene.me.y};WS.zone='INTERIOR';WS.key=bk;
   document.getElementById('mmTgt').textContent='—';
-  drawInterior(scene,bk);
-  scene.me.x=(interior.exitX+.5)*TILE;scene.me.y=(IH-3)*TILE;
+  // Set player to interior entry position immediately to avoid movement-clamp issues during RAF
+  scene.me.x=(Math.floor(IW/2)+.5)*TILE;scene.me.y=(IH-3)*TILE;
   updateHUD();renderBuildingPanel();
   logChat('[→] Entered: '+bk+'. Tap EXIT to leave.',false,'#93c5fd');
-  if(bk==='Casino')initMulGame();
-  if(bk==='Bank')setTimeout(refreshUSDCBalance,500);
+  requestAnimationFrame(()=>{
+    drawInterior(scene,bk);
+    scene.me.x=(interior.exitX+.5)*TILE;scene.me.y=(IH-3)*TILE;
+    if(bk==='Casino')initMulGame();
+    if(bk==='Bank')setTimeout(refreshUSDCBalance,500);
+  });
 }
 function exitCity(scene){
   if(S.sleepLockUntil>Date.now()){
@@ -3492,8 +3555,9 @@ function exitCity(scene){
     return logChat('[⚠️] Work session active! '+rem+'s left. Cannot leave building!',false,'#f87171');
   }
   WS.zone='CITY';WS.key='';interior=null;stopMulGame();
-  drawCity(scene);scene.me.x=WS.savedPos.x;scene.me.y=WS.savedPos.y;
+  scene.me.x=WS.savedPos.x;scene.me.y=WS.savedPos.y;
   updateHUD();renderBuildingPanel();logChat('[←] Back to CITY.',false,'#93c5fd');
+  requestAnimationFrame(()=>{drawCity(scene);});
 }
 
 /* minimap */
