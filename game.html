@@ -2480,7 +2480,7 @@ function buildTiles2(){
   for(let y=32;y<=34;y++)for(let x=40;x<=43;x++)if(t[y][x]===TT.SD||t[y][x]===TT.G)t[y][x]=TT.PK;
   return t;
 }
-function blocked(x,y,tiles){const tx=Math.floor(x/TILE),ty=Math.floor(y/TILE);return(tx<0||ty<0||tx>=CW||ty>=CH)||BLKT.has(tiles[ty][tx]);}
+function blocked(x,y,tiles){if(!tiles)return false;const tx=Math.floor(x/TILE),ty=Math.floor(y/TILE);return(tx<0||ty<0||tx>=CW||ty>=CH)||BLKT.has(tiles[ty][tx]);}
 
 /* ── Interior tiles ── */
 const IT={FW:0,FT:1,WB:2,WP:3,RG:4,CT:5};
