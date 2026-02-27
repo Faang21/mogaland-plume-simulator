@@ -2753,7 +2753,7 @@ function addFurniture(scene,intr,cont){
 let nightOv=null,lampGlows=[],cityTiles=null,interior=null,worldCont=null;
 let _nearPlotIdx=null,_farmGfx=null; // farm plot state
 let _waveGfx=null,_waveGfx2=null,_waveTime=0,_city1WaterTiles=[]; // Ronin-quality wave animation
-function clearWorld(scene){if(worldCont)worldCont.destroy(true);worldCont=scene.add.container(0,0);lampGlows=[];}
+function clearWorld(scene){if(worldCont){for(const c of worldCont.list)scene.tweens.killTweensOf(c);worldCont.destroy(true);}worldCont=scene.add.container(0,0);lampGlows=[];}
 
 function updateDN(dtS){
   CLK.min=(CLK.min+CLK.speed*dtS)%(24*60);const m=CLK.min;
