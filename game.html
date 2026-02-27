@@ -3991,6 +3991,7 @@ function triggerInteract(sceneRef){
       else logChat('[info] Nothing nearby. Walk closer to a building then tap.',false,'#94a3b8');
     }
   }else{
+    if(!interior)return;
     const ex=(interior.exitX+.5)*TILE,ey=(interior.exitY+.5)*TILE;
     if(Math.hypot(scene.me.x-ex,scene.me.y-ey)<120)exitCity(scene);
     else renderBuildingPanel();
@@ -5198,6 +5199,7 @@ const phaserCfg={
           document.getElementById('elNear').textContent=nearLabel+(nearLabel!=='—'?' (tap)':'');
           if(btn){btn.style.display=(nearBldg||plotIdx!==null)?'block':'none';btn.textContent='👆 Enter '+(nearLabel!=='—'?nearLabel:'');}
         }else{
+          if(!interior)return;
           const ex=(interior.exitX+.5)*TILE,ey=(interior.exitY+.5)*TILE;
           const dd=Math.hypot(this.me.x-ex,this.me.y-ey);
           document.getElementById('elNear').textContent=dd<120?'EXIT (tap)':WS.key+' (tap)';
