@@ -198,6 +198,7 @@ kbd{padding:1px 4px;border-radius:4px;border:1px solid rgba(255,255,255,.22);bac
     </div>
 
     <div class="card">
+      <div class="row" style="justify-content:space-between;margin-bottom:3px;"><span style="font-size:11px;color:#94a3b8;">👤 <span id="elNick">YOU</span></span></div>
       <div class="row" style="justify-content:space-between;"><strong>Energy</strong><span id="elETxt">100/100</span></div>
       <div class="ebar"><div id="elEBar"></div></div>
     </div>
@@ -448,6 +449,7 @@ function saveNickname(name){
   if(walletAddress)localStorage.setItem('mogaNickname_'+walletAddress.toLowerCase(),safe);
   // Update player label in Phaser if scene is active
   if(_phaserScene&&_phaserScene.meLabel){_phaserScene.meLabel.setText(getNickname());}
+  const nickEl=document.getElementById('elNick');if(nickEl)nickEl.textContent=getNickname();
   logChat('[Profile] 👤 Nickname set to: '+(safe||'(wallet address)'),false,'#a5f3fc');
   return safe;
 }
@@ -919,6 +921,7 @@ function updateHUD(){
   document.getElementById('elJob').textContent=S.job;
   document.getElementById('elHouse').textContent=S.house;
   document.getElementById('elEMax').textContent=S.energyMax;
+  const nickEl=document.getElementById('elNick');if(nickEl)nickEl.textContent=getNickname();
   document.getElementById('elApple').textContent=S.inv.apple;
   document.getElementById('elSoda').textContent=S.inv.soda;
   document.getElementById('elSand').textContent=S.inv.sandwich;
@@ -3455,7 +3458,7 @@ window.switchCity=switchCity;
 function spawnBirds2(scene){
   for(let i=0;i<5;i++){
     const startX=Math.random()*CW*TILE;
-    const y=(44+Math.random()*4)*TILE;
+    const y=(2+Math.random()*6)*TILE;
     const spd=(80+Math.random()*60)*(Math.random()<.5?1:-1);
     const spr=scene.add.image(startX,y,'bird').setScale(0.8+Math.random()*0.4).setDepth(16).setTint(0xe0f2fe);
     _birds.push({spr,spd,baseY:y,phase:Math.random()*Math.PI*2,
@@ -4599,7 +4602,7 @@ function spawnBirds(scene){
   for(let i=0;i<10;i++){
     const goRight=Math.random()<0.5;
     const startX=goRight?-40:(CW+4)*TILE;
-    const y=(6+Math.random()*20)*TILE;
+    const y=(2+Math.random()*6)*TILE;
     const spd=(110+Math.random()*90)*(goRight?1:-1);
     const spr=scene.add.image(startX,y,'bird')
       .setScale(1.0+Math.random()*0.5).setDepth(16).setFlipX(!goRight);
@@ -4618,7 +4621,7 @@ function updateBirds(dtS){
     const gone=b.spd>0?b.spr.x>b.resetX:b.spr.x<b.resetX;
     if(gone){
       b.spr.x=b.startX;
-      b.baseY=(6+Math.random()*20)*TILE;
+      b.baseY=(2+Math.random()*6)*TILE;
       b.phase=Math.random()*Math.PI*2;
     }
   });
@@ -4876,6 +4879,7 @@ function goFish(){
     for(const ft of FISH_TYPES){acc+=ft.chance;if(r<=acc){caught=ft;break;}}
     S.inv.fish++;
     S.lastFishType=caught;
+    onChainTx('FISH:RIVER:'+caught.name,0.00001);
     logChat('[River] 🎣 Caught: '+caught.name+'! · Sell for $'+FISH_SELL_PRICE+' USD (−'+FISH_ENERGY_COST+' ⚡)',false,'#34d399');
   }
   updateHUD();renderBuildingPanel();saveProgress();
@@ -4896,6 +4900,7 @@ function goFishBoat(){
     let r=Math.random(),acc=0,caught=FISH_TYPES[0];
     for(const ft of FISH_TYPES){acc+=ft.chance;if(r<=acc){caught=ft;break;}}
     S.inv.fish++;S.lastFishType=caught;
+    onChainTx('FISH:OCEAN:'+caught.name,0.00001);
     logChat('[⛵ Ocean] 🎣 Caught: '+caught.name+'! Ocean fishing gives better odds! · $'+FISH_SELL_PRICE+' USD (−'+FISH_ENERGY_COST+' ⚡)',false,'#34d399');
   }
   updateHUD();renderBuildingPanel();saveProgress();
@@ -4923,6 +4928,7 @@ function hoeGround(){
   if(_npcPlots.find(p=>p.tx===tx&&p.ty===ty))return logChat('[Farm] 🔒 This area belongs to another player.',false,'#f87171');
   S.plots.push({tx,ty,state:'hoed',plantedAt:0,readyAt:0});
   updateHUD();redrawFarmPlots();
+  onChainTx('FARM:HOE:'+tx+','+ty,0.00001);
   logChat('[Farm] 🪓 Hoed the ground! Now plant seeds here.',false,'#b45309');
   saveProgress();
 }
@@ -4934,6 +4940,7 @@ function plantSeed(idx){
   if(!S.inv.seeds)return logChat('[Farm] No seeds. Buy at Market.');
   S.inv.seeds--;p.state='seeded';p.plantedAt=Date.now();
   updateHUD();renderBuildingPanel();redrawFarmPlots();
+  onChainTx('FARM:PLANT:'+p.tx+','+p.ty,0.00001);
   logChat('[Farm] 🌱 Seeds planted! Water them to start growing.',false,'#4ade80');
   saveProgress();
 }
@@ -4945,6 +4952,7 @@ function waterSeed(idx){
   if(!S.waterFull)return logChat('[Farm] Watering can empty! Fill at 🏞️ River.',false,'#f87171');
   p.state='watered';p.readyAt=Date.now()+SEED_GROW_MS;S.waterFull=false;
   updateHUD();renderBuildingPanel();redrawFarmPlots();
+  onChainTx('FARM:WATER:'+p.tx+','+p.ty,0.00001);
   logChat('[Farm] 💧 Watered! Fruit ready in 24 hours (real time). Come back tomorrow! 🍇',false,'#38bdf8');
   saveProgress();
 }
@@ -4956,6 +4964,7 @@ function harvestFruit(idx){
   S.plots.splice(idx,1); // remove plot → land resets
   _nearPlotIdx=null;WS.outdoor=null;
   updateHUD();renderBuildingPanel();redrawFarmPlots();
+  rewardFromTreasury('FARM:HARVEST:FRUIT',FRUIT_SELL_PRICE);
   logChat('[Farm] 🍇 Harvested! +1 fruit. Land returned to normal.',false,'#a78bfa');
   saveProgress();
 }
