@@ -3048,6 +3048,7 @@ async function boardPlane(){
   const tx=await treasuryPay('FLIGHT:city2_to_city1:$'+FLIGHT_COST_USD+'USD',FLIGHT_COST_USD);
   if(tx){
     logChat('[✈️ Flight] ✅ Tx hash released! Arriving at Moga City Airport (City 1)… 🛬',false,'#34d399');
+    if(WS.zone==='INTERIOR'){WS.zone='CITY';WS.key='';interior=null;stopMulGame();}
     switchCity(1,true);
   }else{
     S.coins+=FLIGHT_COST_USD;
@@ -3577,7 +3578,7 @@ function drawMM(pos){
         const t=(mmTiles&&mmTiles[Math.floor((y/mmCanvas.height)*CH)])?mmTiles[Math.floor((y/mmCanvas.height)*CH)][Math.floor((x/mmCanvas.width)*CW)]:TT.G;
         ic.fillStyle=t===TT.R||t===TT.CR?'#64748b':t===TT.SD?'#334155':t===TT.W?'#0284c7':t===TT.S?'#fde68a':t===TT.TR?'#374151':t===TT.MT?'#4b5563':t===TT.PK?'#1e293b':'#1f7a3a';ic.fillRect(x,y,1,1);
       }
-    }else for(let y=0;y<mmCanvas.height;y++)for(let x=0;x<mmCanvas.width;x++){
+    }else if(interior)for(let y=0;y<mmCanvas.height;y++)for(let x=0;x<mmCanvas.width;x++){
       const t=interior.g[Math.floor((y/mmCanvas.height)*IH)][Math.floor((x/mmCanvas.width)*IW)];
       ic.fillStyle=t===IT.FW?'#8b5a2b':t===IT.FT?'#94a3b8':t===IT.WB?'#7f1d1d':t===IT.WP?'#cbd5e1':t===IT.RG?'#1d4ed8':'#475569';ic.fillRect(x,y,1,1);
     }
