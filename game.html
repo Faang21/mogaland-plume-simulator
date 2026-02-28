@@ -2483,20 +2483,7 @@ function buildTiles2(){
   for(let y=32;y<=34;y++)for(let x=40;x<=43;x++)if(t[y][x]===TT.SD||t[y][x]===TT.G)t[y][x]=TT.PK;
   return t;
 }
-function blocked(x,y,tiles){
-  if(!tiles)return false;
-  const tx=Math.floor(x/TILE),ty=Math.floor(y/TILE);
-  if((tx<0||ty<0||tx>=CW||ty>=CH)||BLKT.has(tiles[ty][tx]))return true;
-  const tt=tiles[ty][tx];
-  // Building/house collision: block grass and sidewalk tiles inside building footprints
-  if(tt===TT.G||tt===TT.SD){
-    const bldgs=currentCity===2?BLDGS2:BLDGS;
-    for(const b of bldgs)if(x>=b.x&&x<b.x+b.w&&y>=b.y&&y<b.y+b.h)return true;
-  }
-  // Tree collision (City 1 only)
-  if(currentCity===1&&_treeTileSet.has(ty*CW+tx))return true;
-  return false;
-}
+function blocked(x,y,tiles){if(!tiles)return false;const tx=Math.floor(x/TILE),ty=Math.floor(y/TILE);return(tx<0||ty<0||tx>=CW||ty>=CH)||BLKT.has(tiles[ty][tx]);}
 
 /* ── Interior tiles ── */
 const IT={FW:0,FT:1,WB:2,WP:3,RG:4,CT:5};
@@ -2786,7 +2773,6 @@ function updateDN(dtS){
 }
 
 function decorateCity(scene,tiles,cont){
-  _treeTileSet.clear();
   for(let y=0;y<CH;y++)for(let x=0;x<CW;x++){
     if(tiles[y][x]!==TT.SD)continue;const spx=x*TILE+TILE/2,spy=y*TILE+TILE/2;
     let inLot=false;
@@ -2795,7 +2781,6 @@ function decorateCity(scene,tiles,cont){
     if(inLot)continue;
     const n=(x*83492791^y*29765723)>>>0;
     if(n%13===0){
-      _treeTileSet.add(y*CW+x);
       // ── Ronin-style tree sway tween ──
       const treeSpr=scene.add.image(spx,spy,'tree').setScale(1.35).setDepth(1);
       scene.tweens.add({targets:treeSpr,x:spx+(2+(n&3)),scaleY:1.28,duration:1400+(n&599),yoyo:true,repeat:-1,ease:'Sine.easeInOut',delay:n%900});
@@ -3190,7 +3175,6 @@ const PARKING_SPOTS_C2=[
 ];
 let _carSprites={};
 let playerDrivingCar=false;
-let _treeTileSet=new Set(); // tracks tile positions (ty*CW+tx) where trees are placed
 let playerCarSprite=null;
 const CAR_ROAD_TILES=new Set([TT.R,TT.CR,TT.PK]);
 
@@ -3203,21 +3187,11 @@ const NPC_CARS=[
 ];
 function updateNPCCars(dtS){
   if(currentCity!==2||WS.zone!=='CITY')return;
-  let meX=Infinity,meY=Infinity;
-  if(_phaserScene&&_phaserScene.me){
-    if(playerDrivingCar&&playerCarSprite&&playerCarSprite.active){
-      meX=playerCarSprite.x;meY=playerCarSprite.y;
-    }else{
-      meX=_phaserScene.me.x;meY=_phaserScene.me.y;
-    }
-  }
   for(const c of NPC_CARS){
     if(!c.spr)continue;
     const nearRed=isTrafficRed()&&c.road.startsWith('h')&&
       TRAFFIC_LIGHT_INTERSECTIONS.some(tl=>Math.abs(c.x-tl.x)<40&&Math.abs(c.y-tl.y)<TILE*2);
     if(nearRed){c.spr.setVisible(true);continue;}
-    // Stop NPC car if it would hit the player or player's car
-    if(Math.hypot(c.x-meX,c.y-meY)<TILE*1.5){c.spr.setVisible(true);continue;}
     if(c.dir==='right'){c.x+=c.speed*dtS;if(c.x>CW*TILE)c.x=-TILE;}
     else if(c.dir==='left'){c.x-=c.speed*dtS;if(c.x<-TILE)c.x=CW*TILE;}
     else if(c.dir==='down'){c.y+=c.speed*dtS;if(c.y>44*TILE)c.y=0;}
@@ -3447,7 +3421,6 @@ function switchCity(n,fromFlight){
   if(!fromFlight)return logChat('[✈️ Travel] You must board a plane at the Airport to travel between cities! On-chain transaction required.',false,'#f87171');
   if(WS.zone==='INTERIOR')return logChat('[City] Exit building first.',false,'#f87171');
   currentCity=n;
-  _treeTileSet.clear(); // clear City 1 tree positions when switching cities
   const btn1=document.getElementById('btnCity1'),btn2=document.getElementById('btnCity2');
   const pill=document.getElementById('cityPill');
   if(btn1)btn1.style.background=n===1?'linear-gradient(90deg,#0284c7,#0369a1)':'rgba(255,255,255,.08)';

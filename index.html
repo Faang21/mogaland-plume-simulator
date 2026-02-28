@@ -5394,7 +5394,7 @@
               <div class="card">
                 <h3>💰 Stake USDC (${getActiveNetwork().name})</h3>
                 <p style="margin-bottom:8px; font-size:0.9em;">Your Balance: <span id="usdcBalanceDisplay">0.00</span> USDC</p>
-                <p style="margin-bottom:12px; font-size:0.9em;">⚠️ Stake USDC first to unlock and answer quest questions</p>
+                <p style="margin-bottom:12px; font-size:0.9em;">Stake to participate in learning rewards</p>
                 <input type="number" id="stakeAmount" placeholder="Enter USDC amount" step="0.01" style="width:100%; padding:12px; background:#0f172a; border:1px solid var(--border); border-radius:8px; color:white; margin-bottom:16px;"/>
                 <button class="btn-primary" onclick="stakeUSDC()">Stake USDC</button>
                 <p class="stake-info" id="stakedDisplay">Staked: 0.00 USDC</p>
@@ -8483,9 +8483,9 @@
 
     // Quiz & Stake functions
     function loadQuestion() {
-      // Require staking before answering quest questions
-      if (stakedUSDC <= 0) {
-        showNotification("🔒 You must stake USDC first to participate in learning quests!", true);
+      // Show optional staking prompt if not staked yet, but don't block learning
+      if (stakedUSDC <= 0 && currentQuestionIndex === 0) {
+        showNotification("💡 Tip: Stake USDC to earn additional rewards while learning!", false);
       }
       
       if (currentQuestionIndex >= questions.length) {
@@ -8525,12 +8525,6 @@
       if (!userAddress || !provider) {
         showNotification("⚠️ Please connect wallet first to submit answers!", true);
         connectWalletFromApp();
-        return;
-      }
-
-      // Require staking before answering quest questions
-      if (stakedUSDC <= 0) {
-        showNotification("🔒 You must stake USDC first to participate in learning quests!", true);
         return;
       }
 
