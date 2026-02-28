@@ -2999,6 +2999,12 @@ function boardTrain(){
 window.boardTrain=boardTrain;
 function exitTrain(){
   trainState.passengerBoarded=false;
+  // Place player just outside Train Station building footprint to prevent freeze
+  if(_phaserScene){
+    const bldgList=currentCity===2?BLDGS2:BLDGS;
+    const b=bldgList.find(b=>b.key==='Train Station');
+    if(b){_phaserScene.me.x=b.x+b.w/2;_phaserScene.me.y=b.y+b.h+16;}
+  }
   logChat('[🚂 Train] Disembarked at '+trainState.stopLabel+'.',false,'#93c5fd');
 }
 window.exitTrain=exitTrain;
@@ -3451,9 +3457,9 @@ function switchCity(n,fromFlight){
   if(btn2)btn2.style.background=n===2?'linear-gradient(90deg,#0f766e,#14b8a6)':'rgba(255,255,255,.08)';
   if(pill)pill.textContent=n===1?'🏙️ Moga City':'🏝️ Coastal City';
   if(fromFlight&&n===1){
-    WS.savedPos={x:87*TILE,y:5*TILE}; // arrive at City 1 Airport
+    WS.savedPos={x:87*TILE,y:9*TILE}; // arrive at City 1 Airport — outside building footprint
   }else if(fromFlight&&n===2){
-    WS.savedPos={x:77*TILE,y:6*TILE}; // arrive at City 2 Airport
+    WS.savedPos={x:77*TILE,y:11*TILE}; // arrive at City 2 Airport — outside building footprint
   }else{
     WS.savedPos={x:32*TILE,y:32*TILE};
   }
@@ -3583,8 +3589,13 @@ function exitCity(scene){
     const rem=Math.ceil((S.workLockEnd-Date.now())/1000);
     return logChat('[⚠️] Work session active! '+rem+'s left. Cannot leave building!',false,'#f87171');
   }
-  WS.zone='CITY';WS.key='';interior=null;stopMulGame();
-  scene.me.x=WS.savedPos.x;scene.me.y=WS.savedPos.y;
+  WS.zone='CITY';const _bk=WS.key;WS.key='';interior=null;stopMulGame();
+  // Ensure exit position is outside the building footprint to prevent player freeze
+  let exitX=WS.savedPos.x,exitY=WS.savedPos.y;
+  const _bldgList=currentCity===2?BLDGS2:BLDGS;
+  const _bldg=_bldgList.find(b=>b.key===_bk);
+  if(_bldg&&exitX>=_bldg.x&&exitX<_bldg.x+_bldg.w&&exitY>=_bldg.y&&exitY<_bldg.y+_bldg.h){exitX=_bldg.x+_bldg.w/2;exitY=_bldg.y+_bldg.h+16;}
+  scene.me.x=exitX;scene.me.y=exitY;
   updateHUD();renderBuildingPanel();logChat('[←] Back to CITY.',false,'#93c5fd');
   requestAnimationFrame(()=>{drawCity(scene);});
 }
