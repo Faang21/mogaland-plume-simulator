@@ -614,8 +614,12 @@
       cursor: pointer;
       margin: 8px 0;
       transition: all 0.3s;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: rgba(96,165,250,0.2);
     }
     .btn-primary:hover { transform: scale(1.03); }
+    .btn-primary:active { transform: scale(0.97); opacity: 0.85; }
+    .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
     .btn-success { background: linear-gradient(90deg, var(--success), #34d399); }
     .btn-group { display: flex; gap: 16px; margin-top: 24px; }
 
@@ -5700,6 +5704,18 @@
             updateTradingBalance();
             return;
           }
+
+          const activeNet = getActiveNetwork();
+          if (activeNet.id !== 'sepolia') {
+            tradingUSDCBalance = 0;
+            updateTradingBalance();
+            const statusEl = document.getElementById('tradeStatus');
+            if (statusEl) {
+              statusEl.textContent = `⚠️ Trading uses Sepolia USDC. Switch to ETH Sepolia network to trade.`;
+              statusEl.style.color = '#f59e0b';
+            }
+            return;
+          }
           
           try {
             const usdcContract = new ethers.Contract(USDC_SEPOLIA_ADDRESS, USDC_ABI, provider);
@@ -6049,16 +6065,19 @@
           const tabAssets = assetsData[currentTab] || [];
           tabAssets.forEach(asset => {
             const div = document.createElement('div');
+            const isSelected = selectedAsset && selectedAsset.symbol === asset.symbol;
             div.style.padding = '12px 10px';
-            div.style.background = 'rgba(13,110,253,0.1)';
+            div.style.background = isSelected ? 'rgba(96,165,250,0.25)' : 'rgba(13,110,253,0.1)';
             div.style.borderRadius = '8px';
             div.style.cursor = 'pointer';
             div.style.marginBottom = '6px';
+            div.style.border = isSelected ? '1px solid rgba(96,165,250,0.6)' : '1px solid transparent';
+            div.style.transition = 'all 0.2s';
             
             const displayName = asset.name || asset.symbol;
             const subtitle = asset.type ? ` (${asset.type})` : asset.league ? ` - ${asset.league}` : '';
             
-            div.innerHTML = `<strong>${displayName}</strong><span style="opacity:0.7; font-size:0.85em;">${subtitle}</span>`;
+            div.innerHTML = `<strong>${displayName}</strong><span style="opacity:0.7; font-size:0.85em;">${subtitle}</span>${isSelected ? '<span style="float:right;color:#60a5fa;font-size:0.85em;">✓</span>' : ''}`;
             div.onclick = currentTab === 'sports' ? () => showClubHistory(asset) : () => selectAsset(asset);
             container.appendChild(div);
           });
@@ -6150,6 +6169,8 @@
           updateTradingBalance();
           // Update leverage info to show entry price and other details
           updateLeverageInfo();
+          // Refresh asset list to show selection highlight
+          renderAssets();
         }
 
         function selectAsset(asset) {
@@ -6184,6 +6205,8 @@
           updateTradingBalance();
           // Update leverage info to show entry price and other details
           updateLeverageInfo();
+          // Refresh asset list to show selection highlight
+          renderAssets();
         }
 
         // Open a new position
@@ -6211,6 +6234,20 @@
           // Check USDC balance for position
           if (amount > tradingUSDCBalance) {
             showNotification(`Insufficient USDC balance! Need ${amount.toFixed(2)} USDC for position`, true);
+            return;
+          }
+
+          // Check ETH balance for the position transaction (requires 0.0001 ETH)
+          try {
+            const ethBalanceWei = await provider.getBalance(userAddress);
+            const ethBalance = parseFloat(ethers.utils.formatEther(ethBalanceWei));
+            if (ethBalance < 0.0001) {
+              showNotification(`⛽ Insufficient ${getNetworkCurrency()} balance! Need at least 0.0001 ${getNetworkCurrency()} to open a position. Get testnet ${getNetworkCurrency()} from the faucet.`, true);
+              return;
+            }
+          } catch (balanceCheckError) {
+            console.warn('[Trading] ETH balance check failed:', balanceCheckError.message);
+            showNotification('⚠️ Could not verify ETH balance. Ensure you have enough ETH for gas.', true);
             return;
           }
 
@@ -6392,6 +6429,20 @@
           if (!provider || !userAddress) {
             showNotification('⚠️ Please connect your wallet to close position!', true);
             connectWalletFromApp();
+            return;
+          }
+
+          // Check ETH balance for the close position transaction (requires 0.0001 ETH)
+          try {
+            const ethBalanceWei = await provider.getBalance(userAddress);
+            const ethBalance = parseFloat(ethers.utils.formatEther(ethBalanceWei));
+            if (ethBalance < 0.0001) {
+              showNotification(`⛽ Insufficient ${getNetworkCurrency()} balance! Need at least 0.0001 ${getNetworkCurrency()} to close a position.`, true);
+              return;
+            }
+          } catch (balanceCheckError) {
+            console.warn('[Trading] ETH balance check failed:', balanceCheckError.message);
+            showNotification('⚠️ Could not verify ETH balance. Ensure you have enough ETH for gas.', true);
             return;
           }
           
