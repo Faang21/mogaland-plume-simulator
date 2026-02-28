@@ -2487,11 +2487,9 @@ function blocked(x,y,tiles){
   if(!tiles)return false;
   const tx=Math.floor(x/TILE),ty=Math.floor(y/TILE);
   if((tx<0||ty<0||tx>=CW||ty>=CH)||BLKT.has(tiles[ty][tx]))return true;
-  // Building/house collision: block any tile inside building footprints
+  // Building collision: block tiles inside non-house building footprints (houses and trees are passable)
   const bldgs=currentCity===2?BLDGS2:BLDGS;
-  for(const b of bldgs)if(x>=b.x&&x<b.x+b.w&&y>=b.y&&y<b.y+b.h)return true;
-  // Tree collision (City 1 only)
-  if(currentCity===1&&_treeTileSet.has(ty*CW+tx))return true;
+  for(const b of bldgs)if(!b.isHouse&&x>=b.x&&x<b.x+b.w&&y>=b.y&&y<b.y+b.h)return true;
   return false;
 }
 
