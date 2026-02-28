@@ -911,7 +911,7 @@ const S={
 };
 
 /* ── World state ── */
-const WS={zone:'CITY',key:'',savedPos:{x:32*TILE,y:32*TILE},outdoor:null};
+const WS={zone:'CITY',key:'',savedPos:{x:32*TILE,y:28*TILE},outdoor:null};
 
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const reqEnergy=(n,msg)=>{if(S.energy<n){logChat(msg||'[info] Low energy.',false,'#f87171');return false;}S.energy-=n;return true;};
@@ -3461,7 +3461,7 @@ function switchCity(n,fromFlight){
   }else if(fromFlight&&n===2){
     WS.savedPos={x:77*TILE,y:11*TILE}; // arrive at City 2 Airport — outside building footprint
   }else{
-    WS.savedPos={x:32*TILE,y:32*TILE};
+    WS.savedPos={x:32*TILE,y:28*TILE};
   }
   trainState.passengerBoarded=false;playerDrivingCar=false;
   planeState.passengerBoarded=false;boatState.passengerBoarded=false;
@@ -5204,7 +5204,7 @@ const phaserCfg={
       if(WS.savedPos){
         const ax=clamp(WS.savedPos.x,20,CW*TILE-20),ay=clamp(WS.savedPos.y,20,CH*TILE-20);
         const spawnTiles=currentCity===2?city2Tiles:cityTiles;
-        if(blocked(ax,ay,spawnTiles)){this.me.x=32*TILE;this.me.y=32*TILE;WS.savedPos={x:32*TILE,y:32*TILE};}
+        if(blocked(ax,ay,spawnTiles)){this.me.x=32*TILE;this.me.y=28*TILE;WS.savedPos={x:32*TILE,y:28*TILE};}
         else{this.me.x=ax;this.me.y=ay;}
       }
       assignHouseToUser(); // auto-assign if wallet connected and no house yet
