@@ -2487,12 +2487,9 @@ function blocked(x,y,tiles){
   if(!tiles)return false;
   const tx=Math.floor(x/TILE),ty=Math.floor(y/TILE);
   if((tx<0||ty<0||tx>=CW||ty>=CH)||BLKT.has(tiles[ty][tx]))return true;
-  const tt=tiles[ty][tx];
-  // Building/house collision: block grass and sidewalk tiles inside building footprints
-  if(tt===TT.G||tt===TT.SD){
-    const bldgs=currentCity===2?BLDGS2:BLDGS;
-    for(const b of bldgs)if(x>=b.x&&x<b.x+b.w&&y>=b.y&&y<b.y+b.h)return true;
-  }
+  // Building/house collision: block any tile inside building footprints
+  const bldgs=currentCity===2?BLDGS2:BLDGS;
+  for(const b of bldgs)if(x>=b.x&&x<b.x+b.w&&y>=b.y&&y<b.y+b.h)return true;
   // Tree collision (City 1 only)
   if(currentCity===1&&_treeTileSet.has(ty*CW+tx))return true;
   return false;
@@ -5193,7 +5190,12 @@ const phaserCfg={
       this.scale.on('resize',sz=>{if(nightOv){nightOv.width=sz.width;nightOv.height=sz.height;}});
       initChain();initOnlinePlayers();
       loadProgress();updateHUD();
-      if(WS.savedPos){this.me.x=clamp(WS.savedPos.x,20,CW*TILE-20);this.me.y=clamp(WS.savedPos.y,20,CH*TILE-20);}
+      if(WS.savedPos){
+        const ax=clamp(WS.savedPos.x,20,CW*TILE-20),ay=clamp(WS.savedPos.y,20,CH*TILE-20);
+        const spawnTiles=currentCity===2?city2Tiles:cityTiles;
+        if(blocked(ax,ay,spawnTiles)){this.me.x=32*TILE;this.me.y=32*TILE;WS.savedPos={x:32*TILE,y:32*TILE};}
+        else{this.me.x=ax;this.me.y=ay;}
+      }
       assignHouseToUser(); // auto-assign if wallet connected and no house yet
       spawnNPCBots(this);spawnBirds(this);
       logChat('[system] 🎮 Welcome to Moga World! Skills cost $30 USD · Work earns $2 USD/3h shift',false,'#fbbf24');
