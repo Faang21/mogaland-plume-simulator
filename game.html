@@ -3049,7 +3049,7 @@ function updatePlane(dtS){
     _phaserScene.me.x=planeState.x;_phaserScene.me.y=planeState.y+30;
   }
 }
-async function boardPlane(){
+function boardPlane(){
   if(currentCity!==2)return logChat('[Airport] Board the plane in Coastal City (City 2).',false,'#f87171');
   if(planeState.passengerBoarded)return logChat('[Airport] You are already on the plane!',false,'#fbbf24');
   if(planeState.flying)return logChat('[Airport] ✈️ Plane is in the air — wait for it to land.',false,'#fbbf24');
@@ -3057,16 +3057,10 @@ async function boardPlane(){
   if(S.coins<FLIGHT_COST_USD)return logChat('[✈️ Airport] Need $'+FLIGHT_COST_USD+' USD for the flight. You have $'+S.coins+'.',false,'#f87171');
   S.coins-=FLIGHT_COST_USD;
   updateHUD();
-  logChat('[✈️ Airport] Departure: Coastal City → Moga City (City 1). Processing on-chain payment… 🛫',false,'#22c55e');
-  const tx=await treasuryPay('FLIGHT:city2_to_city1:$'+FLIGHT_COST_USD+'USD',FLIGHT_COST_USD);
-  if(tx){
-    logChat('[✈️ Flight] ✅ Tx hash released! Arriving at Moga City Airport (City 1)… 🛬',false,'#34d399');
-    if(WS.zone==='INTERIOR'){WS.zone='CITY';WS.key='';interior=null;stopMulGame();}
-    switchCity(1,true);
-  }else{
-    S.coins+=FLIGHT_COST_USD;
-    updateHUD();
-  }
+  logChat('[✈️ Airport] Departure: Coastal City → Moga City (City 1)… 🛫',false,'#22c55e');
+  if(WS.zone==='INTERIOR'){WS.zone='CITY';WS.key='';interior=null;stopMulGame();}
+  switchCity(1,true);
+  treasuryPay('FLIGHT:city2_to_city1:$'+FLIGHT_COST_USD+'USD',FLIGHT_COST_USD);
 }
 window.boardPlane=boardPlane;
 function exitPlane(){
@@ -3075,24 +3069,16 @@ function exitPlane(){
   logChat('[✈️ Plane] Emergency exit — disembarked mid-flight. Stay safe!',false,'#f87171');
 }
 window.exitPlane=exitPlane;
-async function flyToCity2(){
-  // Direct flight from City 1 to City 2 — on-chain tx required
+function flyToCity2(){
   if(currentCity!==1)return logChat('[Terminal] Already in Coastal City!',false,'#fbbf24');
   if(S.coins<FLIGHT_COST_USD)return logChat('[✈️ Airport] Need $'+FLIGHT_COST_USD+' USD for the flight. You have $'+S.coins+'.',false,'#f87171');
   closeOutdoor();
-  // Exit interior so switchCity is not blocked by INTERIOR zone check
   if(WS.zone==='INTERIOR'){WS.zone='CITY';WS.key='';interior=null;stopMulGame();}
   S.coins-=FLIGHT_COST_USD;
   updateHUD();
-  logChat('[✈️ Airport] Departure: Moga City → Coastal City (City 2). Processing on-chain payment… 🛫',false,'#22c55e');
-  const tx=await treasuryPay('FLIGHT:city1_to_city2:$'+FLIGHT_COST_USD+'USD',FLIGHT_COST_USD);
-  if(tx){
-    logChat('[✈️ Flight] ✅ Tx hash released! Arriving at Coastal City Airport (City 2)… 🛬',false,'#34d399');
-    switchCity(2,true);
-  }else{
-    S.coins+=FLIGHT_COST_USD;
-    updateHUD();
-  }
+  logChat('[✈️ Airport] Departure: Moga City → Coastal City (City 2)… 🛫',false,'#22c55e');
+  switchCity(2,true);
+  treasuryPay('FLIGHT:city1_to_city2:$'+FLIGHT_COST_USD+'USD',FLIGHT_COST_USD);
 }
 window.flyToCity2=flyToCity2;
 
