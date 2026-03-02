@@ -1252,6 +1252,158 @@
     @media (max-width: 768px) {
       #gameFrame { height: 100% !important; }
     }
+
+    /* ===== PRICE TICKER ===== */
+    .price-ticker-wrap {
+      background: rgba(0,0,0,0.55);
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      overflow: hidden;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      width: 100%;
+    }
+    .price-ticker-track {
+      display: flex;
+      gap: 40px;
+      white-space: nowrap;
+      animation: tickerScroll 40s linear infinite;
+      padding: 0 20px;
+    }
+    .price-ticker-track:hover { animation-play-state: paused; }
+    @keyframes tickerScroll {
+      0%   { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+    .ticker-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.82em;
+      font-weight: 600;
+    }
+    .ticker-sym { color: #94a3b8; }
+    .ticker-price { color: #f8f9fa; }
+    .ticker-up   { color: #10b981; }
+    .ticker-down { color: #ef4444; }
+    .light .price-ticker-wrap { background: rgba(255,255,255,0.6); border-bottom: 1px solid var(--border); }
+    .light .ticker-sym { color: #475569; }
+    .light .ticker-price { color: #1e293b; }
+
+    /* ===== DAILY CHECK-IN BUTTON ===== */
+    #dailyCheckinBtn {
+      position: fixed;
+      bottom: 90px;
+      right: 16px;
+      z-index: 9990;
+      background: linear-gradient(135deg, #f59e0b, #ef4444);
+      color: white;
+      border: none;
+      border-radius: 50px;
+      padding: 10px 18px;
+      font-size: 0.9em;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 20px rgba(239,68,68,0.5);
+      animation: pulseGlow 2.5s ease-in-out infinite;
+      transition: all 0.3s;
+      display: none;
+    }
+    #dailyCheckinBtn:hover { transform: scale(1.08); }
+    @keyframes pulseGlow {
+      0%,100% { box-shadow: 0 4px 20px rgba(239,68,68,0.5); }
+      50%      { box-shadow: 0 4px 30px rgba(239,68,68,0.9); }
+    }
+
+    /* ===== ACHIEVEMENT TOAST ===== */
+    .achievement-toast {
+      position: fixed;
+      top: 80px;
+      right: 20px;
+      background: linear-gradient(135deg, rgba(16,185,129,0.15), rgba(99,102,241,0.15));
+      border: 1px solid #10b981;
+      border-radius: 14px;
+      padding: 14px 18px;
+      min-width: 260px;
+      color: white;
+      z-index: 9999;
+      animation: slideInRight 0.4s ease, fadeOut 0.5s ease 4.5s forwards;
+      backdrop-filter: blur(10px);
+    }
+    @keyframes slideInRight {
+      from { transform: translateX(120%); opacity: 0; }
+      to   { transform: translateX(0);    opacity: 1; }
+    }
+    @keyframes fadeOut {
+      from { opacity: 1; }
+      to   { opacity: 0; }
+    }
+    .achievement-toast .ach-title { font-weight: 700; font-size: 0.95em; color: #10b981; }
+    .achievement-toast .ach-desc  { font-size: 0.82em; color: #94a3b8; margin-top: 2px; }
+
+    /* ===== DASHBOARD STYLES ===== */
+    .dash-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      max-width: 1200px;
+      margin: 0 auto 28px auto;
+    }
+    .dash-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+      transition: transform 0.25s;
+    }
+    .dash-card:hover { transform: translateY(-4px); }
+    .dash-card .dc-icon { font-size: 2em; margin-bottom: 8px; }
+    .dash-card .dc-label { font-size: 0.8em; color: #94a3b8; margin-bottom: 4px; text-transform: uppercase; letter-spacing: .5px; }
+    .dash-card .dc-value { font-size: 1.8em; font-weight: bold; }
+    .streak-flame { font-size: 2.8em; line-height: 1; }
+    .dash-section-title { color: #60a5fa; font-size: 1.2em; font-weight: 700; margin: 24px 0 12px; text-align: left; max-width: 1200px; margin-left: auto; margin-right: auto; }
+    .badge-grid { display: flex; flex-wrap: wrap; gap: 12px; max-width: 1200px; margin: 0 auto 24px; justify-content: center; }
+    .badge-item {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 18px;
+      text-align: center;
+      min-width: 110px;
+      opacity: 0.4;
+      transition: all 0.25s;
+    }
+    .badge-item.earned { opacity: 1; border-color: #fbbf24; box-shadow: 0 0 12px rgba(251,191,36,0.4); }
+    .badge-item .badge-icon { font-size: 1.8em; }
+    .badge-item .badge-name { font-size: 0.75em; color: #94a3b8; margin-top: 4px; }
+    .badge-item.earned .badge-name { color: #fbbf24; }
+    .checkin-bar { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; max-width: 700px; margin: 0 auto 24px; }
+    .checkin-day {
+      width: 38px; height: 38px;
+      border-radius: 8px;
+      background: var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.75em; font-weight: 700; color: #64748b;
+      position: relative;
+      transition: all 0.25s;
+    }
+    .checkin-day.done { background: linear-gradient(135deg, #10b981, #34d399); color: white; box-shadow: 0 0 8px rgba(16,185,129,0.5); }
+    .checkin-day.today { border: 2px solid #fbbf24; color: #fbbf24; font-weight: 800; }
+    .quick-actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; max-width: 1200px; margin: 0 auto 40px; }
+    .qa-btn {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      color: var(--text-color);
+      border-radius: 12px;
+      padding: 14px 22px;
+      font-size: 0.95em;
+      cursor: pointer;
+      transition: all 0.25s;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .qa-btn:hover { background: var(--primary); border-color: var(--primary); color: white; transform: scale(1.05); }
   </style>
 </head>
 <body>
@@ -1376,11 +1528,35 @@
     <h1>Mogaland World</h1>
     <div class="subtitle">Playing, learning and Earning</div>
 
+    <!-- Live Price Ticker -->
+    <div class="price-ticker-wrap" id="priceTicker">
+      <div class="price-ticker-track" id="tickerTrack">
+        <span class="ticker-item"><span class="ticker-sym">BTC</span><span class="ticker-price" id="tk-BTC">—</span></span>
+        <span class="ticker-item"><span class="ticker-sym">ETH</span><span class="ticker-price" id="tk-ETH">—</span></span>
+        <span class="ticker-item"><span class="ticker-sym">BNB</span><span class="ticker-price" id="tk-BNB">—</span></span>
+        <span class="ticker-item"><span class="ticker-sym">SOL</span><span class="ticker-price" id="tk-SOL">—</span></span>
+        <span class="ticker-item"><span class="ticker-sym">AVAX</span><span class="ticker-price" id="tk-AVAX">—</span></span>
+        <span class="ticker-item"><span class="ticker-sym">LINK</span><span class="ticker-price" id="tk-LINK">—</span></span>
+        <span class="ticker-item"><span class="ticker-sym">DOT</span><span class="ticker-price" id="tk-DOT">—</span></span>
+        <span class="ticker-item"><span class="ticker-sym">MATIC</span><span class="ticker-price" id="tk-MATIC">—</span></span>
+        <!-- duplicate for seamless loop -->
+        <span class="ticker-item"><span class="ticker-sym">BTC</span><span class="ticker-price" id="tk-BTC2">—</span></span>
+        <span class="ticker-item"><span class="ticker-sym">ETH</span><span class="ticker-price" id="tk-ETH2">—</span></span>
+        <span class="ticker-item"><span class="ticker-sym">BNB</span><span class="ticker-price" id="tk-BNB2">—</span></span>
+        <span class="ticker-item"><span class="ticker-sym">SOL</span><span class="ticker-price" id="tk-SOL2">—</span></span>
+        <span class="ticker-item"><span class="ticker-sym">AVAX</span><span class="ticker-price" id="tk-AVAX2">—</span></span>
+        <span class="ticker-item"><span class="ticker-sym">LINK</span><span class="ticker-price" id="tk-LINK2">—</span></span>
+        <span class="ticker-item"><span class="ticker-sym">DOT</span><span class="ticker-price" id="tk-DOT2">—</span></span>
+        <span class="ticker-item"><span class="ticker-sym">MATIC</span><span class="ticker-price" id="tk-MATIC2">—</span></span>
+      </div>
+    </div>
+
     <div class="content" id="content">
       <p>Select an option below to explore the simulator.</p>
     </div>
 
     <div class="nav-bar">
+      <button class="nav-btn" onclick="showSection('home', event)">🏠 Home</button>
       <button class="nav-btn" onclick="showSection('learning', event)">Learning</button>
       <button class="nav-btn" onclick="showSection('game', event)">🎮 Game</button>
       <button class="nav-btn" onclick="showSection('market', event)">Market Prediction</button>
@@ -1388,6 +1564,9 @@
       <button class="nav-btn" onclick="showSection('bridge', event)">Bridge</button>
       <button class="nav-btn" onclick="showSection('nft', event)">NFT Staking</button>
     </div>
+
+    <!-- Daily Check-In Floating Button -->
+    <button id="dailyCheckinBtn" onclick="claimDailyCheckin()" title="Daily Check-In Reward">🗓️ Daily Check-In</button>
 
     <!-- Profile Slide-in Panel -->
     <div id="profileSlidePanel" class="profile-slide-panel hidden">
@@ -2233,6 +2412,10 @@
       if (typeof startSportsAutoUpdate === 'function') {
         startSportsAutoUpdate();
       }
+
+      // Start price ticker
+      updatePriceTicker();
+      setInterval(updatePriceTicker, 60000);
     }
     
     // Wallet connection functions - need to be global for onclick handlers
@@ -2350,6 +2533,12 @@
         
         // Load user trading volume data
         loadUserTradingVolume();
+
+        // Load check-in, achievements
+        loadCheckinData();
+        loadAchievements();
+        updateCheckinButton();
+        checkAllAchievements();
         
         // Fetch real balances if function is available (may not be defined yet if startApp() hasn't completed)
         if (typeof fetchRealBalances === 'function') {
@@ -4391,6 +4580,164 @@
     const VOLUME_TO_REWARD_RATE = 0.001; // 0.1% of trading volume converted to claimable USDC
     const LEARNING_POINTS_TO_USDC_RATE = 0.001; // 1 point = 0.001 USDC (1000 points = 1 USDC)
 
+    // ===== DAILY CHECK-IN & STREAK =====
+    let dailyStreak = 0;
+    let totalCheckIns = 0;
+    let lastCheckInDate = null; // ISO date string YYYY-MM-DD
+
+    function loadCheckinData() {
+      if (!userAddress) return;
+      dailyStreak  = parseInt(localStorage.getItem(`streak_${userAddress}`) || '0', 10);
+      totalCheckIns = parseInt(localStorage.getItem(`checkIns_${userAddress}`) || '0', 10);
+      lastCheckInDate = localStorage.getItem(`lastCheckIn_${userAddress}`) || null;
+    }
+
+    function saveCheckinData() {
+      if (!userAddress) return;
+      localStorage.setItem(`streak_${userAddress}`, dailyStreak.toString());
+      localStorage.setItem(`checkIns_${userAddress}`, totalCheckIns.toString());
+      if (lastCheckInDate) localStorage.setItem(`lastCheckIn_${userAddress}`, lastCheckInDate);
+    }
+
+    function getTodayISO() {
+      return new Date().toISOString().slice(0, 10);
+    }
+
+    function canCheckinToday() {
+      return lastCheckInDate !== getTodayISO();
+    }
+
+    function updateCheckinButton() {
+      const btn = document.getElementById('dailyCheckinBtn');
+      if (!btn) return;
+      if (!userAddress) { btn.style.display = 'none'; return; }
+      if (canCheckinToday()) {
+        btn.style.display = 'block';
+        const streakBonus = Math.min(dailyStreak + 1, 7) * 50;
+        btn.textContent = `🗓️ Check-In (+${streakBonus} pts)`;
+      } else {
+        btn.style.display = 'none';
+      }
+    }
+
+    window.claimDailyCheckin = function() {
+      if (!userAddress) return showNotification('Please connect wallet first', true);
+      if (!canCheckinToday()) return showNotification('Already checked in today! Come back tomorrow 🌅', true);
+
+      const today = getTodayISO();
+      const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+      if (lastCheckInDate === yesterday) {
+        dailyStreak++;
+      } else {
+        dailyStreak = 1; // reset streak if missed a day
+      }
+      lastCheckInDate = today;
+      totalCheckIns++;
+
+      const bonus = Math.min(dailyStreak, 7) * 50;
+      mogalandPoints += bonus;
+      saveMogalandPoints();
+      saveCheckinData();
+
+      showNotification(`✅ Day ${dailyStreak} streak! +${bonus} bonus points earned 🔥`, false);
+      showAchievementToast('🗓️ Daily Check-In!', `Streak: ${dailyStreak} day${dailyStreak > 1 ? 's' : ''} — +${bonus} pts`);
+
+      updateCheckinButton();
+      updatePointDisplay();
+      checkAllAchievements();
+    };
+
+    // ===== ACHIEVEMENT SYSTEM =====
+    const ACHIEVEMENTS = [
+      { id: 'first_login',   icon: '🚀', name: 'First Login',      desc: 'Connect wallet or log in',         check: () => !!userAddress },
+      { id: 'first_trade',   icon: '📈', name: 'First Trade',       desc: 'Open your first market position',  check: () => (userTradingVolume.total || 0) > 0 },
+      { id: 'first_learn',   icon: '📚', name: 'First Lesson',      desc: 'Answer your first quiz question',  check: () => completedTasks >= 1 },
+      { id: 'streak_3',      icon: '🔥', name: '3-Day Streak',      desc: 'Check in 3 days in a row',         check: () => dailyStreak >= 3 },
+      { id: 'streak_7',      icon: '💎', name: 'Week Warrior',      desc: 'Check in 7 days in a row',         check: () => dailyStreak >= 7 },
+      { id: 'points_1k',     icon: '⭐', name: 'Point Collector',   desc: 'Earn 1,000 Mogaland Points',       check: () => mogalandPoints >= 1000 },
+      { id: 'points_10k',    icon: '🌟', name: 'Point Master',      desc: 'Earn 10,000 Mogaland Points',      check: () => mogalandPoints >= 10000 },
+      { id: 'tasks_10',      icon: '✅', name: 'Learner',           desc: 'Complete 10 quiz tasks',           check: () => completedTasks >= 10 },
+      { id: 'tasks_100',     icon: '🏅', name: 'Knowledge Expert',  desc: 'Complete all 100 tasks',           check: () => completedTasks >= 100 },
+      { id: 'volume_100',    icon: '💰', name: 'Active Trader',     desc: 'Trade $100 USDC volume',           check: () => (userTradingVolume.total || 0) >= 100 },
+      { id: 'volume_1k',     icon: '🤑', name: 'Volume King',       desc: 'Trade $1,000 USDC volume',         check: () => (userTradingVolume.total || 0) >= 1000 },
+      { id: 'nft_staked',    icon: '🏦', name: 'NFT Staker',        desc: 'Stake your first NFT',             check: () => stakedNFTsData.length >= 1 },
+      { id: 'checkins_7',    icon: '📅', name: 'Consistent',        desc: '7 total check-ins',                check: () => totalCheckIns >= 7 },
+      { id: 'checkins_30',   icon: '🗓️', name: 'Dedicated',         desc: '30 total check-ins',               check: () => totalCheckIns >= 30 },
+    ];
+
+    let earnedAchievements = new Set();
+
+    function loadAchievements() {
+      if (!userAddress) return;
+      const saved = localStorage.getItem(`achievements_${userAddress}`);
+      if (saved) {
+        try { earnedAchievements = new Set(JSON.parse(saved)); } catch(e) { earnedAchievements = new Set(); }
+      }
+    }
+
+    function saveAchievements() {
+      if (!userAddress) return;
+      localStorage.setItem(`achievements_${userAddress}`, JSON.stringify([...earnedAchievements]));
+    }
+
+    function showAchievementToast(title, desc) {
+      const toast = document.createElement('div');
+      toast.className = 'achievement-toast';
+      toast.innerHTML = `<div class="ach-title">🏆 ${title}</div><div class="ach-desc">${desc}</div>`;
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 5000);
+    }
+
+    function checkAllAchievements() {
+      if (!userAddress) return;
+      ACHIEVEMENTS.forEach(ach => {
+        if (!earnedAchievements.has(ach.id) && ach.check()) {
+          earnedAchievements.add(ach.id);
+          saveAchievements();
+          showAchievementToast(`${ach.icon} ${ach.name}`, ach.desc);
+        }
+      });
+    }
+
+    // ===== PRICE TICKER UPDATER =====
+    async function updatePriceTicker() {
+      try {
+        const ids = 'bitcoin,ethereum,binancecoin,solana,avalanche-2,chainlink,polkadot,matic-network';
+        const r = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true`);
+        if (!r.ok) {
+          if (r.status === 429) console.log('[Ticker] CoinGecko rate limited – will retry next cycle');
+          return;
+        }
+        const data = await r.json();
+        const map = {
+          BTC:   data['bitcoin'],
+          ETH:   data['ethereum'],
+          BNB:   data['binancecoin'],
+          SOL:   data['solana'],
+          AVAX:  data['avalanche-2'],
+          LINK:  data['chainlink'],
+          DOT:   data['polkadot'],
+          MATIC: data['matic-network']
+        };
+        Object.entries(map).forEach(([sym, d]) => {
+          if (!d) return;
+          const price = d.usd;
+          const change = d.usd_24h_change || 0;
+          const isPositive = change >= 0;
+          const changeClass = isPositive ? 'ticker-up' : 'ticker-down';
+          const changeStr = (isPositive ? '+' : '') + change.toFixed(2) + '%';
+          const priceStr = price >= 1000 ? `$${price.toLocaleString('en-US', {maximumFractionDigits: 0})}` : `$${price.toFixed(2)}`;
+          const html = `${priceStr} <span class="${changeClass}">${changeStr}</span>`;
+          const el1 = document.getElementById(`tk-${sym}`);
+          const el2 = document.getElementById(`tk-${sym}2`);
+          if (el1) el1.innerHTML = html;
+          if (el2) el2.innerHTML = html;
+        });
+      } catch(e) {
+        // Silently fail - ticker is decorative
+      }
+    }
+
     function updateTradingVolume(category, volumeUSDC) {
       if (!userAddress) return;
       
@@ -4412,6 +4759,7 @@
       saveUserTradingVolume();
       
       console.log(`[Volume] ${category}: +${volumeUSDC.toFixed(2)} USDC | Total: ${userTradingVolume.total.toFixed(2)} USDC | Claimable: ${volumeRewardsClaimable.toFixed(4)} USDC`);
+      checkAllAchievements();
     }
 
     function saveUserTradingVolume() {
@@ -5356,7 +5704,108 @@
       const content = document.getElementById('content');
       content.innerHTML = '';
 
-      if (id === 'learning') {
+      if (id === 'home') {
+        // Build achievements HTML
+        const badgesHTML = ACHIEVEMENTS.map(a => `
+          <div class="badge-item ${earnedAchievements.has(a.id) ? 'earned' : ''}">
+            <div class="badge-icon">${a.icon}</div>
+            <div class="badge-name">${a.name}</div>
+          </div>
+        `).join('');
+
+        // Build 7-day check-in calendar — mark only the consecutive streak days back from lastCheckInDate
+        const today = getTodayISO();
+        // Build a Set of ISO dates that are part of the current streak
+        const streakDates = new Set();
+        if (lastCheckInDate && dailyStreak > 0) {
+          const base = new Date(lastCheckInDate + 'T00:00:00');
+          for (let s = 0; s < dailyStreak && s < 7; s++) {
+            const d = new Date(base.getTime() - s * 86400000);
+            streakDates.add(d.toISOString().slice(0, 10));
+          }
+        }
+        const days = Array.from({length: 7}, (_, i) => {
+          const d = new Date(Date.now() - (6 - i) * 86400000);
+          const iso = d.toISOString().slice(0, 10);
+          const label = d.toLocaleDateString('en-US', {weekday:'short'}).slice(0,3);
+          const isDone = streakDates.has(iso);
+          const isToday = iso === today;
+          return `<div class="checkin-day ${isDone ? 'done' : ''} ${isToday ? 'today' : ''}" title="${iso}">${label}</div>`;
+        }).join('');
+
+        const totalRewards = (calculateTotalRewards ? calculateTotalRewards() : 0) + (volumeRewardsClaimable || 0) + (mogalandPoints * LEARNING_POINTS_TO_USDC_RATE);
+        const earnedCount = ACHIEVEMENTS.filter(a => earnedAchievements.has(a.id)).length;
+
+        content.innerHTML = `
+          <div style="max-width:1200px; margin:0 auto; padding:0 16px 60px; text-align:left;">
+            <h2 style="text-align:center; color:#60a5fa; margin-bottom:6px;">🏠 Dashboard</h2>
+            <p style="text-align:center; color:#94a3b8; margin-bottom:24px; font-size:0.95em;">Welcome back, ${userAddress ? userAddress.slice(0,8)+'…' : 'Explorer'}!</p>
+
+            <!-- Key Stats -->
+            <div class="dash-grid">
+              <div class="dash-card">
+                <div class="dc-icon">⭐</div>
+                <div class="dc-label">Points</div>
+                <div class="dc-value" style="color:#f59e0b;">${mogalandPoints.toLocaleString()}</div>
+              </div>
+              <div class="dash-card">
+                <div class="dc-icon">📚</div>
+                <div class="dc-label">Tasks Done</div>
+                <div class="dc-value" style="color:#60a5fa;">${completedTasks}/100</div>
+              </div>
+              <div class="dash-card">
+                <div class="dc-icon">💰</div>
+                <div class="dc-label">Claimable</div>
+                <div class="dc-value" style="color:#10b981;">${totalRewards.toFixed(4)} USDC</div>
+              </div>
+              <div class="dash-card">
+                <div class="dc-icon">📊</div>
+                <div class="dc-label">Volume</div>
+                <div class="dc-value" style="color:#c084fc;">${(userTradingVolume.total || 0).toFixed(2)} USDC</div>
+              </div>
+              <div class="dash-card">
+                <div class="streak-flame">🔥</div>
+                <div class="dc-label">Current Streak</div>
+                <div class="dc-value" style="color:#ef4444;">${dailyStreak} day${dailyStreak !== 1 ? 's' : ''}</div>
+              </div>
+              <div class="dash-card">
+                <div class="dc-icon">🏆</div>
+                <div class="dc-label">Badges Earned</div>
+                <div class="dc-value" style="color:#fbbf24;">${earnedCount}/${ACHIEVEMENTS.length}</div>
+              </div>
+            </div>
+
+            <!-- Daily Check-In -->
+            <div class="dash-section-title">🗓️ Weekly Check-In</div>
+            <div class="checkin-bar">${days}</div>
+            ${canCheckinToday() ? `
+              <div style="text-align:center; margin-bottom:24px;">
+                <button class="btn-primary" style="max-width:280px; background:linear-gradient(135deg,#f59e0b,#ef4444); font-size:1.05em;" onclick="claimDailyCheckin()">
+                  🗓️ Claim Daily Reward (+${Math.min(dailyStreak+1,7)*50} pts)
+                </button>
+              </div>
+            ` : `
+              <p style="text-align:center; color:#10b981; margin-bottom:24px;">✅ Checked in today! Come back tomorrow for your streak bonus.</p>
+            `}
+
+            <!-- Achievements -->
+            <div class="dash-section-title">🏅 Achievements (${earnedCount}/${ACHIEVEMENTS.length})</div>
+            <div class="badge-grid">${badgesHTML}</div>
+
+            <!-- Quick Actions -->
+            <div class="dash-section-title">⚡ Quick Actions</div>
+            <div class="quick-actions">
+              <button class="qa-btn" onclick="showSection('learning',event)">📚 Start Learning</button>
+              <button class="qa-btn" onclick="showSection('market',event)">📈 Trade Now</button>
+              <button class="qa-btn" onclick="showSection('nft',event)">🏦 Stake NFTs</button>
+              <button class="qa-btn" onclick="showSection('swap',event)">🔄 Swap Tokens</button>
+              <button class="qa-btn" onclick="showSection('game',event)">🎮 Play Game</button>
+              <button class="qa-btn" onclick="showVolumeLeaderboard()">🏆 Leaderboard</button>
+            </div>
+          </div>
+        `;
+      }
+      else if (id === 'learning') {
         content.innerHTML = `
           <div class="flex-container">
             <div class="progress-box">
@@ -7965,6 +8414,7 @@
           false
         );
         console.log(`[NFT] Staked ${nftCount} NFTs. Approval: ${approveTx.hash}, Stake: ${stakeTx.hash}`);
+        checkAllAchievements();
         
       } catch (error) {
         console.error('[NFT] Staking error:', error);
@@ -8579,6 +9029,7 @@
         updatePointDisplay();
         updateProgressDisplay();
         updateAnswerHistoryDisplay();
+        checkAllAchievements();
         
         // Move to next question
         currentQuestionIndex++;
