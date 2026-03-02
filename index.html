@@ -1292,6 +1292,7 @@
       white-space: nowrap;
       animation: tickerScroll 40s linear infinite;
       padding: 0 20px;
+      will-change: transform;
     }
     .price-ticker-track:hover { animation-play-state: paused; }
     @keyframes tickerScroll {
@@ -4833,11 +4834,20 @@
           const changeClass = isPositive ? 'ticker-up' : 'ticker-down';
           const changeStr = (isPositive ? '+' : '') + change.toFixed(2) + '%';
           const priceStr = price >= 1000 ? `$${price.toLocaleString('en-US', {maximumFractionDigits: 0})}` : `$${price.toFixed(2)}`;
-          const html = `${priceStr} <span class="${changeClass}">${changeStr}</span>`;
-          const el1 = document.getElementById(`tk-${sym}`);
-          const el2 = document.getElementById(`tk-${sym}2`);
-          if (el1) el1.innerHTML = html;
-          if (el2) el2.innerHTML = html;
+          [document.getElementById(`tk-${sym}`), document.getElementById(`tk-${sym}2`)].forEach(el => {
+            if (!el) return;
+            // Update in-place to avoid resetting the parent scroll animation
+            const changeSpan = el.querySelector('span');
+            if (changeSpan) {
+              const priceNode = Array.from(el.childNodes).find(n => n.nodeType === Node.TEXT_NODE);
+              if (priceNode) priceNode.textContent = priceStr + '\u00a0';
+              else el.insertBefore(document.createTextNode(priceStr + '\u00a0'), changeSpan);
+              changeSpan.className = changeClass;
+              changeSpan.textContent = changeStr;
+            } else {
+              el.innerHTML = `${priceStr}\u00a0<span class="${changeClass}">${changeStr}</span>`;
+            }
+          });
         });
       } catch(e) {
         // Silently fail - ticker is decorative
@@ -9803,6 +9813,7 @@
       box-shadow: 0 8px 40px rgba(0,0,0,0.5);
       overflow: hidden;
       transition: opacity 0.2s, transform 0.2s;
+      touch-action: none;
     }
     #chatbotWindow.chatbot-hidden { opacity: 0; pointer-events: none; transform: translateY(16px) scale(0.97); }
     .chatbot-header {
@@ -9812,6 +9823,8 @@
       align-items: center;
       gap: 10px;
       flex-shrink: 0;
+      cursor: move;
+      user-select: none;
     }
     .chatbot-header-icon { font-size: 1.4em; }
     .chatbot-header-title { font-weight: bold; color: white; font-size: 1em; flex: 1; }
@@ -9912,30 +9925,84 @@
         { keys: ['swap','exchange','trade token','token swap'], answer: '🔄 <b>Swap</b>: Go to the <b>Swap</b> tab to exchange tokens (ETH, WBTC, USDC, etc.) on Sepolia testnet. Select your input/output tokens, enter an amount, and click Swap. Gas fees are charged in ETH.' },
         { keys: ['bridge','cross chain','cross-chain','multichain'], answer: '🌉 <b>Bridge</b>: Use the <b>Bridge</b> tab to transfer tokens between networks (e.g. Sepolia ↔ Base ↔ EDU Chain). Select from/to chains, token, and amount, then click Bridge Now.' },
         { keys: ['nft','staking','stake nft','unstake','claim reward'], answer: '🏦 <b>NFT Staking</b>: In the <b>NFT Staking</b> tab you can stake your MOGA NFTs to earn rewards. Select NFTs, click Stake, wait for rewards to accumulate, then Claim. Rarer NFTs earn more.' },
-        { keys: ['learning','learn','quiz','study','course','skill','education'], answer: '🎓 <b>Learning</b>: The <b>Learning</b> tab has blockchain quizzes and courses. Answer correctly to earn Mogaland Points, which you can convert to USDC rewards.' },
+        { keys: ['learning','learn','quiz','study','course','skill','education','belajar'], answer: '🎓 <b>Learning</b>: The <b>Learning</b> tab has blockchain quizzes and courses. Answer correctly to earn Mogaland Points, which you can convert to USDC rewards.' },
         { keys: ['market','prediction','bet','trading','leverage','forex','stock','sports'], answer: '📈 <b>Market Prediction</b>: Predict price movements for crypto, stocks, commodities, forex, or sports. Use leverage (1×–100×) and trade USDC. Open and close positions to earn or lose based on real price changes.' },
-        { keys: ['game','moga world','open world','rpg','play game'], answer: '🎮 <b>Moga World</b>: An open-world blockchain RPG. Connect your wallet to play. Work, learn skills, earn USDC, travel between City 1 (Moga City) and City 2 (Coastal City), and compete in the multiplier game!' },
-        { keys: ['wallet','connect wallet','metamask','okx','trust wallet'], answer: '🔗 <b>Wallet</b>: Click the wallet icon to connect MetaMask, OKX, or Trust Wallet. You\'ll need a Sepolia ETH wallet for full functionality. You can also login via Email or X (Twitter).' },
-        { keys: ['usdc','balance','coin','money','fund'], answer: '💵 <b>USDC</b>: The in-game currency. Earn by working, winning trades, or claiming rewards. Use it for skills, housing, items, and more in Moga World. On-chain USDC is on Sepolia testnet.' },
-        { keys: ['reward','earn','income','salary','wage'], answer: '💰 <b>Rewards</b>: You can earn through: NFT Staking rewards, Trading Volume rewards, Learning Points (converted to USDC), in-game work salaries, and Casino winnings. All rewards are claimable on-chain.' },
-        { keys: ['point','mogaland point','learning point'], answer: '⭐ <b>Mogaland Points</b>: Earned by answering quiz questions correctly in the Learning section. Accumulate points and convert them to USDC at the Learning tab.' },
+        { keys: ['game','moga world','open world','rpg','play game','main','bermain'], answer: '🎮 <b>Moga World</b>: An open-world blockchain RPG. Connect your wallet to play. Work, learn skills, earn USDC, travel between City 1 (Moga City) and City 2 (Coastal City), and compete in the multiplier game!' },
+        { keys: ['wallet','connect wallet','metamask','okx','trust wallet','dompet'], answer: '🔗 <b>Wallet</b>: Click the wallet icon to connect MetaMask, OKX, or Trust Wallet. You\'ll need a Sepolia ETH wallet for full functionality. You can also login via Email or X (Twitter).' },
+        { keys: ['usdc','balance','coin','money','fund','saldo'], answer: '💵 <b>USDC</b>: The in-game currency. Earn by working, winning trades, or claiming rewards. Use it for skills, housing, items, and more in Moga World. On-chain USDC is on Sepolia testnet.' },
+        { keys: ['reward','earn','income','salary','wage','hadiah','penghasilan'], answer: '💰 <b>Rewards</b>: You can earn through: NFT Staking rewards, Trading Volume rewards, Learning Points (converted to USDC), in-game work salaries, and Casino winnings. All rewards are claimable on-chain.' },
+        { keys: ['point','mogaland point','learning point','poin'], answer: '⭐ <b>Mogaland Points</b>: Earned by answering quiz questions correctly in the Learning section. Accumulate points and convert them to USDC at the Learning tab.' },
         { keys: ['volume','trading volume','leaderboard'], answer: '📊 <b>Trading Volume</b>: Your total trade volume across all markets. Higher volume earns you USDC rewards. Check the leaderboard in the NFT Staking section.' },
-        { keys: ['gas','fee','transaction fee'], answer: '⛽ <b>Gas Fees</b>: Every on-chain action (swap, bridge, flight, work) requires a small gas fee in ETH (about 0.00001 ETH). Make sure your wallet has Sepolia ETH.' },
-        { keys: ['profile','account','address'], answer: '👤 <b>Profile</b>: Click the Profile button in the top-right corner to view your wallet addresses, ETH and USDC balances, and transaction history.' },
-        { keys: ['transaction','history','tx','hash'], answer: '📋 <b>Transactions</b>: All on-chain transactions are recorded with their hash. You can view them in your Profile panel or on the Sepolia explorer.' },
-        { keys: ['network','chain','sepolia','testnet','mainnet'], answer: '🌐 <b>Networks</b>: Mogaland currently operates on Sepolia testnet. Use the network switcher in the top bar to switch between supported networks. Get free Sepolia ETH from a faucet.' },
+        { keys: ['gas','fee','transaction fee','biaya'], answer: '⛽ <b>Gas Fees</b>: Every on-chain action (swap, bridge, flight, work) requires a small gas fee in ETH (about 0.00001 ETH). Make sure your wallet has Sepolia ETH.' },
+        { keys: ['profile','account','address','profil','akun'], answer: '👤 <b>Profile</b>: Click the Profile button in the top-right corner to view your wallet addresses, ETH and USDC balances, and transaction history.' },
+        { keys: ['transaction','history','tx','hash','transaksi'], answer: '📋 <b>Transactions</b>: All on-chain transactions are recorded with their hash. You can view them in your Profile panel or on the Sepolia explorer.' },
+        { keys: ['network','chain','sepolia','testnet','mainnet','jaringan'], answer: '🌐 <b>Networks</b>: Mogaland currently operates on Sepolia testnet. Use the network switcher in the top bar to switch between supported networks. Get free Sepolia ETH from a faucet.' },
         { keys: ['faucet','testnet eth','get eth','free eth'], answer: '🚰 <b>Sepolia Faucet</b>: You need Sepolia ETH to pay gas fees. Get free test ETH at: <a href="https://sepoliafaucet.com" target="_blank" style="color:#60a5fa;">sepoliafaucet.com</a> or <a href="https://faucet.quicknode.com/ethereum/sepolia" target="_blank" style="color:#60a5fa;">QuickNode Faucet</a>.' },
-        { keys: ['casino','multiplier','gamble','bet casino'], answer: '🎰 <b>Casino</b>: Located inside Moga City. Play the multiplier game against up to 100 players. Place bets and watch the multiplier grow — cash out before it crashes to win big!' },
-        { keys: ['car','car nft','drive','vehicle'], answer: '🚗 <b>Car NFT</b>: Available in Coastal City (City 2). Buy a Car NFT at the Car Shop. Drive on city roads. Fill up at the Gas Station. Cars are stored as NFTs in your wallet.' },
-        { keys: ['train','halte','station'], answer: '🚂 <b>Train</b>: Available in City 2. Board at Train Haltes around the city. The train circles the city automatically — it\'s free to ride!' },
-        { keys: ['boat','ocean','dock'], answer: '⛵ <b>Boat</b>: Available at the Beach dock in City 2. Board the boat to cruise around the ocean.' },
-        { keys: ['help','how to','start','begin','what is mogaland','about','mogaland'], answer: '👋 <b>Welcome to Mogaland!</b> This is a blockchain simulator portal. You can: 💱 Swap/Bridge tokens · 📈 Trade markets · 🎓 Learn blockchain · 🏦 Stake NFTs · 🎮 Play Moga World RPG. Connect your wallet to get started!' },
+        { keys: ['casino','multiplier','gamble','bet casino','kasino'], answer: '🎰 <b>Casino</b>: Located inside Moga City. Play the multiplier game against up to 100 players. Place bets and watch the multiplier grow — cash out before it crashes to win big!' },
+        { keys: ['car','car nft','drive','vehicle','mobil'], answer: '🚗 <b>Car NFT</b>: Available in Coastal City (City 2). Buy a Car NFT at the Car Shop. Drive on city roads. Fill up at the Gas Station. Cars are stored as NFTs in your wallet.' },
+        { keys: ['train','halte','station','kereta'], answer: '🚂 <b>Train</b>: Available in City 2. Board at Train Haltes around the city. The train circles the city automatically — it\'s free to ride!' },
+        { keys: ['boat','ocean','dock','kapal','perahu'], answer: '⛵ <b>Boat</b>: Available at the Beach dock in City 2. Board the boat to cruise around the ocean.' },
+        { keys: ['checkin','check-in','daily','streak','login bonus'], answer: '📅 <b>Daily Check-in</b>: Click the 📅 button on the main page to check in every day. Streak bonuses increase your daily USDC reward. Don\'t break your streak!' },
+        { keys: ['dark','light','theme','mode','tampilan'], answer: '🌙 <b>Theme</b>: Toggle between dark and light mode using the 🌙/☀️ button in the top right. Your preference is saved automatically.' },
+        { keys: ['error','problem','bug','issue','eror','masalah','gagal','tidak bisa'], answer: '🛠️ <b>Having trouble?</b> Try refreshing the page or reconnecting your wallet. If the issue persists, please contact our operator team via <b>Discord</b> or <b>Telegram</b> for assistance.' },
+        { keys: ['contact','operator','support','discord','telegram','dc','tele','hubungi','bantuan'], answer: '📞 <b>Contact & Support</b>: Need help? Reach our operator team:<br>💬 <b>Discord</b>: Join our Discord server for community support and announcements.<br>📱 <b>Telegram</b>: Message our Telegram support channel for direct help.<br>Links are available in the portal footer or community pages.' },
+        { keys: ['help','how to','start','begin','what is mogaland','about','mogaland','apa itu','cara'], answer: '👋 <b>Welcome to Mogaland!</b> This is a blockchain simulator portal. You can: 💱 Swap/Bridge tokens · 📈 Trade markets · 🎓 Learn blockchain · 🏦 Stake NFTs · 🎮 Play Moga World RPG. Connect your wallet to get started! Need help? Ask me anything or contact our operator via Discord/Telegram.' },
       ];
 
-      const SUGGESTIONS = ['How do I swap?','What is Moga World?','How to fly to City 2?','How to earn rewards?','What is NFT Staking?'];
+      const SUGGESTIONS = ['How do I swap?','What is Moga World?','How to fly to City 2?','How to earn rewards?','What is NFT Staking?','Contact support'];
 
       let chatOpen = false;
       let chatInitialized = false;
+
+      // ---- Drag state ----
+      let _drag = { active: false, startX: 0, startY: 0, winX: 0, winY: 0 };
+
+      function _chatDragStart(e) {
+        if (e.target.closest('.chatbot-header-close')) return;
+        const win = document.getElementById('chatbotWindow');
+        const rect = win.getBoundingClientRect();
+        win.style.transition = 'none';
+        win.style.bottom = 'auto';
+        win.style.right = 'auto';
+        win.style.left = rect.left + 'px';
+        win.style.top = rect.top + 'px';
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        _drag = { active: true, startX: clientX, startY: clientY, winX: rect.left, winY: rect.top };
+        e.preventDefault();
+      }
+      function _chatDragMove(e) {
+        if (!_drag.active) return;
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        const win = document.getElementById('chatbotWindow');
+        if (!win) return;
+        const maxLeft = Math.max(0, window.innerWidth  - win.offsetWidth);
+        const maxTop  = Math.max(0, window.innerHeight - win.offsetHeight);
+        const newLeft = Math.max(0, Math.min(_drag.winX + clientX - _drag.startX, maxLeft));
+        const newTop  = Math.max(0, Math.min(_drag.winY + clientY - _drag.startY, maxTop));
+        win.style.left = newLeft + 'px';
+        win.style.top  = newTop  + 'px';
+      }
+      function _chatDragEnd() {
+        if (!_drag.active) return;
+        _drag.active = false;
+        const win = document.getElementById('chatbotWindow');
+        if (win) win.style.transition = '';
+      }
+
+      // Attach drag handlers once DOM ready
+      document.addEventListener('DOMContentLoaded', function() {
+        const header = document.querySelector('.chatbot-header');
+        if (header) {
+          header.addEventListener('mousedown', _chatDragStart);
+          header.addEventListener('touchstart', _chatDragStart, { passive: false });
+        }
+        document.addEventListener('mousemove', _chatDragMove);
+        document.addEventListener('touchmove', _chatDragMove);
+        document.addEventListener('mouseup', _chatDragEnd);
+        document.addEventListener('touchend', _chatDragEnd);
+      });
 
       function toggleChatbot() {
         chatOpen = !chatOpen;
@@ -9954,7 +10021,7 @@
       window.toggleChatbot = toggleChatbot;
 
       function initChat() {
-        appendBotMessage('👋 Hi! I\'m <b>Moga AI</b>, your Mogaland portal assistant. Ask me anything — swapping, bridging, the game, rewards, and more!');
+        appendBotMessage('👋 Hi! I\'m <b>Moga AI</b>, your Mogaland portal assistant. Ask me anything — swapping, bridging, the game, rewards, and more!<br><small style="opacity:0.7">💬 Need live help? Contact our operator via <b>Discord</b> or <b>Telegram</b>.</small>');
         renderSuggestions(SUGGESTIONS);
       }
 
@@ -9988,10 +10055,14 @@
 
       function getBotAnswer(text) {
         const lower = text.toLowerCase();
+        // Score each KB entry by number of matching keywords
+        let bestScore = 0, bestAnswer = null;
         for (const entry of CHATBOT_KB) {
-          if (entry.keys.some(k => lower.includes(k))) return entry.answer;
+          const score = entry.keys.filter(k => lower.includes(k)).length;
+          if (score > bestScore) { bestScore = score; bestAnswer = entry.answer; }
         }
-        return '🤔 I\'m not sure about that. Try asking about: swapping, bridging, NFT staking, the game, flying between cities, rewards, or how to earn USDC!';
+        if (bestAnswer) return bestAnswer;
+        return '🤔 I\'m not sure about that. Try asking about: swapping, bridging, NFT staking, the game, flying between cities, rewards, or how to earn USDC!<br><small style="opacity:0.7">Still confused? Contact our operator via <b>Discord</b> or <b>Telegram</b> for direct support.</small>';
       }
 
       function sendChatMessage() {
