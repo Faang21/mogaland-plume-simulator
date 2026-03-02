@@ -3049,7 +3049,7 @@ function updatePlane(dtS){
     _phaserScene.me.x=planeState.x;_phaserScene.me.y=planeState.y+30;
   }
 }
-function boardPlane(){
+async function boardPlane(){
   if(currentCity!==2)return logChat('[Airport] Board the plane in Coastal City (City 2).',false,'#f87171');
   if(planeState.passengerBoarded)return logChat('[Airport] You are already on the plane!',false,'#fbbf24');
   if(planeState.flying)return logChat('[Airport] ✈️ Plane is in the air — wait for it to land.',false,'#fbbf24');
@@ -3057,10 +3057,17 @@ function boardPlane(){
   if(S.coins<FLIGHT_COST_USD)return logChat('[✈️ Airport] Need $'+FLIGHT_COST_USD+' USD for the flight. You have $'+S.coins+'.',false,'#f87171');
   S.coins-=FLIGHT_COST_USD;
   updateHUD();
-  logChat('[✈️ Airport] Departure: Coastal City → Moga City (City 1)… 🛫',false,'#22c55e');
+  logChat('[✈️ Airport] 🔐 Confirm flight payment on blockchain to travel Coastal City → Moga City (City 1)…',false,'#fbbf24');
+  const flightTx=await treasuryPay('FLIGHT:city2_to_city1:$'+FLIGHT_COST_USD+'USD',FLIGHT_COST_USD);
+  if(!flightTx){
+    S.coins+=FLIGHT_COST_USD;
+    updateHUD();
+    logChat('[✈️ Airport] ❌ Flight cancelled — blockchain payment not confirmed.',false,'#f87171');
+    return;
+  }
+  logChat('[✈️ Airport] ✅ Tx confirmed ('+flightTx.hash.slice(0,14)+'…) — Departure: Coastal City → Moga City (City 1)… 🛫',false,'#22c55e');
   if(WS.zone==='INTERIOR'){WS.zone='CITY';WS.key='';interior=null;stopMulGame();}
   switchCity(1,true);
-  treasuryPay('FLIGHT:city2_to_city1:$'+FLIGHT_COST_USD+'USD',FLIGHT_COST_USD);
 }
 window.boardPlane=boardPlane;
 function exitPlane(){
@@ -3069,16 +3076,23 @@ function exitPlane(){
   logChat('[✈️ Plane] Emergency exit — disembarked mid-flight. Stay safe!',false,'#f87171');
 }
 window.exitPlane=exitPlane;
-function flyToCity2(){
+async function flyToCity2(){
   if(currentCity!==1)return logChat('[Terminal] Already in Coastal City!',false,'#fbbf24');
   if(S.coins<FLIGHT_COST_USD)return logChat('[✈️ Airport] Need $'+FLIGHT_COST_USD+' USD for the flight. You have $'+S.coins+'.',false,'#f87171');
-  closeOutdoor();
-  if(WS.zone==='INTERIOR'){WS.zone='CITY';WS.key='';interior=null;stopMulGame();}
   S.coins-=FLIGHT_COST_USD;
   updateHUD();
-  logChat('[✈️ Airport] Departure: Moga City → Coastal City (City 2)… 🛫',false,'#22c55e');
+  logChat('[✈️ Airport] 🔐 Confirm flight payment on blockchain to travel Moga City → Coastal City (City 2)…',false,'#fbbf24');
+  const flightTx=await treasuryPay('FLIGHT:city1_to_city2:$'+FLIGHT_COST_USD+'USD',FLIGHT_COST_USD);
+  if(!flightTx){
+    S.coins+=FLIGHT_COST_USD;
+    updateHUD();
+    logChat('[✈️ Airport] ❌ Flight cancelled — blockchain payment not confirmed.',false,'#f87171');
+    return;
+  }
+  logChat('[✈️ Airport] ✅ Tx confirmed ('+flightTx.hash.slice(0,14)+'…) — Departure: Moga City → Coastal City (City 2)… 🛫',false,'#22c55e');
+  closeOutdoor();
+  if(WS.zone==='INTERIOR'){WS.zone='CITY';WS.key='';interior=null;stopMulGame();}
   switchCity(2,true);
-  treasuryPay('FLIGHT:city1_to_city2:$'+FLIGHT_COST_USD+'USD',FLIGHT_COST_USD);
 }
 window.flyToCity2=flyToCity2;
 
