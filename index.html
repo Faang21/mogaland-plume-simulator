@@ -3247,6 +3247,16 @@
             updateTradingBalance();
           }
         }
+
+        // Hide token rows with zero balance (show only tokens that have balance)
+        const ethRow = document.getElementById('ethExplorerLink');
+        const wbtcRow = document.getElementById('wbtcExplorerLink');
+        const usdcRow = document.getElementById('usdcExplorerLink');
+        const usdtRow = document.getElementById('usdtExplorerLink');
+        if (ethRow) ethRow.style.display = ethBalance > 0 ? '' : 'none';
+        if (wbtcRow) wbtcRow.style.display = wbtcBalance > 0 ? '' : 'none';
+        if (usdcRow) usdcRow.style.display = usdcBalance > 0 ? '' : 'none';
+        if (usdtRow) usdtRow.style.display = usdtBalance > 0 ? '' : 'none';
         
         console.log(`✅ Balances updated: ETH=${ethBalance}, USDC=${usdcBalance}, USDT=${usdtBalance}, GHO=${ghoBalance}, WBTC=${wbtcBalance}`);
       } catch (error) {
@@ -5885,6 +5895,12 @@
       document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
       if (event && event.target) event.target.classList.add('active');
 
+      // Clean up live position refresh interval when leaving market section
+      if (window.positionRefreshInterval) {
+        clearInterval(window.positionRefreshInterval);
+        window.positionRefreshInterval = null;
+      }
+
       const content = document.getElementById('content');
       content.innerHTML = '';
 
@@ -7715,6 +7731,8 @@
                     
                     // Update positions display
                     updatePositionsDisplay();
+                    // Update leverage info so pre-trade liquidation price reflects latest price
+                    updateLeverageInfo();
                   }
                 }
               } catch (error) {
@@ -7821,6 +7839,9 @@
         const leverageSelect = document.getElementById('leverageSelect');
         if (positionInput) positionInput.addEventListener('input', updateLeverageInfo);
         if (leverageSelect) leverageSelect.addEventListener('change', updateLeverageInfo);
+
+        // Start 1-second live P&L refresh for open positions (futures-style)
+        window.positionRefreshInterval = setInterval(updatePositionsDisplay, 1000);
 
         document.querySelectorAll('[data-tab]').forEach(btn => {
           btn.onclick = () => {
@@ -7963,6 +7984,12 @@
             <p style="text-align: center; color: #94a3b8; margin-bottom: 32px; font-size: 1.1em;">
               Transfer tokens between EDU Chain, ETH Sepolia and Base Sepolia
             </p>
+
+            ${!userAddress ? `
+              <div style="background: rgba(220,53,69,0.12); border: 1px solid #dc3545; color: #ffcccc; padding: 12px; border-radius: 10px; margin-bottom: 20px; text-align: center; font-size: 0.95em;">
+                Connect wallet to bridge assets
+              </div>
+            ` : ''}
 
             <div style="background: #13151f; border: 1px solid #1e2130; border-radius: 24px; padding: 32px 24px; box-shadow: 0 12px 48px rgba(0,0,0,0.7);">
               <div style="margin-bottom: 32px;">
