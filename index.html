@@ -4700,15 +4700,14 @@
     }
 
     // ===== PRICE TICKER UPDATER =====
-    const TICKER_COINS = {
-      BTC: 0, ETH: 0, BNB: 0, SOL: 0, AVAX: 0, LINK: 0, DOT: 0, MATIC: 0
-    };
-
     async function updatePriceTicker() {
       try {
         const ids = 'bitcoin,ethereum,binancecoin,solana,avalanche-2,chainlink,polkadot,matic-network';
         const r = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true`);
-        if (!r.ok) return;
+        if (!r.ok) {
+          if (r.status === 429) console.log('[Ticker] CoinGecko rate limited – will retry next cycle');
+          return;
+        }
         const data = await r.json();
         const map = {
           BTC:   data['bitcoin'],
@@ -4724,9 +4723,10 @@
           if (!d) return;
           const price = d.usd;
           const change = d.usd_24h_change || 0;
-          const changeClass = change >= 0 ? 'ticker-up' : 'ticker-down';
-          const changeStr = (change >= 0 ? '+' : '') + change.toFixed(2) + '%';
-          const priceStr = price >= 100 ? `$${price.toLocaleString('en-US', {maximumFractionDigits: 0})}` : `$${price.toFixed(2)}`;
+          const isPositive = change >= 0;
+          const changeClass = isPositive ? 'ticker-up' : 'ticker-down';
+          const changeStr = (isPositive ? '+' : '') + change.toFixed(2) + '%';
+          const priceStr = price >= 1000 ? `$${price.toLocaleString('en-US', {maximumFractionDigits: 0})}` : `$${price.toFixed(2)}`;
           const html = `${priceStr} <span class="${changeClass}">${changeStr}</span>`;
           const el1 = document.getElementById(`tk-${sym}`);
           const el2 = document.getElementById(`tk-${sym}2`);
@@ -5713,13 +5713,22 @@
           </div>
         `).join('');
 
-        // Build 7-day check-in calendar
+        // Build 7-day check-in calendar — mark only the consecutive streak days back from lastCheckInDate
         const today = getTodayISO();
+        // Build a Set of ISO dates that are part of the current streak
+        const streakDates = new Set();
+        if (lastCheckInDate && dailyStreak > 0) {
+          const base = new Date(lastCheckInDate + 'T00:00:00');
+          for (let s = 0; s < dailyStreak && s < 7; s++) {
+            const d = new Date(base.getTime() - s * 86400000);
+            streakDates.add(d.toISOString().slice(0, 10));
+          }
+        }
         const days = Array.from({length: 7}, (_, i) => {
           const d = new Date(Date.now() - (6 - i) * 86400000);
           const iso = d.toISOString().slice(0, 10);
           const label = d.toLocaleDateString('en-US', {weekday:'short'}).slice(0,3);
-          const isDone = lastCheckInDate && iso <= lastCheckInDate && iso >= new Date(Date.now() - dailyStreak * 86400000).toISOString().slice(0, 10);
+          const isDone = streakDates.has(iso);
           const isToday = iso === today;
           return `<div class="checkin-day ${isDone ? 'done' : ''} ${isToday ? 'today' : ''}" title="${iso}">${label}</div>`;
         }).join('');
