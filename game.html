@@ -838,7 +838,7 @@ function assignHouseToUser(){
   if(!walletAddress)return;
   if(getMyHouseKey())return; // already owns one
   // Find first unclaimed house (no owner entry)
-  const allHouseKeys=[...BLDGS,...BLDGS2].filter(b=>b.isHouse).map(b=>b.key);
+  const allHouseKeys=[...BLDGS,...BLDGS2,...BLDGS3].filter(b=>b.isHouse).map(b=>b.key);
   const available=allHouseKeys.find(k=>!houseOwnership[k]||!houseOwnership[k].owner);
   if(available){
     houseOwnership[available]={owner:walletAddress.toLowerCase(),forSale:false,price:0};
