@@ -1557,12 +1557,12 @@
 
     <div class="nav-bar">
       <button class="nav-btn" onclick="showSection('home', event)">🏠 Home</button>
-      <button class="nav-btn" onclick="showSection('learning', event)">Learning</button>
+      <button class="nav-btn" onclick="showSection('learning', event)">📚 Learning</button>
       <button class="nav-btn" onclick="showSection('game', event)">🎮 Game</button>
-      <button class="nav-btn" onclick="showSection('market', event)">Market Prediction</button>
-      <button class="nav-btn active" onclick="showSection('swap', event)">Swap</button>
-      <button class="nav-btn" onclick="showSection('bridge', event)">Bridge</button>
-      <button class="nav-btn" onclick="showSection('nft', event)">NFT Staking</button>
+      <button class="nav-btn" onclick="showSection('market', event)">📈 Market</button>
+      <button class="nav-btn active" onclick="showSection('swap', event)">🔄 Swap</button>
+      <button class="nav-btn" onclick="showSection('bridge', event)">🌉 Bridge</button>
+      <button class="nav-btn" onclick="showSection('nft', event)">🏦 NFT</button>
     </div>
 
     <!-- Daily Check-In Floating Button -->
@@ -5705,6 +5705,8 @@
       content.innerHTML = '';
 
       if (id === 'home') {
+        // Refresh check-in data from localStorage so streak number is always up-to-date
+        loadCheckinData();
         // Build achievements HTML
         const badgesHTML = ACHIEVEMENTS.map(a => `
           <div class="badge-item ${earnedAchievements.has(a.id) ? 'earned' : ''}">
@@ -6422,13 +6424,19 @@
             }
             
             // Handle regular trading positions
-            const currentPrice = selectedAsset && selectedAsset.symbol === pos.asset.symbol ? 
-              (priceHistory[priceHistory.length - 1]?.c || pos.entryPrice) : pos.entryPrice;
+            // Use the most up-to-date price: live priceHistory if this asset is selected,
+            // otherwise fall back to the asset's latest basePrice (updated by updatePriceDisplay),
+            // and as last resort use the entry price.
+            let currentPrice = pos.asset.basePrice || pos.entryPrice;
+            if (selectedAsset && selectedAsset.symbol === pos.asset.symbol && priceHistory.length > 0) {
+              currentPrice = priceHistory[priceHistory.length - 1]?.c || currentPrice;
+            }
             const priceDiff = currentPrice - pos.entryPrice;
             const pnl = pos.type === 'long' ? priceDiff * pos.leverage * (pos.amount / pos.entryPrice) : 
                                              -priceDiff * pos.leverage * (pos.amount / pos.entryPrice);
             const pnlPercent = (pnl / pos.amount) * 100;
             const pnlColor = pnl >= 0 ? '#10b981' : '#ef4444';
+            const priceColor = currentPrice > pos.entryPrice ? '#10b981' : currentPrice < pos.entryPrice ? '#ef4444' : '#94a3b8';
             
             // Calculate equity and liquidation risk
             const equityPercent = calculatePositionEquity(pos, currentPrice);
@@ -6457,6 +6465,9 @@
                 </div>
                 <div style="font-size:0.85em; opacity:0.8;">
                   Entry: $${pos.entryPrice.toFixed(2)} | Amount: ${pos.amount.toFixed(2)} USDC
+                </div>
+                <div style="font-size:0.85em; margin-top:2px;">
+                  Current: <strong style="color:${priceColor};">$${currentPrice.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong>
                 </div>
                 <div style="color:${pnlColor}; font-weight:bold; margin-top:4px;">
                   P&L: ${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)} (${pnlPercent >= 0 ? '+' : ''}${pnlPercent.toFixed(2)}%)
@@ -7234,6 +7245,10 @@
           const priceEl = document.getElementById('currentPrice');
           if (priceEl) {
             priceEl.textContent = `$${price.toLocaleString()}`;
+          }
+          // Keep selectedAsset.basePrice in sync so open positions show the latest price
+          if (selectedAsset && price > 0) {
+            selectedAsset.basePrice = price;
           }
         }
         
