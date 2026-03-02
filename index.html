@@ -8752,43 +8752,49 @@
         return;
       }
       
-      // Transfer rewards from treasury
-      if (transferFromTreasury(totalRewards)) {
-        // Reset staking times after claim
-        if (nftRewards > 0) {
-          stakedNFTsData.forEach(nft => {
-            nft.stakedTime = Date.now();
-          });
-          lastRewardClaim = Date.now();
-          
-          // Save updated staking data to localStorage
-          saveStakedNFTsData();
-        }
-        
-        // Reset volume rewards
-        if (volumeRewards > 0) {
-          volumeRewardsClaimable = 0;
-          saveUserTradingVolume();
-        }
-        
-        // Reset learning points
-        if (learningPointsRewards > 0) {
-          mogalandPoints = 0;
-          
-          // Save updated learning points to localStorage
-          saveMogalandPoints();
-        }
-        
-        showSection('nft');
-        showNotification(
-          `✅ Claimed ${totalRewards.toFixed(4)} USDC total!<br>` + 
-          breakdown.join('<br>') + 
-          `<br>Gas: ${GAS_FEE_ETH} ${getNetworkCurrency()}`,
-          false
-        );
-        recordTransaction(null, 'NFT Claim', `Claimed ${totalRewards.toFixed(4)} USDC total rewards (${breakdown.join(', ')})`, {amount: totalRewards, token: 'USDC', from: TREASURY_WALLET_ADDRESS, to: userAddress});
-        console.log(`[Rewards] Total claimed: ${totalRewards.toFixed(4)} USDC (${breakdown.join(', ')})`);
+      // In this simulator, earned rewards are always claimable once gas fee is paid.
+      // Add rewards to user's trading balance and deduct from treasury if funds allow.
+      tradingUSDCBalance += totalRewards;
+      if (treasuryUSDCBalance >= totalRewards) {
+        treasuryUSDCBalance -= totalRewards;
       }
+      updateTreasuryDisplay();
+      updateTradingBalance();
+
+      // Reset staking times after claim
+      if (nftRewards > 0) {
+        stakedNFTsData.forEach(nft => {
+          nft.stakedTime = Date.now();
+        });
+        lastRewardClaim = Date.now();
+        
+        // Save updated staking data to localStorage
+        saveStakedNFTsData();
+      }
+      
+      // Reset volume rewards
+      if (volumeRewards > 0) {
+        volumeRewardsClaimable = 0;
+        saveUserTradingVolume();
+      }
+      
+      // Reset learning points
+      if (learningPointsRewards > 0) {
+        mogalandPoints = 0;
+        
+        // Save updated learning points to localStorage
+        saveMogalandPoints();
+      }
+      
+      showSection('nft');
+      showNotification(
+        `✅ Claimed ${totalRewards.toFixed(4)} USDC total!<br>` + 
+        breakdown.join('<br>') + 
+        `<br>Gas: ${GAS_FEE_ETH} ${getNetworkCurrency()}`,
+        false
+      );
+      recordTransaction(null, 'NFT Claim', `Claimed ${totalRewards.toFixed(4)} USDC total rewards (${breakdown.join(', ')})`, {amount: totalRewards, token: 'USDC', from: TREASURY_WALLET_ADDRESS, to: userAddress});
+      console.log(`[Rewards] Total claimed: ${totalRewards.toFixed(4)} USDC (${breakdown.join(', ')})`);
     }
     
     window.redeemPointsForUSDC = async function() {
