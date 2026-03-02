@@ -154,10 +154,16 @@
       75%  { transform: translate(-1%, 2%) scale(1.06); }
       100% { transform: translate(0, 0) scale(1.0); }
     }
+    @keyframes auroraShift {
+      0%   { background-position: 0% 50%, 100% 0%, 50% 100%, 0% 0%, 100% 100%, 0% 0%; }
+      33%  { background-position: 50% 0%, 0% 100%, 100% 50%, 100% 50%, 0% 50%, 0% 0%; }
+      66%  { background-position: 100% 100%, 50% 50%, 0% 0%, 50% 100%, 100% 0%, 0% 0%; }
+      100% { background-position: 0% 50%, 100% 0%, 50% 100%, 0% 0%, 100% 100%, 0% 0%; }
+    }
     * { margin:0; padding:0; box-sizing:border-box; }
     body {
       font-family: 'Segoe UI', Arial, sans-serif;
-      background: var(--darker);
+      background: #010c1a;
       color: var(--text-color);
       min-height: 100vh;
       display: flex;
@@ -168,17 +174,34 @@
       position: fixed;
       top: -10%; left: -10%;
       width: 120%; height: 120%;
-      /* CSS-only space nebula: star-dot pattern + colourful radial orbs */
+      /* Aurora / crypto-neon background */
       background:
-        radial-gradient(circle, rgba(255,255,255,0.18) 1px, transparent 1px),
-        radial-gradient(ellipse 70% 55% at 15% 25%, rgba(88,28,220,0.55) 0%, transparent 55%),
-        radial-gradient(ellipse 65% 50% at 85% 15%, rgba(29,78,216,0.5)  0%, transparent 50%),
-        radial-gradient(ellipse 75% 55% at 55% 85%, rgba(8,145,178,0.35)  0%, transparent 60%),
-        radial-gradient(ellipse 50% 45% at 75% 50%, rgba(147,51,234,0.35) 0%, transparent 45%),
-        linear-gradient(135deg, #020817 0%, #0a0f2e 50%, #050d1a 100%);
-      background-size: 160px 160px, 100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100%;
+        radial-gradient(circle, rgba(255,255,255,0.12) 1px, transparent 1px),
+        radial-gradient(ellipse 80% 60% at 10% 20%, rgba(0,229,255,0.22) 0%, transparent 55%),
+        radial-gradient(ellipse 70% 55% at 90% 10%, rgba(99,102,241,0.30) 0%, transparent 50%),
+        radial-gradient(ellipse 60% 50% at 50% 90%, rgba(0,212,170,0.20) 0%, transparent 55%),
+        radial-gradient(ellipse 55% 50% at 80% 55%, rgba(168,85,247,0.25) 0%, transparent 50%),
+        radial-gradient(ellipse 65% 45% at 30% 70%, rgba(16,185,129,0.15) 0%, transparent 50%),
+        linear-gradient(135deg, #010c1a 0%, #050e24 40%, #030d1c 70%, #010c1a 100%);
+      background-size:
+        120px 120px,
+        200% 200%, 200% 200%, 200% 200%, 200% 200%, 200% 200%,
+        100% 100%;
       z-index: -1;
-      animation: catBgFloat 20s ease-in-out infinite;
+      animation: catBgFloat 25s ease-in-out infinite, auroraShift 18s ease-in-out infinite;
+    }
+    body::after {
+      content: '';
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      /* Subtle hex/circuit mesh overlay */
+      background-image:
+        repeating-linear-gradient(0deg,   transparent, transparent 59px, rgba(0,229,255,0.04) 60px),
+        repeating-linear-gradient(60deg,  transparent, transparent 59px, rgba(99,102,241,0.04) 60px),
+        repeating-linear-gradient(120deg, transparent, transparent 59px, rgba(0,212,170,0.03) 60px);
+      z-index: -1;
+      pointer-events: none;
     }
     /* Theme toggle button */
     .theme-toggle {
@@ -1404,6 +1427,89 @@
       display: flex; align-items: center; gap: 8px;
     }
     .qa-btn:hover { background: var(--primary); border-color: var(--primary); color: white; transform: scale(1.05); }
+    /* Fear & Greed + Market Overview widgets */
+    .fng-widget {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 18px 24px;
+      max-width: 1200px;
+      margin: 0 auto 28px;
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+    .fng-gauge-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      min-width: 120px;
+    }
+    .fng-score {
+      font-size: 3rem;
+      font-weight: 800;
+      line-height: 1;
+    }
+    .fng-label {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: 600;
+    }
+    .fng-bar-track {
+      flex: 1;
+      min-width: 200px;
+    }
+    .fng-bar-bg {
+      height: 12px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #ef4444 0%, #f97316 25%, #eab308 50%, #22c55e 75%, #10b981 100%);
+      position: relative;
+      margin: 8px 0;
+    }
+    .fng-needle {
+      position: absolute;
+      top: -4px;
+      width: 4px;
+      height: 20px;
+      background: #fff;
+      border-radius: 2px;
+      transform: translateX(-50%);
+      box-shadow: 0 0 6px rgba(255,255,255,0.8);
+      transition: left 1s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    .fng-legend {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.7rem;
+      color: #94a3b8;
+    }
+    .fng-meta { font-size: 0.82rem; color: #64748b; }
+    .mkt-overview {
+      max-width: 1200px;
+      margin: 0 auto 28px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+    }
+    .mkt-coin-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      transition: transform 0.2s;
+    }
+    .mkt-coin-card:hover { transform: translateY(-3px); }
+    .mkt-coin-sym { font-weight: 700; font-size: 1rem; }
+    .mkt-coin-price { font-size: 1.1rem; font-weight: 600; color: var(--text-color); }
+    .mkt-coin-change { font-size: 0.85rem; font-weight: 600; }
+    .mkt-coin-up { color: #10b981; }
+    .mkt-coin-down { color: #ef4444; }
   </style>
 </head>
 <body>
@@ -4738,6 +4844,74 @@
       }
     }
 
+    // ===== FEAR & GREED INDEX =====
+    async function populateFearAndGreed() {
+      try {
+        const r = await fetch('https://api.alternative.me/fng/?limit=1');
+        if (!r.ok) {
+          console.log('[FearGreed] API returned', r.status);
+          const labelEl = document.getElementById('fngLabel');
+          if (labelEl) { labelEl.textContent = 'Unable to load'; labelEl.style.color = '#94a3b8'; }
+          return;
+        }
+        const data = await r.json();
+        const entry = data?.data?.[0];
+        if (!entry) return;
+        const score = parseInt(entry.value, 10);
+        const label = entry.value_classification || '';
+        // Color by sentiment zone
+        const color = score <= 25 ? '#ef4444'
+                    : score <= 45 ? '#f97316'
+                    : score <= 55 ? '#eab308'
+                    : score <= 75 ? '#22c55e'
+                    :               '#10b981';
+        const scoreEl  = document.getElementById('fngScore');
+        const labelEl  = document.getElementById('fngLabel');
+        const needleEl = document.getElementById('fngNeedle');
+        const metaEl   = document.getElementById('fngMeta');
+        if (scoreEl)  { scoreEl.textContent = score; scoreEl.style.color = color; }
+        if (labelEl)  { labelEl.textContent = label; labelEl.style.color = color; }
+        if (needleEl) needleEl.style.left = `${score}%`;
+        if (metaEl) {
+          const ts = parseInt(entry.timestamp, 10) * 1000;
+          const ago = isNaN(ts) ? '' : ` · Updated ${new Date(ts).toLocaleDateString()}`;
+          metaEl.textContent = `Index 0-100${ago}`;
+        }
+      } catch(e) {
+        console.log('[FearGreed] Fetch error:', e.message);
+        const labelEl = document.getElementById('fngLabel');
+        if (labelEl) { labelEl.textContent = 'Unable to load'; labelEl.style.color = '#94a3b8'; }
+      }
+    }
+
+    // ===== MARKET OVERVIEW =====
+    function populateMarketOverview() {
+      const coins = ['BTC','ETH','BNB','SOL','AVAX','LINK'];
+      coins.forEach(sym => {
+        const tickerEl = document.getElementById(`tk-${sym}`);
+        if (!tickerEl) return;
+        const priceEl  = document.getElementById(`mktPrice${sym}`);
+        const changeEl = document.getElementById(`mktChange${sym}`);
+        if (!priceEl || !changeEl) return;
+        // Extract price and change using DOM child nodes (avoids any XSS concern)
+        const changeSpan = tickerEl.querySelector('span');
+        const changeText = changeSpan ? changeSpan.textContent.trim() : '';
+        // Price is the text node directly inside tickerEl (before the span)
+        let priceText = '';
+        tickerEl.childNodes.forEach(node => {
+          if (node.nodeType === Node.TEXT_NODE) priceText += node.textContent.trim();
+        });
+        if (priceText) {
+          priceEl.textContent = priceText;
+          changeEl.textContent = changeText || '—';
+          // Explicit check for +/0/- prefix
+          const isUp   = changeText.startsWith('+');
+          const isDown = changeText.startsWith('-');
+          changeEl.className = 'mkt-coin-change ' + (isUp ? 'mkt-coin-up' : isDown ? 'mkt-coin-down' : '');
+        }
+      });
+    }
+
     function updateTradingVolume(category, volumeUSDC) {
       if (!userAddress) return;
       
@@ -5804,8 +5978,41 @@
               <button class="qa-btn" onclick="showSection('game',event)">🎮 Play Game</button>
               <button class="qa-btn" onclick="showVolumeLeaderboard()">🏆 Leaderboard</button>
             </div>
+
+            <!-- Market Fear & Greed Index -->
+            <div class="dash-section-title">😱 Market Fear &amp; Greed Index</div>
+            <div class="fng-widget" id="fngWidget" role="region" aria-label="Market Fear and Greed Index">
+              <div class="fng-gauge-wrap" aria-live="polite">
+                <div class="fng-score" id="fngScore" style="color:#94a3b8;" aria-label="Score">—</div>
+                <div class="fng-label" id="fngLabel" style="color:#94a3b8;">Loading…</div>
+              </div>
+              <div class="fng-bar-track" aria-hidden="true">
+                <div class="fng-bar-bg">
+                  <div class="fng-needle" id="fngNeedle" style="left:50%;"></div>
+                </div>
+                <div class="fng-legend"><span>Extreme Fear</span><span>Fear</span><span>Neutral</span><span>Greed</span><span>Extreme Greed</span></div>
+              </div>
+              <div class="fng-meta" id="fngMeta"></div>
+            </div>
+
+            <!-- Market Overview -->
+            <div class="dash-section-title">📊 Market Overview</div>
+            <div class="mkt-overview" id="mktOverview">
+              <div class="mkt-coin-card"><div class="mkt-coin-sym">BTC</div><div class="mkt-coin-price" id="mktPriceBTC">—</div><div class="mkt-coin-change" id="mktChangeBTC">—</div></div>
+              <div class="mkt-coin-card"><div class="mkt-coin-sym">ETH</div><div class="mkt-coin-price" id="mktPriceETH">—</div><div class="mkt-coin-change" id="mktChangeETH">—</div></div>
+              <div class="mkt-coin-card"><div class="mkt-coin-sym">BNB</div><div class="mkt-coin-price" id="mktPriceBNB">—</div><div class="mkt-coin-change" id="mktChangeBNB">—</div></div>
+              <div class="mkt-coin-card"><div class="mkt-coin-sym">SOL</div><div class="mkt-coin-price" id="mktPriceSOL">—</div><div class="mkt-coin-change" id="mktChangeSOL">—</div></div>
+              <div class="mkt-coin-card"><div class="mkt-coin-sym">AVAX</div><div class="mkt-coin-price" id="mktPriceAVAX">—</div><div class="mkt-coin-change" id="mktChangeAVAX">—</div></div>
+              <div class="mkt-coin-card"><div class="mkt-coin-sym">LINK</div><div class="mkt-coin-price" id="mktPriceLINK">—</div><div class="mkt-coin-change" id="mktChangeLINK">—</div></div>
+            </div>
           </div>
         `;
+        // Populate market widgets asynchronously after DOM is ready
+        populateFearAndGreed();
+        // Refresh ticker then populate market overview; skip market cards on ticker failure
+        updatePriceTicker().then(() => populateMarketOverview()).catch(() => {
+          console.log('[Home] Ticker update failed; market overview will show dashes');
+        });
       }
       else if (id === 'learning') {
         content.innerHTML = `
