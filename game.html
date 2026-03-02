@@ -181,6 +181,7 @@ kbd{padding:1px 4px;border-radius:4px;border:1px solid rgba(255,255,255,.22);bac
       <div class="row" style="gap:4px;">
         <div id="btnCity1" style="flex:1;font-size:11px;padding:5px;background:linear-gradient(90deg,#0284c7,#0369a1);border-radius:6px;text-align:center;cursor:default;">🏙️ Moga City</div>
         <div id="btnCity2" style="flex:1;font-size:11px;padding:5px;background:rgba(255,255,255,.08);border-radius:6px;text-align:center;cursor:default;">🏝️ Coastal City</div>
+        <div id="btnCity3" style="flex:1;font-size:11px;padding:5px;background:rgba(255,255,255,.08);border-radius:6px;text-align:center;cursor:default;">🏭 Industrial City</div>
       </div>
     </div>
 
@@ -990,6 +991,7 @@ function renderBuildingPanel(){
   if(WS.outdoor==='Waterfall'){panel.style.display='block';panel.innerHTML=`<strong>💦 Waterfall</strong><div style="font-size:11px;color:#7dd3fc;margin:5px 0;">Natural wonder near Mount Moga. +15 energy when visited.</div><button onclick="closeOutdoor()" class="ibtn btn-blue" style="width:100%;margin-top:5px;">Close</button>`;return;}
   if(WS.outdoor==='Boat'){panel.style.display='block';panel.innerHTML=renderBoat();return;}
   if(WS.outdoor==='GasStation'){panel.style.display='block';panel.innerHTML=renderGasStation();return;}
+  if(WS.outdoor==='BusStop'){panel.style.display='block';panel.innerHTML=renderBusStop3();return;}
   if(WS.outdoor==='TrainHalte'){panel.style.display='block';panel.innerHTML=renderTrainHalte();return;}
   if(WS.outdoor==='Beach'){panel.style.display='block';panel.innerHTML=`<strong>🏖️ Beach</strong><div style="font-size:11px;color:#38bdf8;margin:5px 0;">Moga Beach — crystal clear waters! Walk to Beach Club or board the ⛵ Boat at the dock.</div><button onclick="boardBoat()" class="ibtn btn-teal" style="width:100%;margin-top:5px;">⛵ Board Boat at Dock</button><button onclick="closeOutdoor()" class="ibtn btn-blue" style="width:100%;margin-top:5px;">Close</button>`;return;}
   if(WS.outdoor){panel.style.display='block';panel.innerHTML=renderVending();return;}
@@ -998,6 +1000,10 @@ function renderBuildingPanel(){
   const r={House:renderHome,School:renderSchool,'Job Center':renderJobBoard,Bank:renderBank,Cafe:renderCafe,Market:renderMarket,Gym:renderGym,Hospital:renderHospital,Hotel:renderHotel,Library:renderLibrary,Office:renderOffice,'Town Hall':renderTownHall,
     Airport:renderAirport,'Airport C1':renderAirportC1,'Train Station':renderTrainStation,'Aviation Academy':renderSchool,'Concert Hall':renderConcertHall,Zoo:renderZoo,'Beach Club':renderBeachClub,'Job Center C2':renderJobBoard,'Bank C2':renderBank,'Cafe C2':renderCafe,'Hospital C2':renderHospital,'Hotel C2':renderHotel,
     'Clothing Store':renderClothingStore,'Clothing Store C2':renderClothingStore,
+    'Job Center C3':renderJobBoard,'Bank C3':renderBank,'Hospital C3':renderHospital,'Market C3':renderMarket,
+    'Cafe C3':renderCafe,'Concert Hall C3':renderConcertHall,'Airport C3':renderAirportC3,
+    'Factory 1':renderFactory,'Factory 2':renderFactory,'Steel Mill':renderFactory,'Power Plant':renderFactory,'Chemical Factory':renderFactory,
+    'Bar':renderBar,
     Casino:()=>{initMulGame();return '<strong>🎰 Casino</strong><div style="font-size:11px;color:#94a3b8;margin:5px 0;">Multiplier game panel on the left.</div>';}};  if(WS.key.startsWith('House'))panel.innerHTML=renderHome();
   else if(r[WS.key])panel.innerHTML=r[WS.key]();
   else panel.style.display='none';
@@ -1371,15 +1377,59 @@ window.renderAirport=renderAirport;
 
 function renderAirportC1(){
   return`<strong>✈️ Moga City International Airport</strong>
-<div style="font-size:11px;color:#94a3b8;margin:5px 0;">City 1 Airport · Return flights to Coastal City (City 2)</div>
+<div style="font-size:11px;color:#94a3b8;margin:5px 0;">City 1 Airport · Flights to City 2 & City 3</div>
 <div style="border:1px solid rgba(99,102,241,.3);border-radius:8px;padding:8px;margin:5px 0;background:rgba(99,102,241,.05);">
   <div style="font-size:12px;font-weight:bold;margin-bottom:4px;">✈️ Departure Lounge</div>
-  <div style="font-size:11px;color:#93c5fd;margin-bottom:4px;">Board a return flight to Coastal City</div>
   <div style="font-size:11px;color:#fbbf24;margin-bottom:6px;">✈️ Flight cost: <b>$${FLIGHT_COST_USD} USD</b> · On-chain tx required</div>
   <button onclick="flyToCity2()" class="ibtn btn-blue" style="width:100%;padding:8px;margin-top:4px;">🛫 Fly to Coastal City (City 2) — $${FLIGHT_COST_USD}</button>
+  <button onclick="flyToCity3()" class="ibtn btn-yellow" style="width:100%;padding:8px;margin-top:5px;">🛫 Fly to Industrial City (City 3) — $${FLIGHT_COST_USD}</button>
 </div>`;
 }
 window.renderAirportC1=renderAirportC1;
+
+function renderAirportC3(){
+  return`<strong>✈️ Industrial City International Airport</strong>
+<div style="font-size:11px;color:#94a3b8;margin:5px 0;">City 3 Airport · Flights to Moga City (City 1)</div>
+<div style="border:1px solid rgba(99,102,241,.3);border-radius:8px;padding:8px;margin:5px 0;background:rgba(99,102,241,.05);">
+  <div style="font-size:12px;font-weight:bold;margin-bottom:4px;">✈️ Departure Lounge</div>
+  <div style="font-size:11px;color:#93c5fd;margin-bottom:4px;">Return flight to Moga City (City 1)</div>
+  <div style="font-size:11px;color:#fbbf24;margin-bottom:6px;">✈️ Flight cost: <b>$${FLIGHT_COST_USD} USD</b> · On-chain tx required</div>
+  <button onclick="flyFromCity3()" class="ibtn btn-blue" style="width:100%;padding:8px;margin-top:4px;">🛫 Fly to Moga City (City 1) — $${FLIGHT_COST_USD}</button>
+</div>`;
+}
+window.renderAirportC3=renderAirportC3;
+function renderFactory(){
+  return`<strong>🏭 Industrial Factory</strong>
+<div style="font-size:11px;color:#94a3b8;margin:5px 0;">Heavy industry · Manufacturing · Industrial Zone</div>
+<div style="border:1px solid rgba(251,191,36,.2);border-radius:8px;padding:8px;margin:5px 0;background:rgba(251,191,36,.04);">
+  <div style="font-size:11px;color:#fbbf24;margin-bottom:6px;">⚙️ Industrial production running 24/7</div>
+  <div style="font-size:11px;color:#94a3b8;margin-bottom:6px;">🔧 Produces raw materials · Employs skilled workers</div>
+  <button onclick="exitCity(_phaserScene)" class="ibtn btn-yellow" style="width:100%;padding:8px;margin-top:4px;">Exit Factory</button>
+</div>`;
+}
+window.renderFactory=renderFactory;
+function renderBar(){
+  return`<strong>🍺 Moga Bar — Industrial District</strong>
+<div style="font-size:11px;color:#94a3b8;margin:5px 0;">Chill out after a hard day at the factory!</div>
+<div style="border:1px solid rgba(251,191,36,.25);border-radius:8px;padding:8px;margin:5px 0;">
+  <div style="font-size:11px;color:#fbbf24;margin-bottom:6px;">🍺 Cold beer available · +20 energy</div>
+  <button onclick="buyBarDrink()" ${S.coins<2?'disabled':''} class="ibtn btn-yellow" style="width:100%;padding:8px;">🍺 Buy Beer — $2 USD (+20 energy)</button>
+</div>
+<div style="border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:8px;margin:5px 0;">
+  <div style="font-size:11px;color:#94a3b8;margin-bottom:4px;">🎵 Live music tonight!</div>
+  <button onclick="exitCity(_phaserScene)" class="ibtn btn-blue" style="width:100%;padding:6px;margin-top:4px;">Exit Bar</button>
+</div>`;
+}
+window.renderBar=renderBar;
+function buyBarDrink(){
+  if(S.coins<2)return logChat('[Bar] Need $2 USD. You have $'+S.coins+'.',false,'#f87171');
+  S.coins-=2;S.energy=clamp(S.energy+20,0,S.energyMax);
+  updateHUD();renderBuildingPanel();
+  treasuryPay('BAR:beer',2);
+  logChat('[🍺 Bar] Cheers! +20 energy · -$2 USD',false,'#fbbf24');
+  saveProgress();
+}
+window.buyBarDrink=buyBarDrink;
 
 function renderGasStation(){
   const canFill=S.fuel<S.fuelMax;
@@ -1439,6 +1489,22 @@ function pilotFly(){
   saveProgress();
 }
 window.pilotFly=pilotFly;
+
+function renderBusStop3(){
+  const atStop=busState3.atStop;
+  const{stop,dist}=nearestBusStop3();
+  const nearStop=dist<BUS_STOP_RADIUS;
+  return`<strong>🚌 Bus Stop — Industrial City Loop</strong>
+<div style="font-size:11px;color:#94a3b8;margin:5px 0;">Free circular bus route · No energy cost</div>
+<div style="font-size:11px;color:${atStop?'#22c55e':'#fbbf24'};margin:4px 0;">${atStop?'🟢 Bus at stop: <b>'+busState3.stopLabel+'</b>':'🟡 Bus in transit — wait at stop…'}</div>
+<div style="display:flex;gap:5px;margin-top:6px;">
+  <button onclick="boardBus3()" ${atStop&&nearStop?'':'disabled'} class="ibtn btn-green" style="flex:1;">🎫 Board</button>
+  <button onclick="exitBus3()" ${busState3.passengerBoarded?'':'disabled'} class="ibtn btn-red" style="flex:1;">🚪 Exit</button>
+</div>
+${busState3.passengerBoarded?'<div style="color:#22c55e;font-size:11px;margin-top:4px;">🚌 Riding: '+busState3.stopLabel+'</div>':''}
+<button onclick="closeOutdoor()" style="width:100%;margin-top:8px;padding:6px;border-radius:6px;background:rgba(100,116,139,.3);color:#94a3b8;border:1px solid rgba(255,255,255,.1);font-size:11px;cursor:pointer;">Close ✕</button>`;
+}
+window.renderBusStop3=renderBusStop3;
 
 function renderTrainStation(){
   const hasMasinis=S.learnedSkills.includes('masinis');
@@ -1975,6 +2041,13 @@ const NPC_STANDBY_POSITIONS={
     {x:(24+4)*TILE,  y:(2+3)*TILE},  // Aviation Academy C2
     {x:(44+3)*TILE,  y:(22+3)*TILE}, // Cafe C2
   ],
+  3:[
+    {x:(34+3.5)*TILE,y:(14+3)*TILE}, // Hospital C3
+    {x:(8+4)*TILE,   y:(14+3)*TILE}, // Job Center C3
+    {x:(24+3)*TILE,  y:(14+3)*TILE}, // Bank C3
+    {x:(8+3)*TILE,   y:(26+3)*TILE}, // Cafe C3
+    {x:(50+4)*TILE,  y:(14+3)*TILE}, // Market C3
+  ],
 };
 
 function spawnNPCBots(scene){
@@ -2004,8 +2077,10 @@ function spawnNPCBots(scene){
 
 function updateNPCBots(dtS){
   if(WS.zone!=='CITY'){npcBots.forEach(b=>b.obj.setVisible(false));return;}
-  const activeTiles=currentCity===2?city2Tiles:cityTiles;
-  const roads=currentCity===2
+  const activeTiles=currentCity===3?city3Tiles:currentCity===2?city2Tiles:cityTiles;
+  const roads=currentCity===3
+    ?[{axis:'x',vals:[22,50,78]},{axis:'y',vals:[12,24,36,48]}]
+    :currentCity===2
     ?[{axis:'x',vals:[20,54,82]},{axis:'y',vals:[12,20,32,44]}]
     :[{axis:'x',vals:[18,54,80]},{axis:'y',vals:[12,28,44]}];
   for(const bot of npcBots){
@@ -2425,6 +2500,45 @@ const IACTS2=[
   {key:'Announcement Board C2',tex:'bBulletin',ts:1.8,x:50*TILE,y:7*TILE,w:2*TILE,h:2*TILE,isAnnouncement:true},
 ];
 
+/* ── City 3 — Industrial City buildings ── */
+const BLDGS3=[
+  /* Industrial Zone — North */
+  {key:'Factory 1',        tex:'bGym',    ts:2.4, x:8*TILE, y:2*TILE, w:8*TILE, h:6*TILE},
+  {key:'Factory 2',        tex:'bGym',    ts:2.4, x:20*TILE,y:2*TILE, w:8*TILE, h:6*TILE},
+  {key:'Steel Mill',       tex:'bBank',   ts:2.3, x:34*TILE,y:2*TILE, w:8*TILE, h:6*TILE},
+  {key:'Power Plant',      tex:'bCasino', ts:2.3, x:48*TILE,y:2*TILE, w:8*TILE, h:6*TILE},
+  {key:'Chemical Factory', tex:'bGym',    ts:2.4, x:62*TILE,y:2*TILE, w:8*TILE, h:6*TILE},
+  {key:'Airport C3',       tex:'bCasino', ts:2.5, x:80*TILE,y:1*TILE, w:10*TILE,h:8*TILE},
+  /* Commercial / Business District — Mid */
+  {key:'Job Center C3',    tex:'bJob',    ts:2.2, x:8*TILE, y:14*TILE,w:8*TILE, h:6*TILE},
+  {key:'Bank C3',          tex:'bBank',   ts:2.1, x:24*TILE,y:14*TILE,w:6*TILE, h:6*TILE},
+  {key:'Hospital C3',      tex:'bHosp',   ts:2.1, x:34*TILE,y:14*TILE,w:7*TILE, h:6*TILE},
+  {key:'Market C3',        tex:'bMkt',    ts:2.35,x:50*TILE,y:14*TILE,w:8*TILE, h:6*TILE},
+  /* Leisure Zone */
+  {key:'Cafe C3',          tex:'bCafe',   ts:2.2, x:8*TILE, y:26*TILE,w:6*TILE, h:6*TILE},
+  {key:'Bar',              tex:'bCasino', ts:2.2, x:18*TILE,y:26*TILE,w:6*TILE, h:6*TILE},
+  {key:'Concert Hall C3',  tex:'bGym',    ts:2.3, x:28*TILE,y:26*TILE,w:8*TILE, h:7*TILE},
+  /* Residential Zone — South */
+  {key:'House C3-1',  tex:'bHouse',ts:2.0,x:8*TILE, y:38*TILE,w:6*TILE,h:5*TILE,isHouse:true},
+  {key:'House C3-2',  tex:'bHouse',ts:2.0,x:16*TILE,y:38*TILE,w:6*TILE,h:5*TILE,isHouse:true},
+  {key:'House C3-3',  tex:'bHouse',ts:2.0,x:24*TILE,y:38*TILE,w:6*TILE,h:5*TILE,isHouse:true},
+  {key:'House C3-4',  tex:'bHouse',ts:2.0,x:32*TILE,y:38*TILE,w:6*TILE,h:5*TILE,isHouse:true},
+  {key:'House C3-5',  tex:'bHouse',ts:2.0,x:8*TILE, y:46*TILE,w:6*TILE,h:5*TILE,isHouse:true},
+  {key:'House C3-6',  tex:'bHouse',ts:2.0,x:16*TILE,y:46*TILE,w:6*TILE,h:5*TILE,isHouse:true},
+  {key:'House C3-7',  tex:'bHouse',ts:2.0,x:24*TILE,y:46*TILE,w:6*TILE,h:5*TILE,isHouse:true},
+  {key:'House C3-8',  tex:'bHouse',ts:2.0,x:32*TILE,y:46*TILE,w:6*TILE,h:5*TILE,isHouse:true},
+];
+const IACTS3=[
+  {key:'Vending C3',        tex:'vend',  ts:1.6, x:44*TILE,y:28*TILE,w:2*TILE,h:2*TILE},
+  {key:'Gas Station C3',    tex:'vend',  ts:1.8, x:62*TILE,y:14*TILE,w:3*TILE,h:2*TILE},
+  {key:'Industrial Lake',   tex:'vend',  ts:1.4, x:76*TILE,y:44*TILE,w:2*TILE,h:2*TILE},
+  {key:'Bus Stop North',    tex:'vend',  ts:1.0, x:48*TILE,y:4*TILE, w:2*TILE,h:2*TILE},
+  {key:'Bus Stop South',    tex:'vend',  ts:1.0, x:48*TILE,y:54*TILE,w:2*TILE,h:2*TILE},
+  {key:'Bus Stop West',     tex:'vend',  ts:1.0, x:6*TILE, y:28*TILE,w:2*TILE,h:2*TILE},
+  {key:'Bus Stop East',     tex:'vend',  ts:1.0, x:88*TILE,y:28*TILE,w:2*TILE,h:2*TILE},
+  {key:'Announcement Board C3',tex:'bBulletin',ts:1.8,x:44*TILE,y:16*TILE,w:2*TILE,h:2*TILE,isAnnouncement:true},
+];
+
 /* ── City tiles ── */
 const TT={G:0,R:1,W:2,S:3,SD:4,CR:5};
 const TC={0:0x166534,1:0x374151,2:0x0369a1,3:0xfcd34d,4:0x1e293b,5:0xf0f0f0};
@@ -2481,6 +2595,33 @@ function buildTiles2(){
   // Parking lots (C2)
   for(let y=12;y<=14;y++)for(let x=72;x<=77;x++)if(t[y][x]===TT.SD||t[y][x]===TT.G)t[y][x]=TT.PK;
   for(let y=32;y<=34;y++)for(let x=40;x<=43;x++)if(t[y][x]===TT.SD||t[y][x]===TT.G)t[y][x]=TT.PK;
+  return t;
+}
+let city3Tiles=null;
+function buildTiles3(){
+  const t=Array.from({length:CH},()=>Array.from({length:CW},()=>TT.G));
+  // Industrial concrete floor in northern zone (rows 0-11)
+  for(let y=0;y<12;y++)for(let x=0;x<CW;x++)t[y][x]=TT.PK;
+  // Industrial Lake (southeast reservoir, center x=82, y=44)
+  for(let ly=38;ly<=50;ly++)for(let lx=68;lx<=90;lx++){const dx=lx-79,dy=ly-44;if(dx*dx/36+dy*dy/25<=1)t[ly][lx]=TT.W;else if(dx*dx/64+dy*dy/49<=1&&t[ly][lx]===TT.G)t[ly][lx]=TT.S;}
+  // Roads: horizontal
+  for(const ry of[12,24,36,48])for(let x=0;x<CW;x++)if(t[ry][x]!==TT.W&&t[ry][x]!==TT.S)t[ry][x]=TT.R;
+  // Roads: vertical
+  for(const rx of[22,50,78])for(let y=0;y<CH;y++)if(t[y][rx]!==TT.W&&t[y][rx]!==TT.S)t[y][rx]=TT.R;
+  // Sidewalk around roads
+  for(let y=0;y<CH;y++)for(let x=0;x<CW;x++)if(t[y][x]===TT.R)
+    for(let oy=-1;oy<=1;oy++)for(let ox=-1;ox<=1;ox++){const ny=y+oy,nx=x+ox;if(ny>=0&&nx>=0&&ny<CH&&nx<CW&&t[ny][nx]===TT.G)t[ny][nx]=TT.SD;}
+  // Crossroads at intersections
+  for(const ry of[12,24,36,48])for(const rx of[22,50,78])
+    for(let i=-2;i<=2;i++){const x2=rx+i;if(ry>=0&&ry<CH&&x2>=0&&x2<CW&&t[ry][x2]!==TT.W)t[ry][x2]=(i%2===0)?TT.CR:TT.R;}
+  // Bus ring (outer loop around the city)
+  for(let x=6;x<=90;x++)if(t[3][x]!==TT.W)t[3][x]=TT.TR;
+  for(let x=6;x<=90;x++)if(t[55][x]!==TT.W&&t[55][x]!==TT.S)t[55][x]=TT.TR;
+  for(let y=3;y<=55;y++)if(t[y][6]!==TT.W&&t[y][6]!==TT.S)t[y][6]=TT.TR;
+  for(let y=3;y<=55;y++)if(t[y][90]!==TT.W&&t[y][90]!==TT.S)t[y][90]=TT.TR;
+  // Parking lots (C3)
+  for(let y=12;y<=14;y++)for(let x=72;x<=77;x++)if(t[y][x]===TT.SD||t[y][x]===TT.G)t[y][x]=TT.PK;
+  for(let y=24;y<=26;y++)for(let x=42;x<=45;x++)if(t[y][x]===TT.SD||t[y][x]===TT.G)t[y][x]=TT.PK;
   return t;
 }
 function blocked(x,y,tiles){
@@ -2554,6 +2695,23 @@ function makeInterior(kind){
       pr(2,20,30,1,IT.CT);break;
     case 'Beach Club':
       pr(2,1,30,3,IT.CT);pr(4,5,10,8,IT.RG);pr(20,5,10,8,IT.RG);pr(10,15,14,5,IT.FW);break;
+    case 'Factory 1':
+    case 'Factory 2':
+    case 'Chemical Factory':
+      pr(2,1,30,2,IT.CT);pr(2,4,30,3,IT.RG);pr(2,8,8,7,IT.CT);pr(12,8,8,7,IT.CT);pr(22,8,8,7,IT.CT);pr(4,16,26,4,IT.RG);pr(2,20,30,1,IT.CT);break;
+    case 'Steel Mill':
+      pr(2,1,30,2,IT.CT);for(let b2=0;b2<4;b2++)pr(2+b2*8,4,7,12,IT.CT);pr(2,18,30,2,IT.CT);break;
+    case 'Power Plant':
+      pr(2,1,30,2,IT.CT);pr(4,4,26,6,IT.RG);pr(2,11,14,8,IT.CT);pr(18,11,14,8,IT.CT);pr(14,13,4,4,IT.RG);pr(2,20,30,1,IT.CT);break;
+    case 'Bar':
+      pr(2,1,30,2,IT.CT);pr(2,4,30,2,IT.RG);for(let b3=0;b3<5;b3++)pr(2+b3*6,7,5,5,IT.RG);pr(3,14,28,6,IT.FW);pr(2,20,30,1,IT.CT);break;
+    case 'Concert Hall C3':
+      pr(2,1,30,1,IT.CT);for(let r2=0;r2<5;r2++)for(let c=0;c<8;c++)pr(2+c*4,3+r2*3,3,2,IT.RG);
+      pr(10,18,14,2,IT.CT);pr(14,15,6,3,IT.FW);break;
+    case 'Airport C3':
+      pr(2,1,30,3,IT.CT);pr(4,5,26,5,IT.RG);pr(2,11,12,8,IT.CT);pr(20,11,12,8,IT.CT);pr(14,12,6,6,IT.RG);pr(2,20,30,1,IT.CT);break;
+    case 'Market C3':
+      pr(2,1,30,2,IT.CT);for(let a=0;a<4;a++)pr(3+a*7,4,2,14,IT.CT);pr(2,18,30,2,IT.CT);break;
   }
   return{g,exitX:ex,exitY:h-1,title:kind};
 }
@@ -3248,6 +3406,104 @@ function driveMyCar(){
 }
 window.driveMyCar=driveMyCar;
 
+/* ── City 3 — Bus system (circles industrial city) ── */
+const BUS_WAYPOINTS3=[
+  {x:48*TILE,y:3*TILE,  stop:true, label:'Bus Stop North'},   // WP 0
+  {x:90*TILE,y:3*TILE,  stop:false},                          // WP 1
+  {x:90*TILE,y:28*TILE, stop:true, label:'Bus Stop East'},    // WP 2
+  {x:90*TILE,y:55*TILE, stop:false},                          // WP 3
+  {x:48*TILE,y:55*TILE, stop:true, label:'Bus Stop South'},   // WP 4
+  {x:6*TILE, y:55*TILE, stop:false},                          // WP 5
+  {x:6*TILE, y:28*TILE, stop:true, label:'Bus Stop West'},    // WP 6
+  {x:6*TILE, y:3*TILE,  stop:false},                          // WP 7
+];
+const BUS_STOP_RADIUS=5*TILE;
+const busState3={
+  spr:null,wpIdx:0,x:48*TILE,y:3*TILE,speed:110,
+  passengerBoarded:false,atStop:true,stopLabel:'Bus Stop North',stopDwell:0,DWELL_MS:3000,
+  posHistory:[],carSprs:[]
+};
+const BUS_LAG=8;
+function updateBus3(dtS){
+  if(!busState3.spr||currentCity!==3)return;
+  if(busState3.stopDwell>0){busState3.stopDwell-=dtS*1000;if(busState3.stopDwell<=0)busState3.atStop=false;return;}
+  const wp=BUS_WAYPOINTS3[busState3.wpIdx];
+  const dx=wp.x-busState3.x,dy=wp.y-busState3.y,dist=Math.hypot(dx,dy);
+  if(dist<6){
+    busState3.x=wp.x;busState3.y=wp.y;
+    busState3.wpIdx=(busState3.wpIdx+1)%BUS_WAYPOINTS3.length;
+    const nwp=BUS_WAYPOINTS3[(busState3.wpIdx-1+BUS_WAYPOINTS3.length)%BUS_WAYPOINTS3.length];
+    if(nwp.stop){busState3.stopDwell=busState3.DWELL_MS;busState3.atStop=true;busState3.stopLabel=nwp.label;}
+    else{busState3.atStop=false;}
+  }else{
+    busState3.x+=dx/dist*busState3.speed*dtS;
+    busState3.y+=dy/dist*busState3.speed*dtS;
+  }
+  busState3.posHistory.push({x:busState3.x,y:busState3.y});
+  if(busState3.posHistory.length>90)busState3.posHistory.shift();
+  busState3.spr.setPosition(busState3.x,busState3.y);
+  busState3.carSprs.forEach((car,i)=>{
+    const histIdx=Math.max(0,busState3.posHistory.length-1-(i+1)*BUS_LAG);
+    const pos=busState3.posHistory[histIdx];
+    if(pos&&car.active)car.setPosition(pos.x,pos.y);
+  });
+  if(busState3.passengerBoarded&&_phaserScene){
+    _phaserScene.me.x=busState3.x;_phaserScene.me.y=busState3.y+20;
+  }
+}
+function nearestBusStop3(){
+  const px=_phaserScene?_phaserScene.me.x:0,py=_phaserScene?_phaserScene.me.y:0;
+  let best=null,bd=Infinity;
+  for(const wp of BUS_WAYPOINTS3){
+    if(!wp.stop)continue;
+    const d=Math.hypot(px-wp.x,py-wp.y);
+    if(d<bd){bd=d;best=wp;}
+  }
+  return{stop:best,dist:bd};
+}
+function boardBus3(){
+  if(currentCity!==3)return logChat('[Bus] Only available in Industrial City.',false,'#f87171');
+  if(busState3.passengerBoarded)return logChat('[Bus] You\'re already on the bus.',false,'#fbbf24');
+  const{stop,dist}=nearestBusStop3();
+  if(dist>BUS_STOP_RADIUS)return logChat('[Bus] 🚌 Walk closer to a bus stop first!',false,'#f87171');
+  if(!busState3.atStop)return logChat('[Bus] 🚌 Bus is in transit — wait at the stop!',false,'#fbbf24');
+  busState3.passengerBoarded=true;
+  logChat('[🚌 Bus] Boarded at '+busState3.stopLabel+'! Riding the city loop. Tap Exit to disembark.',false,'#22c55e');
+  onChainTx('BUS_BOARD:'+busState3.stopLabel,0.00001);
+}
+window.boardBus3=boardBus3;
+function exitBus3(){
+  if(!busState3.passengerBoarded)return;
+  busState3.passengerBoarded=false;
+  const bldgList=BLDGS3;
+  const b=bldgList.find(b=>b.key==='Airport C3');
+  let exitX=busState3.x+TILE*2,exitY=busState3.y+TILE*2;
+  if(b&&exitX>=b.x&&exitX<b.x+b.w&&exitY>=b.y&&exitY<b.y+b.h){exitX=b.x+b.w/2;exitY=b.y+b.h+16;}
+  if(_phaserScene){_phaserScene.me.x=exitX;_phaserScene.me.y=exitY;}
+  logChat('[🚌 Bus] Disembarked at '+busState3.stopLabel+'.',false,'#93c5fd');
+}
+window.exitBus3=exitBus3;
+
+/* ── City 3 NPC Trucks ── */
+const NPC_TRUCKS3=[
+  {x:22*TILE,y:0,     dir:'down', speed:110,road:'v22',spr:null,tex:'car_red'},
+  {x:50*TILE,y:0,     dir:'down', speed:95, road:'v50',spr:null,tex:'car_blue'},
+  {x:0,      y:12*TILE,dir:'right',speed:120,road:'h12',spr:null,tex:'car_yellow'},
+  {x:0,      y:36*TILE,dir:'right',speed:100,road:'h36',spr:null,tex:'car_green'},
+  {x:78*TILE,y:0,     dir:'down', speed:90, road:'v78',spr:null,tex:'car_purple'},
+  {x:CW*TILE,y:24*TILE,dir:'left',speed:115,road:'h24',spr:null,tex:'car_red'},
+];
+function updateNPCTrucks3(dtS){
+  if(currentCity!==3||WS.zone!=='CITY')return;
+  for(const c of NPC_TRUCKS3){
+    if(!c.spr)continue;
+    if(c.dir==='right'){c.x+=c.speed*dtS;if(c.x>CW*TILE)c.x=-TILE;}
+    else if(c.dir==='left'){c.x-=c.speed*dtS;if(c.x<-TILE)c.x=CW*TILE;}
+    else if(c.dir==='down'){c.y+=c.speed*dtS;if(c.y>CH*TILE)c.y=0;}
+    else if(c.dir==='up'){c.y-=c.speed*dtS;if(c.y<0)c.y=CH*TILE;}
+    c.spr.setPosition(c.x,c.y);c.spr.setVisible(true);
+  }
+}
 function drawCity2(scene){
   clearWorld(scene);city2Tiles=buildTiles2();
   const gr=scene.add.graphics().setDepth(-3);
@@ -3440,25 +3696,162 @@ function drawCity2(scene){
   redrawFarmPlots();
 }
 
+/* ── City 3 draw function ── */
+function drawCity3(scene){
+  clearWorld(scene);city3Tiles=buildTiles3();
+  const gr=scene.add.graphics().setDepth(-3);
+  for(let y=0;y<CH;y++)for(let x=0;x<CW;x++){
+    const tt=city3Tiles[y][x];
+    if(tt===TT.TR){gr.fillStyle(0x374151,1);gr.fillRect(x*TILE,y*TILE,TILE,TILE);gr.fillStyle(0x9ca3af,1);gr.fillRect(x*TILE+TILE/2-2,y*TILE,4,TILE);gr.fillRect(x*TILE,y*TILE+TILE/2-2,TILE,4);continue;}
+    if(tt===TT.PK){gr.fillStyle(0x2d3748,1);gr.fillRect(x*TILE,y*TILE,TILE,TILE);gr.lineStyle(1,0x4a5568,0.35);gr.strokeRect(x*TILE+1,y*TILE+1,TILE-2,TILE-2);continue;}
+    gr.fillStyle(TC[tt]??0x14532d,1);gr.fillRect(x*TILE,y*TILE,TILE,TILE);
+  }
+  worldCont.add(gr);
+  // Detail pass
+  const dGr3=scene.add.graphics().setDepth(-2);
+  for(let y=0;y<CH;y++)for(let x=0;x<CW;x++){
+    const tt=city3Tiles[y][x];const n=(x*7483+y*6823)>>>0;
+    if(tt===TT.G){
+      if(n%9===0){dGr3.fillStyle(0x15803d,0.45);dGr3.fillRect(x*TILE+(n%20),y*TILE+(n>>4&15),8,4);}
+      if(n%13===0){dGr3.fillStyle(0x4ade80,0.18);dGr3.fillRect(x*TILE+(n>>3&23),y*TILE+(n>>7&23),3,3);}
+    }else if(tt===TT.PK){
+      // Industrial concrete detail
+      if(n%5===0){dGr3.fillStyle(0x4a5568,0.22);dGr3.fillRect(x*TILE+4,y*TILE+4,TILE-8,TILE-8);}
+      if(n%7===0){dGr3.lineStyle(1,0x718096,0.18);dGr3.strokeRect(x*TILE,y*TILE,TILE,TILE);}
+    }else if(tt===TT.R){
+      dGr3.fillStyle(0x1e293b,0.2);dGr3.fillRect(x*TILE+1,y*TILE+1,TILE-2,TILE-2);
+      const hR=x>0&&x<CW-1&&city3Tiles[y][x-1]===TT.R&&city3Tiles[y][x+1]===TT.R;
+      const vR=y>0&&y<CH-1&&city3Tiles[y-1][x]===TT.R&&city3Tiles[y+1][x]===TT.R;
+      if(hR&&!vR&&n%3===0){dGr3.fillStyle(0xf1f5f9,0.65);dGr3.fillRect(x*TILE+2,y*TILE+14,TILE-4,2);}
+      if(vR&&!hR&&n%3===0){dGr3.fillStyle(0xf1f5f9,0.65);dGr3.fillRect(x*TILE+14,y*TILE+2,2,TILE-4);}
+    }else if(tt===TT.CR){
+      for(let s=2;s<TILE;s+=6){dGr3.fillStyle(0xfafafa,0.55);dGr3.fillRect(x*TILE+s,y*TILE+1,3,TILE-2);}
+    }else if(tt===TT.W){
+      dGr3.fillStyle(0x0c4a6e,0.25);dGr3.fillRect(x*TILE,y*TILE,TILE,8);
+    }else if(tt===TT.S){
+      if(n%5===0){dGr3.fillStyle(0xfbbf24,0.35);dGr3.fillCircle(x*TILE+(n%28),y*TILE+(n>>4&28),2+n%2);}
+    }
+  }
+  worldCont.add(dGr3);
+  // Smokestack chimneys on factory buildings
+  const chGr=scene.add.graphics().setDepth(5);
+  const chimneys=[
+    {x:11*TILE,y:2*TILE},{x:13*TILE,y:2*TILE},  // Factory 1
+    {x:23*TILE,y:2*TILE},{x:25*TILE,y:2*TILE},  // Factory 2
+    {x:36*TILE,y:2*TILE},{x:38*TILE,y:2*TILE},  // Steel Mill
+    {x:50*TILE,y:2*TILE},{x:52*TILE,y:2*TILE},  // Power Plant
+    {x:64*TILE,y:2*TILE},{x:66*TILE,y:2*TILE},  // Chemical Factory
+  ];
+  for(const c of chimneys){
+    chGr.fillStyle(0x4a5568,1);chGr.fillRect(c.x+10,c.y,6,TILE+4);
+    chGr.fillStyle(0x718096,1);chGr.fillRect(c.x+8,c.y-4,10,6);
+  }
+  worldCont.add(chGr);
+  // Industrial Lake label
+  worldCont.add(scene.add.text(79*TILE,44*TILE,'🏭\nReservoir',{fontSize:'11px',color:'#bae6fd',align:'center',backgroundColor:'rgba(0,0,0,.45)',padding:{x:4,y:3}}).setOrigin(.5).setDepth(5));
+  // Bus stop markers
+  for(const wp of BUS_WAYPOINTS3){
+    if(!wp.stop)continue;
+    worldCont.add(scene.add.text(wp.x,wp.y-18,'🚌',{fontSize:'20px'}).setOrigin(.5).setDepth(4));
+    worldCont.add(scene.add.text(wp.x,wp.y-42,wp.label,{fontSize:'9px',color:'#fbbf24',backgroundColor:'rgba(0,0,0,.65)',padding:{x:4,y:2}}).setOrigin(.5).setDepth(4));
+  }
+  // Gas station icon
+  worldCont.add(scene.add.text(63.5*TILE,15*TILE,'⛽',{fontSize:'22px'}).setOrigin(.5).setDepth(5));
+  // Smokestack smoke emoji labels on factories
+  for(const b of [BLDGS3[0],BLDGS3[1],BLDGS3[2],BLDGS3[3],BLDGS3[4]]){
+    worldCont.add(scene.add.text(b.x+b.w/2,b.y-2,'🏭',{fontSize:'22px'}).setOrigin(.5,1).setDepth(5));
+  }
+  // Buildings
+  for(const b of BLDGS3){
+    const cx=b.x+b.w/2,cy=b.y+b.h/2;
+    const bSpr=scene.add.image(cx,cy,b.tex).setScale(b.ts).setDepth(3);
+    if(b.isHouse){const ow=houseOwnership[b.key];bSpr.setTint(ow&&ow.owner?getHouseColorByOwner(ow.owner).tint:0x94a3b8);}
+    worldCont.add(bSpr);
+    worldCont.add(scene.add.text(cx,b.y-8,b.key,{fontSize:'12px',color:'#e2e8f0',fontStyle:'bold',backgroundColor:'rgba(0,0,0,.38)',padding:{x:5,y:3}}).setOrigin(.5,1).setDepth(4));
+  }
+  for(const i of IACTS3){
+    const cx=i.x+i.w/2,cy=i.y+i.h/2;
+    worldCont.add(scene.add.image(cx,cy,i.tex).setScale(i.ts).setDepth(3));
+    worldCont.add(scene.add.text(cx,i.y-8,i.key,{fontSize:'11px',color:'#e2e8f0',backgroundColor:'rgba(0,0,0,.35)',padding:{x:4,y:2}}).setOrigin(.5,1).setDepth(4));
+  }
+  scene.cameras.main.setBounds(0,0,CW*TILE,CH*TILE);drawMM._k=null;
+  // Bus sprite
+  if(!busState3.spr||!busState3.spr.active){
+    busState3.spr=scene.add.text(busState3.x,busState3.y,'🚌',{fontSize:'44px'}).setOrigin(.5).setDepth(8);
+    worldCont.add(busState3.spr);
+  }else{busState3.spr.setPosition(busState3.x,busState3.y);worldCont.add(busState3.spr);}
+  // Bus trailing cars
+  busState3.carSprs=[];
+  for(let ci=0;ci<2;ci++){
+    const car=scene.add.text(busState3.x,busState3.y,'🚎',{fontSize:'42px'}).setOrigin(.5).setDepth(7);
+    worldCont.add(car);
+    busState3.carSprs.push(car);
+  }
+  // NPC Trucks
+  for(const c of NPC_TRUCKS3){
+    if(!c.spr||!c.spr.active){c.spr=scene.add.image(c.x,c.y,c.tex||'car_red').setOrigin(.5).setDepth(6).setScale(1.5);}
+    else{c.spr.setPosition(c.x,c.y);}
+    worldCont.add(c.spr);
+  }
+  // Airplane (shared state with city 2)
+  if(!planeState.spr||!planeState.spr.active){
+    planeState.spr=scene.add.text(planeState.x,planeState.y,'✈️',{fontSize:'54px'}).setOrigin(.5).setDepth(9);
+  }else{planeState.spr.setPosition(planeState.x,planeState.y);}
+  worldCont.add(planeState.spr);
+  // Traffic light graphics layer
+  if(!_tlightGfx||!_tlightGfx.active){_tlightGfx=scene.add.graphics().setDepth(7);}
+  worldCont.add(_tlightGfx);
+}
+
+/* ── City 3 flight functions ── */
+async function flyToCity3(){
+  if(currentCity===3)return logChat('[Terminal] Already in Industrial City!',false,'#fbbf24');
+  if(S.coins<FLIGHT_COST_USD)return logChat('[✈️ Airport] Need $'+FLIGHT_COST_USD+' USD for the flight. You have $'+S.coins+'.',false,'#f87171');
+  S.coins-=FLIGHT_COST_USD;updateHUD();
+  logChat('[✈️ Airport] 🔐 Confirm flight payment on blockchain to travel to Industrial City (City 3)…',false,'#fbbf24');
+  const flightTx=await treasuryPay('FLIGHT:to_city3:$'+FLIGHT_COST_USD+'USD',FLIGHT_COST_USD);
+  if(!flightTx){S.coins+=FLIGHT_COST_USD;updateHUD();logChat('[✈️ Airport] ❌ Flight cancelled — blockchain payment not confirmed.',false,'#f87171');return;}
+  logChat('[✈️ Airport] ✅ Tx confirmed ('+flightTx.hash.slice(0,14)+'…) — Departure to Industrial City… 🛫',false,'#22c55e');
+  closeOutdoor();
+  if(WS.zone==='INTERIOR'){WS.zone='CITY';WS.key='';interior=null;stopMulGame();}
+  switchCity(3,true);
+}
+window.flyToCity3=flyToCity3;
+async function flyFromCity3(){
+  if(currentCity!==3)return logChat('[Terminal] Not in Industrial City!',false,'#fbbf24');
+  if(S.coins<FLIGHT_COST_USD)return logChat('[✈️ Airport] Need $'+FLIGHT_COST_USD+' USD for the flight. You have $'+S.coins+'.',false,'#f87171');
+  S.coins-=FLIGHT_COST_USD;updateHUD();
+  logChat('[✈️ Airport C3] 🔐 Confirm flight payment to travel back…',false,'#fbbf24');
+  const flightTx=await treasuryPay('FLIGHT:city3_to_city1:$'+FLIGHT_COST_USD+'USD',FLIGHT_COST_USD);
+  if(!flightTx){S.coins+=FLIGHT_COST_USD;updateHUD();logChat('[✈️ Airport C3] ❌ Flight cancelled.',false,'#f87171');return;}
+  logChat('[✈️ Airport C3] ✅ Tx confirmed ('+flightTx.hash.slice(0,14)+'…) — Returning to Moga City… 🛫',false,'#22c55e');
+  if(WS.zone==='INTERIOR'){WS.zone='CITY';WS.key='';interior=null;stopMulGame();}
+  switchCity(1,true);
+}
+window.flyFromCity3=flyFromCity3;
+
 function switchCity(n,fromFlight){
   if(n===currentCity)return;
   if(!fromFlight)return logChat('[✈️ Travel] You must board a plane at the Airport to travel between cities! On-chain transaction required.',false,'#f87171');
   if(WS.zone==='INTERIOR')return logChat('[City] Exit building first.',false,'#f87171');
   currentCity=n;
   _treeTileSet.clear(); // clear City 1 tree positions when switching cities
-  const btn1=document.getElementById('btnCity1'),btn2=document.getElementById('btnCity2');
+  const btn1=document.getElementById('btnCity1'),btn2=document.getElementById('btnCity2'),btn3=document.getElementById('btnCity3');
   const pill=document.getElementById('cityPill');
   if(btn1)btn1.style.background=n===1?'linear-gradient(90deg,#0284c7,#0369a1)':'rgba(255,255,255,.08)';
   if(btn2)btn2.style.background=n===2?'linear-gradient(90deg,#0f766e,#14b8a6)':'rgba(255,255,255,.08)';
-  if(pill)pill.textContent=n===1?'🏙️ Moga City':'🏝️ Coastal City';
+  if(btn3)btn3.style.background=n===3?'linear-gradient(90deg,#d97706,#b45309)':'rgba(255,255,255,.08)';
+  if(pill)pill.textContent=n===1?'🏙️ Moga City':n===2?'🏝️ Coastal City':'🏭 Industrial City';
   if(fromFlight&&n===1){
     WS.savedPos={x:87*TILE,y:9*TILE}; // arrive at City 1 Airport — outside building footprint
   }else if(fromFlight&&n===2){
     WS.savedPos={x:77*TILE,y:11*TILE}; // arrive at City 2 Airport — outside building footprint
+  }else if(fromFlight&&n===3){
+    WS.savedPos={x:85*TILE,y:10*TILE}; // arrive at City 3 Airport — outside building footprint
   }else{
     WS.savedPos={x:32*TILE,y:28*TILE};
   }
-  trainState.passengerBoarded=false;playerDrivingCar=false;
+  trainState.passengerBoarded=false;busState3.passengerBoarded=false;playerDrivingCar=false;
   planeState.passengerBoarded=false;boatState.passengerBoarded=false;
   if(WS.outdoor==='Boat')WS.outdoor=null;
   if(_tlightGfx&&_tlightGfx.active){_tlightGfx.clear();_tlightGfx=null;}
@@ -3471,6 +3864,8 @@ function switchCity(n,fromFlight){
         spawnBirds2(_phaserScene);
         logChat('[🏝️ Coastal City] Welcome to City 2! Beach🏖️ · Airport✈️ · Train🚂 · Zoo🦁 · Concert🎵 · Waterfall💦 · Gas Station⛽',false,'#fbbf24');
         loadCarOwnership();
+      }else if(n===3){
+        logChat('[🏭 Industrial City] Welcome to City 3! Factories🏭 · Airport✈️ · Bus🚌 · Market🛒 · Bar🍺 · Cafe☕ · Concert🎵 · Lake💧 · Gas Station⛽',false,'#fbbf24');
       }else{
         logChat('[🏙️ Moga City] Welcome to City 1! ✈️ Airport C1 in NE · Use Airport to fly to City 2',false,'#fbbf24');
       }
@@ -3493,7 +3888,8 @@ function spawnBirds2(scene){
 }
 
 function drawCity(scene){
-  if(currentCity===2)drawCity2(scene);
+  if(currentCity===3)drawCity3(scene);
+  else if(currentCity===2)drawCity2(scene);
   else drawCity1(scene);
 }
 
@@ -3587,7 +3983,7 @@ function exitCity(scene){
   WS.zone='CITY';const _bk=WS.key;WS.key='';interior=null;stopMulGame();
   // Ensure exit position is outside the building footprint to prevent player freeze
   let exitX=WS.savedPos.x,exitY=WS.savedPos.y;
-  const _bldgList=currentCity===2?BLDGS2:BLDGS;
+  const _bldgList=currentCity===3?BLDGS3:currentCity===2?BLDGS2:BLDGS;
   const _bldg=_bldgList.find(b=>b.key===_bk);
   if(_bldg&&exitX>=_bldg.x&&exitX<_bldg.x+_bldg.w&&exitY>=_bldg.y&&exitY<_bldg.y+_bldg.h){exitX=_bldg.x+_bldg.w/2;exitY=_bldg.y+_bldg.h+16;}
   scene.me.x=exitX;scene.me.y=exitY;
@@ -3604,7 +4000,7 @@ function drawMM(pos){
     drawMM._k=ck;
     const bg=document.createElement('canvas');bg.width=mmCanvas.width;bg.height=mmCanvas.height;const ic=bg.getContext('2d');
     if(WS.zone==='CITY'){
-      const mmTiles=currentCity===2?city2Tiles:cityTiles;
+      const mmTiles=currentCity===3?city3Tiles:currentCity===2?city2Tiles:cityTiles;
       for(let y=0;y<mmCanvas.height;y++)for(let x=0;x<mmCanvas.width;x++){
         const t=(mmTiles&&mmTiles[Math.floor((y/mmCanvas.height)*CH)])?mmTiles[Math.floor((y/mmCanvas.height)*CH)][Math.floor((x/mmCanvas.width)*CW)]:TT.G;
         ic.fillStyle=t===TT.R||t===TT.CR?'#64748b':t===TT.SD?'#334155':t===TT.W?'#0284c7':t===TT.S?'#fde68a':t===TT.TR?'#374151':t===TT.MT?'#4b5563':t===TT.PK?'#1e293b':'#1f7a3a';ic.fillRect(x,y,1,1);
@@ -3623,7 +4019,7 @@ function drawMM(pos){
     if(drawMM._job!==S.job){drawMM._job=S.job;const sk=S.job&&S.job!=='Unemployed'?SKILLS.find(s=>s.job===S.job):null;drawMM._workBldg=sk?sk.workBuilding:null;}
     const myWorkBldg=drawMM._workBldg;
     const wP=CW*TILE,hP=CH*TILE;
-    const activeBldgs=currentCity===2?BLDGS2:BLDGS;
+    const activeBldgs=currentCity===3?BLDGS3:currentCity===2?BLDGS2:BLDGS;
     for(const b of activeBldgs){
       const mx=(b.x+b.w/2)/wP*mmCanvas.width;
       const my=(b.y+b.h/2)/hP*mmCanvas.height;
@@ -3654,7 +4050,7 @@ function drawMM(pos){
       if(myHouseKey){mmCtx2.fillStyle='#fbbf24';mmCtx2.beginPath();mmCtx2.arc(4.5,ly-2,3,0,Math.PI*2);mmCtx2.fill();mmCtx2.fillStyle='rgba(255,255,255,.5)';mmCtx2.fillText('Home',9,ly);}
     }
     // Draw announcement board markers on minimap
-    const activeIacts=currentCity===2?IACTS2:IACTS;
+    const activeIacts=currentCity===3?IACTS3:currentCity===2?IACTS2:IACTS;
     for(const ia of activeIacts){
       if(!ia.isAnnouncement)continue;
       const mx=(ia.x+ia.w/2)/wP*mmCanvas.width;
@@ -3678,8 +4074,8 @@ function drawMM(pos){
 
 function nearPOI(px,py){
   let best=null,bd=Infinity;
-  const bldgs=currentCity===2?BLDGS2:BLDGS;
-  const iacts=currentCity===2?IACTS2:IACTS;
+  const bldgs=currentCity===3?BLDGS3:currentCity===2?BLDGS2:BLDGS;
+  const iacts=currentCity===3?IACTS3:currentCity===2?IACTS2:IACTS;
   for(const b of bldgs){const d=Math.hypot(px-b.x-b.w/2,py-b.y-b.h/2);if(d<bd){bd=d;best=b;}}
   for(const i of iacts){const d=Math.hypot(px-i.x-i.w/2,py-i.y-i.h/2);if(d<bd){bd=d;best=i;}}
   return{poi:best,d:bd};
@@ -3731,7 +4127,30 @@ function doIAct(action){
       break;
     case 'announcement board':
     case 'announcement board c2':
+    case 'announcement board c3':
       showAnnouncementBoard();
+      break;
+    case 'bus stop north':
+    case 'bus stop south':
+    case 'bus stop west':
+    case 'bus stop east':
+      WS.outdoor='BusStop';
+      renderBuildingPanel();
+      logChat('[🚌 Bus Stop] Wait for the bus · Riding the bus is FREE and uses no energy!',false,'#fbbf24');
+      break;
+    case 'industrial lake':
+      logChat('[💧 Industrial Lake] Cooling reservoir for the Power Plant. +10 energy from fresh air!',false,'#38bdf8');
+      S.energy=Math.min(S.energy+10,S.energyMax);updateHUD();
+      break;
+    case 'vending c3':
+      WS.outdoor='Vending';
+      renderBuildingPanel();
+      logChat('[Vending C3] 🍫 Choose your energy item! ($1 USD each)',false,'#fbbf24');
+      break;
+    case 'gas station c3':
+      WS.outdoor='GasStation';
+      renderBuildingPanel();
+      logChat('[⛽ Gas Station C3] Fill up your car fuel here!',false,'#fbbf24');
       break;
   }
   const items=[
@@ -3997,7 +4416,7 @@ function triggerInteract(sceneRef){
     }
     /* Priority: building/IACT > own plot > nothing */
     if(poi&&d<IDIST){
-      const bldgList=currentCity===2?BLDGS2:BLDGS;
+      const bldgList=currentCity===3?BLDGS3:currentCity===2?BLDGS2:BLDGS;
       const housePlot=poi.key.startsWith('House')&&bldgList.find(b=>b.key===poi.key);
       if(housePlot){
         const myKey=getMyHouseKey();
@@ -5111,16 +5530,16 @@ function loadProgress(){
 function populateNav(){
   const sel=document.getElementById('navSel');
   sel.innerHTML='<option value="">Choose...</option>';
-  const bldgs=currentCity===2?BLDGS2:BLDGS;
-  const iacts=currentCity===2?IACTS2:IACTS;
+  const bldgs=currentCity===3?BLDGS3:currentCity===2?BLDGS2:BLDGS;
+  const iacts=currentCity===3?IACTS3:currentCity===2?IACTS2:IACTS;
   bldgs.forEach(b=>{const o=document.createElement('option');o.value=b.key;o.textContent=b.key;sel.appendChild(o);});
   iacts.forEach(i=>{const o=document.createElement('option');o.value=i.key;o.textContent=i.key;sel.appendChild(o);});
 }
 document.getElementById('btnGo').onclick=()=>{
   if(WS.zone!=='CITY')return logChat('[nav] Only in CITY.');
   const k=document.getElementById('navSel').value;if(!k)return;
-  const activeBldgs2=currentCity===2?BLDGS2:BLDGS;
-  const activeIacts2=currentCity===2?IACTS2:IACTS;
+  const activeBldgs2=currentCity===3?BLDGS3:currentCity===2?BLDGS2:BLDGS;
+  const activeIacts2=currentCity===3?IACTS3:currentCity===2?IACTS2:IACTS;
   const all=[...activeBldgs2.map(b=>({key:b.key,x:b.x+b.w/2,y:b.y+b.h/2})),...activeIacts2.map(i=>({key:i.key,x:i.x+i.w/2,y:i.y+i.h/2}))];
   const f=all.find(t=>t.key===k);if(!f)return;
   NAV.key=k;NAV.pos={x:f.x,y:f.y};document.getElementById('mmTgt').textContent=k;logChat('[nav] Target: '+k);
@@ -5277,6 +5696,7 @@ const phaserCfg={
       const dtS=dt/1000;updateDN(dtS);
       updateNPCBots(dtS);updateBirds(dtS);updateWaves(dtS);
       if(currentCity===2){updateTrain(dtS);updateNPCCars(dtS);updateTrafficLights(dtS);updatePlane(dtS);updateBoat(dtS);}
+      if(currentCity===3){updateBus3(dtS);updateNPCTrucks3(dtS);updatePlane(dtS);}
       if(S.sleeping)return;
       const spr=this.keys.SHIFT.isDown&&S.energy>0,spd=spr?380:240;
       let vx=0,vy=0;
@@ -5287,7 +5707,7 @@ const phaserCfg={
       if(vx&&vy){vx*=.7071;vy*=.7071;}
       const mv=(vx||vy),nx=this.me.x+vx*spd*dtS,ny=this.me.y+vy*spd*dtS;
       if(WS.zone==='CITY'){
-        const activeTiles=currentCity===2?city2Tiles:cityTiles;
+        const activeTiles=currentCity===3?city3Tiles:currentCity===2?city2Tiles:cityTiles;
         const cx=clamp(nx,20,CW*TILE-20),cy=clamp(ny,20,CH*TILE-20);
         // If driving a car: must stay on road tiles
         if(playerDrivingCar&&activeTiles){
