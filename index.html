@@ -9932,6 +9932,48 @@
       transition: opacity 0.15s;
     }
     #chatbotSend:hover { opacity: 0.85; }
+    #chatbotSend:disabled { opacity: 0.5; cursor: not-allowed; }
+    .chat-typing-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.82em;
+      color: #94a3b8;
+      padding: 2px 0;
+    }
+    .chat-typing-dots { display: inline-flex; gap: 4px; align-items: center; }
+    .chat-typing-dots span {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: #6366f1;
+      display: inline-block;
+      animation: chatTypingBounce 1.2s infinite ease-in-out;
+    }
+    .chat-typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .chat-typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes chatTypingBounce {
+      0%, 80%, 100% { transform: scale(0.7); opacity: 0.5; }
+      40% { transform: scale(1.1); opacity: 1; }
+    }
+    .chat-web-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.72em;
+      background: rgba(99,102,241,0.15);
+      border: 1px solid rgba(99,102,241,0.25);
+      color: #a5b4fc;
+      border-radius: 999px;
+      padding: 2px 8px;
+      margin-bottom: 4px;
+    }
+    .chatbot-status-bar {
+      font-size: 0.72em;
+      color: #64748b;
+      padding: 0 16px 6px;
+      text-align: center;
+      flex-shrink: 0;
+    }
   </style>
 
   <button id="chatbotToggle" onclick="toggleChatbot()" title="Ask Moga AI">🤖</button>
@@ -9939,13 +9981,14 @@
   <div id="chatbotWindow" class="chatbot-hidden">
     <div class="chatbot-header">
       <span class="chatbot-header-icon">🤖</span>
-      <span class="chatbot-header-title">Moga AI — Portal Assistant</span>
+      <span class="chatbot-header-title">Moga AI — Web Search &amp; AI</span>
       <button class="chatbot-header-close" onclick="toggleChatbot()">×</button>
     </div>
     <div id="chatbotMessages"></div>
     <div class="chat-suggestions" id="chatSuggestions"></div>
+    <div class="chatbot-status-bar" id="chatStatusBar"></div>
     <div class="chatbot-input-row">
-      <input id="chatbotInput" type="text" placeholder="Ask anything about Mogaland..." autocomplete="off" onkeydown="if(event.key==='Enter')sendChatMessage()" />
+      <input id="chatbotInput" type="text" placeholder="Ask anything — I'll search the web..." autocomplete="off" onkeydown="if(event.key==='Enter')sendChatMessage()" />
       <button id="chatbotSend" onclick="sendChatMessage()">➤</button>
     </div>
   </div>
@@ -9970,7 +10013,7 @@
         { keys: ['profile','account','address','profil','akun'], answer: '👤 <b>Profile</b>: Click the Profile button in the top-right corner to view your wallet addresses, ETH and USDC balances, and transaction history.' },
         { keys: ['transaction','history','tx','hash','transaksi'], answer: '📋 <b>Transactions</b>: All on-chain transactions are recorded with their hash. You can view them in your Profile panel or on the Sepolia explorer.' },
         { keys: ['network','chain','sepolia','testnet','mainnet','jaringan'], answer: '🌐 <b>Networks</b>: Mogaland currently operates on Sepolia testnet. Use the network switcher in the top bar to switch between supported networks. Get free Sepolia ETH from a faucet.' },
-        { keys: ['faucet','testnet eth','get eth','free eth'], answer: '🚰 <b>Sepolia Faucet</b>: You need Sepolia ETH to pay gas fees. Get free test ETH at: <a href="https://sepoliafaucet.com" target="_blank" style="color:#60a5fa;">sepoliafaucet.com</a> or <a href="https://faucet.quicknode.com/ethereum/sepolia" target="_blank" style="color:#60a5fa;">QuickNode Faucet</a>.' },
+        { keys: ['faucet','testnet eth','get eth','free eth'], answer: '🚰 <b>Sepolia Faucet</b>: You need Sepolia ETH to pay gas fees. Get free test ETH at: <a href="https://sepoliafaucet.com" target="_blank" rel="noopener noreferrer" style="color:#60a5fa;">sepoliafaucet.com</a> or <a href="https://faucet.quicknode.com/ethereum/sepolia" target="_blank" rel="noopener noreferrer" style="color:#60a5fa;">QuickNode Faucet</a>.' },
         { keys: ['casino','multiplier','gamble','bet casino','kasino'], answer: '🎰 <b>Casino</b>: Located inside Moga City. Play the multiplier game against up to 100 players. Place bets and watch the multiplier grow — cash out before it crashes to win big!' },
         { keys: ['car','car nft','drive','vehicle','mobil'], answer: '🚗 <b>Car NFT</b>: Available in Coastal City (City 2). Buy a Car NFT at the Car Shop. Drive on city roads. Fill up at the Gas Station. Cars are stored as NFTs in your wallet.' },
         { keys: ['train','halte','station','kereta'], answer: '🚂 <b>Train</b>: Available in City 2. Board at Train Haltes around the city. The train circles the city automatically — it\'s free to ride!' },
@@ -9984,8 +10027,22 @@
 
       const SUGGESTIONS = ['How do I swap?','What is Moga World?','How to fly to City 2?','How to earn rewards?','What is NFT Staking?','Contact support'];
 
+      // System prompt with Mogaland knowledge for the AI
+      const AI_SYSTEM_PROMPT = `You are Moga AI, a helpful and friendly assistant for the Mogaland blockchain portal. You can answer questions about Mogaland and general topics. Keep answers concise (2–4 sentences max). Do not use markdown headers. Use emojis naturally.
+
+Mogaland context:
+- Blockchain simulator portal on Sepolia testnet
+- Features: Token Swap, Cross-chain Bridge, NFT Staking, Learning quizzes, Market Prediction (leverage 1x-100x), Moga World RPG
+- Moga World RPG: open-world game with City 1 (Moga City) and City 2 (Coastal City), casino, train, boat, car NFTs
+- Currency: USDC (on-chain Sepolia). Earn via staking, trading, quizzes, in-game work
+- Mogaland Points: earned from quizzes, converted to USDC
+- Wallets supported: MetaMask, OKX, Trust Wallet, Email login, X (Twitter) login
+- Get free Sepolia ETH at sepoliafaucet.com for gas fees
+- Support: Discord and Telegram`;
+
       let chatOpen = false;
       let chatInitialized = false;
+      let _aiPending = false;
 
       // ---- Drag state ----
       let _drag = { active: false, startX: 0, startY: 0, winX: 0, winY: 0 };
@@ -10054,8 +10111,10 @@
       window.toggleChatbot = toggleChatbot;
 
       function initChat() {
-        appendBotMessage('👋 Hi! I\'m <b>Moga AI</b>, your Mogaland portal assistant. Ask me anything — swapping, bridging, the game, rewards, and more!<br><small style="opacity:0.7">💬 Need live help? Contact our operator via <b>Discord</b> or <b>Telegram</b>.</small>');
+        appendBotMessage('👋 Hi! I\'m <b>Moga AI</b> — your Mogaland assistant with web search. Ask me anything about the portal, blockchain, or anything else!<br><small style="opacity:0.7">🔍 I can search the web for up-to-date answers. Need live help? Contact our operator via <b>Discord</b> or <b>Telegram</b>.</small>');
         renderSuggestions(SUGGESTIONS);
+        const statusBar = document.getElementById('chatStatusBar');
+        if (statusBar) statusBar.textContent = '🔍 Web search + AI powered';
       }
 
       function appendBotMessage(html) {
@@ -10064,6 +10123,28 @@
         const div = document.createElement('div');
         div.className = 'chat-bubble bot';
         div.innerHTML = html;
+        msgs.appendChild(div);
+        msgs.scrollTop = msgs.scrollHeight;
+      }
+
+      // Append AI-generated text safely (no innerHTML from external source)
+      function appendBotMessageText(text, webBadge) {
+        const msgs = document.getElementById('chatbotMessages');
+        if (!msgs) return;
+        const div = document.createElement('div');
+        div.className = 'chat-bubble bot';
+        if (webBadge) {
+          const badge = document.createElement('div');
+          badge.className = 'chat-web-badge';
+          badge.textContent = webBadge;
+          div.appendChild(badge);
+        }
+        // Convert newlines to <br> safely, then set as text
+        const lines = text.split('\n');
+        lines.forEach((line, i) => {
+          div.appendChild(document.createTextNode(line));
+          if (i < lines.length - 1) div.appendChild(document.createElement('br'));
+        });
         msgs.appendChild(div);
         msgs.scrollTop = msgs.scrollHeight;
       }
@@ -10078,6 +10159,46 @@
         msgs.scrollTop = msgs.scrollHeight;
       }
 
+      function showTypingIndicator(label) {
+        const msgs = document.getElementById('chatbotMessages');
+        if (!msgs || document.getElementById('chatTypingBubble')) return;
+        const div = document.createElement('div');
+        div.className = 'chat-bubble bot';
+        div.id = 'chatTypingBubble';
+        const row = document.createElement('div');
+        row.className = 'chat-typing-indicator';
+        const dots = document.createElement('div');
+        dots.className = 'chat-typing-dots';
+        for (let i = 0; i < 3; i++) dots.appendChild(document.createElement('span'));
+        const labelEl = document.createElement('span');
+        labelEl.textContent = label || 'Searching…';
+        row.appendChild(dots);
+        row.appendChild(labelEl);
+        div.appendChild(row);
+        msgs.appendChild(div);
+        msgs.scrollTop = msgs.scrollHeight;
+      }
+
+      function updateTypingLabel(label) {
+        const el = document.getElementById('chatTypingBubble');
+        if (!el) return;
+        const labelEl = el.querySelector('.chat-typing-indicator span:last-child');
+        if (labelEl) labelEl.textContent = label;
+      }
+
+      function removeTypingIndicator() {
+        const el = document.getElementById('chatTypingBubble');
+        if (el) el.remove();
+      }
+
+      function setChatBusy(busy) {
+        _aiPending = busy;
+        const input = document.getElementById('chatbotInput');
+        const btn = document.getElementById('chatbotSend');
+        if (input) input.disabled = busy;
+        if (btn) btn.disabled = busy;
+      }
+
       function renderSuggestions(items) {
         const el = document.getElementById('chatSuggestions');
         if (!el) return;
@@ -10086,34 +10207,98 @@
         ).join('');
       }
 
-      function getBotAnswer(text) {
+      // Local KB lookup — returns answer HTML for Mogaland-specific queries, else null
+      function getLocalKBAnswer(text) {
         const lower = text.toLowerCase();
-        // Score each KB entry by number of matching keywords
         let bestScore = 0, bestAnswer = null;
         for (const entry of CHATBOT_KB) {
           const score = entry.keys.filter(k => lower.includes(k)).length;
           if (score > bestScore) { bestScore = score; bestAnswer = entry.answer; }
         }
-        if (bestAnswer) return bestAnswer;
-        return '🤔 I\'m not sure about that. Try asking about: swapping, bridging, NFT staking, the game, flying between cities, rewards, or how to earn USDC!<br><small style="opacity:0.7">Still confused? Contact our operator via <b>Discord</b> or <b>Telegram</b> for direct support.</small>';
+        return bestScore >= 1 ? bestAnswer : null;
+      }
+
+      // Web search snippet limits
+      const SNIPPET_MIN_LENGTH = 20;
+      const SNIPPET_MAX_LENGTH = 400;
+      async function fetchWebSearch(query) {
+        try {
+          const url = 'https://api.duckduckgo.com/?q=' + encodeURIComponent(query) + '&format=json&no_html=1&skip_disambig=1';
+          const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+          const data = await res.json();
+          const snippet = data.AbstractText || data.Answer || '';
+          return snippet.length > SNIPPET_MIN_LENGTH ? snippet.slice(0, SNIPPET_MAX_LENGTH) : null;
+        } catch {
+          return null;
+        }
+      }
+
+      // Fetch AI answer from Pollinations AI (free, no API key required)
+      async function fetchAIAnswer(userText, webContext) {
+        const messages = [{ role: 'system', content: AI_SYSTEM_PROMPT }];
+        if (webContext) {
+          messages.push({ role: 'system', content: 'Web search result for context: ' + webContext });
+        }
+        messages.push({ role: 'user', content: userText });
+
+        const res = await fetch('https://text.pollinations.ai/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ messages: messages, model: 'openai', seed: 42 }),
+          signal: AbortSignal.timeout(20000)
+        });
+        if (!res.ok) throw new Error('AI request failed: ' + res.status);
+        const text = await res.text();
+        return text.trim();
       }
 
       function sendChatMessage() {
         const input = document.getElementById('chatbotInput');
         if (!input) return;
         const text = input.value.trim();
-        if (!text) return;
+        if (!text || _aiPending) return;
         input.value = '';
         sendChatText(text);
       }
       window.sendChatMessage = sendChatMessage;
 
-      function sendChatText(text) {
+      async function sendChatText(text) {
+        if (_aiPending) return;
         appendUserMessage(text);
         document.getElementById('chatSuggestions').innerHTML = '';
-        setTimeout(() => {
-          appendBotMessage(getBotAnswer(text));
-        }, 350);
+
+        // Check local KB first for instant Mogaland-specific answers
+        const localAnswer = getLocalKBAnswer(text);
+        if (localAnswer) {
+          setTimeout(() => appendBotMessage(localAnswer), 300);
+          return;
+        }
+
+        // For general questions: search web + AI
+        setChatBusy(true);
+        showTypingIndicator('🔍 Searching the web…');
+
+        try {
+          // First search the web, then pass context to AI for enriched response
+          const webSnippet = await fetchWebSearch(text);
+          if (webSnippet) updateTypingLabel('🤖 Generating AI answer…');
+          const aiAnswer = await fetchAIAnswer(text, webSnippet);
+
+          removeTypingIndicator();
+
+          if (aiAnswer && aiAnswer.length > 0) {
+            const badge = webSnippet ? '🌐 Web search result included' : null;
+            appendBotMessageText(aiAnswer, badge);
+          } else {
+            appendBotMessage('🤔 I\'m not sure about that. Try asking about swapping, staking, the game, or rewards!<br><small style="opacity:0.7">Contact our operator via <b>Discord</b> or <b>Telegram</b> for live support.</small>');
+          }
+        } catch (err) {
+          removeTypingIndicator();
+          // Fallback to KB-style error message
+          appendBotMessage('🤔 I\'m not sure about that. Try asking about swapping, bridging, NFT staking, the game, or how to earn USDC!<br><small style="opacity:0.7">Still confused? Contact our operator via <b>Discord</b> or <b>Telegram</b> for direct support.</small>');
+        } finally {
+          setChatBusy(false);
+        }
       }
       window.sendChatText = sendChatText;
     })();
