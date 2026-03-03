@@ -934,7 +934,7 @@ function updateHUD(){
   const lbl=WS.zone==='CITY'?'CITY':WS.key.toUpperCase();
   document.getElementById('modePill').textContent=lbl;
   document.getElementById('mmLoc').textContent=lbl;
-  document.getElementById('mulCard').style.display=(WS.zone==='INTERIOR'&&WS.key==='Casino')?'block':'none';
+  document.getElementById('mulCard').style.display=(WS.zone==='INTERIOR'&&(WS.key==='Casino'||WS.key==='Casino C2'))?'block':'none';
   /* new inventory items */
   const setVis=(id,show)=>{const e=document.getElementById(id);if(e)e.style.display=show?'':'none';};
   setVis('pillFish',S.inv.fish>0);if(S.inv.fish>0)document.getElementById('elFish').textContent=S.inv.fish;
@@ -1004,7 +1004,9 @@ function renderBuildingPanel(){
     'Cafe C3':renderCafe,'Concert Hall C3':renderConcertHall,'Airport C3':renderAirportC3,
     'Factory 1':renderFactory,'Factory 2':renderFactory,'Steel Mill':renderFactory,'Power Plant':renderFactory,'Chemical Factory':renderFactory,
     'Bar':renderBar,
-    Casino:()=>{initMulGame();return '<strong>🎰 Casino</strong><div style="font-size:11px;color:#94a3b8;margin:5px 0;">Multiplier game panel on the left.</div>';}};  if(WS.key.startsWith('House'))panel.innerHTML=renderHome();
+    Casino:()=>{initMulGame();return '<strong>🎰 Casino</strong><div style="font-size:11px;color:#94a3b8;margin:5px 0;">Multiplier game panel on the left.</div>';},
+    'Casino C2':()=>{initMulGame();return '<strong>🎰 Casino C2</strong><div style="font-size:11px;color:#94a3b8;margin:5px 0;">Coastal City Casino · Multiplier game panel on the left.</div>';},
+    'Hollywood Studio':renderHollywoodStudio};  if(WS.key.startsWith('House'))panel.innerHTML=renderHome();
   else if(r[WS.key])panel.innerHTML=r[WS.key]();
   else panel.style.display='none';
 }
@@ -1589,6 +1591,12 @@ function renderConcertHall(){
 <button onclick="buyConcertTicket()" ${S.coins<10?'disabled':''} class="ibtn btn-purple">$10 USD</button></div>
 <div class="irow"><div class="ileft"><div class="iname">🎤 VIP Experience</div><div class="idesc">Backstage pass · NFT collectible</div></div>
 <button onclick="buyVIPConcert()" ${S.coins<50?'disabled':''} class="ibtn btn-indigo">$50 USD</button></div>
+<div style="border:1px solid rgba(168,85,247,.3);border-radius:8px;padding:8px;margin:5px 0;background:rgba(168,85,247,.05);">
+  <div style="font-size:12px;font-weight:bold;margin-bottom:4px;">🎤 Sing on Stage</div>
+  <div style="font-size:11px;color:#94a3b8;margin-bottom:6px;">Your voice echoes inside the concert hall only 🎶</div>
+  <input id="concertSongInput" placeholder="Type your song or lyrics…" style="width:100%;padding:6px;border-radius:6px;border:1px solid rgba(255,255,255,.2);background:#0f172a;color:#f0abfc;font-size:11px;margin-bottom:6px;box-sizing:border-box;"/>
+  <button onclick="singAtStage()" class="ibtn btn-purple" style="width:100%;padding:8px;">🎤 Sing!</button>
+</div>
 <div style="font-size:10px;color:#64748b;margin-top:5px;">Tonight: MogaFest Live 🎶 · Entry from $10 USD</div>`;
 }
 window.renderConcertHall=renderConcertHall;
@@ -1613,6 +1621,19 @@ function buyVIPConcert(){
   saveProgress();
 }
 window.buyVIPConcert=buyVIPConcert;
+
+function singAtStage(){
+  if(WS.zone!=='INTERIOR'||(WS.key!=='Concert Hall'&&WS.key!=='Concert Hall C3'))
+    return logChat('[Concert] You must be inside the Concert Hall to sing on stage!',false,'#f87171');
+  const inp=document.getElementById('concertSongInput');
+  // Trim and limit length; logChat() handles HTML escaping
+  const raw=(inp&&inp.value.trim())||'🎶 La la la…';
+  const lyrics=raw.slice(0,120);
+  // Clear input
+  if(inp)inp.value='';
+  logChat('[🎤 Concert Stage] 🎵 "'+lyrics+'" — (audible only inside the concert hall)',false,'#f0abfc');
+}
+window.singAtStage=singAtStage;
 
 function renderZoo(){
   return`<strong>🦁 Moga Zoo</strong>
@@ -1647,6 +1668,45 @@ function buyZooNFT(){
   saveProgress();
 }
 window.buyZooNFT=buyZooNFT;
+
+function renderHollywoodStudio(){
+  const CELEB_NAMES=['Moga Star 🌟','Plume Idol 💃','Cyber Diva 🎤','Pixel Queen 👑','Neon Actress 🎭'];
+  const celeb=CELEB_NAMES[Math.floor(Date.now()/10000)%CELEB_NAMES.length];
+  return`<strong>🎬 Hollywood Studio — Coastal City</strong>
+<div style="font-size:11px;color:#94a3b8;margin:5px 0;">Celebrity hotspot · Film productions · Star sightings 🌟</div>
+<div style="border:1px solid rgba(251,191,36,.3);border-radius:8px;padding:8px;margin:5px 0;background:rgba(251,191,36,.05);">
+  <div style="font-size:12px;font-weight:bold;margin-bottom:4px;">🌟 On Set Today: ${celeb}</div>
+  <div style="font-size:11px;color:#fbbf24;margin-bottom:6px;">Meet & Greet · Photo Op · VIP access</div>
+  <button onclick="meetCelebrity()" ${S.coins<20?'disabled':''} class="ibtn btn-yellow" style="width:100%;padding:8px;">⭐ Meet Celebrity ($20 USD)</button>
+</div>
+<div style="border:1px solid rgba(167,139,250,.25);border-radius:8px;padding:8px;margin:5px 0;background:rgba(167,139,250,.04);">
+  <div style="font-size:11px;color:#a78bfa;margin-bottom:4px;">🎥 Film Audition NFT</div>
+  <button onclick="filmAudition()" ${S.coins<50?'disabled':''} class="ibtn btn-indigo" style="width:100%;padding:8px;">🎬 Film Audition NFT ($50 USD)</button>
+</div>`;
+}
+window.renderHollywoodStudio=renderHollywoodStudio;
+
+function meetCelebrity(){
+  if(S.coins<20)return logChat('[Studio] Need $20 USD.',false,'#f87171');
+  S.coins-=20;S.energy=Math.min(S.energy+15,S.energyMax);
+  updateHUD();renderBuildingPanel();
+  treasuryPay('CELEB_MEET:HollywoodStudio:$20USD',20);
+  const celeb=['Moga Star 🌟','Plume Idol 💃','Cyber Diva 🎤','Pixel Queen 👑','Neon Actress 🎭'][Math.floor(Math.random()*5)];
+  logChat('[🌟 Hollywood] Met '+celeb+' on set! +15 energy. Selfie taken 📸',false,'#fbbf24');
+  saveProgress();
+}
+window.meetCelebrity=meetCelebrity;
+
+function filmAudition(){
+  if(S.coins<50)return logChat('[Studio] Need $50 USD for film audition.',false,'#f87171');
+  S.coins-=50;
+  updateHUD();renderBuildingPanel();
+  treasuryPay('FILM_AUDITION:HollywoodStudio:$50USD',50);
+  awardNFT('Hollywood Film Audition NFT: Coastal City Studio');
+  logChat('[🎬 Hollywood] 🌟 Film Audition NFT minted! You\'re a star in Moga City!',false,'#f0abfc');
+  saveProgress();
+}
+window.filmAudition=filmAudition;
 
 function renderCarShop(){
   if(currentCity!==2)return logChat('[Car] Visit City 2 to buy cars.',false,'#f87171');
@@ -2043,8 +2103,8 @@ const NPC_STANDBY_POSITIONS={
     {x:(22+3.5)*TILE,y:(36+3)*TILE}, // Hospital C2
     {x:(8+4)*TILE,   y:(36+3)*TILE}, // Job Center C2
     {x:(56+3)*TILE,  y:(14+3)*TILE}, // Bank C2
-    {x:(24+4)*TILE,  y:(2+3)*TILE},  // Aviation Academy C2
-    {x:(44+3)*TILE,  y:(22+3)*TILE}, // Cafe C2
+    {x:(37+4)*TILE,  y:(22+3)*TILE}, // Hollywood Studio — celebrity bot
+    {x:(39+3)*TILE,  y:(36+3)*TILE}, // Casino C2 — dealer bot
   ],
   3:[
     {x:(34+3.5)*TILE,y:(14+3)*TILE}, // Hospital C3
@@ -2491,6 +2551,9 @@ const BLDGS2=[
   {key:'House C2-8',  tex:'bHouse',ts:2.0,x:16*TILE,y:46*TILE,w:6*TILE,h:5*TILE,isHouse:true},
   {key:'House C2-9',  tex:'bHouse',ts:2.0,x:56*TILE,y:46*TILE,w:6*TILE,h:5*TILE,isHouse:true},
   {key:'House C2-10', tex:'bHouse',ts:2.0,x:68*TILE,y:46*TILE,w:6*TILE,h:5*TILE,isHouse:true},
+  /* City 2 new venues */
+  {key:'Casino C2',      tex:'bCasino',ts:2.35,x:34*TILE,y:36*TILE,w:8*TILE,h:6*TILE},
+  {key:'Hollywood Studio',tex:'bGym',  ts:2.3, x:32*TILE,y:22*TILE,w:10*TILE,h:7*TILE},
 ];
 const IACTS2=[
   {key:'Waterfall',  tex:'vend', ts:1.5, x:14*TILE,y:16*TILE,w:2*TILE,h:2*TILE},
@@ -2643,7 +2706,7 @@ const IPal={0:[0x8b5a2b,0x7c4a22],1:[0x94a3b8,0x64748b],2:[0xb91c1c,0x7f1d1d],3:
 function makeInterior(kind){
   const k=kind.startsWith('House')?'House':kind; // all house plots share same interior
   const w=IW,h=IH;
-  const bf=(k==='House'||k==='Cafe'||k==='Casino'||k==='Gym'||k==='Hotel')?IT.FW:IT.FT;
+  const bf=(k==='House'||k==='Cafe'||k==='Casino'||k==='Casino C2'||k==='Gym'||k==='Hotel')?IT.FW:IT.FT;
   const bw=(k==='Hospital'||k==='School'||k==='Library'||k==='Bank')?IT.WP:IT.WB;
   const g=Array.from({length:h},()=>Array.from({length:w},()=>bf));
   for(let x=0;x<w;x++){g[0][x]=bw;g[h-1][x]=bw;}for(let y=0;y<h;y++){g[y][0]=bw;g[y][w-1]=bw;}
@@ -2700,6 +2763,12 @@ function makeInterior(kind){
       pr(2,20,30,1,IT.CT);break;
     case 'Beach Club':
       pr(2,1,30,3,IT.CT);pr(4,5,10,8,IT.RG);pr(20,5,10,8,IT.RG);pr(10,15,14,5,IT.FW);break;
+    case 'Casino C2':
+      pr(2,1,30,3,IT.CT);pr(2,5,13,5,IT.RG);pr(19,5,13,5,IT.RG);pr(8,12,18,5,IT.RG);pr(2,18,30,2,IT.CT);break;
+    case 'Hollywood Studio':
+      // Stage area in centre, director booth left, camera pit right, seating front
+      pr(2,1,30,2,IT.CT);pr(12,3,10,7,IT.FW);pr(2,3,8,7,IT.RG);pr(24,3,8,7,IT.RG);
+      pr(2,11,30,2,IT.CT);pr(2,14,30,6,IT.FT);pr(2,20,30,1,IT.CT);break;
     case 'Factory 1':
     case 'Factory 2':
     case 'Chemical Factory':
@@ -2784,6 +2853,9 @@ function add(scene,cont,tx,ty,key,sc=1.1,dp=20){
     scene.tweens.add({targets:spr,alpha:0.86,duration:120+Math.floor(Math.random()*80),yoyo:true,repeat:-1,ease:'Linear',delay:Math.floor(Math.random()*3000)});
   } else if(key==='fSlot'){
     scene.tweens.add({targets:spr,scaleY:sc*1.03,duration:300+Math.floor(Math.random()*200),yoyo:true,repeat:-1,ease:'Sine.easeInOut',delay:Math.floor(Math.random()*500)});
+  } else if(key==='fMachine'){
+    // Industrial machine: pulsing scale + gentle rotation for gear-like animation
+    scene.tweens.add({targets:spr,scaleX:sc*1.04,scaleY:sc*0.97,duration:600+Math.floor(Math.random()*400),yoyo:true,repeat:-1,ease:'Sine.easeInOut',delay:Math.floor(Math.random()*700)});
   }
   return spr;
 }
@@ -2904,9 +2976,14 @@ function addFurniture(scene,intr,cont){
       add(scene,cont,2,1,'fPlant',1.0);add(scene,cont,31,1,'fPlant',1.0);break;
     case 'Train Station':
       add(scene,cont,16,1,'fComputer',1.1);add(scene,cont,10,7,'fSofa',1.2);add(scene,cont,22,7,'fSofa',1.2);
-      add(scene,cont,16,11,'fTable',1.1);add(scene,cont,16,17,'fSofa',1.2);break;
+      add(scene,cont,16,11,'fTable',1.1);add(scene,cont,16,17,'fSofa',1.2);
+      // Japanese-style waiting room extras: vending machines, schedule board
+      add(scene,cont,2,2,'fTV',1.0);add(scene,cont,31,2,'fTV',1.0);
+      add(scene,cont,3,7,'fShelf',1.0);add(scene,cont,29,7,'fShelf',1.0);break;
     case 'Concert Hall':
       add(scene,cont,16,18,'fTV',2.0);add(scene,cont,16,16,'fTable',1.5);
+      // Microphone stand on stage
+      add(scene,cont,16,15,'fSlot',0.7);
       for(let r2=0;r2<5;r2++)for(let c=0;c<8;c++)add(scene,cont,3+c*4,4+r2*3,'fSofa',0.9);
       add(scene,cont,2,1,'fPlant',1.0);add(scene,cont,31,1,'fPlant',1.0);break;
     case 'Zoo':
@@ -2917,6 +2994,37 @@ function addFurniture(scene,intr,cont){
       add(scene,cont,8,7,'fSofa',1.2);add(scene,cont,24,7,'fSofa',1.2);
       add(scene,cont,16,11,'fTable',1.3);add(scene,cont,8,16,'fTable',1.1);add(scene,cont,24,16,'fTable',1.1);
       add(scene,cont,2,2,'fPlant',1.0);add(scene,cont,31,2,'fPlant',1.0);break;
+    case 'Casino C2':
+      for(let x=4;x<=28;x+=3)add(scene,cont,x,2,'fSlot',1.1);
+      for(const x of[6,10])add(scene,cont,x,7,'fRoul',1.3);
+      for(const x of[21,25])add(scene,cont,x,7,'fTable',1.3);
+      add(scene,cont,14,14,'fRoul',1.5);add(scene,cont,20,14,'fTable',1.3);
+      for(const x of[6,12,18,24])add(scene,cont,x,19,'fTable',1.0);
+      add(scene,cont,2,4,'fTV',1.1);add(scene,cont,31,4,'fTV',1.1);add(scene,cont,16,4,'fTV',1.2);break;
+    case 'Hollywood Studio':
+      // Stage: large screen behind, camera stands, director chairs, audience seating
+      add(scene,cont,16,3,'fTV',2.2);add(scene,cont,16,5,'fTable',1.4);
+      add(scene,cont,3,4,'fComputer',1.1);add(scene,cont,6,4,'fTable',1.0);
+      add(scene,cont,25,4,'fComputer',1.1);add(scene,cont,28,4,'fTable',1.0);
+      for(let c=0;c<7;c++)add(scene,cont,3+c*4,15,'fSofa',1.0);
+      for(let c=0;c<7;c++)add(scene,cont,3+c*4,17,'fSofa',1.0);
+      add(scene,cont,2,2,'fPlant',1.0);add(scene,cont,31,2,'fPlant',1.0);
+      add(scene,cont,2,8,'fShelf',1.1);add(scene,cont,31,8,'fShelf',1.1);break;
+    case 'Factory 1':
+    case 'Factory 2':
+    case 'Chemical Factory':
+      // Industrial machines in rows, workers' computers and shelves
+      for(const x of[5,12,19,26])add(scene,cont,x,6,'fMachine',1.3);
+      for(const x of[5,12,19,26])add(scene,cont,x,7,'fTable',1.0);
+      add(scene,cont,8,9,'fComputer',1.1);add(scene,cont,22,9,'fComputer',1.1);
+      add(scene,cont,2,17,'fShelf',1.1);add(scene,cont,16,17,'fTable',1.2);add(scene,cont,31,17,'fShelf',1.1);break;
+    case 'Steel Mill':
+      for(const x of[3,11,19,27])add(scene,cont,x,8,'fMachine',1.4);
+      add(scene,cont,16,15,'fTable',1.2);add(scene,cont,8,17,'fShelf',1.0);add(scene,cont,24,17,'fShelf',1.0);break;
+    case 'Power Plant':
+      for(const x of[6,14,22,28])add(scene,cont,x,5,'fMachine',1.3);
+      add(scene,cont,14,14,'fComputer',1.2);add(scene,cont,18,14,'fComputer',1.2);
+      add(scene,cont,3,17,'fShelf',1.0);add(scene,cont,29,17,'fShelf',1.0);break;
   }
 }
 
@@ -3072,6 +3180,10 @@ function drawCity1(scene){
     worldCont.add(scene.add.text(cx,i.y-8,i.key,{fontSize:'12px',color:'#e2e8f0',backgroundColor:'rgba(0,0,0,.35)',padding:{x:5,y:2}}).setOrigin(.5,1).setDepth(4));
   }
   scene.cameras.main.setBounds(0,0,CW*TILE,CH*TILE);drawMM._k=null;
+  // ── Airport welcome banner (City 1) ──
+  {const ap=BLDGS.find(b=>b.key==='Airport C1');if(ap){
+    worldCont.add(scene.add.text(ap.x+ap.w/2,ap.y-20,'✈️ Welcome to Moga City!',{fontSize:'12px',color:'#fbbf24',fontStyle:'bold',backgroundColor:'rgba(0,0,0,.55)',padding:{x:7,y:4}}).setOrigin(.5,1).setDepth(6));
+  }}
   redrawFarmPlots();
 }
 
@@ -3698,6 +3810,49 @@ function drawCity2(scene){
   worldCont.add(boatState.spr);
   // Dock label near beach
   worldCont.add(scene.add.text(25*TILE,50*TILE,'⚓ Dock',{fontSize:'11px',color:'#fbbf24',backgroundColor:'rgba(0,0,0,.45)',padding:{x:4,y:2}}).setOrigin(.5).setDepth(5));
+  // ── Airport welcome banner (City 2) ──
+  {const ap=BLDGS2.find(b=>b.key==='Airport');if(ap){
+    worldCont.add(scene.add.text(ap.x+ap.w/2,ap.y-20,'✈️ Welcome to Coastal City!',{fontSize:'12px',color:'#38bdf8',fontStyle:'bold',backgroundColor:'rgba(0,0,0,.55)',padding:{x:7,y:4}}).setOrigin(.5,1).setDepth(6));
+  }}
+  // ── Japanese-style train halte shelter structures ──
+  {const halteShelterGr=scene.add.graphics().setDepth(5);
+  for(const i of IACTS2){
+    if(!i.key.startsWith('Halte'))continue;
+    const hx=i.x+i.w/2,hy=i.y+i.h/2;
+    // Roof (tiled, Japanese-style with curved ends)
+    halteShelterGr.fillStyle(0xb45309,1);halteShelterGr.fillRect(hx-2.5*TILE,hy-2.5*TILE,5*TILE,6);
+    halteShelterGr.fillStyle(0x92400e,1);halteShelterGr.fillRect(hx-2.6*TILE,hy-2.5*TILE,0.2*TILE,18);halteShelterGr.fillRect(hx+2.4*TILE,hy-2.5*TILE,0.2*TILE,18);
+    halteShelterGr.fillStyle(0xfbbf24,0.6);halteShelterGr.fillRect(hx-2.5*TILE,hy-2.5*TILE,5*TILE,3);// roof highlight
+    // Bench
+    halteShelterGr.fillStyle(0x78350f,1);halteShelterGr.fillRect(hx-1.5*TILE,hy-1.8*TILE,3*TILE,8);
+    // Sign board
+    halteShelterGr.fillStyle(0x1e3a5f,0.9);halteShelterGr.fillRect(hx-TILE,hy-3*TILE,2*TILE,TILE*0.8);
+    halteShelterGr.fillStyle(0x38bdf8,1);halteShelterGr.fillRect(hx-TILE+3,hy-3*TILE+3,2*TILE-6,TILE*0.8-6);
+  }
+  worldCont.add(halteShelterGr);}
+  // ── Beach bots — bikini bots sunbathing + surfers ──
+  const beachBotPositions=[
+    {x:30*TILE,y:47*TILE,emoji:'👙'},{x:36*TILE,y:47.5*TILE,emoji:'👙'},{x:42*TILE,y:47*TILE,emoji:'👙'},
+    {x:33*TILE,y:48*TILE,emoji:'🏄'},{x:50*TILE,y:47.5*TILE,emoji:'👙'},
+  ];
+  for(const bp of beachBotPositions){
+    const bSpr=scene.add.text(bp.x,bp.y,bp.emoji,{fontSize:'22px'}).setOrigin(.5).setDepth(6);
+    worldCont.add(bSpr);
+    // Sunbathing bots sway gently; surfers bob up-down
+    if(bp.emoji==='👙'){
+      scene.tweens.add({targets:bSpr,angle:8,duration:2200+Math.random()*800,yoyo:true,repeat:-1,ease:'Sine.easeInOut',delay:Math.random()*1000});
+    }
+  }
+  // Surfer bots in the wave area (y ~51-52)
+  const surferPositions=[
+    {x:38*TILE,y:51*TILE},{x:55*TILE,y:52*TILE},{x:70*TILE,y:51.5*TILE},
+  ];
+  for(const sp of surferPositions){
+    const sSpr=scene.add.text(sp.x,sp.y,'🏄',{fontSize:'26px'}).setOrigin(.5).setDepth(7);
+    worldCont.add(sSpr);
+    // Surfers ride waves: move horizontally
+    scene.tweens.add({targets:sSpr,x:sp.x+3*TILE,y:sp.y-8,duration:2500+Math.random()*1000,yoyo:true,repeat:-1,ease:'Sine.easeInOut',delay:Math.random()*1500});
+  }
   redrawFarmPlots();
 }
 
@@ -3780,6 +3935,27 @@ function drawCity3(scene){
     worldCont.add(scene.add.text(cx,i.y-8,i.key,{fontSize:'11px',color:'#e2e8f0',backgroundColor:'rgba(0,0,0,.35)',padding:{x:4,y:2}}).setOrigin(.5,1).setDepth(4));
   }
   scene.cameras.main.setBounds(0,0,CW*TILE,CH*TILE);drawMM._k=null;
+  // ── Airport welcome banner (City 3) ──
+  {const ap=BLDGS3.find(b=>b.key==='Airport C3');if(ap){
+    worldCont.add(scene.add.text(ap.x+ap.w/2,ap.y-20,'✈️ Welcome to Industrial City!',{fontSize:'12px',color:'#fbbf24',fontStyle:'bold',backgroundColor:'rgba(0,0,0,.55)',padding:{x:7,y:4}}).setOrigin(.5,1).setDepth(6));
+  }}
+  // ── Japanese-style bus stop shelters ──
+  {const busStopGr=scene.add.graphics().setDepth(5);
+  for(const wp of BUS_WAYPOINTS3){
+    if(!wp.stop)continue;
+    const hx=wp.x,hy=wp.y;
+    // Roof panels (dark tile with highlight)
+    busStopGr.fillStyle(0x1e3a5f,1);busStopGr.fillRect(hx-2.5*TILE,hy-2.8*TILE,5*TILE,8);
+    busStopGr.fillStyle(0x3b82f6,0.5);busStopGr.fillRect(hx-2.5*TILE,hy-2.8*TILE,5*TILE,3);
+    // Side pillars
+    busStopGr.fillStyle(0x334155,1);busStopGr.fillRect(hx-2.5*TILE,hy-2.8*TILE,6,22);busStopGr.fillRect(hx+2.3*TILE,hy-2.8*TILE,6,22);
+    // Bench
+    busStopGr.fillStyle(0x78350f,1);busStopGr.fillRect(hx-1.8*TILE,hy-2.0*TILE,3.6*TILE,7);
+    // Blue sign panel
+    busStopGr.fillStyle(0x1d4ed8,0.9);busStopGr.fillRect(hx-TILE*1.2,hy-3.6*TILE,2.4*TILE,TILE*0.7);
+    busStopGr.fillStyle(0x93c5fd,1);busStopGr.fillRect(hx-TILE*1.1,hy-3.5*TILE,2.2*TILE,TILE*0.5);
+  }
+  worldCont.add(busStopGr);}
   // Bus sprite
   if(!busState3.spr||!busState3.spr.active){
     busState3.spr=scene.add.text(busState3.x,busState3.y,'🚌',{fontSize:'44px'}).setOrigin(.5).setDepth(8);
@@ -3964,6 +4140,20 @@ function updateWaves(dtS){
 function drawInterior(scene,bk){
   clearWorld(scene);interior=makeInterior(bk);
   drawInteriorTiles(scene,interior,worldCont);addFurniture(scene,interior,worldCont);
+  // ── Extra interior labels for specific buildings ──
+  if(bk==='Concert Hall'||bk==='Concert Hall C3'){
+    // Stage microphone marker
+    worldCont.add(scene.add.text(16.5*TILE,15.5*TILE,'🎤\nSTAGE',{fontSize:'13px',color:'#f0abfc',fontStyle:'bold',align:'center',backgroundColor:'rgba(88,28,135,.7)',padding:{x:5,y:3}}).setOrigin(.5).setDepth(52));
+  }
+  if(bk==='Hollywood Studio'){
+    // Red carpet + star marker
+    worldCont.add(scene.add.text(16.5*TILE,4*TILE,'🌟\nSTAGE',{fontSize:'13px',color:'#fbbf24',fontStyle:'bold',align:'center',backgroundColor:'rgba(0,0,0,.65)',padding:{x:5,y:3}}).setOrigin(.5).setDepth(52));
+  }
+  if(bk==='Airport'||bk==='Airport C1'||bk==='Airport C3'){
+    // Welcome board inside airport
+    const cityName=currentCity===1?'Moga City':currentCity===2?'Coastal City':'Industrial City';
+    worldCont.add(scene.add.text(16.5*TILE,2*TILE,'✈️ Welcome to '+cityName+'!',{fontSize:'14px',color:'#fbbf24',fontStyle:'bold',backgroundColor:'rgba(0,0,0,.6)',padding:{x:8,y:5}}).setOrigin(.5,0).setDepth(52));
+  }
   scene.cameras.main.setBounds(0,0,IW*TILE,IH*TILE);drawMM._k=null;
   if(_farmGfx)_farmGfx.setVisible(false);
 }
@@ -3978,7 +4168,7 @@ function enterBuilding(scene,bk){
   requestAnimationFrame(()=>{
     drawInterior(scene,bk);
     scene.me.x=(interior.exitX+.5)*TILE;scene.me.y=(IH-3)*TILE;
-    if(bk==='Casino')initMulGame();
+    if(bk==='Casino'||bk==='Casino C2')initMulGame();
     if(bk==='Bank')setTimeout(refreshUSDCBalance,500);
     const canvas=document.querySelector('#game canvas');if(canvas)canvas.focus();
   });
