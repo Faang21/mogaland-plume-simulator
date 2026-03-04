@@ -5741,6 +5741,7 @@ function saveProgress(){
       outfits:S.outfits||[],
       posX:_phaserScene&&WS.zone==='CITY'?_phaserScene.me.x:(WS.savedPos?.x??32*TILE),
       posY:_phaserScene&&WS.zone==='CITY'?_phaserScene.me.y:(WS.savedPos?.y??32*TILE),
+      city:currentCity,
       savedAt:Date.now(),
     };
     localStorage.setItem(getSaveKey(),JSON.stringify(data));
@@ -5777,6 +5778,15 @@ function loadProgress(){
     S.plots=Array.isArray(d.plots)?d.plots.filter(p=>p&&p.state):[];
     S.outfits=Array.isArray(d.outfits)?d.outfits:[];
     if(typeof d.posX==='number'&&typeof d.posY==='number')WS.savedPos={x:d.posX,y:d.posY};
+    if(typeof d.city==='number'&&[1,2,3].includes(d.city)&&d.city!==currentCity){
+      currentCity=d.city;
+      const pill=document.getElementById('cityPill');
+      if(pill)pill.textContent=currentCity===1?'🏙️ Moga City':currentCity===2?'🏝️ Coastal City':'🏭 Industrial City';
+      const btn1=document.getElementById('btnCity1'),btn2=document.getElementById('btnCity2'),btn3=document.getElementById('btnCity3');
+      if(btn1)btn1.style.background=currentCity===1?'linear-gradient(90deg,#0284c7,#0369a1)':'rgba(255,255,255,.08)';
+      if(btn2)btn2.style.background=currentCity===2?'linear-gradient(90deg,#0f766e,#14b8a6)':'rgba(255,255,255,.08)';
+      if(btn3)btn3.style.background=currentCity===3?'linear-gradient(90deg,#d97706,#b45309)':'rgba(255,255,255,.08)';
+    }
     if(S.learningEndTime>Date.now()&&S.learningId){
       const remMs=S.learningEndTime-Date.now(),lid=S.learningId;
       setTimeout(()=>{
@@ -5881,7 +5891,7 @@ const phaserCfg={
       nightOv=this.add.rectangle(0,0,this.scale.width,this.scale.height,0x020617,1).setOrigin(0,0).setScrollFactor(0).setDepth(999);nightOv.setAlpha(.08);
       this.scale.on('resize',sz=>{if(nightOv){nightOv.width=sz.width;nightOv.height=sz.height;}});
       initChain();initOnlinePlayers();
-      loadProgress();updateHUD();
+      loadProgress();updateHUD();drawCity(this);populateNav();
       if(WS.savedPos){
         const ax=clamp(WS.savedPos.x,20,CW*TILE-20),ay=clamp(WS.savedPos.y,20,CH*TILE-20);
         const spawnTiles=currentCity===2?city2Tiles:cityTiles;
