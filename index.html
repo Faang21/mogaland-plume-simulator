@@ -5058,6 +5058,22 @@
         stakedUSDC = isNaN(parsed) ? 0 : parsed;
         updateStakedDisplay();
       }
+
+      // Load task progress (completed tasks, question index, NFT minted status)
+      const savedCompletedTasks = localStorage.getItem(`completedTasks_${userAddress}`);
+      if (savedCompletedTasks) {
+        const parsed = parseInt(savedCompletedTasks, 10);
+        completedTasks = isNaN(parsed) ? 0 : parsed;
+      }
+      const savedQuestionIndex = localStorage.getItem(`questionIndex_${userAddress}`);
+      if (savedQuestionIndex) {
+        const parsed = parseInt(savedQuestionIndex, 10);
+        currentQuestionIndex = isNaN(parsed) ? 0 : parsed;
+      }
+      const savedNftMinted = localStorage.getItem(`nftMinted_${userAddress}`);
+      if (savedNftMinted === 'true') {
+        nftMinted = true;
+      }
     }
     
     // Helper function to save mogaland points to localStorage
@@ -5078,6 +5094,15 @@
     function saveStakedNFTsData() {
       if (userAddress) {
         localStorage.setItem(`stakedNFTs_${userAddress}`, JSON.stringify(stakedNFTsData));
+      }
+    }
+
+    // Helper function to save task progress (completedTasks, questionIndex, nftMinted)
+    function saveTaskProgress() {
+      if (userAddress) {
+        localStorage.setItem(`completedTasks_${userAddress}`, completedTasks.toString());
+        localStorage.setItem(`questionIndex_${userAddress}`, currentQuestionIndex.toString());
+        localStorage.setItem(`nftMinted_${userAddress}`, nftMinted.toString());
       }
     }
 
@@ -9397,8 +9422,7 @@
         await new Promise(resolve => setTimeout(resolve, 2000));
         
         nftMinted = true;
-        
-        // Minting revenue goes to treasury
+        saveTaskProgress();
         const mintPrice = 0.05; // 0.05 ETH mint price
         treasuryUSDCBalance += mintPrice * 2500; // Convert ETH to USDC (assuming 2500 USD/ETH)
         console.log(`[Treasury] Received ${mintPrice * 2500} USDC from NFT mint`);
@@ -9826,6 +9850,7 @@
         
         // Move to next question
         currentQuestionIndex++;
+        saveTaskProgress();
         loadQuestion();
         
         // Check if all 100 tasks completed
@@ -10180,7 +10205,8 @@
         console.log('[NFT] NFT minted successfully!', receipt);
         
         nftMinted = true;
-        
+        saveTaskProgress();
+
         recordTransaction(tx.hash, 'NFT Mint', 'Minted Learning Achievement NFT', {to: NFT_CONTRACT_ADDRESS});
         showNotification(
           `🎉 Congratulations! Your Learning Achievement NFT has been minted!<br>TX: <a href="${getActiveNetwork().explorer}/tx/${tx.hash}" target="_blank" style="color:#60a5fa;">${tx.hash.slice(0, 10)}...</a>`,
