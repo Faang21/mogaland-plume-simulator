@@ -3351,6 +3351,7 @@ async function boardPlane(){
     return;
   }
   logChat('[✈️ Airport] ✅ Tx confirmed ('+flightTx.hash.slice(0,14)+'…) — Departure: Coastal City → Moga City (City 1)… 🛫',false,'#22c55e');
+  closeOutdoor();
   if(WS.zone==='INTERIOR'){WS.zone='CITY';WS.key='';interior=null;stopMulGame();}
   switchCity(1,true);
 }
@@ -4032,6 +4033,7 @@ async function flyFromCity3(){
   const flightTx=await treasuryPay('FLIGHT:city3_to_city1:$'+FLIGHT_COST_USD+'USD',FLIGHT_COST_USD);
   if(!flightTx){S.coins+=FLIGHT_COST_USD;updateHUD();logChat('[✈️ Airport C3] ❌ Flight cancelled.',false,'#f87171');return;}
   logChat('[✈️ Airport C3] ✅ Tx confirmed ('+flightTx.hash.slice(0,14)+'…) — Returning to Moga City… 🛫',false,'#22c55e');
+  closeOutdoor();
   if(WS.zone==='INTERIOR'){WS.zone='CITY';WS.key='';interior=null;stopMulGame();}
   switchCity(1,true);
 }
@@ -4044,6 +4046,7 @@ async function flyFromCity3ToCity2(){
   const flightTx=await treasuryPay('FLIGHT:city3_to_city2:$'+FLIGHT_COST_USD+'USD',FLIGHT_COST_USD);
   if(!flightTx){S.coins+=FLIGHT_COST_USD;updateHUD();logChat('[✈️ Airport C3] ❌ Flight cancelled.',false,'#f87171');return;}
   logChat('[✈️ Airport C3] ✅ Tx confirmed ('+flightTx.hash.slice(0,14)+'…) — Heading to Coastal City (City 2)… 🛫',false,'#22c55e');
+  closeOutdoor();
   if(WS.zone==='INTERIOR'){WS.zone='CITY';WS.key='';interior=null;stopMulGame();}
   switchCity(2,true);
 }

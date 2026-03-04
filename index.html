@@ -4784,6 +4784,24 @@
 
     let earnedAchievements = new Set();
 
+    // MOGA points awarded when each badge is first earned
+    const BADGE_MOGA_POINTS = {
+      first_login:  100,
+      first_trade:  200,
+      first_learn:  150,
+      streak_3:     300,
+      streak_7:     700,
+      points_1k:    500,
+      points_10k:  2000,
+      tasks_10:     400,
+      tasks_100:   5000,
+      volume_100:   500,
+      volume_1k:   2000,
+      nft_staked:   500,
+      checkins_7:   350,
+      checkins_30: 1500
+    };
+
     function loadAchievements() {
       if (!userAddress) return;
       const saved = localStorage.getItem(`achievements_${userAddress}`);
@@ -4811,7 +4829,14 @@
         if (!earnedAchievements.has(ach.id) && ach.check()) {
           earnedAchievements.add(ach.id);
           saveAchievements();
-          showAchievementToast(`${ach.icon} ${ach.name}`, ach.desc);
+          const pts = BADGE_MOGA_POINTS[ach.id] || 0;
+          if (pts > 0) {
+            mogalandPoints += pts;
+            saveMogalandPoints();
+            showAchievementToast(`${ach.icon} ${ach.name}`, `${ach.desc} — +${pts} MOGA pts`);
+          } else {
+            showAchievementToast(`${ach.icon} ${ach.name}`, ach.desc);
+          }
         }
       });
     }
@@ -4993,12 +5018,27 @@
           stakedNFTsData = [];
         }
       }
+
+      // Load staked USDC balance
+      const savedStakedUSDC = localStorage.getItem(`stakedUSDC_${userAddress}`);
+      if (savedStakedUSDC) {
+        const parsed = parseFloat(savedStakedUSDC);
+        stakedUSDC = isNaN(parsed) ? 0 : parsed;
+        updateStakedDisplay();
+      }
     }
     
     // Helper function to save mogaland points to localStorage
     function saveMogalandPoints() {
       if (userAddress) {
         localStorage.setItem(`mogalandPoints_${userAddress}`, mogalandPoints);
+      }
+    }
+
+    // Helper function to save staked USDC to localStorage
+    function saveStakedUSDC() {
+      if (userAddress) {
+        localStorage.setItem(`stakedUSDC_${userAddress}`, stakedUSDC.toString());
       }
     }
     
@@ -5908,12 +5948,19 @@
         // Refresh check-in data from localStorage so streak number is always up-to-date
         loadCheckinData();
         // Build achievements HTML
-        const badgesHTML = ACHIEVEMENTS.map(a => `
-          <div class="badge-item ${earnedAchievements.has(a.id) ? 'earned' : ''}">
+        const badgesHTML = ACHIEVEMENTS.map(a => {
+          const pts = BADGE_MOGA_POINTS[a.id] || 0;
+          const earned = earnedAchievements.has(a.id);
+          const ptsColor = earned ? '#fbbf24' : '#64748b';
+          const ptsHtml = pts ? `<div style="font-size:0.68em;color:${ptsColor};margin-top:2px;">+${pts} pts</div>` : '';
+          const titleSuffix = pts ? ` (+${pts} MOGA pts)` : '';
+          return `
+          <div class="badge-item ${earned ? 'earned' : ''}" title="${a.desc}${titleSuffix}">
             <div class="badge-icon">${a.icon}</div>
             <div class="badge-name">${a.name}</div>
-          </div>
-        `).join('');
+            ${ptsHtml}
+          </div>`;
+        }).join('');
 
         // Build 7-day check-in calendar — mark only the consecutive streak days back from lastCheckInDate
         const today = getTodayISO();
@@ -7834,6 +7881,8 @@
         updatePositionsDisplay();
         updateTradeHistory();
 
+        // Refresh top ticker bar immediately so prices are not stale when entering the market
+        updatePriceTicker().catch(() => {});
         // Add event listeners for leverage calculation
         const positionInput = document.getElementById('positionAmount');
         const leverageSelect = document.getElementById('leverageSelect');
@@ -9458,8 +9507,10 @@
         
         // For demo: we'll just track it locally. In production, you'd interact with a staking contract
         stakedUSDC += amount;
+        saveStakedUSDC();
         updateStakedDisplay();
         document.getElementById('stakeAmount').value = '';
+        recordTransaction(null, 'Stake', `Staked ${amount} USDC`, {amount, token: 'USDC'});
         showNotification(`✅ Successfully staked ${amount} USDC!`, false);
         updateUSDCBalance();
       } catch (error) {
@@ -9507,8 +9558,10 @@
         
         // For demo: we'll just track it locally
         stakedUSDC -= amount;
+        saveStakedUSDC();
         updateStakedDisplay();
         document.getElementById('unstakeAmount').value = '';
+        recordTransaction(null, 'Unstake', `Unstaked ${amount} USDC`, {amount, token: 'USDC'});
         showNotification(`✅ Successfully unstaked ${amount} USDC!`, false);
         updateUSDCBalance();
       } catch (error) {
