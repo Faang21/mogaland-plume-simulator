@@ -797,6 +797,31 @@
       font-weight: bold;
     }
 
+    /* Token Launch Styles */
+    .tl-token-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; max-width: 1200px; margin: 0 auto 32px; }
+    .tl-token-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; padding: 0; overflow: hidden; cursor: pointer; transition: all 0.25s; }
+    .tl-token-card:hover { transform: translateY(-4px); box-shadow: 0 12px 28px rgba(0,0,0,0.45); border-color: #60a5fa; }
+    .tl-token-img { width: 100%; height: 160px; object-fit: cover; background: linear-gradient(135deg,#1e3a5f,#2d1b69); display: flex; align-items: center; justify-content: center; font-size: 3em; }
+    .tl-token-body { padding: 14px; }
+    .tl-token-name { font-weight: 700; font-size: 1.05em; color: #f1f5f9; }
+    .tl-token-ticker { font-size: 0.8em; color: #60a5fa; font-weight: 600; background: rgba(96,165,250,0.12); padding: 2px 8px; border-radius: 999px; display: inline-block; margin-top: 2px; }
+    .tl-token-desc { font-size: 0.82em; color: #94a3b8; margin: 8px 0; line-height: 1.4; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+    .tl-bond-bar-bg { background: rgba(255,255,255,0.08); border-radius: 999px; height: 6px; margin: 10px 0 4px; overflow: hidden; }
+    .tl-bond-bar-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg,#10b981,#60a5fa); transition: width 0.5s; }
+    .tl-bond-label { font-size: 0.75em; color: #64748b; display: flex; justify-content: space-between; }
+    .tl-mcap { font-size: 0.85em; color: #fbbf24; font-weight: 600; margin-top: 6px; }
+    .tl-creator { font-size: 0.75em; color: #475569; margin-top: 4px; }
+    .tl-form-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 20px; padding: 28px; max-width: 520px; margin: 0 auto 32px; }
+    .tl-form-card label { display: block; font-size: 0.85em; color: #94a3b8; margin-bottom: 4px; font-weight: 500; }
+    .tl-form-card input, .tl-form-card textarea { width: 100%; box-sizing: border-box; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; color: #f1f5f9; font-size: 0.95em; margin-bottom: 14px; outline: none; transition: border-color 0.2s; }
+    .tl-form-card input:focus, .tl-form-card textarea:focus { border-color: #60a5fa; }
+    .tl-form-card textarea { resize: vertical; min-height: 70px; }
+    .tl-tabs { display: flex; gap: 8px; margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 0; }
+    .tl-tab { padding: 10px 20px; border: none; background: none; color: #64748b; cursor: pointer; font-size: 0.95em; font-weight: 600; border-bottom: 3px solid transparent; transition: all 0.2s; }
+    .tl-tab.active { color: #60a5fa; border-bottom-color: #60a5fa; }
+    .tl-trade-row { display: flex; gap: 10px; margin-top: 10px; }
+    .tl-badge-new { background: #ef4444; color: white; font-size: 0.65em; padding: 2px 6px; border-radius: 999px; font-weight: 700; vertical-align: top; margin-left: 4px; }
+
     /* Profile Panel Styles */
     .profile-slide-panel {
       position: fixed;
@@ -1670,6 +1695,7 @@
       <button class="nav-btn active" onclick="showSection('swap', event)">🔄 Swap</button>
       <button class="nav-btn" onclick="showSection('bridge', event)">🌉 Bridge</button>
       <button class="nav-btn" onclick="showSection('nft', event)">🏦 NFT</button>
+      <button class="nav-btn" onclick="showSection('tokenlaunch', event)">🚀 Token Launch</button>
     </div>
 
     <!-- Daily Check-In Floating Button -->
@@ -8400,6 +8426,9 @@
           }
         }
       }
+      else if (id === 'tokenlaunch') {
+        renderTokenLaunchSection();
+      }
       else {
         content.innerHTML = `
           <h2 style="text-align:center; margin:40px 0;">${id.charAt(0).toUpperCase() + id.slice(1)}</h2>
@@ -8407,6 +8436,309 @@
         `;
       }
     }
+
+    // ===== Token Launch (pump.fun-style on Base) =====
+    let launchedTokens = JSON.parse(localStorage.getItem('tl_tokens') || '[]');
+    let tlCurrentView = 'explore'; // 'explore' | 'create' | 'detail'
+    let tlCurrentTradeMode = 'buy'; // 'buy' | 'sell'
+    let tlSelectedToken = null;
+
+    // Seed a few demo tokens if none exist
+    if (launchedTokens.length === 0) {
+      launchedTokens = [
+        { id: 'demo1', name: 'Moga Doge', ticker: 'MOGADOGE', desc: 'The first meme token on Base chain. Much wow, very MOGA.', emoji: '🐶', creator: '0xdemo...0001', raised: 1.45, cap: 4.20, created: Date.now() - 3600000 * 5, holders: 42, trades: 87 },
+        { id: 'demo2', name: 'BasePepe', ticker: 'BPEPE', desc: 'Pepe found a new home on Base. Ribbit.', emoji: '🐸', creator: '0xdemo...0002', raised: 3.10, cap: 4.20, created: Date.now() - 3600000 * 12, holders: 113, trades: 230 },
+        { id: 'demo3', name: 'Plume Cat', ticker: 'PCAT', desc: 'The first cat meme token powered by Plume x Base.', emoji: '🐱', creator: '0xdemo...0003', raised: 0.38, cap: 4.20, created: Date.now() - 3600000 * 1, holders: 18, trades: 34 }
+      ];
+      saveTLTokens();
+    }
+
+    function saveTLTokens() {
+      localStorage.setItem('tl_tokens', JSON.stringify(launchedTokens));
+    }
+
+    function tlBondingProgress(token) {
+      return Math.min(token.raised / token.cap, 1);
+    }
+
+    function tlMcap(token) {
+      // Simulated market cap: ETH raised * ~238 gives a rough USD equivalent
+      // based on an assumed ETH price of ~$2380 and 10% market cap / raise ratio
+      return (token.raised * 238).toFixed(0);
+    }
+
+    function tlTokenCard(token) {
+      const pct = (tlBondingProgress(token) * 100).toFixed(1);
+      const isNew = (Date.now() - token.created) < 3600000;
+      return `
+        <div class="tl-token-card" onclick="tlOpenDetail('${token.id}')">
+          <div class="tl-token-img">${token.emoji || '🪙'}</div>
+          <div class="tl-token-body">
+            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+              <span class="tl-token-name">${token.name}</span>
+              <span class="tl-token-ticker">$${token.ticker}</span>
+              ${isNew ? '<span class="tl-badge-new">NEW</span>' : ''}
+            </div>
+            <div class="tl-token-desc">${token.desc}</div>
+            <div class="tl-bond-bar-bg"><div class="tl-bond-bar-fill" style="width:${pct}%"></div></div>
+            <div class="tl-bond-label"><span>${pct}% bonding</span><span>${token.raised.toFixed(3)} / ${token.cap} ETH</span></div>
+            <div class="tl-mcap">Market Cap: ~$${tlMcap(token)}</div>
+            <div class="tl-creator">👤 ${token.creator} · 🔄 ${token.trades} trades · 👥 ${token.holders} holders</div>
+          </div>
+        </div>`;
+    }
+
+    function renderTokenLaunchSection() {
+      const content = document.getElementById('content');
+      const net = getActiveNetwork();
+      const isBase = net.id === 'basesepolia';
+
+      const networkWarning = !isBase ? `
+        <div style="background:rgba(251,191,36,0.1);border:1px solid #fbbf24;border-radius:12px;padding:12px 16px;margin-bottom:16px;font-size:0.9em;color:#fbbf24;text-align:center;">
+          ⚠️ Token Launch is optimized for <strong>Base</strong> chain. You are on ${net.name}. Switch to Base for the best experience.
+        </div>` : '';
+
+      const walletBanner = !userAddress ? `
+        <div style="background:rgba(220,53,69,0.12);border:1px solid #dc3545;color:#ffcccc;padding:12px 16px;border-radius:12px;margin-bottom:16px;text-align:center;font-size:0.9em;">
+          🔗 Connect your wallet to launch or trade tokens
+        </div>` : '';
+
+      // Sort: newest first
+      const sorted = [...launchedTokens].sort((a, b) => b.created - a.created);
+
+      const exploreHtml = `
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
+            <h3 style="color:#60a5fa;margin:0;">🔍 Explore Tokens (${launchedTokens.length})</h3>
+            <button class="btn-primary" onclick="tlShowCreate()" style="background:linear-gradient(90deg,#10b981,#059669);">+ Create Token</button>
+          </div>
+          ${sorted.length === 0 ? '<p style="text-align:center;color:#64748b;padding:40px;">No tokens yet. Be the first to launch!</p>' : `<div class="tl-token-grid">${sorted.map(t => tlTokenCard(t)).join('')}</div>`}
+        </div>`;
+
+      const createHtml = `
+        <div>
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+            <button onclick="tlShowExplore()" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:1.1em;">← Back</button>
+            <h3 style="color:#60a5fa;margin:0;">🚀 Launch a New Token</h3>
+          </div>
+          <div class="tl-form-card">
+            <div style="text-align:center;margin-bottom:20px;">
+              <div style="font-size:3em;margin-bottom:8px;">🪙</div>
+              <p style="color:#94a3b8;font-size:0.9em;margin:0;">Create your meme token on Base Chain · Rewards paid in <strong style="color:#10b981;">USDC</strong></p>
+            </div>
+            <label>Token Name *</label>
+            <input id="tl_name" type="text" placeholder="e.g. Moga Moon" maxlength="40">
+            <label>Ticker Symbol *</label>
+            <input id="tl_ticker" type="text" placeholder="e.g. MGMOON" maxlength="10" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()">
+            <label>Description *</label>
+            <textarea id="tl_desc" placeholder="Describe your token in a few sentences..." maxlength="280"></textarea>
+            <label>Token Emoji (optional)</label>
+            <input id="tl_emoji" type="text" placeholder="🚀" maxlength="2">
+            <div style="background:rgba(96,165,250,0.08);border:1px solid rgba(96,165,250,0.2);border-radius:12px;padding:14px;margin-bottom:16px;font-size:0.85em;color:#94a3b8;">
+              <div style="font-weight:600;color:#60a5fa;margin-bottom:6px;">📋 Launch Details</div>
+              <div>• Creation fee: <strong style="color:#fbbf24;">0.0001 ETH</strong> (gas fee to treasury)</div>
+              <div>• Bonding curve target: <strong style="color:#10b981;">4.20 ETH</strong></div>
+              <div>• When target is reached, liquidity is added to Base DEX</div>
+              <div>• Holders earn <strong style="color:#10b981;">USDC</strong> rewards from trading fees</div>
+            </div>
+            <button class="btn-primary" onclick="tlCreateToken()" style="width:100%;padding:14px;font-size:1em;">🚀 Launch Token (0.0001 ETH fee)</button>
+          </div>
+        </div>`;
+
+      const viewHtml = tlCurrentView === 'create' ? createHtml : exploreHtml;
+
+      content.innerHTML = `
+        <div style="max-width:1200px;margin:0 auto;padding:0 16px 80px;">
+          <div style="text-align:center;margin-bottom:24px;">
+            <h2 style="color:#60a5fa;font-size:1.9em;margin-bottom:6px;">🚀 Token Launch</h2>
+            <p style="color:#94a3b8;margin:0;font-size:0.95em;">Launch meme tokens on Base Chain — pump.fun style · Earn USDC rewards</p>
+          </div>
+          ${networkWarning}
+          ${walletBanner}
+          ${viewHtml}
+        </div>`;
+    }
+
+    function tlShowExplore() {
+      tlCurrentView = 'explore';
+      tlSelectedToken = null;
+      renderTokenLaunchSection();
+    }
+
+    function tlShowCreate() {
+      if (!userAddress) return showNotification('🔗 Please connect your wallet first!', true);
+      tlCurrentView = 'create';
+      renderTokenLaunchSection();
+    }
+
+    async function tlCreateToken() {
+      const name = (document.getElementById('tl_name')?.value || '').trim();
+      const ticker = (document.getElementById('tl_ticker')?.value || '').trim().toUpperCase();
+      const desc = (document.getElementById('tl_desc')?.value || '').trim();
+      const emoji = (document.getElementById('tl_emoji')?.value || '🪙').trim();
+
+      if (!name) return showNotification('Token name is required', true);
+      if (!ticker || !/^[A-Z]{1,10}$/.test(ticker)) return showNotification('Ticker must be 1-10 uppercase letters', true);
+      if (!desc) return showNotification('Description is required', true);
+      if (launchedTokens.find(t => t.ticker === ticker)) return showNotification(`$${ticker} already exists!`, true);
+
+      showNotification('⛽ Paying gas fee to launch token...', false);
+      const gasPaid = await processGasFee('token-launch: ' + ticker);
+      if (!gasPaid) return;
+
+      const token = {
+        id: 'tl_' + Date.now(),
+        name,
+        ticker,
+        desc,
+        emoji: emoji || '🪙',
+        creator: userAddress ? `${userAddress.slice(0,6)}...${userAddress.slice(-4)}` : '0x???',
+        raised: 0,
+        cap: 4.20,
+        created: Date.now(),
+        holders: 1,
+        trades: 0
+      };
+      launchedTokens.unshift(token);
+      saveTLTokens();
+      showNotification(`🎉 $${ticker} launched successfully on Base Chain!`, false);
+      tlCurrentView = 'explore';
+      renderTokenLaunchSection();
+    }
+
+    function tlOpenDetail(tokenId) {
+      const token = launchedTokens.find(t => t.id === tokenId);
+      if (!token) return;
+      tlSelectedToken = token;
+
+      const existing = document.getElementById('tlDetailModal');
+      if (existing) existing.remove();
+
+      const pct = (tlBondingProgress(token) * 100).toFixed(1);
+      const modal = document.createElement('div');
+      modal.id = 'tlDetailModal';
+      modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:20000;padding:16px;overflow-y:auto;';
+      modal.innerHTML = `
+        <div style="background:#1e293b;border-radius:20px;padding:0;max-width:480px;width:100%;border:1px solid #334155;box-shadow:0 20px 60px rgba(0,0,0,0.7);overflow:hidden;">
+          <div style="background:linear-gradient(135deg,#1e3a5f,#2d1b69);padding:32px;text-align:center;">
+            <div style="font-size:4em;margin-bottom:8px;">${token.emoji}</div>
+            <h2 style="color:#f1f5f9;margin:0 0 4px;">${token.name}</h2>
+            <span style="background:rgba(96,165,250,0.2);color:#60a5fa;padding:4px 14px;border-radius:999px;font-size:0.85em;font-weight:600;">$${token.ticker}</span>
+          </div>
+          <div style="padding:20px;">
+            <p style="color:#94a3b8;font-size:0.9em;margin:0 0 16px;">${token.desc}</p>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+              <div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:12px;text-align:center;">
+                <div style="font-size:0.75em;color:#64748b;">Market Cap</div>
+                <div style="font-weight:700;color:#fbbf24;">~$${tlMcap(token)}</div>
+              </div>
+              <div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:12px;text-align:center;">
+                <div style="font-size:0.75em;color:#64748b;">Holders</div>
+                <div style="font-weight:700;color:#f1f5f9;">${token.holders}</div>
+              </div>
+              <div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:12px;text-align:center;">
+                <div style="font-size:0.75em;color:#64748b;">ETH Raised</div>
+                <div style="font-weight:700;color:#10b981;">${token.raised.toFixed(3)} ETH</div>
+              </div>
+              <div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:12px;text-align:center;">
+                <div style="font-size:0.75em;color:#64748b;">Trades</div>
+                <div style="font-weight:700;color:#f1f5f9;">${token.trades}</div>
+              </div>
+            </div>
+
+            <div style="margin-bottom:16px;">
+              <div style="display:flex;justify-content:space-between;font-size:0.8em;color:#64748b;margin-bottom:4px;">
+                <span>Bonding Curve Progress</span>
+                <span>${pct}%</span>
+              </div>
+              <div class="tl-bond-bar-bg"><div class="tl-bond-bar-fill" style="width:${pct}%"></div></div>
+              <div style="font-size:0.75em;color:#64748b;text-align:right;margin-top:2px;">${token.raised.toFixed(3)} / ${token.cap} ETH</div>
+            </div>
+
+            <div style="background:rgba(96,165,250,0.08);border:1px solid rgba(96,165,250,0.2);border-radius:10px;padding:12px;margin-bottom:16px;font-size:0.8em;color:#94a3b8;">
+              🏆 Rewards: Trading fees distributed as <strong style="color:#10b981;">USDC</strong> to holders
+            </div>
+
+            <div class="tl-tab" style="border-bottom:1px solid #334155;margin-bottom:12px;padding-bottom:0;display:flex;gap:0;">
+              <button id="tlTabBuy" class="tl-tab active" onclick="tlSwitchTradeTab('buy')" style="padding:8px 20px;">Buy</button>
+              <button id="tlTabSell" class="tl-tab" onclick="tlSwitchTradeTab('sell')" style="padding:8px 20px;">Sell</button>
+            </div>
+
+            <div id="tlTradeForm">
+              <input id="tlTradeAmt" type="number" placeholder="Amount (ETH)" min="0.0001" step="0.001"
+                style="width:100%;box-sizing:border-box;background:rgba(255,255,255,0.05);border:1px solid #334155;border-radius:10px;padding:10px 14px;color:#f1f5f9;font-size:0.95em;margin-bottom:10px;outline:none;">
+              <button id="tlTradeBtnExec" class="btn-primary" onclick="tlExecuteTrade('${token.id}')" style="width:100%;padding:12px;font-size:1em;">Buy with ETH</button>
+            </div>
+
+            <button onclick="document.getElementById('tlDetailModal').remove()" style="width:100%;margin-top:10px;background:none;border:1px solid #334155;color:#94a3b8;padding:10px;border-radius:10px;cursor:pointer;font-size:0.9em;">Close</button>
+          </div>
+        </div>`;
+      document.body.appendChild(modal);
+      modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+    }
+
+    function tlSwitchTradeTab(mode) {
+      const buyTab = document.getElementById('tlTabBuy');
+      const sellTab = document.getElementById('tlTabSell');
+      const btn = document.getElementById('tlTradeBtnExec');
+      if (!buyTab || !sellTab || !btn) return;
+      if (mode === 'buy') {
+        buyTab.classList.add('active'); sellTab.classList.remove('active');
+        btn.textContent = 'Buy with ETH';
+        btn.style.background = '';
+      } else {
+        sellTab.classList.add('active'); buyTab.classList.remove('active');
+        btn.textContent = 'Sell Tokens';
+        btn.style.background = 'linear-gradient(90deg,#ef4444,#dc2626)';
+      }
+      tlCurrentTradeMode = mode;
+    }
+
+    async function tlExecuteTrade(tokenId) {
+      if (!userAddress) return showNotification('🔗 Please connect wallet first!', true);
+      const token = launchedTokens.find(t => t.id === tokenId);
+      if (!token) return;
+      const amtInput = document.getElementById('tlTradeAmt');
+      const amt = parseFloat(amtInput?.value || '0');
+      if (!amt || amt <= 0) return showNotification('Enter a valid ETH amount', true);
+
+      const isBuy = document.getElementById('tlTabBuy')?.classList.contains('active');
+      const action = isBuy ? 'buy-token' : 'sell-token';
+
+      showNotification(`⛽ Processing ${isBuy ? 'buy' : 'sell'} trade...`, false);
+      const gasPaid = await processGasFee(`${action}: $${token.ticker}`);
+      if (!gasPaid) return;
+
+      // Simulate trade effects
+      if (isBuy) {
+        token.raised = Math.min(token.raised + amt, token.cap);
+        token.holders += (Math.random() > 0.5 ? 1 : 0); // randomly gain a new holder on buy
+      } else {
+        token.raised = Math.max(token.raised - amt * 0.9, 0); // 10% fee/slippage on sell
+      }
+      token.trades++;
+      saveTLTokens();
+
+      showNotification(`✅ ${isBuy ? 'Bought' : 'Sold'} $${token.ticker} — ${amt} ETH · Rewards: USDC`, false);
+
+      if (token.raised >= token.cap && isBuy) {
+        showNotification(`🎉 $${token.ticker} bonding curve complete! Liquidity added to Base DEX!`, false);
+      }
+
+      if (amtInput) amtInput.value = '';
+      // Refresh modal
+      document.getElementById('tlDetailModal')?.remove();
+      tlOpenDetail(tokenId);
+    }
+
+    window.renderTokenLaunchSection = renderTokenLaunchSection;
+    window.tlShowExplore = tlShowExplore;
+    window.tlShowCreate = tlShowCreate;
+    window.tlCreateToken = tlCreateToken;
+    window.tlOpenDetail = tlOpenDetail;
+    window.tlSwitchTradeTab = tlSwitchTradeTab;
+    window.tlExecuteTrade = tlExecuteTrade;
 
     // NFT Staking functions
     function generateNFTCards(count, isStaked = false) {
