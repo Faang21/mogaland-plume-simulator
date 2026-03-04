@@ -680,6 +680,39 @@ async function sendUSDCOnChain(to,amount){
 }
 window.sendUSDCOnChain=sendUSDCOnChain;
 
+async function getUSDCBalance(){
+  if(!window.ethereum||!walletAddress)return 0;
+  const addr=usdcAddress();if(!addr)return 0;
+  try{
+    const prov=new ethers.providers.Web3Provider(window.ethereum);
+    const usdc=new ethers.Contract(addr,USDC_ABI,prov);
+    const b=await usdc.balanceOf(walletAddress);
+    return parseFloat(ethers.utils.formatUnits(b,6));
+  }catch{return 0;}
+}
+
+async function treasuryPayUSDC(label,usdcAmount){
+  if(!window.ethereum||!walletAddress){
+    logChat('[Treasury] Wallet not connected – connect first to pay.',false,'#f87171');return null;
+  }
+  const addr=usdcAddress();
+  if(!addr){logChat('[Treasury] USDC not available on this network.',false,'#f87171');return null;}
+  const net=networkConfig.name||'Unknown Network';
+  try{
+    const signer=new ethers.providers.Web3Provider(window.ethereum).getSigner();
+    const usdc=new ethers.Contract(addr,USDC_ABI,signer);
+    const amtW=ethers.utils.parseUnits(String(usdcAmount),6);
+    logChat('[Treasury] 🔐 Sending '+usdcAmount+' USDC ('+label+') → Treasury ['+net+']…',false,'#a78bfa');
+    const tx=await usdc.transfer(TREASURY,amtW);
+    saveTxRecord(tx.hash,label,String(usdcAmount),'USDC',net,'PAY');
+    logChat('[Treasury] ✅ PAY:'+label+' | '+usdcAmount+' USDC | <a href="'+explorerTx(tx.hash)+'" target="_blank">'+tx.hash.slice(0,14)+'…</a>',false,'#34d399');
+    return tx;
+  }catch(e){
+    logChat('[Treasury] ❌ USDC payment failed ('+net+'): '+e.message.slice(0,80),false,'#f87171');
+    return null;
+  }
+}
+
 async function refreshUSDCBalance(){
   const el=document.getElementById('usdcBal');if(!el)return;
   if(!window.ethereum||!walletAddress||!usdcAddress()){el.textContent='N/A';return;}
@@ -731,7 +764,7 @@ const SKILLS=[
   {id:'taxi',    name:'Driving',     icon:'🚕',cost:SKILL_COST_USD,time:SKILL_LEARN_MS,teacher:'Mr. Supir',  job:'Taxi Driver',   wMin:WORK_PAY_USD,wMax:WORK_PAY_USD,cd:WORK_CD_MS,workBuilding:'Job Center C2'},
 ];
 
-const FLIGHT_COST_USD=5;   // $5 USD per flight between cities
+const FLIGHT_COST_USDC=5;   // $5 USDC per flight between cities
 
 /* ── Car NFT System ── */
 const CAR_NFT_PRICE=50;    // $50 USD to buy a car NFT
@@ -1363,17 +1396,17 @@ function renderAirport(){
 <div style="border:1px solid rgba(99,102,241,.3);border-radius:8px;padding:8px;margin:5px 0;background:rgba(99,102,241,.05);">
   <div style="font-size:12px;font-weight:bold;margin-bottom:4px;">✈️ Passenger Flight → Moga City (City 1)</div>
   <div style="font-size:11px;color:#22c55e;margin-bottom:6px;">🟢 Direct flight available — no boarding required</div>
-  <div style="font-size:11px;color:#fbbf24;margin-bottom:6px;">✈️ Flight cost: <b>$${FLIGHT_COST_USD} USD</b> · On-chain tx required</div>
+  <div style="font-size:11px;color:#fbbf24;margin-bottom:6px;">✈️ Flight cost: <b>${FLIGHT_COST_USDC} USDC</b> · On-chain USDC tx required</div>
   <div style="display:flex;gap:5px;">
-    <button onclick="boardPlane()" ${!onPlane?'':'disabled'} class="ibtn btn-blue" style="flex:1;">🛫 Fly to City 1 ($${FLIGHT_COST_USD})</button>
+    <button onclick="boardPlane()" ${!onPlane?'':'disabled'} class="ibtn btn-blue" style="flex:1;">🛫 Fly to City 1 (${FLIGHT_COST_USDC} USDC)</button>
     <button onclick="exitPlane()" ${onPlane?'':'disabled'} class="ibtn btn-red" style="flex:1;">🚪 Exit</button>
   </div>
   ${hasPilot?`<button onclick="pilotFly()" class="ibtn btn-indigo" style="width:100%;margin-top:5px;">🧑‍✈️ Work as Pilot (+$${WORK_PAY_USD} USD)</button>`:`<div style="font-size:10px;color:#64748b;margin-top:5px;">Learn Aviation at Aviation Academy to work as Pilot</div>`}
 </div>
 <div style="border:1px solid rgba(251,191,36,.2);border-radius:8px;padding:8px;margin:5px 0;background:rgba(251,191,36,.04);">
   <div style="font-size:12px;font-weight:bold;margin-bottom:4px;">✈️ Direct Flight → Industrial City (City 3)</div>
-  <div style="font-size:11px;color:#fbbf24;margin-bottom:6px;">✈️ Flight cost: <b>$${FLIGHT_COST_USD} USD</b> · On-chain tx required</div>
-  <button onclick="flyToCity3()" class="ibtn btn-yellow" style="width:100%;padding:8px;margin-top:4px;">🛫 Fly to Industrial City (City 3) — $${FLIGHT_COST_USD}</button>
+  <div style="font-size:11px;color:#fbbf24;margin-bottom:6px;">✈️ Flight cost: <b>${FLIGHT_COST_USDC} USDC</b> · On-chain USDC tx required</div>
+  <button onclick="flyToCity3()" class="ibtn btn-yellow" style="width:100%;padding:8px;margin-top:4px;">🛫 Fly to Industrial City (City 3) — ${FLIGHT_COST_USDC} USDC</button>
 </div>
 <div style="border-top:1px solid rgba(255,255,255,.1);margin-top:8px;padding-top:8px;">
   <div style="font-size:11px;color:#fbbf24;margin-bottom:5px;">🚗 Airport Parking</div>
@@ -1387,9 +1420,9 @@ function renderAirportC1(){
 <div style="font-size:11px;color:#94a3b8;margin:5px 0;">City 1 Airport · Flights to City 2 & City 3</div>
 <div style="border:1px solid rgba(99,102,241,.3);border-radius:8px;padding:8px;margin:5px 0;background:rgba(99,102,241,.05);">
   <div style="font-size:12px;font-weight:bold;margin-bottom:4px;">✈️ Departure Lounge</div>
-  <div style="font-size:11px;color:#fbbf24;margin-bottom:6px;">✈️ Flight cost: <b>$${FLIGHT_COST_USD} USD</b> · On-chain tx required</div>
-  <button onclick="flyToCity2()" class="ibtn btn-blue" style="width:100%;padding:8px;margin-top:4px;">🛫 Fly to Coastal City (City 2) — $${FLIGHT_COST_USD}</button>
-  <button onclick="flyToCity3()" class="ibtn btn-yellow" style="width:100%;padding:8px;margin-top:5px;">🛫 Fly to Industrial City (City 3) — $${FLIGHT_COST_USD}</button>
+  <div style="font-size:11px;color:#fbbf24;margin-bottom:6px;">✈️ Flight cost: <b>${FLIGHT_COST_USDC} USDC</b> · On-chain USDC tx required</div>
+  <button onclick="flyToCity2()" class="ibtn btn-blue" style="width:100%;padding:8px;margin-top:4px;">🛫 Fly to Coastal City (City 2) — ${FLIGHT_COST_USDC} USDC</button>
+  <button onclick="flyToCity3()" class="ibtn btn-yellow" style="width:100%;padding:8px;margin-top:5px;">🛫 Fly to Industrial City (City 3) — ${FLIGHT_COST_USDC} USDC</button>
 </div>`;
 }
 window.renderAirportC1=renderAirportC1;
@@ -1399,9 +1432,9 @@ function renderAirportC3(){
 <div style="font-size:11px;color:#94a3b8;margin:5px 0;">City 3 Airport · Flights to City 1 & City 2</div>
 <div style="border:1px solid rgba(99,102,241,.3);border-radius:8px;padding:8px;margin:5px 0;background:rgba(99,102,241,.05);">
   <div style="font-size:12px;font-weight:bold;margin-bottom:4px;">✈️ Departure Lounge</div>
-  <div style="font-size:11px;color:#fbbf24;margin-bottom:6px;">✈️ Flight cost: <b>$${FLIGHT_COST_USD} USD</b> · On-chain tx required</div>
-  <button onclick="flyFromCity3()" class="ibtn btn-blue" style="width:100%;padding:8px;margin-top:4px;">🛫 Fly to Moga City (City 1) — $${FLIGHT_COST_USD}</button>
-  <button onclick="flyFromCity3ToCity2()" class="ibtn btn-green" style="width:100%;padding:8px;margin-top:5px;">🛫 Fly to Coastal City (City 2) — $${FLIGHT_COST_USD}</button>
+  <div style="font-size:11px;color:#fbbf24;margin-bottom:6px;">✈️ Flight cost: <b>${FLIGHT_COST_USDC} USDC</b> · On-chain USDC tx required</div>
+  <button onclick="flyFromCity3()" class="ibtn btn-blue" style="width:100%;padding:8px;margin-top:4px;">🛫 Fly to Moga City (City 1) — ${FLIGHT_COST_USDC} USDC</button>
+  <button onclick="flyFromCity3ToCity2()" class="ibtn btn-green" style="width:100%;padding:8px;margin-top:5px;">🛫 Fly to Coastal City (City 2) — ${FLIGHT_COST_USDC} USDC</button>
 </div>`;
 }
 window.renderAirportC3=renderAirportC3;
@@ -3339,14 +3372,11 @@ function updatePlane(dtS){
 async function boardPlane(){
   if(currentCity!==2)return logChat('[Airport] Board the plane in Coastal City (City 2).',false,'#f87171');
   if(planeState.passengerBoarded)return logChat('[Airport] You are already on the plane!',false,'#fbbf24');
-  if(S.coins<FLIGHT_COST_USD)return logChat('[✈️ Airport] Need $'+FLIGHT_COST_USD+' USD for the flight. You have $'+S.coins+'.',false,'#f87171');
-  S.coins-=FLIGHT_COST_USD;
-  updateHUD();
-  logChat('[✈️ Airport] 🔐 Confirm flight payment on blockchain to travel Coastal City → Moga City (City 1)…',false,'#fbbf24');
-  const flightTx=await treasuryPay('FLIGHT:city2_to_city1:$'+FLIGHT_COST_USD+'USD',FLIGHT_COST_USD);
+  const usdcBal=await getUSDCBalance();
+  if(usdcBal<FLIGHT_COST_USDC)return logChat('[✈️ Airport] Need $'+FLIGHT_COST_USDC+' USDC for the flight. You have $'+usdcBal.toFixed(2)+' USDC.',false,'#f87171');
+  logChat('[✈️ Airport] 🔐 Confirm USDC flight payment on blockchain to travel Coastal City → Moga City (City 1)…',false,'#fbbf24');
+  const flightTx=await treasuryPayUSDC('FLIGHT:city2_to_city1:$'+FLIGHT_COST_USDC+'USDC',FLIGHT_COST_USDC);
   if(!flightTx){
-    S.coins+=FLIGHT_COST_USD;
-    updateHUD();
     logChat('[✈️ Airport] ❌ Flight cancelled — blockchain payment not confirmed.',false,'#f87171');
     return;
   }
@@ -3364,14 +3394,11 @@ function exitPlane(){
 window.exitPlane=exitPlane;
 async function flyToCity2(){
   if(currentCity!==1)return logChat('[Terminal] Already in Coastal City!',false,'#fbbf24');
-  if(S.coins<FLIGHT_COST_USD)return logChat('[✈️ Airport] Need $'+FLIGHT_COST_USD+' USD for the flight. You have $'+S.coins+'.',false,'#f87171');
-  S.coins-=FLIGHT_COST_USD;
-  updateHUD();
-  logChat('[✈️ Airport] 🔐 Confirm flight payment on blockchain to travel Moga City → Coastal City (City 2)…',false,'#fbbf24');
-  const flightTx=await treasuryPay('FLIGHT:city1_to_city2:$'+FLIGHT_COST_USD+'USD',FLIGHT_COST_USD);
+  const usdcBal=await getUSDCBalance();
+  if(usdcBal<FLIGHT_COST_USDC)return logChat('[✈️ Airport] Need $'+FLIGHT_COST_USDC+' USDC for the flight. You have $'+usdcBal.toFixed(2)+' USDC.',false,'#f87171');
+  logChat('[✈️ Airport] 🔐 Confirm USDC flight payment on blockchain to travel Moga City → Coastal City (City 2)…',false,'#fbbf24');
+  const flightTx=await treasuryPayUSDC('FLIGHT:city1_to_city2:$'+FLIGHT_COST_USDC+'USDC',FLIGHT_COST_USDC);
   if(!flightTx){
-    S.coins+=FLIGHT_COST_USD;
-    updateHUD();
     logChat('[✈️ Airport] ❌ Flight cancelled — blockchain payment not confirmed.',false,'#f87171');
     return;
   }
@@ -4014,11 +4041,11 @@ function drawCity3(scene){
 /* ── City 3 flight functions ── */
 async function flyToCity3(){
   if(currentCity===3)return logChat('[Terminal] Already in Industrial City!',false,'#fbbf24');
-  if(S.coins<FLIGHT_COST_USD)return logChat('[✈️ Airport] Need $'+FLIGHT_COST_USD+' USD for the flight. You have $'+S.coins+'.',false,'#f87171');
-  S.coins-=FLIGHT_COST_USD;updateHUD();
-  logChat('[✈️ Airport] 🔐 Confirm flight payment on blockchain to travel to Industrial City (City 3)…',false,'#fbbf24');
-  const flightTx=await treasuryPay('FLIGHT:to_city3:$'+FLIGHT_COST_USD+'USD',FLIGHT_COST_USD);
-  if(!flightTx){S.coins+=FLIGHT_COST_USD;updateHUD();logChat('[✈️ Airport] ❌ Flight cancelled — blockchain payment not confirmed.',false,'#f87171');return;}
+  const usdcBal=await getUSDCBalance();
+  if(usdcBal<FLIGHT_COST_USDC)return logChat('[✈️ Airport] Need $'+FLIGHT_COST_USDC+' USDC for the flight. You have $'+usdcBal.toFixed(2)+' USDC.',false,'#f87171');
+  logChat('[✈️ Airport] 🔐 Confirm USDC flight payment on blockchain to travel to Industrial City (City 3)…',false,'#fbbf24');
+  const flightTx=await treasuryPayUSDC('FLIGHT:to_city3:$'+FLIGHT_COST_USDC+'USDC',FLIGHT_COST_USDC);
+  if(!flightTx){logChat('[✈️ Airport] ❌ Flight cancelled — blockchain payment not confirmed.',false,'#f87171');return;}
   logChat('[✈️ Airport] ✅ Tx confirmed ('+flightTx.hash.slice(0,14)+'…) — Departure to Industrial City… 🛫',false,'#22c55e');
   closeOutdoor();
   if(WS.zone==='INTERIOR'){WS.zone='CITY';WS.key='';interior=null;stopMulGame();}
@@ -4027,11 +4054,11 @@ async function flyToCity3(){
 window.flyToCity3=flyToCity3;
 async function flyFromCity3(){
   if(currentCity!==3)return logChat('[Terminal] Not in Industrial City!',false,'#fbbf24');
-  if(S.coins<FLIGHT_COST_USD)return logChat('[✈️ Airport] Need $'+FLIGHT_COST_USD+' USD for the flight. You have $'+S.coins+'.',false,'#f87171');
-  S.coins-=FLIGHT_COST_USD;updateHUD();
-  logChat('[✈️ Airport C3] 🔐 Confirm flight payment to travel back…',false,'#fbbf24');
-  const flightTx=await treasuryPay('FLIGHT:city3_to_city1:$'+FLIGHT_COST_USD+'USD',FLIGHT_COST_USD);
-  if(!flightTx){S.coins+=FLIGHT_COST_USD;updateHUD();logChat('[✈️ Airport C3] ❌ Flight cancelled.',false,'#f87171');return;}
+  const usdcBal=await getUSDCBalance();
+  if(usdcBal<FLIGHT_COST_USDC)return logChat('[✈️ Airport] Need $'+FLIGHT_COST_USDC+' USDC for the flight. You have $'+usdcBal.toFixed(2)+' USDC.',false,'#f87171');
+  logChat('[✈️ Airport C3] 🔐 Confirm USDC flight payment to travel back…',false,'#fbbf24');
+  const flightTx=await treasuryPayUSDC('FLIGHT:city3_to_city1:$'+FLIGHT_COST_USDC+'USDC',FLIGHT_COST_USDC);
+  if(!flightTx){logChat('[✈️ Airport C3] ❌ Flight cancelled.',false,'#f87171');return;}
   logChat('[✈️ Airport C3] ✅ Tx confirmed ('+flightTx.hash.slice(0,14)+'…) — Returning to Moga City… 🛫',false,'#22c55e');
   closeOutdoor();
   if(WS.zone==='INTERIOR'){WS.zone='CITY';WS.key='';interior=null;stopMulGame();}
@@ -4040,11 +4067,11 @@ async function flyFromCity3(){
 window.flyFromCity3=flyFromCity3;
 async function flyFromCity3ToCity2(){
   if(currentCity!==3)return logChat('[Terminal] Not in Industrial City!',false,'#fbbf24');
-  if(S.coins<FLIGHT_COST_USD)return logChat('[✈️ Airport] Need $'+FLIGHT_COST_USD+' USD for the flight. You have $'+S.coins+'.',false,'#f87171');
-  S.coins-=FLIGHT_COST_USD;updateHUD();
-  logChat('[✈️ Airport C3] 🔐 Confirm flight payment to travel to Coastal City (City 2)…',false,'#fbbf24');
-  const flightTx=await treasuryPay('FLIGHT:city3_to_city2:$'+FLIGHT_COST_USD+'USD',FLIGHT_COST_USD);
-  if(!flightTx){S.coins+=FLIGHT_COST_USD;updateHUD();logChat('[✈️ Airport C3] ❌ Flight cancelled.',false,'#f87171');return;}
+  const usdcBal=await getUSDCBalance();
+  if(usdcBal<FLIGHT_COST_USDC)return logChat('[✈️ Airport] Need $'+FLIGHT_COST_USDC+' USDC for the flight. You have $'+usdcBal.toFixed(2)+' USDC.',false,'#f87171');
+  logChat('[✈️ Airport C3] 🔐 Confirm USDC flight payment to travel to Coastal City (City 2)…',false,'#fbbf24');
+  const flightTx=await treasuryPayUSDC('FLIGHT:city3_to_city2:$'+FLIGHT_COST_USDC+'USDC',FLIGHT_COST_USDC);
+  if(!flightTx){logChat('[✈️ Airport C3] ❌ Flight cancelled.',false,'#f87171');return;}
   logChat('[✈️ Airport C3] ✅ Tx confirmed ('+flightTx.hash.slice(0,14)+'…) — Heading to Coastal City (City 2)… 🛫',false,'#22c55e');
   closeOutdoor();
   if(WS.zone==='INTERIOR'){WS.zone='CITY';WS.key='';interior=null;stopMulGame();}
