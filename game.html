@@ -1362,10 +1362,10 @@ function renderAirport(){
 <div style="font-size:11px;color:#94a3b8;margin:5px 0;">City 2 flights · To City 1 & City 3 · On-chain tx required</div>
 <div style="border:1px solid rgba(99,102,241,.3);border-radius:8px;padding:8px;margin:5px 0;background:rgba(99,102,241,.05);">
   <div style="font-size:12px;font-weight:bold;margin-bottom:4px;">✈️ Passenger Flight → Moga City (City 1)</div>
-  <div style="font-size:11px;color:${planeReady?'#22c55e':planeState.flying?'#f59e0b':'#94a3b8'};margin-bottom:6px;">${onPlane?'🛫 You are on the plane! Circling city...':planeReady?'🟢 Plane at gate — board now!':planeState.flying?'🟡 In the air — wait for landing':'⏳ Plane on standby'}</div>
+  <div style="font-size:11px;color:#22c55e;margin-bottom:6px;">🟢 Direct flight available — no boarding required</div>
   <div style="font-size:11px;color:#fbbf24;margin-bottom:6px;">✈️ Flight cost: <b>$${FLIGHT_COST_USD} USD</b> · On-chain tx required</div>
   <div style="display:flex;gap:5px;">
-    <button onclick="boardPlane()" ${planeReady&&!onPlane?'':'disabled'} class="ibtn btn-blue" style="flex:1;">🛫 Fly to City 1 ($${FLIGHT_COST_USD})</button>
+    <button onclick="boardPlane()" ${!onPlane?'':'disabled'} class="ibtn btn-blue" style="flex:1;">🛫 Fly to City 1 ($${FLIGHT_COST_USD})</button>
     <button onclick="exitPlane()" ${onPlane?'':'disabled'} class="ibtn btn-red" style="flex:1;">🚪 Exit</button>
   </div>
   ${hasPilot?`<button onclick="pilotFly()" class="ibtn btn-indigo" style="width:100%;margin-top:5px;">🧑‍✈️ Work as Pilot (+$${WORK_PAY_USD} USD)</button>`:`<div style="font-size:10px;color:#64748b;margin-top:5px;">Learn Aviation at Aviation Academy to work as Pilot</div>`}
@@ -2132,9 +2132,11 @@ function spawnNPCBots(scene){
     const cont=scene.add.container(sx,sy).setDepth(8);
     const npcGender=i%3===0?'f':'m'; // mix of male/female NPCs
     const npcOutfits=['default','casual','sport','formal','suit'];
-    const npcTex='human_'+npcGender+'_'+npcOutfits[i%npcOutfits.length];
+    // standbyIdx===3 = celebrity bot position (Hollywood Studio in City 2)
+    const isCeleb=isStandby&&standbyIdx===3;
+    const npcTex=isCeleb?'human_f_formal':('human_'+npcGender+'_'+npcOutfits[i%npcOutfits.length]);
     const img=scene.add.image(0,0,npcTex).setScale(1.1).setOrigin(.5,.78);
-    const lbl=scene.add.text(-18,-34,NPC_NAMES[i%NPC_NAMES.length],{fontSize:'9px',color:'#94a3b8'});
+    const lbl=scene.add.text(-18,-34,NPC_NAMES[i%NPC_NAMES.length],{fontSize:'9px',color:isCeleb?'#fbbf24':'#94a3b8',fontStyle:isCeleb?'bold':''});
     cont.add([img,lbl]);
     npcBots.push({obj:cont,tx:sx,ty:sy,speed:50+Math.random()*60,wait:Math.random()*4,standby:isStandby,standbyCity:1,standbyIdx});
   }
@@ -2275,6 +2277,9 @@ function makeTextures(scene){
   makeHuman('human_f_sport',  '#fde68a','#111827','#f0abfc','#a855f7','#6d28d9',true,'#f87171');
   makeHuman('human_f_casual', '#fde68a','#92400e','#fbbf24','#ec4899','#be185d',true,'#f87171');
   makeHuman('human_f_formal', '#fde68a','#0f172a','#a78bfa','#6d28d9','#4c1d95',true,'#f87171');
+  /* Beach/swimwear textures for beach NPCs */
+  makeHuman('human_f_beach',  '#fcd9b6','#fde68a','#ec4899','#0ea5e9','#fcd9b6',true,'#f87171');
+  makeHuman('human_m_beach',  '#fcd9b6','#f59e0b','#0ea5e9','#0ea5e9','#fcd9b6',false);
   /* Legacy cat texture kept for NPC bots with tinting */
   addTex(scene,'cat',32,32,c=>{const p=(x,y,w,h,col)=>px(c,x,y,w,h,col);
     p(7,26,18,4,'rgba(0,0,0,.22)');p(24,18,5,2,'#f59e0b');p(26,16,3,2,'#f59e0b');p(27,14,3,2,'#f59e0b');
@@ -3029,10 +3034,12 @@ function addFurniture(scene,intr,cont){
 }
 
 /* ── Day/night, world render, minimap, Phaser ── */
-let nightOv=null,lampGlows=[],cityTiles=null,interior=null,worldCont=null;
+let nightOv=null,lampGlows=[],buildingGlows=[],cityTiles=null,interior=null,worldCont=null;
 let _nearPlotIdx=null,_farmGfx=null; // farm plot state
-let _waveGfx=null,_waveGfx2=null,_waveTime=0,_city1WaterTiles=[]; // Ronin-quality wave animation
-function clearWorld(scene){for(const g of lampGlows)scene.tweens.killTweensOf(g);if(worldCont)worldCont.destroy(true);worldCont=scene.add.container(0,0);lampGlows=[];}
+let _waveGfx=null,_waveGfx2=null,_waveTime=0,_waveFrameSkip=0,_city1WaterTiles=[]; // Ronin-quality wave animation
+let _isNight=false; // global night flag for vehicle lights
+let _vehicleLightGfx=null; // vehicle headlight graphics layer
+function clearWorld(scene){for(const g of lampGlows)scene.tweens.killTweensOf(g);if(worldCont)worldCont.destroy(true);worldCont=scene.add.container(0,0);lampGlows=[];buildingGlows=[];_vehicleLightGfx=null;_waveFrameSkip=0;}
 
 function updateDN(dtS){
   CLK.min=(CLK.min+CLK.speed*dtS)%(24*60);const m=CLK.min;
@@ -3046,6 +3053,9 @@ function updateDN(dtS){
   const ga=(tod==='Night')?.22:(tod==='Sunset'||tod==='Dawn')?.14:.06;
   for(const g of lampGlows)g.setAlpha(ga);
   if(nightOv)nightOv.setAlpha(dark);
+  _isNight=(tod==='Night');
+  const bga=(tod==='Night')?.28:(tod==='Sunset'||tod==='Dawn')?.12:0;
+  for(const g of buildingGlows)g.setAlpha(bga);
 }
 
 function decorateCity(scene,tiles,cont){
@@ -3167,12 +3177,14 @@ function drawCity1(scene){
   if(_waveGfx2&&_waveGfx2.active)_waveGfx2.destroy();
   _waveGfx2=scene.add.graphics().setDepth(0);worldCont.add(_waveGfx2);
   decorateCity(scene,cityTiles,worldCont);
+  if(!_vehicleLightGfx||!_vehicleLightGfx.active){_vehicleLightGfx=scene.add.graphics().setDepth(7.5);}worldCont.add(_vehicleLightGfx);
   for(const b of BLDGS){
     const cx=b.x+b.w/2,cy=b.y+b.h/2;
     const bSpr=scene.add.image(cx,cy,b.tex).setScale(b.ts).setDepth(3);
     if(b.isHouse){const ow=houseOwnership[b.key];bSpr.setTint(ow&&ow.owner?getHouseColorByOwner(ow.owner).tint:0x94a3b8);}
     worldCont.add(bSpr);
     worldCont.add(scene.add.text(cx,b.y-8,b.key,{fontSize:'13px',color:'#e2e8f0',fontStyle:'bold',backgroundColor:'rgba(0,0,0,.35)',padding:{x:6,y:3}}).setOrigin(.5,1).setDepth(4));
+    const bg=scene.add.rectangle(cx,cy-b.h*0.05,b.w*0.55,b.h*0.5,0xfbbf24,0).setDepth(3.5).setBlendMode(1);worldCont.add(bg);buildingGlows.push(bg);
   }
   for(const i of IACTS){
     const cx=i.x+i.w/2,cy=i.y+i.h/2;
@@ -3327,8 +3339,6 @@ function updatePlane(dtS){
 async function boardPlane(){
   if(currentCity!==2)return logChat('[Airport] Board the plane in Coastal City (City 2).',false,'#f87171');
   if(planeState.passengerBoarded)return logChat('[Airport] You are already on the plane!',false,'#fbbf24');
-  if(planeState.flying)return logChat('[Airport] ✈️ Plane is in the air — wait for it to land.',false,'#fbbf24');
-  if(!planeState.atGate)return logChat('[Airport] Plane not at gate.',false,'#f87171');
   if(S.coins<FLIGHT_COST_USD)return logChat('[✈️ Airport] Need $'+FLIGHT_COST_USD+' USD for the flight. You have $'+S.coins+'.',false,'#f87171');
   S.coins-=FLIGHT_COST_USD;
   updateHUD();
@@ -3757,6 +3767,7 @@ function drawCity2(scene){
     if(b.isHouse){const ow=houseOwnership[b.key];bSpr.setTint(ow&&ow.owner?getHouseColorByOwner(ow.owner).tint:0x94a3b8);}
     worldCont.add(bSpr);
     worldCont.add(scene.add.text(cx,b.y-8,b.key,{fontSize:'12px',color:'#e2e8f0',fontStyle:'bold',backgroundColor:'rgba(0,0,0,.38)',padding:{x:5,y:3}}).setOrigin(.5,1).setDepth(4));
+    const bg=scene.add.rectangle(cx,cy-b.h*0.05,b.w*0.55,b.h*0.5,0xfbbf24,0).setDepth(3.5).setBlendMode(1);worldCont.add(bg);buildingGlows.push(bg);
   }
   for(const i of IACTS2){
     const cx=i.x+i.w/2,cy=i.y+i.h/2;
@@ -3782,6 +3793,9 @@ function drawCity2(scene){
   // Traffic light graphics layer
   if(!_tlightGfx||!_tlightGfx.active){_tlightGfx=scene.add.graphics().setDepth(7);}
   worldCont.add(_tlightGfx);
+  // Vehicle headlight graphics layer (night-only)
+  if(!_vehicleLightGfx||!_vehicleLightGfx.active){_vehicleLightGfx=scene.add.graphics().setDepth(7.5);}
+  worldCont.add(_vehicleLightGfx);
   // NPC cars — use pixel-art sprites
   for(const c of NPC_CARS){
     if(!c.spr||!c.spr.active){c.spr=scene.add.image(c.x,c.y,c.tex||'car_red').setOrigin(.5).setDepth(6).setScale(1.4);}
@@ -3830,25 +3844,33 @@ function drawCity2(scene){
     halteShelterGr.fillStyle(0x38bdf8,1);halteShelterGr.fillRect(hx-TILE+3,hy-3*TILE+3,2*TILE-6,TILE*0.8-6);
   }
   worldCont.add(halteShelterGr);}
-  // ── Beach bots — bikini bots sunbathing + surfers ──
+  // ── Celebrity star indicator at Hollywood Studio ──
+  {const hs=BLDGS2.find(b=>b.key==='Hollywood Studio');if(hs){
+    worldCont.add(scene.add.text(hs.x+hs.w/2,hs.y-10,'🌟 Celebrities Here!',{fontSize:'11px',color:'#fbbf24',fontStyle:'bold',backgroundColor:'rgba(0,0,0,.6)',padding:{x:5,y:3}}).setOrigin(.5,1).setDepth(6));
+  }}
+  // ── Beach bots — NPC characters on beach (replace emoji with proper sprites) ──
   const beachBotPositions=[
-    {x:30*TILE,y:47*TILE,emoji:'👙'},{x:36*TILE,y:47.5*TILE,emoji:'👙'},{x:42*TILE,y:47*TILE,emoji:'👙'},
-    {x:33*TILE,y:48*TILE,emoji:'🏄'},{x:50*TILE,y:47.5*TILE,emoji:'👙'},
+    {x:30*TILE,y:47*TILE,tex:'human_f_beach'},{x:36*TILE,y:47.5*TILE,tex:'human_f_beach'},{x:42*TILE,y:47*TILE,tex:'human_f_beach'},
+    {x:50*TILE,y:47.5*TILE,tex:'human_f_beach'},{x:58*TILE,y:47*TILE,tex:'human_m_beach'},
   ];
-  for(const bp of beachBotPositions){
-    const bSpr=scene.add.text(bp.x,bp.y,bp.emoji,{fontSize:'22px'}).setOrigin(.5).setDepth(6);
-    worldCont.add(bSpr);
-    // Sunbathing bots sway gently; surfers bob up-down
-    if(bp.emoji==='👙'){
-      scene.tweens.add({targets:bSpr,angle:8,duration:2200+Math.random()*800,yoyo:true,repeat:-1,ease:'Sine.easeInOut',delay:Math.random()*1000});
-    }
+  const beachNames=['Sandy 🏖️','Sunny 🌊','Coral 🐚','Marina 🌺','Kai 🏄'];
+  for(let bi=0;bi<beachBotPositions.length;bi++){
+    const bp=beachBotPositions[bi];
+    const tex=scene.textures.exists(bp.tex)?bp.tex:'human_f_casual';
+    const bSpr=scene.add.image(bp.x,bp.y,tex).setScale(1.1).setOrigin(.5,.78).setDepth(6);
+    const lbl=scene.add.text(bp.x-16,bp.y-38,beachNames[bi]||'Beach NPC',{fontSize:'8px',color:'#fbbf24',backgroundColor:'rgba(0,0,0,.5)',padding:{x:2,y:1}}).setDepth(6);
+    worldCont.add(bSpr);worldCont.add(lbl);
+    const driftX=TILE*(0.5+Math.random())*(Math.random()<.5?1:-1);
+    scene.tweens.add({targets:[bSpr],x:bp.x+driftX,duration:3000+Math.random()*2000,yoyo:true,repeat:-1,ease:'Sine.easeInOut',delay:Math.random()*2000});
+    scene.tweens.add({targets:[lbl],x:bp.x-16+driftX,duration:3000+Math.random()*2000,yoyo:true,repeat:-1,ease:'Sine.easeInOut',delay:Math.random()*2000});
   }
   // Surfer bots in the wave area (y ~51-52)
   const surferPositions=[
     {x:38*TILE,y:51*TILE},{x:55*TILE,y:52*TILE},{x:70*TILE,y:51.5*TILE},
   ];
   for(const sp of surferPositions){
-    const sSpr=scene.add.text(sp.x,sp.y,'🏄',{fontSize:'26px'}).setOrigin(.5).setDepth(7);
+    const tex=scene.textures.exists('human_m_beach')?'human_m_beach':'human_m_sport';
+    const sSpr=scene.add.image(sp.x,sp.y,tex).setScale(1.1).setOrigin(.5,.78).setDepth(7);
     worldCont.add(sSpr);
     // Surfers ride waves: move horizontally
     scene.tweens.add({targets:sSpr,x:sp.x+3*TILE,y:sp.y-8,duration:2500+Math.random()*1000,yoyo:true,repeat:-1,ease:'Sine.easeInOut',delay:Math.random()*1500});
@@ -3928,6 +3950,7 @@ function drawCity3(scene){
     if(b.isHouse){const ow=houseOwnership[b.key];bSpr.setTint(ow&&ow.owner?getHouseColorByOwner(ow.owner).tint:0x94a3b8);}
     worldCont.add(bSpr);
     worldCont.add(scene.add.text(cx,b.y-8,b.key,{fontSize:'12px',color:'#e2e8f0',fontStyle:'bold',backgroundColor:'rgba(0,0,0,.38)',padding:{x:5,y:3}}).setOrigin(.5,1).setDepth(4));
+    const bg=scene.add.rectangle(cx,cy-b.h*0.05,b.w*0.55,b.h*0.5,0xfbbf24,0).setDepth(3.5).setBlendMode(1);worldCont.add(bg);buildingGlows.push(bg);
   }
   for(const i of IACTS3){
     const cx=i.x+i.w/2,cy=i.y+i.h/2;
@@ -3982,6 +4005,9 @@ function drawCity3(scene){
   // Traffic light graphics layer
   if(!_tlightGfx||!_tlightGfx.active){_tlightGfx=scene.add.graphics().setDepth(7);}
   worldCont.add(_tlightGfx);
+  // Vehicle headlight graphics layer (night-only)
+  if(!_vehicleLightGfx||!_vehicleLightGfx.active){_vehicleLightGfx=scene.add.graphics().setDepth(7.5);}
+  worldCont.add(_vehicleLightGfx);
 }
 
 /* ── City 3 flight functions ── */
@@ -4055,7 +4081,8 @@ function switchCity(n,fromFlight){
       drawCity(_phaserScene);
       if(n===2){
         spawnBirds2(_phaserScene);
-        logChat('[🏝️ Coastal City] Welcome to City 2! Beach🏖️ · Airport✈️ · Train🚂 · Zoo🦁 · Concert🎵 · Waterfall💦 · Gas Station⛽',false,'#fbbf24');
+        logChat('[🏝️ Coastal City] Welcome to City 2! Beach🏖️ · Airport✈️ · Train🚂 · Zoo🦁 · Concert🎵 · Waterfall💦 · Gas Station⛽ · 🌟 Hollywood Studio',false,'#fbbf24');
+        logChat('[🌟 Hollywood Studio] Look for the gold star NPC near Hollywood Studio to meet celebrities! ($20 USD)',false,'#fbbf24');
         loadCarOwnership();
       }else if(n===3){
         logChat('[🏭 Industrial City] Welcome to City 3! Factories🏭 · Airport✈️ · Bus🚌 · Market🛒 · Bar🍺 · Cafe☕ · Concert🎵 · Lake💧 · Gas Station⛽',false,'#fbbf24');
@@ -4090,6 +4117,9 @@ function drawCity(scene){
 function updateWaves(dtS){
   _waveTime+=dtS;
   if(!_phaserScene||WS.zone!=='CITY')return;
+  // ── Performance: skip every other frame to reduce CPU usage ──
+  _waveFrameSkip=(_waveFrameSkip+1)%2;
+  if(_waveFrameSkip!==0)return;
   const t=_waveTime;
   // ── City 2: Animated ocean waves with sinusoidal crests ──
   if(currentCity===2&&_waveGfx&&_waveGfx.active){
@@ -5904,6 +5934,19 @@ const phaserCfg={
       updateNPCBots(dtS);updateBirds(dtS);updateWaves(dtS);
       if(currentCity===2){updateTrain(dtS);updateNPCCars(dtS);updateTrafficLights(dtS);updatePlane(dtS);updateBoat(dtS);}
       if(currentCity===3){updateBus3(dtS);updateNPCTrucks3(dtS);updatePlane(dtS);}
+      // ── Vehicle headlights at night ──
+      if(_vehicleLightGfx&&_vehicleLightGfx.active&&WS.zone==='CITY'){
+        if(_isNight){
+          _vehicleLightGfx.clear();
+          if(currentCity===2){
+            if(trainState.spr){_vehicleLightGfx.fillStyle(0xfef9c3,0.5);_vehicleLightGfx.fillCircle(trainState.x,trainState.y,24);}
+            for(const c of NPC_CARS){if(!c.spr)continue;_vehicleLightGfx.fillStyle(0xfef9c3,0.4);_vehicleLightGfx.fillCircle(c.x,c.y,16);}
+            if(playerDrivingCar&&playerCarSprite&&playerCarSprite.active){_vehicleLightGfx.fillStyle(0xfef9c3,0.55);_vehicleLightGfx.fillCircle(playerCarSprite.x,playerCarSprite.y,18);}
+          }
+          if(currentCity===3&&busState3.spr){_vehicleLightGfx.fillStyle(0xfef9c3,0.5);_vehicleLightGfx.fillCircle(busState3.x,busState3.y,24);}
+          for(const c of NPC_TRUCKS3||[]){if(currentCity===3&&c.spr){_vehicleLightGfx.fillStyle(0xfef9c3,0.38);_vehicleLightGfx.fillCircle(c.x,c.y,14);}}
+        }else{_vehicleLightGfx.clear();}
+      }
       if(S.sleeping)return;
       const spr=this.keys.SHIFT.isDown&&S.energy>0,spd=spr?380:240;
       let vx=0,vy=0;
