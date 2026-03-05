@@ -5990,10 +5990,17 @@ const phaserCfg={
       if(S.sleeping)return;
       const spr=this.keys.SHIFT.isDown&&S.energy>0,spd=spr?380:240;
       let vx=0,vy=0;
-      if(this.cursors.up.isDown||this.keys.W.isDown||_touch.up)vy-=1;
-      if(this.cursors.down.isDown||this.keys.S.isDown||_touch.down)vy+=1;
-      if(this.cursors.left.isDown||this.keys.A.isDown||_touch.left)vx-=1;
-      if(this.cursors.right.isDown||this.keys.D.isDown||_touch.right)vx+=1;
+      const _ae=document.activeElement,_inputActive=_ae&&(_ae.tagName==='INPUT'||_ae.tagName==='TEXTAREA');
+      if(!_inputActive){
+        if(this.cursors.up.isDown||this.keys.W.isDown)vy-=1;
+        if(this.cursors.down.isDown||this.keys.S.isDown)vy+=1;
+        if(this.cursors.left.isDown||this.keys.A.isDown)vx-=1;
+        if(this.cursors.right.isDown||this.keys.D.isDown)vx+=1;
+      }
+      if(_touch.up)vy-=1;
+      if(_touch.down)vy+=1;
+      if(_touch.left)vx-=1;
+      if(_touch.right)vx+=1;
       if(vx&&vy){vx*=.7071;vy*=.7071;}
       const mv=(vx||vy),nx=this.me.x+vx*spd*dtS,ny=this.me.y+vy*spd*dtS;
       if(WS.zone==='CITY'){
