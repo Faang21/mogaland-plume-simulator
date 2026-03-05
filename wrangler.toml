@@ -1,0 +1,2 @@
+name = "mogaland-plume-simulator"
+pages_build_output_dir = "dist"
