@@ -6852,6 +6852,19 @@
         // Order book state
         let orderBookInterval = null;
 
+        // Named constants for order book simulation
+        const ORDER_BOOK_DEPTH_RATIO = 0.002;  // 0.2% price range from mid for full depth
+        const ORDER_BOOK_LEVELS = 8;           // Number of bid/ask levels to display
+
+        function getTickInfo(price) {
+          if (price < 1)     return { tick: 0.00001, decimals: 5 };
+          if (price < 10)    return { tick: 0.0001,  decimals: 4 };
+          if (price < 100)   return { tick: 0.001,   decimals: 3 };
+          if (price < 1000)  return { tick: 0.01,    decimals: 2 };
+          if (price < 10000) return { tick: 0.1,     decimals: 2 };
+          return { tick: 1, decimals: 2 };
+        }
+
         function renderOrderBook(price, volatility) {
           const asksEl = document.getElementById('orderBookAsks');
           const bidsEl = document.getElementById('orderBookBids');
@@ -6859,16 +6872,15 @@
           if (!asksEl || !bidsEl || !price) return;
 
           const spread = price * (volatility || 0.001) * 0.5;
-          const tick = price < 1 ? 0.00001 : price < 10 ? 0.0001 : price < 100 ? 0.001 : price < 1000 ? 0.01 : price < 10000 ? 0.1 : 1;
-          const priceDecimals = tick < 0.001 ? 5 : tick < 0.01 ? 4 : tick < 0.1 ? 3 : tick < 1 ? 2 : 2;
+          const { decimals: priceDecimals } = getTickInfo(price);
           const fmt = (p) => p.toLocaleString(undefined, {minimumFractionDigits: priceDecimals, maximumFractionDigits: priceDecimals});
 
           const askRows = [];
           const bidRows = [];
           let cumAsk = 0, cumBid = 0;
-          const maxDepth = price * 0.002;
+          const maxDepth = price * ORDER_BOOK_DEPTH_RATIO;
 
-          for (let i = 0; i < 8; i++) {
+          for (let i = 0; i < ORDER_BOOK_LEVELS; i++) {
             const pAsk = price + spread + (i * maxDepth / 8) + Math.random() * (maxDepth / 16);
             const qAsk = (0.1 + Math.random() * 2).toFixed(3);
             cumAsk += parseFloat(qAsk);
@@ -6911,8 +6923,10 @@
           if (selectedAsset && selectedAsset.basePrice) {
             renderOrderBook(selectedAsset.basePrice, selectedAsset.volatility);
             orderBookInterval = setInterval(() => {
-              const price = priceHistory.length > 0 ? priceHistory[priceHistory.length-1]?.c : selectedAsset.basePrice;
-              renderOrderBook(price || selectedAsset.basePrice, selectedAsset.volatility);
+              // Guard: stop if the order book element was removed (section changed)
+              if (!document.getElementById('orderBookBids')) { stopOrderBookUpdates(); return; }
+              const price = priceHistory.length > 0 ? priceHistory[priceHistory.length-1]?.c : selectedAsset?.basePrice;
+              renderOrderBook(price || selectedAsset?.basePrice, selectedAsset?.volatility);
             }, 2000);
           }
         }
@@ -6987,13 +7001,16 @@
 
         function calculateEMA(data, period) {
           if (!data || data.length < period) return [];
+          // Filter out entries with null/undefined close values
+          const valid = data.filter(d => d && typeof d.close === 'number' && !isNaN(d.close) && d.time != null);
+          if (valid.length < period) return [];
           const k = 2 / (period + 1);
           const result = [];
-          let ema = data.slice(0, period).reduce((sum, d) => sum + d.close, 0) / period;
-          result.push({ time: data[period - 1].time, value: ema });
-          for (let i = period; i < data.length; i++) {
-            ema = data[i].close * k + ema * (1 - k);
-            result.push({ time: data[i].time, value: ema });
+          let ema = valid.slice(0, period).reduce((sum, d) => sum + d.close, 0) / period;
+          result.push({ time: valid[period - 1].time, value: ema });
+          for (let i = period; i < valid.length; i++) {
+            ema = valid[i].close * k + ema * (1 - k);
+            result.push({ time: valid[i].time, value: ema });
           }
           return result;
         }
@@ -7023,24 +7040,35 @@
         }
 
         function updateRSIDisplay() {
-          if (!priceHistory || priceHistory.length < 15) return;
+          const RSI_PERIOD = 14;
+          if (!priceHistory || priceHistory.length < RSI_PERIOD + 1) return;
           const rsiEl = document.getElementById('rsiValue');
           if (!rsiEl) return;
 
-          const period = 14;
-          const closes = priceHistory.slice(-period - 1).map(p => p.c);
-          if (closes.length < period + 1) return;
+          const closes = priceHistory.map(p => p.c).filter(c => typeof c === 'number' && !isNaN(c));
+          if (closes.length < RSI_PERIOD + 1) return;
 
-          let gains = 0, losses = 0;
-          for (let i = 1; i < closes.length; i++) {
-            const diff = closes[i] - closes[i-1];
-            if (diff > 0) gains += diff;
-            else losses -= diff;
+          // Step 1: seed using simple average of first RSI_PERIOD gains/losses
+          let avgGain = 0, avgLoss = 0;
+          for (let i = 1; i <= RSI_PERIOD; i++) {
+            const diff = closes[i] - closes[i - 1];
+            if (diff > 0) avgGain += diff;
+            else avgLoss -= diff;
           }
-          const avgGain = gains / period;
-          const avgLoss = losses / period;
-          const rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
-          const rsi = 100 - (100 / (1 + rs));
+          avgGain /= RSI_PERIOD;
+          avgLoss /= RSI_PERIOD;
+
+          // Step 2: use Wilder's smoothing for remaining periods
+          for (let i = RSI_PERIOD + 1; i < closes.length; i++) {
+            const diff = closes[i] - closes[i - 1];
+            const gain = diff > 0 ? diff : 0;
+            const loss = diff < 0 ? -diff : 0;
+            avgGain = (avgGain * (RSI_PERIOD - 1) + gain) / RSI_PERIOD;
+            avgLoss = (avgLoss * (RSI_PERIOD - 1) + loss) / RSI_PERIOD;
+          }
+
+          const rs = avgLoss === 0 ? Infinity : avgGain / avgLoss;
+          const rsi = avgLoss === 0 ? 100 : 100 - (100 / (1 + rs));
 
           const color = rsi > 70 ? '#f6465d' : rsi < 30 ? '#0ecb81' : '#f0b90b';
           rsiEl.textContent = 'RSI: ' + rsi.toFixed(1);
@@ -7686,7 +7714,9 @@
           if (currentPriceDisplayEl) currentPriceDisplayEl.style.display = 'flex';
           const bannerSymbolEl = document.getElementById('bannerSymbol');
           if (bannerSymbolEl) bannerSymbolEl.textContent = asset.symbol + (asset.binanceSymbol ? ' Perp' : '');
-          const change24h = (Math.random() - 0.48) * asset.volatility * 100 * 2;
+          // Slight positive bias (0.48 < 0.5) so simulated 24h change leans slightly bullish
+          const BANNER_CHANGE_BIAS = 0.48;
+          const change24h = (Math.random() - BANNER_CHANGE_BIAS) * asset.volatility * 100 * 2;
           const high24h = asset.basePrice * (1 + Math.abs(asset.volatility) * 1.5);
           const low24h = asset.basePrice * (1 - Math.abs(asset.volatility) * 1.5);
           const vol24h = asset.basePrice * (500 + Math.random() * 2000);
