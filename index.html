@@ -119,6 +119,8 @@
   <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@0.2.0/dist/chartjs-chart-financial.min.js"></script>
   <!-- TradingView Widget -->
   <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+  <!-- TradingView Lightweight Charts - high-performance candlestick charts -->
+  <script src="https://unpkg.com/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
 
   <style>
     :root {
@@ -565,6 +567,32 @@
       -webkit-tap-highlight-color: transparent;
     }
     .nav-btn:hover, .nav-btn.active { background: var(--primary); transform: scale(1.08); }
+    .tf-btn {
+      background: rgba(13,110,253,0.15);
+      color: #94a3b8;
+      border: 1px solid rgba(255,255,255,0.1);
+      padding: 4px 10px;
+      font-size: 0.8rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .tf-btn:hover { background: rgba(96,165,250,0.25); color: white; }
+    .tf-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+    .lw-chart-wrap { position: relative; width: 100%; }
+    .chart-live-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: rgba(16,185,129,0.15); color: #10b981;
+      border: 1px solid rgba(16,185,129,0.3); border-radius: 20px;
+      padding: 3px 10px; font-size: 0.78rem; font-weight: 600;
+    }
+    .chart-live-badge::before {
+      content: ''; display: inline-block; width: 7px; height: 7px;
+      background: #10b981; border-radius: 50%;
+      animation: livePulse 1.5s infinite;
+    }
+    @keyframes livePulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
     .content { flex: 1; padding: 20px; padding-bottom: 100px; text-align: center; -webkit-overflow-scrolling: touch; }
     .hidden { display: none !important; }
     .notification {
@@ -6259,11 +6287,22 @@
               </div>
 
               <div class="card" style="flex:2; min-height:580px; padding:20px;">
-                <h3 id="viewTitle" style="color:#60a5fa; text-align:center; margin-bottom:15px;">Select Asset to Trade</h3>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
+                  <h3 id="viewTitle" style="color:#60a5fa; margin:0;">Select Asset to Trade</h3>
+                  <span class="chart-live-badge" id="chartLiveBadge" style="display:none;">LIVE</span>
+                </div>
+                <div id="chartTimeframeBar" style="margin-bottom:8px; gap:5px; flex-wrap:wrap; align-items:center; display:none;">
+                  <button class="tf-btn" onclick="changeChartTimeframe('1m')">1m</button>
+                  <button class="tf-btn" onclick="changeChartTimeframe('5m')">5m</button>
+                  <button class="tf-btn" onclick="changeChartTimeframe('15m')">15m</button>
+                  <button class="tf-btn" onclick="changeChartTimeframe('1h')">1h</button>
+                  <button class="tf-btn" onclick="changeChartTimeframe('4h')">4h</button>
+                  <button class="tf-btn active" onclick="changeChartTimeframe('1d')">1d</button>
+                </div>
                 <div id="priceChart" style="min-height:420px; display:none;"></div>
                 <div id="clubHistoryView" style="display:none; color:#e2e8f0; font-size:1.05em; line-height:1.6; padding:15px; background:rgba(13,110,253,0.08); border-radius:12px;"></div>
-                <div id="chartFooter" style="text-align:center; margin-top:15px; font-size:0.95em; opacity:0.8; display:none;">
-                  Live price data from TradingView
+                <div id="chartFooter" style="text-align:center; margin-top:10px; font-size:0.85em; opacity:0.8; display:none;">
+                  Live price data • <span id="chartDataSource">TradingView</span>
                 </div>
               </div>
 
@@ -6321,16 +6360,20 @@
 
         const assetsData = {
           crypto: [
-            {symbol: "BTCUSD", name: "Bitcoin", tvSymbol: "BINANCE:BTCUSDT", basePrice: 45000, volatility: 0.025},
-            {symbol: "ETHUSD", name: "Ethereum", tvSymbol: "BINANCE:ETHUSDT", basePrice: 2500, volatility: 0.030},
-            {symbol: "BNBUSD", name: "BNB", tvSymbol: "BINANCE:BNBUSDT", basePrice: 320, volatility: 0.028},
-            {symbol: "SOLUSD", name: "Solana", tvSymbol: "BINANCE:SOLUSDT", basePrice: 100, volatility: 0.040},
-            {symbol: "ADAUSD", name: "Cardano", tvSymbol: "BINANCE:ADAUSDT", basePrice: 0.50, volatility: 0.035},
-            {symbol: "XRPUSD", name: "Ripple", tvSymbol: "BINANCE:XRPUSDT", basePrice: 0.60, volatility: 0.032},
-            {symbol: "DOTUSD", name: "Polkadot", tvSymbol: "BINANCE:DOTUSDT", basePrice: 7.50, volatility: 0.038},
-            {symbol: "MATICUSD", name: "Polygon", tvSymbol: "BINANCE:MATICUSDT", basePrice: 0.85, volatility: 0.042},
-            {symbol: "LINKUSD", name: "Chainlink", tvSymbol: "BINANCE:LINKUSDT", basePrice: 15.00, volatility: 0.036},
-            {symbol: "UNIUSD", name: "Uniswap", tvSymbol: "BINANCE:UNIUSDT", basePrice: 6.50, volatility: 0.040}
+            {symbol: "BTCUSD", name: "Bitcoin", tvSymbol: "BINANCE:BTCUSDT", binanceSymbol: "BTCUSDT", basePrice: 45000, volatility: 0.025},
+            {symbol: "ETHUSD", name: "Ethereum", tvSymbol: "BINANCE:ETHUSDT", binanceSymbol: "ETHUSDT", basePrice: 2500, volatility: 0.030},
+            {symbol: "BNBUSD", name: "BNB", tvSymbol: "BINANCE:BNBUSDT", binanceSymbol: "BNBUSDT", basePrice: 320, volatility: 0.028},
+            {symbol: "SOLUSD", name: "Solana", tvSymbol: "BINANCE:SOLUSDT", binanceSymbol: "SOLUSDT", basePrice: 100, volatility: 0.040},
+            {symbol: "ADAUSD", name: "Cardano", tvSymbol: "BINANCE:ADAUSDT", binanceSymbol: "ADAUSDT", basePrice: 0.50, volatility: 0.035},
+            {symbol: "XRPUSD", name: "Ripple", tvSymbol: "BINANCE:XRPUSDT", binanceSymbol: "XRPUSDT", basePrice: 0.60, volatility: 0.032},
+            {symbol: "DOTUSD", name: "Polkadot", tvSymbol: "BINANCE:DOTUSDT", binanceSymbol: "DOTUSDT", basePrice: 7.50, volatility: 0.038},
+            {symbol: "MATICUSD", name: "Polygon", tvSymbol: "BINANCE:MATICUSDT", binanceSymbol: "MATICUSDT", basePrice: 0.85, volatility: 0.042},
+            {symbol: "LINKUSD", name: "Chainlink", tvSymbol: "BINANCE:LINKUSDT", binanceSymbol: "LINKUSDT", basePrice: 15.00, volatility: 0.036},
+            {symbol: "UNIUSD", name: "Uniswap", tvSymbol: "BINANCE:UNIUSDT", binanceSymbol: "UNIUSDT", basePrice: 6.50, volatility: 0.040},
+            {symbol: "DOGEUSD", name: "Dogecoin", tvSymbol: "BINANCE:DOGEUSDT", binanceSymbol: "DOGEUSDT", basePrice: 0.08, volatility: 0.055},
+            {symbol: "AVAXUSD", name: "Avalanche", tvSymbol: "BINANCE:AVAXUSDT", binanceSymbol: "AVAXUSDT", basePrice: 35, volatility: 0.045},
+            {symbol: "ATOMUSD", name: "Cosmos", tvSymbol: "BINANCE:ATOMUSDT", binanceSymbol: "ATOMUSDT", basePrice: 9, volatility: 0.038},
+            {symbol: "NEARUSD", name: "NEAR Protocol", tvSymbol: "BINANCE:NEARUSDT", binanceSymbol: "NEARUSDT", basePrice: 4, volatility: 0.048}
           ],
           stocks: [
             {symbol: "AAPL", name: "Apple Inc.", tvSymbol: "NASDAQ:AAPL", basePrice: 190, volatility: 0.015},
@@ -6339,19 +6382,30 @@
             {symbol: "MSFT", name: "Microsoft", tvSymbol: "NASDAQ:MSFT", basePrice: 380, volatility: 0.018},
             {symbol: "AMZN", name: "Amazon", tvSymbol: "NASDAQ:AMZN", basePrice: 155, volatility: 0.025},
             {symbol: "NVDA", name: "NVIDIA", tvSymbol: "NASDAQ:NVDA", basePrice: 500, volatility: 0.040},
-            {symbol: "META", name: "Meta Platforms", tvSymbol: "NASDAQ:META", basePrice: 350, volatility: 0.030}
+            {symbol: "META", name: "Meta Platforms", tvSymbol: "NASDAQ:META", basePrice: 350, volatility: 0.030},
+            {symbol: "AMD", name: "AMD", tvSymbol: "NASDAQ:AMD", basePrice: 120, volatility: 0.038},
+            {symbol: "SPY", name: "S&P 500 ETF", tvSymbol: "AMEX:SPY", basePrice: 480, volatility: 0.012},
+            {symbol: "QQQ", name: "Nasdaq 100 ETF", tvSymbol: "NASDAQ:QQQ", basePrice: 420, volatility: 0.015}
           ],
           commodities: [
             {symbol: "GOLD", name: "Gold", tvSymbol: "TVC:GOLD", basePrice: 2050, volatility: 0.010},
             {symbol: "SILVER", name: "Silver", tvSymbol: "TVC:SILVER", basePrice: 24, volatility: 0.020},
-            {symbol: "OIL", name: "Crude Oil", tvSymbol: "TVC:USOIL", basePrice: 75, volatility: 0.025},
-            {symbol: "NATGAS", name: "Natural Gas", tvSymbol: "TVC:NATURALGAS", basePrice: 2.80, volatility: 0.035}
+            {symbol: "OIL", name: "Crude Oil (WTI)", tvSymbol: "TVC:USOIL", basePrice: 75, volatility: 0.025},
+            {symbol: "NATGAS", name: "Natural Gas", tvSymbol: "TVC:NATURALGAS", basePrice: 2.80, volatility: 0.035},
+            {symbol: "COPPER", name: "Copper", tvSymbol: "TVC:COPPER", basePrice: 3.80, volatility: 0.022},
+            {symbol: "WHEAT", name: "Wheat", tvSymbol: "TVC:WHEAT", basePrice: 580, volatility: 0.028},
+            {symbol: "CORN", name: "Corn", tvSymbol: "TVC:CORN", basePrice: 420, volatility: 0.026}
           ],
           forex: [
             {symbol: "EURUSD", name: "EUR/USD", tvSymbol: "FX:EURUSD", basePrice: 1.085, volatility: 0.005},
             {symbol: "GBPUSD", name: "GBP/USD", tvSymbol: "FX:GBPUSD", basePrice: 1.270, volatility: 0.006},
             {symbol: "USDJPY", name: "USD/JPY", tvSymbol: "FX:USDJPY", basePrice: 148.5, volatility: 0.007},
-            {symbol: "AUDUSD", name: "AUD/USD", tvSymbol: "FX:AUDUSD", basePrice: 0.660, volatility: 0.008}
+            {symbol: "AUDUSD", name: "AUD/USD", tvSymbol: "FX:AUDUSD", basePrice: 0.660, volatility: 0.008},
+            {symbol: "GBPJPY", name: "GBP/JPY", tvSymbol: "FX:GBPJPY", basePrice: 188.5, volatility: 0.009},
+            {symbol: "NZDUSD", name: "NZD/USD", tvSymbol: "FX:NZDUSD", basePrice: 0.610, volatility: 0.008},
+            {symbol: "USDCHF", name: "USD/CHF", tvSymbol: "FX:USDCHF", basePrice: 0.895, volatility: 0.006},
+            {symbol: "USDCAD", name: "USD/CAD", tvSymbol: "FX:USDCAD", basePrice: 1.360, volatility: 0.007},
+            {symbol: "EURJPY", name: "EUR/JPY", tvSymbol: "FX:EURJPY", basePrice: 161.0, volatility: 0.009}
           ],
           sports: [
             {symbol: "Real Madrid", type: "football", teamId: "133602", league: "La Liga", strength: 0.85, nextMatch: "vs Barcelona", recentForm: [
@@ -6496,8 +6550,14 @@
         let tradeHistoryList = [];
         let liquidationHistory = []; // Track liquidation events
         let liquidationMonitorInterval = null; // Interval for checking liquidations
-        let binanceWebSocket = null; // WebSocket connection to Binance
+        let binanceWebSocket = null; // WebSocket connection to Binance (trade ticks)
         let priceUpdateMethod = 'websocket'; // 'websocket' or 'polling'
+        // Lightweight Charts state
+        let lwChart = null;
+        let lwCandleSeries = null;
+        let lwVolumeSeries = null;
+        let lwKlineWebSocket = null;
+        let currentChartTimeframe = '1d';
         // Note: tradingUSDCBalance is now declared in global scope
         
         // Fetch real USDC balance for trading
@@ -6903,6 +6963,11 @@
           document.getElementById('priceChart').style.display = 'none';
           document.getElementById('chartFooter').style.display = 'none';
           document.getElementById('currentPriceDisplay').style.display = 'none';
+          const tfBar = document.getElementById('chartTimeframeBar');
+          if (tfBar) tfBar.style.display = 'none';
+          const badge = document.getElementById('chartLiveBadge');
+          if (badge) badge.style.display = 'none';
+          destroyLightweightChart();
 
           const view = document.getElementById('clubHistoryView');
           view.style.display = 'block';
@@ -6998,22 +7063,34 @@
           // Show current price
           document.getElementById('currentPriceDisplay').style.display = 'block';
 
-          initChart(asset);
-          
-          // Priority 1: Use Chainlink on-chain oracle for supported assets
-          // Priority 2: Use Binance WebSocket for crypto
-          // Priority 3: Use CoinGecko polling for others
-          if (hasChainlinkFeed(asset.symbol)) {
-            console.log(`[Price Updates] Using Chainlink Price Feed for ${asset.symbol}`);
-            startRealTimePriceUpdates(); // Uses Chainlink in fetchTradingViewPrice
-          } else if (currentTab === 'crypto' && asset.symbol.includes('USD')) {
-            console.log(`[Price Updates] Using Binance WebSocket for ${asset.symbol}`);
-            connectBinanceWebSocket(asset.symbol);
-          } else {
-            console.log(`[Price Updates] Using CoinGecko polling for ${asset.symbol}`);
-            startRealTimePriceUpdates();
+          // Show timeframe bar and live badge
+          const tfBar = document.getElementById('chartTimeframeBar');
+          if (tfBar) tfBar.style.display = 'flex';
+
+          // Try Lightweight Charts first (for all assets)
+          initLightweightChart(asset, currentChartTimeframe).then(ok => {
+            if (!ok) {
+              // Fall back to legacy TradingView widget / Chart.js
+              initChart(asset);
+            }
+          });
+
+          // Stop previous polling/WebSocket
+          stopRealTimePriceUpdates();
+          disconnectBinanceWebSocket();
+
+          // For non-crypto assets without Binance kline support, use polling
+          if (!asset.binanceSymbol) {
+            if (hasChainlinkFeed(asset.symbol)) {
+              console.log(`[Price Updates] Using Chainlink Price Feed for ${asset.symbol}`);
+              startRealTimePriceUpdates();
+            } else {
+              console.log(`[Price Updates] Using polling for ${asset.symbol}`);
+              startRealTimePriceUpdates();
+            }
           }
-          
+          // For crypto with binanceSymbol, connectKlineWebSocket handles updates
+
           updateTradingBalance();
           // Update leverage info to show entry price and other details
           updateLeverageInfo();
@@ -7397,7 +7474,11 @@
                 'DOTUSD': 'polkadot',
                 'MATICUSD': 'matic-network',
                 'LINKUSD': 'chainlink',
-                'UNIUSD': 'uniswap'
+                'UNIUSD': 'uniswap',
+                'DOGEUSD': 'dogecoin',
+                'AVAXUSD': 'avalanche',
+                'ATOMUSD': 'cosmos',
+                'NEARUSD': 'near'
               };
               
               const coinId = coinGeckoIds[asset.symbol];
@@ -7529,7 +7610,11 @@
                 'doge': 'dogecoin',
                 'matic': 'matic-network',
                 'dot': 'polkadot',
-                'avax': 'avalanche-2'
+                'avax': 'avalanche-2',
+                'link': 'chainlink',
+                'uni': 'uniswap',
+                'atom': 'cosmos',
+                'near': 'near'
               };
               
               const coinId = coinIdMap[symbol] || symbol;
@@ -7735,7 +7820,11 @@
                 'doge': 'dogecoin',
                 'matic': 'matic-network',
                 'dot': 'polkadot',
-                'avax': 'avalanche-2'
+                'avax': 'avalanche-2',
+                'link': 'chainlink',
+                'uni': 'uniswap',
+                'atom': 'cosmos',
+                'near': 'near'
               };
               
               const coinId = coinIdMap[symbol] || symbol;
@@ -7795,7 +7884,11 @@
             'DOGEUSD': 'dogeusdt',
             'MATICUSD': 'maticusdt',
             'DOTUSD': 'dotusdt',
-            'AVAXUSD': 'avaxusdt'
+            'AVAXUSD': 'avaxusdt',
+            'LINKUSD': 'linkusdt',
+            'UNIUSD': 'uniusdt',
+            'ATOMUSD': 'atomusdt',
+            'NEARUSD': 'nearusdt'
           };
           
           const binanceSymbol = binanceSymbolMap[symbol];
@@ -7905,6 +7998,317 @@
           connectBinanceWebSocket(symbol);
         }
 
+        // === LIGHTWEIGHT CHARTS (TradingView) INTEGRATION ===
+
+        /**
+         * Map internal timeframe labels to Binance kline intervals
+         */
+        const TIMEFRAME_TO_BINANCE = {
+          '1m': '1m', '5m': '5m', '15m': '15m', '1h': '1h', '4h': '4h', '1d': '1d'
+        };
+
+        /**
+         * Destroy existing Lightweight Chart instance and kline WebSocket
+         */
+        function destroyLightweightChart() {
+          if (lwKlineWebSocket) {
+            try { lwKlineWebSocket.close(); } catch(_) {}
+            lwKlineWebSocket = null;
+          }
+          if (lwChart) {
+            try { lwChart.remove(); } catch(_) {}
+            lwChart = null;
+            lwCandleSeries = null;
+            lwVolumeSeries = null;
+          }
+        }
+
+        /**
+         * Fetch historical OHLC klines from Binance REST API
+         * Returns array of {time, open, high, low, close, volume}
+         */
+        async function loadBinanceKlines(binanceSymbol, interval, limit = 100) {
+          try {
+            const url = `https://api.binance.com/api/v3/klines?symbol=${binanceSymbol}&interval=${interval}&limit=${limit}`;
+            const resp = await fetch(url);
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            const raw = await resp.json();
+            return raw.map(k => ({
+              time: Math.floor(k[0] / 1000),
+              open: parseFloat(k[1]),
+              high: parseFloat(k[2]),
+              low: parseFloat(k[3]),
+              close: parseFloat(k[4]),
+              volume: parseFloat(k[5])
+            }));
+          } catch (err) {
+            console.warn('[Binance Klines] Failed to fetch:', err.message);
+            return [];
+          }
+        }
+
+        /**
+         * Initialize TradingView Lightweight Charts for an asset
+         * Uses Binance kline data for crypto; simulated data for others
+         */
+        async function initLightweightChart(asset, timeframe) {
+          if (typeof LightweightCharts === 'undefined') {
+            console.warn('[LWCharts] Library not loaded');
+            return false;
+          }
+
+          const container = document.getElementById('priceChart');
+          if (!container) return false;
+
+          // Destroy previous chart
+          destroyLightweightChart();
+
+          container.innerHTML = '';
+          container.style.display = 'block';
+
+          // Set fixed height
+          container.style.height = `${CHART_HEIGHT}px`;
+          container.style.minHeight = `${CHART_HEIGHT}px`;
+
+          // Create chart
+          lwChart = LightweightCharts.createChart(container, {
+            width: container.clientWidth || 700,
+            height: CHART_HEIGHT,
+            layout: {
+              background: { color: '#0a1628' },
+              textColor: '#94a3b8',
+            },
+            grid: {
+              vertLines: { color: '#1e293b' },
+              horzLines: { color: '#1e293b' },
+            },
+            crosshair: {
+              mode: LightweightCharts.CrosshairMode.Normal,
+            },
+            rightPriceScale: {
+              borderColor: '#334155',
+            },
+            timeScale: {
+              borderColor: '#334155',
+              timeVisible: true,
+              secondsVisible: false,
+            },
+          });
+
+          // Candlestick series
+          lwCandleSeries = lwChart.addCandlestickSeries({
+            upColor: '#10b981',
+            downColor: '#ef4444',
+            borderUpColor: '#10b981',
+            borderDownColor: '#ef4444',
+            wickUpColor: '#10b981',
+            wickDownColor: '#ef4444',
+          });
+
+          // Volume series (histogram)
+          lwVolumeSeries = lwChart.addHistogramSeries({
+            color: '#3b82f640',
+            priceFormat: { type: 'volume' },
+            priceScaleId: '',
+            scaleMargins: { top: 0.8, bottom: 0 },
+          });
+
+          const interval = TIMEFRAME_TO_BINANCE[timeframe] || '1d';
+
+          // Fetch real OHLC data from Binance for crypto
+          if (asset.binanceSymbol) {
+            const klines = await loadBinanceKlines(asset.binanceSymbol, interval, 150);
+            if (klines.length > 0) {
+              lwCandleSeries.setData(klines.map(k => ({
+                time: k.time, open: k.open, high: k.high, low: k.low, close: k.close
+              })));
+              lwVolumeSeries.setData(klines.map(k => ({
+                time: k.time,
+                value: k.volume,
+                color: k.close >= k.open ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'
+              })));
+
+              // Update price display with latest close
+              const last = klines[klines.length - 1];
+              updatePriceDisplay(last.close);
+
+              // Start kline WebSocket for real-time updates
+              connectKlineWebSocket(asset.binanceSymbol, interval);
+
+              // Update chart source label
+              const srcEl = document.getElementById('chartDataSource');
+              if (srcEl) srcEl.textContent = 'Binance (real-time)';
+
+              lwChart.timeScale().fitContent();
+              return true;
+            }
+          }
+
+          // For non-crypto (stocks/forex/commodities): use simulated data
+          const simData = generateLWSimData(asset.basePrice, 100, interval);
+          lwCandleSeries.setData(simData.candles);
+          lwVolumeSeries.setData(simData.volumes);
+          updatePriceDisplay(asset.basePrice);
+          lwChart.timeScale().fitContent();
+
+          const srcEl = document.getElementById('chartDataSource');
+          if (srcEl) srcEl.textContent = 'TradingView';
+
+          return true;
+        }
+
+        /**
+         * Generate simulated OHLC data anchored to a real price (for non-crypto assets)
+         */
+        function generateLWSimData(basePrice, count, interval) {
+          const now = Math.floor(Date.now() / 1000);
+          const intervalSeconds = { '1m': 60, '5m': 300, '15m': 900, '1h': 3600, '4h': 14400, '1d': 86400 };
+          const step = intervalSeconds[interval] || 86400;
+          // Slight upward bias (0.48 < 0.5) keeps chart from drifting to zero
+          const RANDOM_BIAS = 0.48;
+          // Per-candle volatility: 1.2% of current price
+          const VOLATILITY_MULTIPLIER = 0.012;
+          // Max allowed single-candle drop to prevent unrealistic prices
+          const MAX_DROP_RATIO = 0.95;
+
+          const candles = [];
+          const volumes = [];
+          let price = basePrice * 0.97;
+
+          for (let i = 0; i < count; i++) {
+            const t = now - (count - i - 1) * step;
+            const change = (Math.random() - RANDOM_BIAS) * price * VOLATILITY_MULTIPLIER;
+            const open = price;
+            const close = Math.max(open + change, open * MAX_DROP_RATIO);
+            const high = Math.max(open, close) * (1 + Math.random() * 0.004);
+            const low  = Math.min(open, close) * (1 - Math.random() * 0.004);
+            candles.push({ time: t, open, high, low, close });
+            volumes.push({
+              time: t,
+              value: basePrice * (50 + Math.random() * 200),
+              color: close >= open ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'
+            });
+            price = close;
+          }
+          return { candles, volumes };
+        }
+
+        /**
+         * Connect to Binance kline WebSocket for real-time OHLC updates
+         */
+        function connectKlineWebSocket(binanceSymbol, interval) {
+          if (lwKlineWebSocket) {
+            try { lwKlineWebSocket.close(); } catch(_) {}
+            lwKlineWebSocket = null;
+          }
+
+          // Minimum price movement ratio to record a new priceHistory candle (0.01%)
+          const KLINE_PRICE_UPDATE_THRESHOLD = 0.0001;
+          const wsUrl = `wss://stream.binance.com:9443/ws/${binanceSymbol.toLowerCase()}@kline_${interval}`;
+          try {
+            lwKlineWebSocket = new WebSocket(wsUrl);
+
+            lwKlineWebSocket.onopen = () => {
+              console.log(`🔗 [LWCharts] Kline WebSocket connected: ${binanceSymbol} ${interval}`);
+              const badge = document.getElementById('chartLiveBadge');
+              if (badge) badge.style.display = 'inline-flex';
+            };
+
+            lwKlineWebSocket.onmessage = (event) => {
+              try {
+                const msg = JSON.parse(event.data);
+                const k = msg.k;
+                if (!k) return;
+
+                const candle = {
+                  time: Math.floor(k.t / 1000),
+                  open: parseFloat(k.o),
+                  high: parseFloat(k.h),
+                  low:  parseFloat(k.l),
+                  close: parseFloat(k.c)
+                };
+
+                if (lwCandleSeries) lwCandleSeries.update(candle);
+
+                if (lwVolumeSeries) {
+                  lwVolumeSeries.update({
+                    time: candle.time,
+                    value: parseFloat(k.v),
+                    color: candle.close >= candle.open ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'
+                  });
+                }
+
+                // Update price display and internal price history
+                const price = candle.close;
+                updatePriceDisplay(price);
+
+                // Keep priceHistory in sync for position P&L
+                if (priceHistory.length > 0) {
+                  const last = priceHistory[priceHistory.length - 1];
+                  if (Math.abs(last.c - price) / last.c > KLINE_PRICE_UPDATE_THRESHOLD) {
+                    priceHistory.push({ x: k.t, o: candle.open, h: candle.high, l: candle.low, c: price });
+                    if (priceHistory.length > 200) priceHistory.shift();
+                  }
+                } else {
+                  priceHistory.push({ x: k.t, o: candle.open, h: candle.high, l: candle.low, c: price });
+                }
+
+                updatePositionsDisplay();
+                updateLeverageInfo();
+              } catch (e) {
+                console.error('[LWCharts] Kline WS parse error:', e);
+              }
+            };
+
+            lwKlineWebSocket.onerror = () => {
+              console.warn('[LWCharts] Kline WS error, falling back to polling');
+              const badge = document.getElementById('chartLiveBadge');
+              if (badge) badge.style.display = 'none';
+              startRealTimePriceUpdates();
+            };
+
+            lwKlineWebSocket.onclose = () => {
+              lwKlineWebSocket = null;
+              const badge = document.getElementById('chartLiveBadge');
+              if (badge) badge.style.display = 'none';
+            };
+          } catch (e) {
+            console.error('[LWCharts] Kline WS connect error:', e);
+            startRealTimePriceUpdates();
+          }
+        }
+
+        /**
+         * Change chart timeframe and reload data
+         */
+        window.changeChartTimeframe = function(tf) {
+          currentChartTimeframe = tf;
+          // Update button active state
+          document.querySelectorAll('.tf-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.textContent.trim() === tf);
+          });
+          if (selectedAsset && currentTab !== 'sports') {
+            initLightweightChart(selectedAsset, tf).then(ok => {
+              if (!ok) initChart(selectedAsset);
+            });
+          }
+        };
+
+        // Resize Lightweight Chart when container resizes
+        if (typeof ResizeObserver !== 'undefined') {
+          const chartResizeObserver = new ResizeObserver(() => {
+            const container = document.getElementById('priceChart');
+            if (lwChart && container) {
+              lwChart.applyOptions({ width: container.clientWidth });
+            }
+          });
+          // Observer will be attached to the container after it's shown
+          document.addEventListener('lwChartReady', () => {
+            const container = document.getElementById('priceChart');
+            if (container) chartResizeObserver.observe(container);
+          });
+        }
+
         function placeBet(direction) {
           if (!selectedAsset) return showNotification("Select first!", true);
           currentBet = { asset: selectedAsset.symbol, direction, odds: parseFloat(document.getElementById('betOdds').value) || 2.2 };
@@ -7977,6 +8381,11 @@
             document.getElementById('clubHistoryView').style.display = 'none';
             document.getElementById('currentPriceDisplay').style.display = 'none';
             document.getElementById('chartFooter').style.display = 'none';
+            const tfBar = document.getElementById('chartTimeframeBar');
+            if (tfBar) tfBar.style.display = 'none';
+            const badge = document.getElementById('chartLiveBadge');
+            if (badge) badge.style.display = 'none';
+            destroyLightweightChart();
             if (chart) chart.destroy();
             chart = null;
           };
