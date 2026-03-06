@@ -7712,8 +7712,9 @@
 
         function filterSportsbookCategory(type) {
           currentSbFilter = type;
-          ['all', 'football', 'basketball'].forEach(cat => {
-            const el = document.getElementById('sbCat' + cat.charAt(0).toUpperCase() + cat.slice(1));
+          const catIdMap = { all: 'sbCatAll', football: 'sbCatFootball', basketball: 'sbCatBasketball' };
+          Object.entries(catIdMap).forEach(([cat, elId]) => {
+            const el = document.getElementById(elId);
             if (el) {
               const isActive = cat === type;
               el.style.background = isActive ? 'rgba(240,185,11,0.12)' : 'transparent';
@@ -7789,10 +7790,15 @@
           container.innerHTML = html;
         }
 
+        // Delay between sequential bet placements (allows tx to settle)
+        const SB_BET_PLACEMENT_DELAY_MS = 600;
+
         function buildMatchCard(team, isLive) {
           const odds = calcFallbackOdds(team.strength || 0.5);
           const locked = isBettingLocked(team);
           const isFootball = team.type === 'football';
+          // Use team index instead of symbol string in onclick to avoid any escaping issues
+          const teamIdx = (assetsData.sports || []).findIndex(t => t === team);
 
           const matchTimeStr = team.commenceTime
             ? new Date(team.commenceTime).toLocaleString('en-US', {
@@ -7801,12 +7807,12 @@
               })
             : 'Date TBD';
 
-          // Extract opponent from nextMatch string
+          // Extract opponent from nextMatch string - split on 'vs' and take what follows
           const opponent = team.nextMatch
-            ? team.nextMatch.replace(/^[A-Za-z]{3}\s+\d+\s+/, '').replace(/^vs\s+/i, '')
+            ? (team.nextMatch.split(/\bvs\b/i).pop() || '').trim() || 'TBD'
             : 'TBD';
 
-          const slipItem = sportsBetSlip.find(b => b.asset.symbol === team.symbol);
+          const slipItem = sportsBetSlip.find(b => b.asset === team);
 
           const makeOddsBtn = (type, label, oddsVal, color) => {
             const isSelected = slipItem && slipItem.betType === type;
@@ -7816,7 +7822,7 @@
                 <div style="font-size:0.95em; font-weight:700; color:#475569;">${oddsVal}×</div>
               </div>`;
             }
-            return `<div onclick="addToBetSlip('${team.symbol.replace(/'/g,"\\'")}','${type}',${oddsVal})"
+            return `<div onclick="addToBetSlip(${teamIdx},'${type}',${oddsVal})"
               style="flex:1; padding:9px 4px; text-align:center; background:${isSelected ? color + '28' : '#0a0d18'}; border:1px solid ${isSelected ? color : '#1e2535'}; border-radius:4px; cursor:pointer; min-width:54px; transition:all 0.15s;">
               <div style="font-size:0.68em; color:#94a3b8; margin-bottom:2px;">${label}</div>
               <div style="font-size:0.95em; font-weight:700; color:${isSelected ? color : '#e2e8f0'};">${oddsVal}×</div>
@@ -7844,11 +7850,15 @@
           `;
         }
 
-        function addToBetSlip(teamSymbol, betType, odds) {
-          const team = (assetsData.sports || []).find(t => t.symbol === teamSymbol);
+        function addToBetSlip(teamIdxOrSymbol, betType, odds) {
+          // Accept either numeric index or legacy symbol string
+          const sports = assetsData.sports || [];
+          const team = typeof teamIdxOrSymbol === 'number'
+            ? sports[teamIdxOrSymbol]
+            : sports.find(t => t.symbol === teamIdxOrSymbol);
           if (!team) return;
 
-          const existing = sportsBetSlip.findIndex(b => b.asset.symbol === teamSymbol);
+          const existing = sportsBetSlip.findIndex(b => b.asset === team);
           if (existing >= 0) {
             if (sportsBetSlip[existing].betType === betType) {
               sportsBetSlip.splice(existing, 1); // toggle off
@@ -7982,7 +7992,8 @@
             if (levDisp) levDisp.textContent = '1×';
 
             await openPosition(bet.betType);
-            await new Promise(r => setTimeout(r, 600));
+            // Wait between bets to allow each transaction to be processed
+            await new Promise(r => setTimeout(r, SB_BET_PLACEMENT_DELAY_MS));
           }
 
           updateSbActiveBets();
