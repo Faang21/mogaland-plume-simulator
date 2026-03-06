@@ -18,7 +18,7 @@ html,body{margin:0;padding:0;height:100%;background:#0b1020;font-family:Arial,sa
   #onlineBar{font-size:10px;padding:3px 7px;}
 }
 /* ── Virtual D-pad ── */
-#dpad{position:absolute;left:10px;bottom:14px;z-index:200;width:150px;height:150px;display:none;pointer-events:auto;}
+#dpad{position:absolute;left:10px;bottom:14px;z-index:300;width:150px;height:150px;display:none;pointer-events:auto;}
 #dpad button{position:absolute;width:46px;height:46px;border-radius:10px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);color:#e2e8f0;font-size:22px;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:manipulation;display:flex;align-items:center;justify-content:center;padding:0;}
 #dpad .dup   {top:0;  left:52px;}
 #dpad .ddown {top:102px;left:52px;}
@@ -80,7 +80,7 @@ kbd{padding:1px 4px;border-radius:4px;border:1px solid rgba(255,255,255,.22);bac
 #loadingBar{width:200px;height:5px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden;}
 #loadingFill{height:100%;width:0%;background:linear-gradient(90deg,#fbbf24,#f59e0b);border-radius:3px;transition:width .4s ease;}
 @keyframes loadingSpin{to{transform:rotate(360deg)}}
-#errOv{position:absolute;left:6px;bottom:6px;z-index:200;background:rgba(0,0,0,.75);border:1px solid rgba(255,100,100,.3);border-radius:8px;padding:8px 10px;max-width:600px;display:none;white-space:pre-wrap;font-size:11px;color:#fecaca;}
+#errOv{position:absolute;left:6px;bottom:170px;/* above D-pad: 14px+150px+6px */z-index:150;background:rgba(0,0,0,.75);border:1px solid rgba(255,100,100,.3);border-radius:8px;padding:8px 10px;max-width:calc(100% - 12px);display:none;white-space:pre-wrap;font-size:11px;color:#fecaca;pointer-events:none;}
 #minimap{position:absolute;right:6px;top:6px;width:170px;height:188px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.16);border-radius:10px;z-index:50;padding:7px;box-sizing:border-box;user-select:none;pointer-events:none;}
 #minimap .mmtitle{font-size:10px;opacity:.9;display:flex;justify-content:space-between;margin-bottom:5px;}
 #minimap canvas{width:100%;height:calc(100% - 34px);border-radius:7px;background:rgba(15,23,42,.35);border:1px solid rgba(255,255,255,.08);image-rendering:pixelated;}
@@ -373,7 +373,12 @@ kbd{padding:1px 4px;border-radius:4px;border:1px solid rgba(255,255,255,.22);bac
 'use strict';
 /* ── Error overlay ── */
 const errOv=document.getElementById('errOv');
-function showError(e){errOv.style.display='block';errOv.textContent=(e&&(e.stack||e.message))?e.stack||e.message:String(e);}
+const BENIGN_ERR_REGEX=/scrypt|SES lockdown|Removing.*intrinsic|Cannot redefine|code=NETWORK_ERROR|missing provider|underlying network changed|could not detect network|call revert exception|user rejected/i;
+function showError(e){
+  const msg=(e&&(e.stack||e.message))?e.stack||e.message:String(e);
+  if(BENIGN_ERR_REGEX.test(msg))return; // suppress known non-critical wallet/SES errors
+  errOv.style.display='block';errOv.textContent=msg;
+}
 window.addEventListener('error',e=>showError(e.error||e.message));
 window.addEventListener('unhandledrejection',e=>showError(e.reason));
 
@@ -4259,7 +4264,7 @@ function exitCity(scene){
 }
 
 /* minimap */
-const mmCanvas=document.getElementById('mmC'),mmCtx2=mmCanvas.getContext('2d');
+const mmCanvas=document.getElementById('mmC'),mmCtx2=mmCanvas.getContext('2d',{willReadFrequently:true});
 function w2mm(x,y){const wP=(WS.zone==='CITY'?CW:IW)*TILE,hP=(WS.zone==='CITY'?CH:IH)*TILE;return{mx:(x/wP)*mmCanvas.width,my:(y/hP)*mmCanvas.height};}
 function drawMM(pos){
   const ck=WS.zone==='CITY'?'CITY':'INT:'+WS.key;
@@ -5894,7 +5899,7 @@ const phaserCfg={
       loadProgress();updateHUD();drawCity(this);populateNav();
       if(WS.savedPos){
         const ax=clamp(WS.savedPos.x,20,CW*TILE-20),ay=clamp(WS.savedPos.y,20,CH*TILE-20);
-        const spawnTiles=currentCity===2?city2Tiles:cityTiles;
+        const spawnTiles=currentCity===3?city3Tiles:currentCity===2?city2Tiles:cityTiles;
         if(blocked(ax,ay,spawnTiles)){this.me.x=32*TILE;this.me.y=28*TILE;WS.savedPos={x:32*TILE,y:28*TILE};}
         else{this.me.x=ax;this.me.y=ay;}
       }
