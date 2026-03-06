@@ -6265,96 +6265,212 @@
       }
       else if (id === 'market') {
         content.innerHTML = `
-          <div style="max-width:1600px; margin:0 auto; padding:20px; color:white;">
-            <h2 style="text-align:center; margin-bottom:10px; color:#60a5fa;">Mogaland-Plume Market Prediction</h2>
-            <p style="text-align:center; opacity:0.8; margin-bottom:20px;">Live Trading Demo — Trade with leverage using Sepolia USDC!</p>
+          <div style="background:#0d1421; min-height:100vh; color:#e2e8f0; font-family:'Inter',sans-serif;">
 
-            <div style="display:flex; justify-content:center; align-items:center; gap:8px; margin-bottom:25px; flex-wrap:wrap;">
-              <button class="nav-btn active" data-tab="crypto">Crypto</button>
-              <button class="nav-btn" data-tab="stocks">Stocks</button>
-              <button class="nav-btn" data-tab="commodities">Commodities</button>
-              <button class="nav-btn" data-tab="forex">Forex</button>
-              <button class="nav-btn" data-tab="sports">Sports</button>
-              <button class="btn-primary" onclick="showVolumeLeaderboard()" style="margin-left:16px; background:linear-gradient(90deg,#fbbf24,#f59e0b); padding:10px 20px;">
-                🏆 Volume Leaderboard
-              </button>
+            <!-- A) TOP NAV BAR -->
+            <div style="background:#131722; border-bottom:1px solid #2a2d3a; padding:0 16px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; min-height:52px;">
+              <span style="font-weight:700; font-size:1.1em; color:#f0b90b; white-space:nowrap;">📊 Futures Pro</span>
+              <div style="display:flex; gap:4px; flex-wrap:wrap; flex:1;">
+                <button class="nav-btn active" data-tab="crypto" style="padding:6px 14px; border-radius:4px; border:none; background:rgba(240,185,11,0.15); color:#f0b90b; cursor:pointer; font-size:0.85em;">🪙 Crypto</button>
+                <button class="nav-btn" data-tab="stocks" style="padding:6px 14px; border-radius:4px; border:none; background:transparent; color:#94a3b8; cursor:pointer; font-size:0.85em;">📈 Stocks</button>
+                <button class="nav-btn" data-tab="commodities" style="padding:6px 14px; border-radius:4px; border:none; background:transparent; color:#94a3b8; cursor:pointer; font-size:0.85em;">🏅 Commodities</button>
+                <button class="nav-btn" data-tab="forex" style="padding:6px 14px; border-radius:4px; border:none; background:transparent; color:#94a3b8; cursor:pointer; font-size:0.85em;">💱 Forex</button>
+                <button class="nav-btn" data-tab="sports" style="padding:6px 14px; border-radius:4px; border:none; background:transparent; color:#94a3b8; cursor:pointer; font-size:0.85em;">⚽ Sports</button>
+              </div>
+              <div style="display:flex; align-items:center; gap:10px; white-space:nowrap;">
+                <span style="font-size:0.8em; color:#94a3b8;">Balance:</span>
+                <strong id="usdcBalanceTrading" style="color:#f0b90b; font-size:0.9em;">0.00 USDC</strong>
+                <button onclick="showVolumeLeaderboard()" style="padding:5px 12px; background:linear-gradient(90deg,#fbbf24,#f59e0b); color:#000; border:none; border-radius:4px; cursor:pointer; font-size:0.8em; font-weight:600;">🏆 Leaderboard</button>
+              </div>
             </div>
 
-            <div class="flex-container" style="gap:25px; align-items:stretch;">
-              <div class="card" style="flex:1; max-width:380px; overflow-y:auto; overflow-x:hidden; max-height:680px; padding:15px;">
-                <h3 style="color:#60a5fa; text-align:center;" id="assetListTitle">Assets</h3>
-                <div id="assetList" style="display:flex; flex-direction:column; gap:8px;"></div>
+            <!-- B) PRICE BANNER -->
+            <div id="priceBanner" style="display:none; background:#131722; border-bottom:1px solid #2a2d3a; padding:8px 16px; align-items:center; gap:20px; flex-wrap:wrap;">
+              <span id="selectedAsset" style="display:none;"></span>
+              <span id="viewTitle" style="display:none;"></span>
+              <span id="bannerSymbol" style="font-size:1.1em; font-weight:700; color:#fff; white-space:nowrap;"></span>
+              <div id="currentPriceDisplay" style="display:none; align-items:center; gap:8px;">
+                <strong id="currentPrice" style="font-size:1.4em; font-weight:700; color:#0ecb81;">-</strong>
+              </div>
+              <div style="display:flex; gap:16px; flex-wrap:wrap; font-size:0.78em;">
+                <div style="color:#94a3b8;">24h Change <span id="banner24hChange" style="font-weight:600;">-</span></div>
+                <div style="color:#94a3b8;">24h High <span id="banner24hHigh" style="color:#0ecb81;">-</span></div>
+                <div style="color:#94a3b8;">24h Low <span id="banner24hLow" style="color:#f6465d;">-</span></div>
+                <div style="color:#94a3b8;">24h Vol <span id="banner24hVol" style="color:#e2e8f0;">-</span></div>
+                <div style="color:#94a3b8;">Mark <span id="bannerMarkPrice" style="color:#e2e8f0;">-</span></div>
+                <div style="color:#94a3b8;">Index <span id="bannerIndexPrice" style="color:#e2e8f0;">-</span></div>
+              </div>
+              <span class="chart-live-badge" id="chartLiveBadge" style="display:none; margin-left:auto;">LIVE</span>
+            </div>
+
+            <!-- MAIN BODY -->
+            <div style="display:flex; height:calc(100vh - 52px - 200px); min-height:560px;">
+
+              <!-- C1) ASSET LIST PANEL -->
+              <div style="width:200px; min-width:160px; background:#131722; border-right:1px solid #2a2d3a; overflow-y:auto; flex-shrink:0;">
+                <div style="padding:8px 10px; border-bottom:1px solid #2a2d3a;">
+                  <span id="assetListTitle" style="font-size:0.8em; color:#94a3b8; font-weight:600; text-transform:uppercase; letter-spacing:0.05em;">Assets</span>
+                </div>
+                <div id="assetList" style="padding:4px;"></div>
               </div>
 
-              <div class="card" style="flex:2; min-height:580px; padding:20px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
-                  <h3 id="viewTitle" style="color:#60a5fa; margin:0;">Select Asset to Trade</h3>
-                  <span class="chart-live-badge" id="chartLiveBadge" style="display:none;">LIVE</span>
-                </div>
-                <div id="chartTimeframeBar" style="margin-bottom:8px; gap:5px; flex-wrap:wrap; align-items:center; display:none;">
-                  <button class="tf-btn" onclick="changeChartTimeframe('1m')">1m</button>
-                  <button class="tf-btn" onclick="changeChartTimeframe('5m')">5m</button>
-                  <button class="tf-btn" onclick="changeChartTimeframe('15m')">15m</button>
-                  <button class="tf-btn" onclick="changeChartTimeframe('1h')">1h</button>
-                  <button class="tf-btn" onclick="changeChartTimeframe('4h')">4h</button>
-                  <button class="tf-btn active" onclick="changeChartTimeframe('1d')">1d</button>
-                </div>
-                <div id="priceChart" style="min-height:420px; display:none;"></div>
-                <div id="clubHistoryView" style="display:none; color:#e2e8f0; font-size:1.05em; line-height:1.6; padding:15px; background:rgba(13,110,253,0.08); border-radius:12px;"></div>
-                <div id="chartFooter" style="text-align:center; margin-top:10px; font-size:0.85em; opacity:0.8; display:none;">
-                  Live price data • <span id="chartDataSource">TradingView</span>
-                </div>
-              </div>
+              <!-- CENTER: Chart + Order Book -->
+              <div style="flex:1; min-width:0; display:flex; flex-direction:column; background:#0d1421;">
 
-              <div class="card" style="flex:1; max-width:400px; padding:20px;">
-                <h3 style="color:#60a5fa;">Trade Position</h3>
-                <p>Asset: <strong id="selectedAsset">None</strong></p>
-                <p style="font-size:0.95em; opacity:0.8; margin-bottom:8px;">Your Balance: <strong id="usdcBalanceTrading">0.00 USDC</strong></p>
-                <div id="currentPriceDisplay" style="font-size:1.1em; margin-bottom:12px; display:none;">Current Price: <strong style="color:#10b981;" id="currentPrice">-</strong></div>
-                
-                <label style="display:block; margin:12px 0 6px;">Leverage</label>
-                <select id="leverageSelect" style="width:100%; padding:10px; background:#0f172a; border:1px solid var(--border); border-radius:8px; color:white;">
-                  <option value="1">1x (No Leverage)</option>
-                  <option value="2">2x Leverage</option>
-                  <option value="5" selected>5x Leverage</option>
-                  <option value="10">10x Leverage</option>
-                  <option value="20">20x Leverage</option>
-                </select>
+                <!-- C2) CHART AREA -->
+                <div style="flex:1; min-width:0; display:flex; flex-direction:column;">
 
-                <label style="display:block; margin:12px 0 6px;">Position Amount (USDC)</label>
-                <input type="number" id="positionAmount" placeholder="Enter USDC amount" min="1" step="0.01" style="width:100%; padding:12px; margin-bottom:12px; background:#0f172a; border:1px solid var(--border); border-radius:8px; color:white;"/>
-                
-                <div id="leverageInfo" style="font-size:0.85em; color:#94a3b8; margin-bottom:12px; padding:12px; background:rgba(13,110,253,0.1); border-radius:6px; display:none;">
-                  <div style="margin-bottom:4px;">💰 Entry Price: <span id="entryPrice" style="color:#10b981; font-weight:bold;">-</span></div>
-                  <div style="margin-bottom:4px;">📊 Leverage: <span id="leverageAmount" style="color:#60a5fa; font-weight:bold;">-</span></div>
-                  <div style="margin-bottom:4px;">📈 Trade Size: <span id="tradeSize" style="color:#10b981; font-weight:bold;">0</span> USDC</div>
-                  <div style="margin-bottom:4px;">💵 Required Margin: <span id="requiredMargin" style="color:#fbbf24; font-weight:bold;">0</span> USDC</div>
-                  <div style="margin-bottom:4px;">📉 Liquidation Price: <span id="liquidationPrice" style="color:#ef4444; font-weight:bold;">-</span></div>
-                  <div style="margin-top:8px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.1);">
-                    <div style="font-size:0.9em; opacity:0.9;">Estimated PNL at +/-1%: <span id="estimatedPnl" style="color:#10b981; font-weight:bold;">-</span></div>
+                  <!-- Timeframe bar -->
+                  <div id="chartTimeframeBar" style="display:none; background:#131722; border-bottom:1px solid #2a2d3a; padding:4px 8px; align-items:center; gap:4px; flex-wrap:wrap;">
+                    <button class="tf-btn" onclick="changeChartTimeframe('1m')" style="padding:3px 8px; background:transparent; border:1px solid #2a2d3a; color:#94a3b8; border-radius:3px; cursor:pointer; font-size:0.78em;">1m</button>
+                    <button class="tf-btn" onclick="changeChartTimeframe('5m')" style="padding:3px 8px; background:transparent; border:1px solid #2a2d3a; color:#94a3b8; border-radius:3px; cursor:pointer; font-size:0.78em;">5m</button>
+                    <button class="tf-btn" onclick="changeChartTimeframe('15m')" style="padding:3px 8px; background:transparent; border:1px solid #2a2d3a; color:#94a3b8; border-radius:3px; cursor:pointer; font-size:0.78em;">15m</button>
+                    <button class="tf-btn" onclick="changeChartTimeframe('1h')" style="padding:3px 8px; background:transparent; border:1px solid #2a2d3a; color:#94a3b8; border-radius:3px; cursor:pointer; font-size:0.78em;">1h</button>
+                    <button class="tf-btn" onclick="changeChartTimeframe('4h')" style="padding:3px 8px; background:transparent; border:1px solid #2a2d3a; color:#94a3b8; border-radius:3px; cursor:pointer; font-size:0.78em;">4h</button>
+                    <button class="tf-btn active" onclick="changeChartTimeframe('1d')" style="padding:3px 8px; background:rgba(240,185,11,0.15); border:1px solid #f0b90b; color:#f0b90b; border-radius:3px; cursor:pointer; font-size:0.78em;">1d</button>
+                    <span style="width:1px; height:14px; background:#2a2d3a; margin:0 4px;"></span>
+                    <button id="indicatorEMABtn" onclick="toggleIndicator('EMA')" style="padding:3px 8px; background:transparent; border:1px solid #2a2d3a; color:#94a3b8; border-radius:3px; cursor:pointer; font-size:0.78em;">EMA</button>
+                    <button id="indicatorBBBtn" onclick="toggleIndicator('BB')" style="padding:3px 8px; background:transparent; border:1px solid #2a2d3a; color:#94a3b8; border-radius:3px; cursor:pointer; font-size:0.78em;">BB</button>
+                    <button id="indicatorRSIBtn" onclick="toggleIndicator('RSI')" style="padding:3px 8px; background:transparent; border:1px solid #2a2d3a; color:#94a3b8; border-radius:3px; cursor:pointer; font-size:0.78em;">RSI</button>
+                    <span id="chartDataSource" style="margin-left:auto; font-size:0.72em; color:#64748b;"></span>
+                  </div>
+
+                  <!-- Chart row: chart + order book -->
+                  <div style="display:flex; flex:1; min-height:0;">
+
+                    <!-- Chart itself -->
+                    <div style="flex:1; min-width:0; display:flex; flex-direction:column;">
+                      <div id="priceChart" style="flex:1; min-height:380px; display:none;"></div>
+                      <div id="clubHistoryView" style="display:none; color:#e2e8f0; font-size:1.05em; line-height:1.6; padding:15px; background:rgba(13,110,253,0.08); border-radius:0;"></div>
+                      <div id="chartFooter" style="text-align:center; padding:4px 8px; font-size:0.75em; color:#64748b; display:none; border-top:1px solid #2a2d3a; background:#131722;">
+                        Live price data
+                      </div>
+                      <!-- RSI Panel -->
+                      <div id="rsiPanel" style="display:none; height:80px; background:#131722; border-top:1px solid #2a2d3a; padding:8px 12px; align-items:center;">
+                        <span id="rsiValue" style="font-size:0.85em; font-weight:600; color:#f0b90b;">RSI: -</span>
+                      </div>
+                    </div>
+
+                    <!-- D) ORDER BOOK SIDEBAR -->
+                    <div style="width:200px; min-width:180px; background:#131722; border-left:1px solid #2a2d3a; display:flex; flex-direction:column; flex-shrink:0;">
+                      <div style="padding:6px 8px; border-bottom:1px solid #2a2d3a; display:flex; align-items:center; justify-content:space-between;">
+                        <span style="font-size:0.78em; font-weight:600; color:#e2e8f0;">Order Book</span>
+                      </div>
+                      <div id="orderBookHeader" style="padding:2px 4px;"></div>
+                      <div id="orderBookAsks" style="flex:1; overflow-y:auto; display:flex; flex-direction:column; font-size:0.75em; font-family:monospace;"></div>
+                      <div style="padding:4px 8px; border-top:1px solid #2a2d3a; border-bottom:1px solid #2a2d3a; display:flex; justify-content:space-between; align-items:center; font-size:0.75em;">
+                        <span style="color:#64748b;">Spread</span>
+                        <span id="orderBookSpread" style="color:#e2e8f0; font-weight:600; font-family:monospace;">-</span>
+                      </div>
+                      <div id="orderBookBids" style="flex:1; overflow-y:auto; display:flex; flex-direction:column; font-size:0.75em; font-family:monospace;"></div>
+                    </div>
+
+                  </div><!-- end chart row -->
+                </div><!-- end C2 chart area -->
+
+              </div><!-- end center column -->
+
+              <!-- C3) TRADE PANEL -->
+              <div style="width:280px; min-width:260px; background:#131722; border-left:1px solid #2a2d3a; display:flex; flex-direction:column; overflow-y:auto; flex-shrink:0;">
+
+                <!-- Margin mode -->
+                <div style="padding:8px 10px; border-bottom:1px solid #2a2d3a; display:flex; gap:4px;">
+                  <button id="marginModeIsolated" onclick="setMarginMode('isolated')" style="flex:1; padding:5px; background:#1e222d; color:#fff; border:1px solid #2a2d3a; border-radius:4px; cursor:pointer; font-size:0.78em; font-weight:600;">Isolated</button>
+                  <button id="marginModeCross" onclick="setMarginMode('cross')" style="flex:1; padding:5px; background:#0d1421; color:#94a3b8; border:1px solid #2a2d3a; border-radius:4px; cursor:pointer; font-size:0.78em; font-weight:400;">Cross</button>
+                </div>
+
+                <!-- Leverage -->
+                <div style="padding:10px 12px; border-bottom:1px solid #2a2d3a;">
+                  <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                    <span style="font-size:0.8em; color:#94a3b8;">Leverage</span>
+                    <span id="leverageDisplay" style="color:#f0b90b; font-weight:700; font-size:0.9em;">5×</span>
+                  </div>
+                  <input type="range" id="leverageSlider" min="1" max="100" value="5" oninput="updateLeverageSlider(this.value)" style="width:100%; accent-color:#f0b90b; cursor:pointer;"/>
+                  <div style="display:flex; justify-content:space-between; font-size:0.68em; color:#64748b; margin-top:2px;"><span>1×</span><span>25×</span><span>50×</span><span>100×</span></div>
+                  <!-- Hidden select for JS compatibility -->
+                  <select id="leverageSelect" style="display:none;">
+                    <option value="1">1x</option>
+                    <option value="2">2x</option>
+                    <option value="5" selected>5x</option>
+                    <option value="10">10x</option>
+                    <option value="20">20x</option>
+                    <option value="25">25x</option>
+                    <option value="50">50x</option>
+                    <option value="75">75x</option>
+                    <option value="100">100x</option>
+                  </select>
+                </div>
+
+                <!-- Amount -->
+                <div style="padding:10px 12px; border-bottom:1px solid #2a2d3a;">
+                  <div style="display:flex; justify-content:space-between; margin-bottom:6px; align-items:center;">
+                    <span style="font-size:0.8em; color:#94a3b8;">Amount (USDC)</span>
+                    <span style="font-size:0.75em; color:#94a3b8;">Avail: <span id="availableBalanceInline" style="color:#f0b90b;">0.00</span></span>
+                  </div>
+                  <input type="number" id="positionAmount" placeholder="0.00" min="1" step="0.01" style="width:100%; padding:8px 10px; background:#0d1421; border:1px solid #2a2d3a; border-radius:4px; color:#fff; font-size:0.9em; box-sizing:border-box;"/>
+                  <div style="display:flex; gap:4px; margin-top:6px;">
+                    <button onclick="setAmountPercent(25)" style="flex:1; padding:4px; background:#0d1421; border:1px solid #2a2d3a; color:#94a3b8; border-radius:3px; cursor:pointer; font-size:0.72em;">25%</button>
+                    <button onclick="setAmountPercent(50)" style="flex:1; padding:4px; background:#0d1421; border:1px solid #2a2d3a; color:#94a3b8; border-radius:3px; cursor:pointer; font-size:0.72em;">50%</button>
+                    <button onclick="setAmountPercent(75)" style="flex:1; padding:4px; background:#0d1421; border:1px solid #2a2d3a; color:#94a3b8; border-radius:3px; cursor:pointer; font-size:0.72em;">75%</button>
+                    <button onclick="setAmountPercent(100)" style="flex:1; padding:4px; background:#0d1421; border:1px solid #2a2d3a; color:#94a3b8; border-radius:3px; cursor:pointer; font-size:0.72em;">Max</button>
                   </div>
                 </div>
 
-                <div style="margin:16px 0; display:flex; gap:10px;">
-                  <button class="btn-primary" style="flex:1; background:#10b981;" onclick="openPosition('long')">🔼 LONG</button>
-                  <button class="btn-primary" style="flex:1; background:#ef4444;" onclick="openPosition('short')">🔽 SHORT</button>
+                <!-- Order info -->
+                <div id="leverageInfo" style="display:none; padding:8px 12px; border-bottom:1px solid #2a2d3a; font-size:0.75em; color:#94a3b8;">
+                  <div style="display:flex; justify-content:space-between; margin-bottom:3px;"><span>Entry Price</span><span id="entryPrice" style="color:#e2e8f0;">-</span></div>
+                  <div style="display:flex; justify-content:space-between; margin-bottom:3px;"><span>Leverage</span><span id="leverageAmount" style="color:#f0b90b;">-</span></div>
+                  <div style="display:flex; justify-content:space-between; margin-bottom:3px;"><span>Trade Size</span><span id="tradeSize" style="color:#e2e8f0;">-</span></div>
+                  <div style="display:flex; justify-content:space-between; margin-bottom:3px;"><span>Margin</span><span id="requiredMargin" style="color:#e2e8f0;">-</span></div>
+                  <div style="margin-top:4px; padding-top:4px; border-top:1px solid #2a2d3a;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:3px;"><span style="color:#0ecb81;">Liq (Long)</span><span id="liquidationPriceLong" style="color:#f6465d;">-</span></div>
+                    <div style="display:flex; justify-content:space-between; margin-bottom:3px;"><span style="color:#f6465d;">Liq (Short)</span><span id="liquidationPriceShort" style="color:#f6465d;">-</span></div>
+                    <!-- backward compat hidden element -->
+                    <span id="liquidationPrice" style="display:none;"></span>
+                  </div>
+                  <div style="display:flex; justify-content:space-between; margin-top:4px; padding-top:4px; border-top:1px solid #2a2d3a;"><span>Est. PNL ±1%</span><span id="estimatedPnl" style="color:#f0b90b;">-</span></div>
                 </div>
 
-                <p id="tradeStatus" style="margin-top:15px; font-weight:bold; min-height:40px; font-size:0.9em;"></p>
-                
-                <p style="font-size:0.85em; color:#f59e0b; margin-top:8px;">⛽ Gas Fee: ${GAS_FEE_ETH} ${getNetworkCurrency()} per trade</p>
-
-                <div style="margin-top:20px;">
-                  <h4 style="color:#60a5fa; margin-bottom:8px;">Open Positions</h4>
-                  <div id="openPositions" style="font-size:0.85em; max-height:120px; overflow-y:auto; color:#94a3b8;"></div>
+                <!-- Long/Short buttons -->
+                <div style="padding:10px 12px; display:flex; gap:6px;">
+                  <button onclick="openPosition('long')" style="flex:1; padding:10px; background:#0ecb81; color:#000; border:none; border-radius:4px; cursor:pointer; font-weight:700; font-size:0.85em;">▲ Long</button>
+                  <button onclick="openPosition('short')" style="flex:1; padding:10px; background:#f6465d; color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:700; font-size:0.85em;">▼ Short</button>
                 </div>
 
-                <div style="margin-top:20px;">
-                  <h4 style="color:#60a5fa; margin-bottom:8px;">Trade History</h4>
-                  <div id="tradeHistory" style="font-size:0.85em; max-height:120px; overflow-y:auto; color:#94a3b8;"></div>
+                <p id="tradeStatus" style="margin:0; padding:6px 12px; font-size:0.8em; font-weight:600; min-height:30px; color:#f0b90b;"></p>
+                <p style="margin:0; padding:4px 12px 8px; font-size:0.72em; color:#64748b;">⛽ Gas: ${GAS_FEE_ETH} ${getNetworkCurrency()}</p>
+
+              </div><!-- end trade panel -->
+
+            </div><!-- end main body flex row -->
+
+            <!-- E) BOTTOM POSITIONS TABLE -->
+            <div style="background:#131722; border-top:1px solid #2a2d3a; min-height:160px; display:flex; flex-direction:column;">
+
+              <!-- Tab bar -->
+              <div style="display:flex; align-items:center; border-bottom:1px solid #2a2d3a; padding:0 12px;">
+                <button id="posTabPositions" onclick="switchPosTab('positions')" style="padding:10px 14px; background:transparent; border:none; border-bottom:2px solid #f0b90b; color:#fff; cursor:pointer; font-size:0.82em; font-weight:600; white-space:nowrap;">
+                  Positions (<span id="openPositionCount">0</span>)
+                </button>
+                <button id="posTabHistory" onclick="switchPosTab('history')" style="padding:10px 14px; background:transparent; border:none; border-bottom:2px solid transparent; color:#94a3b8; cursor:pointer; font-size:0.82em; white-space:nowrap;">
+                  Trade History
+                </button>
+                <div style="margin-left:auto; display:flex; gap:16px; font-size:0.75em; padding-right:4px;">
+                  <span style="color:#94a3b8;">Unrealized PNL: <span id="totalUnrealizedPnl" style="font-weight:700; color:#0ecb81;">$0.00</span></span>
+                  <span style="color:#94a3b8;">Margin Used: <span id="totalMarginUsed" style="color:#e2e8f0;">$0.00</span></span>
+                  <span style="color:#94a3b8;">Available: <span id="availableBalance" style="color:#e2e8f0;">$0.00</span></span>
                 </div>
               </div>
-            </div>
+
+              <div id="positionsPanel" style="overflow-x:auto; flex:1;">
+                <div id="openPositions" style="min-width:600px;"></div>
+              </div>
+              <div id="historyPanel" style="display:none; overflow-x:auto; flex:1;">
+                <div id="tradeHistory" style="min-width:600px;"></div>
+              </div>
+
+            </div><!-- end bottom positions -->
+
           </div>
         `;
 
@@ -6670,7 +6786,295 @@
         let lwKlineWebSocket = null;
         let currentChartTimeframe = '1d';
         // Note: tradingUSDCBalance is now declared in global scope
-        
+
+        // === NEW BINANCE-STYLE UI FUNCTIONS ===
+
+        // Leverage slider sync
+        function updateLeverageSlider(value) {
+          const v = parseInt(value);
+          const lev = document.getElementById('leverageDisplay');
+          if (lev) lev.textContent = v + '×';
+          const sel = document.getElementById('leverageSelect');
+          if (sel) {
+            let found = false;
+            for (let opt of sel.options) {
+              if (parseInt(opt.value) === v) { sel.value = v; found = true; break; }
+            }
+            if (!found) {
+              const opt = document.createElement('option');
+              opt.value = v; opt.textContent = v + 'x';
+              sel.appendChild(opt);
+              sel.value = v;
+            }
+          }
+          updateLeverageInfo();
+        }
+
+        // Set amount as % of available balance
+        function setAmountPercent(pct) {
+          const input = document.getElementById('positionAmount');
+          if (input) {
+            const amount = (tradingUSDCBalance * pct / 100).toFixed(2);
+            input.value = amount;
+            updateLeverageInfo();
+          }
+        }
+
+        // Margin mode toggle
+        let currentMarginMode = 'isolated';
+        function setMarginMode(mode) {
+          currentMarginMode = mode;
+          const iBtn = document.getElementById('marginModeIsolated');
+          const cBtn = document.getElementById('marginModeCross');
+          if (iBtn) { iBtn.style.background = mode === 'isolated' ? '#1e222d' : '#0d1421'; iBtn.style.color = mode === 'isolated' ? '#fff' : '#94a3b8'; iBtn.style.fontWeight = mode === 'isolated' ? '600' : '400'; }
+          if (cBtn) { cBtn.style.background = mode === 'cross' ? '#1e222d' : '#0d1421'; cBtn.style.color = mode === 'cross' ? '#fff' : '#94a3b8'; cBtn.style.fontWeight = mode === 'cross' ? '600' : '400'; }
+        }
+
+        // Switch positions/history tab
+        function switchPosTab(tab) {
+          const posPanel = document.getElementById('positionsPanel');
+          const histPanel = document.getElementById('historyPanel');
+          const posBtn = document.getElementById('posTabPositions');
+          const histBtn = document.getElementById('posTabHistory');
+          if (!posPanel || !histPanel) return;
+          if (tab === 'positions') {
+            posPanel.style.display = 'block'; histPanel.style.display = 'none';
+            if (posBtn) { posBtn.style.borderBottom = '2px solid #f0b90b'; posBtn.style.color = '#fff'; }
+            if (histBtn) { histBtn.style.borderBottom = '2px solid transparent'; histBtn.style.color = '#94a3b8'; }
+          } else {
+            posPanel.style.display = 'none'; histPanel.style.display = 'block';
+            if (histBtn) { histBtn.style.borderBottom = '2px solid #f0b90b'; histBtn.style.color = '#fff'; }
+            if (posBtn) { posBtn.style.borderBottom = '2px solid transparent'; posBtn.style.color = '#94a3b8'; }
+            updateTradeHistory();
+          }
+        }
+
+        // Order book state
+        let orderBookInterval = null;
+
+        // Named constants for order book simulation
+        const ORDER_BOOK_DEPTH_RATIO = 0.002;  // 0.2% price range from mid for full depth
+        const ORDER_BOOK_LEVELS = 8;           // Number of bid/ask levels to display
+
+        function getTickInfo(price) {
+          if (price < 1)     return { tick: 0.00001, decimals: 5 };
+          if (price < 10)    return { tick: 0.0001,  decimals: 4 };
+          if (price < 100)   return { tick: 0.001,   decimals: 3 };
+          if (price < 1000)  return { tick: 0.01,    decimals: 2 };
+          if (price < 10000) return { tick: 0.1,     decimals: 2 };
+          return { tick: 1, decimals: 2 };
+        }
+
+        function renderOrderBook(price, volatility) {
+          const asksEl = document.getElementById('orderBookAsks');
+          const bidsEl = document.getElementById('orderBookBids');
+          const spreadEl = document.getElementById('orderBookSpread');
+          if (!asksEl || !bidsEl || !price) return;
+
+          const spread = price * (volatility || 0.001) * 0.5;
+          const { decimals: priceDecimals } = getTickInfo(price);
+          const fmt = (p) => p.toLocaleString(undefined, {minimumFractionDigits: priceDecimals, maximumFractionDigits: priceDecimals});
+
+          const askRows = [];
+          const bidRows = [];
+          let cumAsk = 0, cumBid = 0;
+          const maxDepth = price * ORDER_BOOK_DEPTH_RATIO;
+
+          for (let i = 0; i < ORDER_BOOK_LEVELS; i++) {
+            const pAsk = price + spread + (i * maxDepth / 8) + Math.random() * (maxDepth / 16);
+            const qAsk = (0.1 + Math.random() * 2).toFixed(3);
+            cumAsk += parseFloat(qAsk);
+            const barWidth = Math.min(100, (parseFloat(qAsk) / 3) * 100);
+            askRows.push({price: pAsk, qty: qAsk, cum: cumAsk.toFixed(3), bar: barWidth});
+
+            const pBid = price - spread - (i * maxDepth / 8) - Math.random() * (maxDepth / 16);
+            const qBid = (0.1 + Math.random() * 2).toFixed(3);
+            cumBid += parseFloat(qBid);
+            const bBarWidth = Math.min(100, (parseFloat(qBid) / 3) * 100);
+            bidRows.push({price: pBid, qty: qBid, cum: cumBid.toFixed(3), bar: bBarWidth});
+          }
+
+          asksEl.innerHTML = askRows.slice().reverse().map(row => `
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:1px 4px; position:relative; cursor:pointer;" onmouseover="this.style.background='#1e222d'" onmouseout="this.style.background='transparent'">
+              <div style="position:absolute; right:0; top:0; bottom:0; background:rgba(246,70,93,0.1); width:${row.bar}%;"></div>
+              <span style="color:#f6465d; font-weight:500; z-index:1;">${fmt(row.price)}</span>
+              <span style="color:#94a3b8; z-index:1;">${row.qty}</span>
+              <span style="color:#64748b; font-size:0.7em; z-index:1;">${row.cum}</span>
+            </div>
+          `).join('');
+
+          bidsEl.innerHTML = bidRows.map(row => `
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:1px 4px; position:relative; cursor:pointer;" onmouseover="this.style.background='#1e222d'" onmouseout="this.style.background='transparent'">
+              <div style="position:absolute; right:0; top:0; bottom:0; background:rgba(14,203,129,0.1); width:${row.bar}%;"></div>
+              <span style="color:#0ecb81; font-weight:500; z-index:1;">${fmt(row.price)}</span>
+              <span style="color:#94a3b8; z-index:1;">${row.qty}</span>
+              <span style="color:#64748b; font-size:0.7em; z-index:1;">${row.cum}</span>
+            </div>
+          `).join('');
+
+          if (spreadEl) spreadEl.textContent = (spread * 2).toLocaleString(undefined, {minimumFractionDigits: priceDecimals, maximumFractionDigits: priceDecimals});
+
+          const hdr = document.getElementById('orderBookHeader');
+          if (hdr && hdr.innerHTML === '') hdr.innerHTML = `<div style="display:flex; justify-content:space-between; padding:2px 4px; font-size:0.7em; color:#64748b;"><span>Price(USDC)</span><span>Size</span><span>Total</span></div>`;
+        }
+
+        function startOrderBookUpdates() {
+          stopOrderBookUpdates();
+          if (selectedAsset && selectedAsset.basePrice) {
+            renderOrderBook(selectedAsset.basePrice, selectedAsset.volatility);
+            orderBookInterval = setInterval(() => {
+              // Guard: stop if the order book element was removed (section changed)
+              if (!document.getElementById('orderBookBids')) { stopOrderBookUpdates(); return; }
+              const price = priceHistory.length > 0 ? priceHistory[priceHistory.length-1]?.c : selectedAsset?.basePrice;
+              renderOrderBook(price || selectedAsset?.basePrice, selectedAsset?.volatility);
+            }, 2000);
+          }
+        }
+
+        function stopOrderBookUpdates() {
+          if (orderBookInterval) { clearInterval(orderBookInterval); orderBookInterval = null; }
+        }
+
+        // PNL Summary update
+        function updatePnlSummary() {
+          let totalUnrealizedPnl = 0;
+          let totalMarginUsed = 0;
+
+          openPositions.forEach(pos => {
+            if (pos.isSportsBet) { totalMarginUsed += pos.amount; return; }
+            let currentPrice = pos.asset.basePrice || pos.entryPrice;
+            if (selectedAsset && selectedAsset.symbol === pos.asset.symbol && priceHistory.length > 0) {
+              currentPrice = priceHistory[priceHistory.length - 1]?.c || currentPrice;
+            }
+            const priceDiff = currentPrice - pos.entryPrice;
+            const pnl = pos.type === 'long' ? priceDiff * pos.leverage * (pos.amount / pos.entryPrice) :
+                                              -priceDiff * pos.leverage * (pos.amount / pos.entryPrice);
+            totalUnrealizedPnl += pnl;
+            totalMarginUsed += pos.amount;
+          });
+
+          const pnlEl = document.getElementById('totalUnrealizedPnl');
+          const marginEl = document.getElementById('totalMarginUsed');
+          const availEl = document.getElementById('availableBalance');
+          const countEl = document.getElementById('openPositionCount');
+          const availInline = document.getElementById('availableBalanceInline');
+
+          if (pnlEl) {
+            pnlEl.textContent = (totalUnrealizedPnl >= 0 ? '+' : '') + '$' + Math.abs(totalUnrealizedPnl).toFixed(2);
+            pnlEl.style.color = totalUnrealizedPnl >= 0 ? '#0ecb81' : '#f6465d';
+          }
+          if (marginEl) marginEl.textContent = '$' + totalMarginUsed.toFixed(2);
+          if (availEl) availEl.textContent = '$' + tradingUSDCBalance.toFixed(2);
+          if (availInline) availInline.textContent = tradingUSDCBalance.toFixed(2);
+          if (countEl) countEl.textContent = openPositions.filter(p => !p.isSportsBet).length;
+        }
+
+        // Indicator state
+        const activeIndicators = new Set();
+        let emaLine20 = null, emaLine50 = null;
+
+        function toggleIndicator(name) {
+          const btn = document.getElementById('indicator' + name + 'Btn');
+          if (activeIndicators.has(name)) {
+            activeIndicators.delete(name);
+            if (btn) { btn.style.background = ''; btn.style.color = '#94a3b8'; btn.style.borderColor = '#2a2d3a'; }
+            if (name === 'EMA') {
+              if (emaLine20 && lwChart) { try { lwChart.removeSeries(emaLine20); } catch(e){} emaLine20 = null; }
+              if (emaLine50 && lwChart) { try { lwChart.removeSeries(emaLine50); } catch(e){} emaLine50 = null; }
+            }
+            if (name === 'RSI') {
+              const rsiPanel = document.getElementById('rsiPanel');
+              if (rsiPanel) rsiPanel.style.display = 'none';
+            }
+          } else {
+            activeIndicators.add(name);
+            if (btn) { btn.style.background = '#1e3a5f'; btn.style.color = '#60a5fa'; btn.style.borderColor = '#60a5fa'; }
+            if (name === 'EMA' && lwChart && lwCandleSeries) {
+              addEMALines();
+            }
+            if (name === 'RSI') {
+              const rsiPanel = document.getElementById('rsiPanel');
+              if (rsiPanel) { rsiPanel.style.display = 'flex'; updateRSIDisplay(); }
+            }
+          }
+        }
+
+        function calculateEMA(data, period) {
+          if (!data || data.length < period) return [];
+          // Filter out entries with null/undefined close values
+          const valid = data.filter(d => d && typeof d.close === 'number' && !isNaN(d.close) && d.time != null);
+          if (valid.length < period) return [];
+          const k = 2 / (period + 1);
+          const result = [];
+          let ema = valid.slice(0, period).reduce((sum, d) => sum + d.close, 0) / period;
+          result.push({ time: valid[period - 1].time, value: ema });
+          for (let i = period; i < valid.length; i++) {
+            ema = valid[i].close * k + ema * (1 - k);
+            result.push({ time: valid[i].time, value: ema });
+          }
+          return result;
+        }
+
+        function addEMALines() {
+          if (!lwChart || !lwCandleSeries) return;
+          const data = priceHistory.map(p => ({ time: Math.floor(p.x / 1000), close: p.c }));
+          if (!data || data.length < 20) return;
+
+          const ema20Data = calculateEMA(data, 20);
+          const ema50Data = calculateEMA(data, Math.min(50, data.length));
+
+          if (ema20Data.length > 0) {
+            try {
+              if (emaLine20) { lwChart.removeSeries(emaLine20); emaLine20 = null; }
+              emaLine20 = lwChart.addLineSeries({ color: '#f0b90b', lineWidth: 1, priceLineVisible: false, lastValueVisible: false });
+              emaLine20.setData(ema20Data);
+            } catch(e) { console.warn('EMA20 error:', e); }
+          }
+          if (ema50Data.length > 0) {
+            try {
+              if (emaLine50) { lwChart.removeSeries(emaLine50); emaLine50 = null; }
+              emaLine50 = lwChart.addLineSeries({ color: '#9b59b6', lineWidth: 1, priceLineVisible: false, lastValueVisible: false });
+              emaLine50.setData(ema50Data);
+            } catch(e) { console.warn('EMA50 error:', e); }
+          }
+        }
+
+        function updateRSIDisplay() {
+          const RSI_PERIOD = 14;
+          if (!priceHistory || priceHistory.length < RSI_PERIOD + 1) return;
+          const rsiEl = document.getElementById('rsiValue');
+          if (!rsiEl) return;
+
+          const closes = priceHistory.map(p => p.c).filter(c => typeof c === 'number' && !isNaN(c));
+          if (closes.length < RSI_PERIOD + 1) return;
+
+          // Step 1: seed using simple average of first RSI_PERIOD gains/losses
+          let avgGain = 0, avgLoss = 0;
+          for (let i = 1; i <= RSI_PERIOD; i++) {
+            const diff = closes[i] - closes[i - 1];
+            if (diff > 0) avgGain += diff;
+            else avgLoss -= diff;
+          }
+          avgGain /= RSI_PERIOD;
+          avgLoss /= RSI_PERIOD;
+
+          // Step 2: use Wilder's smoothing for remaining periods
+          for (let i = RSI_PERIOD + 1; i < closes.length; i++) {
+            const diff = closes[i] - closes[i - 1];
+            const gain = diff > 0 ? diff : 0;
+            const loss = diff < 0 ? -diff : 0;
+            avgGain = (avgGain * (RSI_PERIOD - 1) + gain) / RSI_PERIOD;
+            avgLoss = (avgLoss * (RSI_PERIOD - 1) + loss) / RSI_PERIOD;
+          }
+
+          const rs = avgLoss === 0 ? Infinity : avgGain / avgLoss;
+          const rsi = avgLoss === 0 ? 100 : 100 - (100 / (1 + rs));
+
+          const color = rsi > 70 ? '#f6465d' : rsi < 30 ? '#0ecb81' : '#f0b90b';
+          rsiEl.textContent = 'RSI: ' + rsi.toFixed(1);
+          rsiEl.style.color = color;
+        }
+
         // Fetch real USDC balance for trading
         async function fetchTradingBalance() {
           if (!provider || !userAddress) {
@@ -6713,34 +7117,41 @@
         function updateLeverageInfo() {
           const amount = parseFloat(document.getElementById('positionAmount')?.value || 0);
           const leverage = parseInt(document.getElementById('leverageSelect')?.value || 1);
-          
+
           if (amount > 0 && selectedAsset) {
             const tradeSize = amount * leverage;
             const entryPrice = selectedAsset.basePrice || 0;
-            
-            // Calculate liquidation price based on leverage
-            // For long: liquidation when price drops by (100% / leverage)
-            // For short: liquidation when price rises by (100% / leverage)
-            const liquidationThreshold = LIQUIDATION_CONFIG.LIQUIDATION_THRESHOLD_PERCENT / 100; // 0.15 = 15%
+
+            const liquidationThreshold = LIQUIDATION_CONFIG.LIQUIDATION_THRESHOLD_PERCENT / 100;
             const priceChangeToLiquidation = liquidationThreshold / leverage;
-            const longLiquidationPrice = entryPrice * (1 - priceChangeToLiquidation);
-            const shortLiquidationPrice = entryPrice * (1 + priceChangeToLiquidation);
-            
-            // Calculate estimated PNL at +/-1% price movement
-            const priceChange1Percent = 0.01;
-            const pnlPercentPerLeverage = priceChange1Percent * leverage * 100; // In percentage
-            const pnlUSDC = amount * pnlPercentPerLeverage / 100;
-            
-            // Update display
-            document.getElementById('tradeSize').textContent = tradeSize.toFixed(2);
-            document.getElementById('requiredMargin').textContent = amount.toFixed(2);
-            document.getElementById('leverageAmount').textContent = leverage + 'x';
-            document.getElementById('entryPrice').textContent = entryPrice > 0 ? `$${entryPrice.toLocaleString()}` : '-';
-            document.getElementById('liquidationPrice').textContent = entryPrice > 0 
-              ? `Long: $${longLiquidationPrice.toFixed(2)} | Short: $${shortLiquidationPrice.toFixed(2)}`
-              : '-';
-            document.getElementById('estimatedPnl').textContent = `±$${pnlUSDC.toFixed(2)} (${pnlPercentPerLeverage.toFixed(1)}%)`;
+            const longLiqPrice = entryPrice * (1 - priceChangeToLiquidation);
+            const shortLiqPrice = entryPrice * (1 + priceChangeToLiquidation);
+
+            const pnlUSDC = amount * 0.01 * leverage;
+            const pnlPct = (pnlUSDC / amount) * 100;
+
+            const fmt2 = (n) => n.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            const setEl = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+
+            setEl('tradeSize', fmt2(tradeSize) + ' USDC');
+            setEl('requiredMargin', fmt2(amount) + ' USDC');
+            setEl('leverageAmount', leverage + 'x');
+            setEl('entryPrice', entryPrice > 0 ? '$' + entryPrice.toLocaleString() : '-');
+
+            const liqEl = document.getElementById('liquidationPrice');
+            if (liqEl) liqEl.textContent = entryPrice > 0 ? 'L:$' + fmt2(longLiqPrice) + ' S:$' + fmt2(shortLiqPrice) : '-';
+
+            setEl('liquidationPriceLong', entryPrice > 0 ? '$' + fmt2(longLiqPrice) : '-');
+            setEl('liquidationPriceShort', entryPrice > 0 ? '$' + fmt2(shortLiqPrice) : '-');
+            setEl('estimatedPnl', '±$' + fmt2(pnlUSDC) + ' (' + pnlPct.toFixed(1) + '%)');
+
             document.getElementById('leverageInfo').style.display = 'block';
+
+            setEl('leverageDisplay', leverage + '×');
+            const slider = document.getElementById('leverageSlider');
+            if (slider && parseInt(slider.value) !== leverage) slider.value = leverage;
+
+            setEl('bannerMarkPrice', entryPrice > 0 ? '$' + entryPrice.toLocaleString() : '-');
           } else {
             document.getElementById('leverageInfo').style.display = 'none';
           }
@@ -6920,115 +7331,162 @@
         function updatePositionsDisplay() {
           const container = document.getElementById('openPositions');
           if (!container) return;
-          
+
           if (openPositions.length === 0) {
-            container.innerHTML = '<div style="opacity:0.6;">No open positions</div>';
+            container.innerHTML = '<div style="color:#94a3b8; font-size:0.85em; padding:16px 20px;">No open positions</div>';
+            updatePnlSummary();
             return;
           }
-          
-          container.innerHTML = openPositions.map((pos, idx) => {
-            // Handle sports bets
+
+          let html = `
+            <table style="width:100%; border-collapse:collapse; font-size:0.8em; color:#e2e8f0;">
+              <thead>
+                <tr style="color:#94a3b8; font-size:0.75em; border-bottom:1px solid #2a2d3a;">
+                  <th style="padding:6px 12px; text-align:left; font-weight:400;">Symbol</th>
+                  <th style="padding:6px 8px; text-align:right; font-weight:400;">Size (USDC)</th>
+                  <th style="padding:6px 8px; text-align:right; font-weight:400;">Entry Price</th>
+                  <th style="padding:6px 8px; text-align:right; font-weight:400;">Mark Price</th>
+                  <th style="padding:6px 8px; text-align:right; font-weight:400;">Liq. Price</th>
+                  <th style="padding:6px 8px; text-align:right; font-weight:400;">Margin</th>
+                  <th style="padding:6px 8px; text-align:right; font-weight:400;">Unrealized PNL (ROI%)</th>
+                  <th style="padding:6px 8px; text-align:right; font-weight:400;">Margin Ratio</th>
+                  <th style="padding:6px 12px; text-align:right; font-weight:400;">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+          `;
+
+          openPositions.forEach((pos, idx) => {
             if (pos.isSportsBet) {
               const betType = pos.type === 'long' ? 'WIN' : 'LOSE';
-              return `
-                <div style="padding:8px; background:rgba(251,191,36,0.1); border-radius:6px; margin-bottom:6px;">
-                  <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
-                    <span><strong>${pos.asset.symbol}</strong> ${pos.leverage}x</span>
-                    <span style="color:#fbbf24">🏆 ${betType}</span>
-                  </div>
-                  <div style="font-size:0.85em; opacity:0.8;">
-                    Bet: ${pos.amount.toFixed(2)} USDC
-                  </div>
-                  <div style="color:#fbbf24; font-weight:bold; margin-top:4px;">
-                    ⏳ Waiting for match result...
-                  </div>
-                </div>
+              html += `
+                <tr style="border-bottom:1px solid #1e222d;">
+                  <td style="padding:8px 12px;">
+                    <div style="font-weight:600; color:#f0b90b;">⚽ ${pos.asset.symbol}</div>
+                    <div style="font-size:0.75em; color:#94a3b8;">Sports Bet • ${betType}</div>
+                  </td>
+                  <td style="padding:8px; text-align:right;">${pos.amount.toFixed(2)}</td>
+                  <td style="padding:8px; text-align:right; color:#94a3b8;">-</td>
+                  <td style="padding:8px; text-align:right; color:#94a3b8;">-</td>
+                  <td style="padding:8px; text-align:right; color:#94a3b8;">-</td>
+                  <td style="padding:8px; text-align:right;">${pos.amount.toFixed(2)}</td>
+                  <td style="padding:8px; text-align:right; color:#f0b90b;">⏳ Pending</td>
+                  <td style="padding:8px; text-align:right; color:#94a3b8;">-</td>
+                  <td style="padding:8px 12px; text-align:right;">
+                    <span style="color:#94a3b8; font-size:0.8em;">Auto-settle</span>
+                  </td>
+                </tr>
               `;
+              return;
             }
-            
-            // Handle regular trading positions
-            // Use the most up-to-date price: live priceHistory if this asset is selected,
-            // otherwise fall back to the asset's latest basePrice (updated by updatePriceDisplay),
-            // and as last resort use the entry price.
+
             let currentPrice = pos.asset.basePrice || pos.entryPrice;
             if (selectedAsset && selectedAsset.symbol === pos.asset.symbol && priceHistory.length > 0) {
               currentPrice = priceHistory[priceHistory.length - 1]?.c || currentPrice;
             }
             const priceDiff = currentPrice - pos.entryPrice;
-            const pnl = pos.type === 'long' ? priceDiff * pos.leverage * (pos.amount / pos.entryPrice) : 
-                                             -priceDiff * pos.leverage * (pos.amount / pos.entryPrice);
-            const pnlPercent = (pnl / pos.amount) * 100;
-            const pnlColor = pnl >= 0 ? '#10b981' : '#ef4444';
-            const priceColor = currentPrice > pos.entryPrice ? '#10b981' : currentPrice < pos.entryPrice ? '#ef4444' : '#94a3b8';
-            
-            // Calculate equity and liquidation risk
+            const pnl = pos.type === 'long' ? priceDiff * pos.leverage * (pos.amount / pos.entryPrice)
+                                            : -priceDiff * pos.leverage * (pos.amount / pos.entryPrice);
+            const roi = pos.amount > 0 ? (pnl / pos.amount) * 100 : 0;
+            const pnlColor = pnl >= 0 ? '#0ecb81' : '#f6465d';
+
             const equityPercent = calculatePositionEquity(pos, currentPrice);
-            let riskIndicator = '';
-            let riskColor = '#10b981';
-            
+            let riskColor = '#0ecb81';
+            let riskLabel = 'Healthy';
             if (equityPercent <= LIQUIDATION_CONFIG.LIQUIDATION_THRESHOLD_PERCENT) {
-              riskIndicator = '⚠️ LIQUIDATION IMMINENT';
-              riskColor = '#ef4444';
+              riskColor = '#f6465d'; riskLabel = 'LIQ!';
             } else if (equityPercent <= LIQUIDATION_CONFIG.WARNING_THRESHOLD_PERCENT) {
-              riskIndicator = '⚡ HIGH RISK';
-              riskColor = '#f59e0b';
+              riskColor = '#f59e0b'; riskLabel = 'High';
             } else if (equityPercent <= 50) {
-              riskIndicator = '⚠️ MODERATE RISK';
-              riskColor = '#eab308';
-            } else {
-              riskIndicator = '✓ HEALTHY';
-              riskColor = '#10b981';
+              riskColor = '#eab308'; riskLabel = 'Medium';
             }
-            
-            return `
-              <div style="padding:8px; background:rgba(13,110,253,0.08); border:${equityPercent <= LIQUIDATION_CONFIG.WARNING_THRESHOLD_PERCENT ? '2px solid ' + riskColor : '1px solid rgba(255,255,255,0.1)'}; border-radius:6px; margin-bottom:6px;">
-                <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
-                  <span><strong>${pos.asset.symbol}</strong> ${pos.leverage}x</span>
-                  <span style="color:${pos.type === 'long' ? '#10b981' : '#ef4444'}">${pos.type.toUpperCase()}</span>
-                </div>
-                <div style="font-size:0.85em; opacity:0.8;">
-                  Entry: $${pos.entryPrice.toFixed(2)} | Amount: ${pos.amount.toFixed(2)} USDC
-                </div>
-                <div style="font-size:0.85em; margin-top:2px;">
-                  Current: <strong style="color:${priceColor};">$${currentPrice.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong>
-                </div>
-                <div style="color:${pnlColor}; font-weight:bold; margin-top:4px;">
-                  P&L: ${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)} (${pnlPercent >= 0 ? '+' : ''}${pnlPercent.toFixed(2)}%)
-                </div>
-                <div style="margin-top:4px; font-size:0.85em;">
-                  <div style="color:${riskColor}; font-weight:600;">Equity: ${equityPercent.toFixed(1)}% ${riskIndicator}</div>
-                  <div style="opacity:0.7; font-size:0.9em;">Liquidation at ${LIQUIDATION_CONFIG.LIQUIDATION_THRESHOLD_PERCENT}% equity</div>
-                </div>
-                <button onclick="closePosition(${idx})" style="margin-top:6px; padding:4px 8px; background:#ef4444; color:white; border:none; border-radius:4px; cursor:pointer; font-size:0.85em;">Close</button>
-              </div>
+
+            const liqThresh = LIQUIDATION_CONFIG.LIQUIDATION_THRESHOLD_PERCENT / 100 / pos.leverage;
+            const liqPrice = pos.type === 'long'
+              ? pos.entryPrice * (1 - liqThresh)
+              : pos.entryPrice * (1 + liqThresh);
+
+            const fmt2 = (n) => n.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+            html += `
+              <tr style="border-bottom:1px solid #1e222d; background:${equityPercent <= LIQUIDATION_CONFIG.WARNING_THRESHOLD_PERCENT ? 'rgba(246,70,93,0.05)' : 'transparent'};">
+                <td style="padding:8px 12px;">
+                  <div style="font-weight:600; color:#fff;">${pos.asset.symbol}</div>
+                  <div style="display:flex; gap:4px; margin-top:2px;">
+                    <span style="padding:1px 5px; border-radius:3px; font-size:0.7em; background:${pos.type==='long'?'rgba(14,203,129,0.2)':'rgba(246,70,93,0.2)'}; color:${pos.type==='long'?'#0ecb81':'#f6465d'}; font-weight:600;">${pos.type.toUpperCase()}</span>
+                    <span style="padding:1px 5px; border-radius:3px; font-size:0.7em; background:rgba(240,185,11,0.15); color:#f0b90b; font-weight:600;">${pos.leverage}×</span>
+                  </div>
+                </td>
+                <td style="padding:8px; text-align:right; font-weight:500;">${fmt2(pos.amount)}</td>
+                <td style="padding:8px; text-align:right; color:#94a3b8;">$${fmt2(pos.entryPrice)}</td>
+                <td style="padding:8px; text-align:right; color:${currentPrice > pos.entryPrice ? '#0ecb81' : currentPrice < pos.entryPrice ? '#f6465d' : '#94a3b8'}; font-weight:600;">$${fmt2(currentPrice)}</td>
+                <td style="padding:8px; text-align:right; color:#f6465d; font-size:0.9em;">$${fmt2(liqPrice)}</td>
+                <td style="padding:8px; text-align:right;">${fmt2(pos.amount)}</td>
+                <td style="padding:8px; text-align:right;">
+                  <div style="color:${pnlColor}; font-weight:700;">${pnl >= 0 ? '+' : ''}$${fmt2(Math.abs(pnl))}</div>
+                  <div style="color:${pnlColor}; font-size:0.8em;">${roi >= 0 ? '+' : ''}${roi.toFixed(2)}%</div>
+                </td>
+                <td style="padding:8px; text-align:right;">
+                  <div style="font-size:0.85em; color:${riskColor}; font-weight:600;">${riskLabel}</div>
+                  <div style="font-size:0.7em; color:#64748b; margin-top:2px;">${equityPercent.toFixed(1)}% equity</div>
+                </td>
+                <td style="padding:8px 12px; text-align:right;">
+                  <button onclick="closePosition(${idx})" style="padding:4px 10px; background:transparent; border:1px solid #f6465d; color:#f6465d; border-radius:4px; cursor:pointer; font-size:0.8em; white-space:nowrap;">Close</button>
+                </td>
+              </tr>
             `;
-          }).join('');
+          });
+
+          html += '</tbody></table>';
+          container.innerHTML = html;
+          updatePnlSummary();
         }
 
         // Update trade history
         function updateTradeHistory() {
           const container = document.getElementById('tradeHistory');
           if (!container) return;
-          
+
           if (tradeHistoryList.length === 0) {
-            container.innerHTML = '<div style="opacity:0.6;">No trades yet</div>';
+            container.innerHTML = '<div style="color:#94a3b8; font-size:0.85em; padding:16px 20px;">No trades yet</div>';
             return;
           }
-          
-          container.innerHTML = tradeHistoryList.slice(-5).reverse().map(trade => {
-            const pnlColor = trade.pnl >= 0 ? '#10b981' : '#ef4444';
-            const liquidationBadge = trade.liquidated ? 
-              '<span style="background:#ef4444; color:white; padding:2px 5px; border-radius:3px; font-size:0.75em; margin-left:4px; font-weight:bold;">LIQ</span>' : 
-              '';
-            
-            return `
-              <div style="padding:6px; border-bottom:1px solid rgba(255,255,255,0.1); font-size:0.85em;">
-                <div><strong>${trade.asset.symbol}</strong> ${trade.leverage}x ${trade.type.toUpperCase()} ${liquidationBadge}</div>
-                <div style="opacity:0.8;">${trade.amount.toFixed(2)} USDC</div>
-                <div style="color:${pnlColor};">P&L: ${trade.pnl >= 0 ? '+' : ''}$${trade.pnl.toFixed(2)}</div>
-              </div>
+
+          let html = `
+            <table style="width:100%; border-collapse:collapse; font-size:0.8em; color:#e2e8f0;">
+              <thead>
+                <tr style="color:#94a3b8; font-size:0.75em; border-bottom:1px solid #2a2d3a;">
+                  <th style="padding:6px 12px; text-align:left; font-weight:400;">Symbol</th>
+                  <th style="padding:6px 8px; text-align:right; font-weight:400;">Side</th>
+                  <th style="padding:6px 8px; text-align:right; font-weight:400;">Size</th>
+                  <th style="padding:6px 8px; text-align:right; font-weight:400;">Entry Price</th>
+                  <th style="padding:6px 8px; text-align:right; font-weight:400;">Exit Price</th>
+                  <th style="padding:6px 8px; text-align:right; font-weight:400;">Realized PNL</th>
+                  <th style="padding:6px 12px; text-align:right; font-weight:400;">Time</th>
+                </tr>
+              </thead>
+              <tbody>
+          `;
+
+          tradeHistoryList.slice().reverse().forEach(trade => {
+            const pnlColor = trade.pnl >= 0 ? '#0ecb81' : '#f6465d';
+            const liqBadge = trade.liquidated ? '<span style="margin-left:4px; padding:1px 4px; background:#f6465d; color:white; border-radius:2px; font-size:0.7em; font-weight:700;">LIQ</span>' : '';
+            const fmt2 = (n) => n !== undefined && n !== null ? Math.abs(n).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-';
+            html += `
+              <tr style="border-bottom:1px solid #1e222d;">
+                <td style="padding:6px 12px;"><span style="font-weight:600;">${trade.asset ? trade.asset.symbol : '-'}</span>${liqBadge}</td>
+                <td style="padding:6px 8px; text-align:right;"><span style="color:${trade.type==='long'||trade.type==='WIN'?'#0ecb81':'#f6465d'}; font-weight:600;">${(trade.type||'-').toUpperCase()}</span> <span style="color:#f0b90b; font-size:0.8em;">${trade.leverage||'-'}×</span></td>
+                <td style="padding:6px 8px; text-align:right;">${fmt2(trade.amount)}</td>
+                <td style="padding:6px 8px; text-align:right; color:#94a3b8;">$${trade.entryPrice !== undefined ? trade.entryPrice.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}) : '-'}</td>
+                <td style="padding:6px 8px; text-align:right; color:#94a3b8;">$${trade.exitPrice !== undefined ? trade.exitPrice.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}) : '-'}</td>
+                <td style="padding:6px 8px; text-align:right; font-weight:700; color:${pnlColor}">${trade.pnl >= 0 ? '+' : '-'}$${fmt2(trade.pnl)}</td>
+                <td style="padding:6px 12px; text-align:right; color:#64748b; font-size:0.85em;">${trade.closeTime || '-'}</td>
+              </tr>
             `;
-          }).join('');
+          });
+
+          html += '</tbody></table>';
+          container.innerHTML = html;
         }
 
         // Update USDC balance display
@@ -7249,7 +7707,29 @@
           document.getElementById('selectedAsset').textContent = asset.symbol;
           document.getElementById('viewTitle').textContent = `${asset.symbol} Chart`;
 
-          document.getElementById('priceChart').style.display = 'block';
+          // Update price banner
+          const banner = document.getElementById('priceBanner');
+          if (banner) banner.style.display = 'flex';
+          const currentPriceDisplayEl = document.getElementById('currentPriceDisplay');
+          if (currentPriceDisplayEl) currentPriceDisplayEl.style.display = 'flex';
+          const bannerSymbolEl = document.getElementById('bannerSymbol');
+          if (bannerSymbolEl) bannerSymbolEl.textContent = asset.symbol + (asset.binanceSymbol ? ' Perp' : '');
+          // Slight positive bias (0.48 < 0.5) so simulated 24h change leans slightly bullish
+          const BANNER_CHANGE_BIAS = 0.48;
+          const change24h = (Math.random() - BANNER_CHANGE_BIAS) * asset.volatility * 100 * 2;
+          const high24h = asset.basePrice * (1 + Math.abs(asset.volatility) * 1.5);
+          const low24h = asset.basePrice * (1 - Math.abs(asset.volatility) * 1.5);
+          const vol24h = asset.basePrice * (500 + Math.random() * 2000);
+          const setBannerEl = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+          setBannerEl('banner24hChange', (change24h >= 0 ? '+' : '') + change24h.toFixed(2) + '%');
+          const change24hEl = document.getElementById('banner24hChange');
+          if (change24hEl) change24hEl.style.color = change24h >= 0 ? '#0ecb81' : '#f6465d';
+          setBannerEl('banner24hHigh', '$' + high24h.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}));
+          setBannerEl('banner24hLow', '$' + low24h.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}));
+          setBannerEl('banner24hVol', '$' + (vol24h / 1e6).toFixed(1) + 'M');
+          setBannerEl('bannerMarkPrice', '$' + asset.basePrice.toLocaleString());
+          setBannerEl('bannerIndexPrice', '$' + (asset.basePrice * (1 - 0.0002)).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}));
+          startOrderBookUpdates();
           document.getElementById('chartFooter').style.display = 'block';
           document.getElementById('clubHistoryView').style.display = 'none';
 
@@ -8633,6 +9113,9 @@
             destroyLightweightChart();
             if (chart) chart.destroy();
             chart = null;
+            stopOrderBookUpdates();
+            const bannerEl = document.getElementById('priceBanner');
+            if (bannerEl) bannerEl.style.display = 'none';
           };
         });
       } 
