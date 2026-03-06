@@ -6352,7 +6352,7 @@
                     </div>
 
                     <!-- D) ORDER BOOK SIDEBAR -->
-                    <div style="width:200px; min-width:180px; background:#131722; border-left:1px solid #2a2d3a; display:flex; flex-direction:column; flex-shrink:0;">
+                    <div id="orderBookSidebar" style="width:200px; min-width:180px; background:#131722; border-left:1px solid #2a2d3a; display:flex; flex-direction:column; flex-shrink:0;">
                       <div style="padding:6px 8px; border-bottom:1px solid #2a2d3a; display:flex; align-items:center; justify-content:space-between;">
                         <span style="font-size:0.78em; font-weight:600; color:#e2e8f0;">Order Book</span>
                       </div>
@@ -6374,13 +6374,13 @@
               <div style="width:280px; min-width:260px; background:#131722; border-left:1px solid #2a2d3a; display:flex; flex-direction:column; overflow-y:auto; flex-shrink:0;">
 
                 <!-- Margin mode -->
-                <div style="padding:8px 10px; border-bottom:1px solid #2a2d3a; display:flex; gap:4px;">
+                <div id="marginModePanel" style="padding:8px 10px; border-bottom:1px solid #2a2d3a; display:flex; gap:4px;">
                   <button id="marginModeIsolated" onclick="setMarginMode('isolated')" style="flex:1; padding:5px; background:#1e222d; color:#fff; border:1px solid #2a2d3a; border-radius:4px; cursor:pointer; font-size:0.78em; font-weight:600;">Isolated</button>
                   <button id="marginModeCross" onclick="setMarginMode('cross')" style="flex:1; padding:5px; background:#0d1421; color:#94a3b8; border:1px solid #2a2d3a; border-radius:4px; cursor:pointer; font-size:0.78em; font-weight:400;">Cross</button>
                 </div>
 
                 <!-- Leverage -->
-                <div style="padding:10px 12px; border-bottom:1px solid #2a2d3a;">
+                <div id="leveragePanel" style="padding:10px 12px; border-bottom:1px solid #2a2d3a;">
                   <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
                     <span style="font-size:0.8em; color:#94a3b8;">Leverage</span>
                     <span id="leverageDisplay" style="color:#f0b90b; font-weight:700; font-size:0.9em;">5×</span>
@@ -6432,9 +6432,10 @@
                 </div>
 
                 <!-- Long/Short buttons -->
-                <div style="padding:10px 12px; display:flex; gap:6px;">
-                  <button onclick="openPosition('long')" style="flex:1; padding:10px; background:#0ecb81; color:#000; border:none; border-radius:4px; cursor:pointer; font-weight:700; font-size:0.85em;">▲ Long</button>
-                  <button onclick="openPosition('short')" style="flex:1; padding:10px; background:#f6465d; color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:700; font-size:0.85em;">▼ Short</button>
+                <div style="padding:10px 12px; display:flex; gap:6px;" id="tradeButtonsRow">
+                  <button id="longBtn" onclick="openPosition('long')" style="flex:1; padding:10px; background:#0ecb81; color:#000; border:none; border-radius:4px; cursor:pointer; font-weight:700; font-size:0.85em;">▲ Long</button>
+                  <button id="drawBtn" onclick="openPosition('draw')" style="flex:1; padding:10px; background:#f59e0b; color:#000; border:none; border-radius:4px; cursor:pointer; font-weight:700; font-size:0.85em; display:none;">🤝 DRAW</button>
+                  <button id="shortBtn" onclick="openPosition('short')" style="flex:1; padding:10px; background:#f6465d; color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:700; font-size:0.85em;">▼ Short</button>
                 </div>
 
                 <p id="tradeStatus" style="margin:0; padding:6px 12px; font-size:0.8em; font-weight:600; min-height:30px; color:#f0b90b;"></p>
@@ -6857,6 +6858,9 @@
         // Named constants for order book simulation
         const ORDER_BOOK_DEPTH_RATIO = 0.002;  // 0.2% price range from mid for full depth
         const ORDER_BOOK_LEVELS = 8;           // Number of bid/ask levels to display
+        // Sports bet draw probability for fallback simulation
+        const FOOTBALL_DRAW_CHANCE = 0.25;     // ~25% chance of draw in football
+        const BASKETBALL_DRAW_CHANCE = 0.05;   // ~5% chance of draw in basketball (OT treated as win/loss)
 
         function getTickInfo(price) {
           if (price < 1)     return { tick: 0.00001, decimals: 5 };
@@ -7117,6 +7121,13 @@
         function updateLeverageInfo() {
           const amount = parseFloat(document.getElementById('positionAmount')?.value || 0);
           const leverage = parseInt(document.getElementById('leverageSelect')?.value || 1);
+
+          // Hide order/leverage info for sports – not applicable
+          if (currentTab === 'sports') {
+            const leverageInfoEl = document.getElementById('leverageInfo');
+            if (leverageInfoEl) leverageInfoEl.style.display = 'none';
+            return;
+          }
 
           if (amount > 0 && selectedAsset) {
             const tradeSize = amount * leverage;
@@ -7528,6 +7539,73 @@
           if (el) el.textContent = tradingUSDCBalance.toFixed(2) + ' USDC';
         }
 
+        function updateMarketForTab(tab) {
+          const isSports = tab === 'sports';
+
+          // Show/hide order book sidebar (not relevant for sports)
+          const obSidebar = document.getElementById('orderBookSidebar');
+          if (obSidebar) obSidebar.style.display = isSports ? 'none' : 'flex';
+
+          // Show/hide margin mode and leverage panels (not relevant for sports)
+          const marginPanel = document.getElementById('marginModePanel');
+          if (marginPanel) marginPanel.style.display = isSports ? 'none' : 'flex';
+          const leveragePanel = document.getElementById('leveragePanel');
+          if (leveragePanel) leveragePanel.style.display = isSports ? 'none' : 'block';
+
+          // Change Long/Short/Draw button labels for sports betting context
+          const longBtn = document.getElementById('longBtn');
+          const shortBtn = document.getElementById('shortBtn');
+          const drawBtn = document.getElementById('drawBtn');
+          if (longBtn) {
+            longBtn.innerHTML = isSports ? '🏆 BET WIN' : '▲ Long';
+            longBtn.style.background = isSports ? '#10b981' : '#0ecb81';
+            longBtn.style.color = isSports ? '#fff' : '#000';
+          }
+          if (shortBtn) {
+            shortBtn.innerHTML = isSports ? '📉 BET LOSE' : '▼ Short';
+            shortBtn.style.background = isSports ? '#ef4444' : '#f6465d';
+            shortBtn.style.color = '#fff';
+          }
+          if (drawBtn) {
+            drawBtn.style.display = isSports ? 'flex' : 'none';
+          }
+
+          // Show sportsbook landing when entering sports tab and no team selected
+          if (isSports) {
+            const view = document.getElementById('clubHistoryView');
+            if (view && view.style.display === 'none') {
+              view.style.display = 'block';
+              view.innerHTML = `
+                <div style="padding:24px 16px; text-align:center;">
+                  <div style="font-size:2.5em; margin-bottom:12px;">⚽ 🏀</div>
+                  <h3 style="color:#60a5fa; margin-bottom:8px;">Sports Betting Market</h3>
+                  <p style="opacity:0.7; margin-bottom:20px; font-size:0.95em;">Select a team from the left panel to view upcoming matches, live odds, and place your bet.</p>
+                  <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-bottom:20px;">
+                    <div style="background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.3); padding:12px 20px; border-radius:8px; min-width:140px;">
+                      <div style="color:#10b981; font-weight:bold; font-size:1.05em; margin-bottom:4px;">⚽ Football</div>
+                      <div style="opacity:0.7; font-size:0.82em;">La Liga • Premier League • UCL</div>
+                    </div>
+                    <div style="background:rgba(96,165,250,0.12); border:1px solid rgba(96,165,250,0.3); padding:12px 20px; border-radius:8px; min-width:140px;">
+                      <div style="color:#60a5fa; font-weight:bold; font-size:1.05em; margin-bottom:4px;">🏀 Basketball</div>
+                      <div style="opacity:0.7; font-size:0.82em;">NBA</div>
+                    </div>
+                  </div>
+                  <div style="background:rgba(240,185,11,0.08); border:1px solid rgba(240,185,11,0.2); padding:10px 14px; border-radius:8px; font-size:0.85em; max-width:380px; margin:0 auto;">
+                    <strong style="color:#f0b90b;">How it works:</strong>
+                    <ol style="text-align:left; margin:8px 0 0; padding-left:18px; opacity:0.85; line-height:1.7;">
+                      <li>Select a team from the left panel</li>
+                      <li>Review upcoming match &amp; odds</li>
+                      <li>Enter your bet amount (USDC)</li>
+                      <li>Click <strong>BET WIN</strong>, <strong>DRAW</strong>, or <strong>BET LOSE</strong></li>
+                      <li>Settlement auto-runs at match end</li>
+                    </ol>
+                  </div>
+                </div>
+              `;
+            }
+          }
+        }
+
         function renderAssets() {
           const container = document.getElementById('assetList');
           const titleEl = document.getElementById('assetListTitle');
@@ -7682,10 +7760,10 @@
               <br>
               <div style="background:rgba(59,130,246,0.1); padding:12px; border-radius:8px; margin-top:12px;">
                 <strong>💰 Place Your Bet with Sepolia USDC:</strong><br>
-                Predict if <strong>${asset.symbol}</strong> will WIN or LOSE their next match!<br>
+                Predict the outcome for <strong>${asset.symbol}</strong>'s next match!<br>
                 <span id="sportsBetInfo" style="font-size:0.9em; opacity:0.9;">
                   Win Probability: <span style="color:#10b981; font-weight:bold;">${winRate}%</span> |
-                  ${locked ? '<span style="color:#ef4444; font-weight:bold;">Betting is locked – match is less than 1 hour away.</span>' : 'Use the controls on the right to place your bet with leverage.'}
+                  ${locked ? '<span style="color:#ef4444; font-weight:bold;">Betting is locked – match is less than 1 hour away.</span>' : 'Use the <strong>BET WIN</strong>, <strong>DRAW</strong>, or <strong>BET LOSE</strong> buttons on the right to place your bet.'}
                 </span>
               </div>
             `;
@@ -7885,7 +7963,7 @@
             if (currentTab === 'sports') {
               const position = {
                 asset: selectedAsset,
-                type: type, // 'long' = WIN, 'short' = LOSE
+                type: type, // 'long' = WIN, 'short' = LOSE, 'draw' = DRAW
                 betType: type, // Captured explicitly for settlement closure
                 amount: amount,
                 leverage: leverage,
@@ -7899,7 +7977,7 @@
               tradingUSDCBalance -= amount;
               transferToTreasury(amount); // Move bet amount to treasury
 
-              const betType = type === 'long' ? 'WIN' : 'LOSE';
+              const betType = type === 'long' ? 'WIN' : type === 'draw' ? 'DRAW' : 'LOSE';
               recordTransaction(tx.hash, 'Sports Bet', `${selectedAsset.symbol} ${betType} ${leverage}x on ${amount.toFixed(2)} USDC`, {amount: amount, token: 'USDC', to: TREASURY_WALLET_ADDRESS});
               showNotification(
                 `🏆 Sports bet placed: ${selectedAsset.symbol} to ${betType}<br>${leverage}x leverage on ${amount.toFixed(2)} USDC<br>TX: <a href="${getActiveNetwork().explorer}/tx/${tx.hash}" target="_blank" style="color:#60a5fa;">${tx.hash.slice(0, 10)}...</a>`,
@@ -7941,8 +8019,12 @@
                         const awayScore = parseInt(ev.intAwayScore);
                         const isDraw = homeScore === awayScore;
                         const teamWon = isHome ? homeScore > awayScore : awayScore > homeScore;
-                        // Draws treated as a loss for both WIN and LOSE bets (no draw market in this UI)
-                        won = isDraw ? false : (position.betType === 'long' ? teamWon : !teamWon);
+                        // Draw bet wins only if match ends in a draw; WIN/LOSE bets lose on draw
+                        if (position.betType === 'draw') {
+                          won = isDraw;
+                        } else {
+                          won = isDraw ? false : (position.betType === 'long' ? teamWon : !teamWon);
+                        }
                       }
                     }
                   } catch (e) {
@@ -7952,8 +8034,13 @@
 
                 // Fall back to strength-based simulation if no live result available
                 if (won === null) {
-                  const winChance = position.betType === 'long' ? position.asset.strength : (1 - position.asset.strength);
-                  won = Math.random() < winChance;
+                  if (position.betType === 'draw') {
+                    const drawChance = position.asset.type === 'basketball' ? BASKETBALL_DRAW_CHANCE : FOOTBALL_DRAW_CHANCE;
+                    won = Math.random() < drawChance;
+                  } else {
+                    const winChance = position.betType === 'long' ? position.asset.strength : (1 - position.asset.strength);
+                    won = Math.random() < winChance;
+                  }
                 }
 
                 const profit = amount * leverage * 0.9; // 90% profit if win
@@ -7961,21 +8048,23 @@
                 if (won) {
                   const totalPayout = amount + profit;
                   if (transferFromTreasury(totalPayout)) {
+                    const betLabel = position.betType === 'long' ? 'WIN' : position.betType === 'draw' ? 'DRAW' : 'LOSE';
                     tradeHistoryList.push({
                       asset: selectedAsset,
-                      type: position.betType === 'long' ? 'WIN' : 'LOSE',
+                      type: betLabel,
                       leverage: leverage,
                       amount: amount,
                       pnl: profit,
                       closeTime: new Date().toLocaleTimeString()
                     });
                     showNotification(`🏆 Match result: ${selectedAsset.symbol} - You won $${profit.toFixed(2)} from treasury!`, false);
-                    recordTransaction(null, 'Sports Bet', `${selectedAsset.symbol} WIN - Treasury paid $${profit.toFixed(2)} USDC profit`, {amount: profit, token: 'USDC', from: TREASURY_WALLET_ADDRESS, to: userAddress});
+                    recordTransaction(null, 'Sports Bet', `${selectedAsset.symbol} ${betLabel} - Treasury paid $${profit.toFixed(2)} USDC profit`, {amount: profit, token: 'USDC', from: TREASURY_WALLET_ADDRESS, to: userAddress});
                   }
                 } else {
+                  const betLabel = position.betType === 'long' ? 'WIN' : position.betType === 'draw' ? 'DRAW' : 'LOSE';
                   tradeHistoryList.push({
                     asset: selectedAsset,
-                    type: position.betType === 'long' ? 'WIN' : 'LOSE',
+                    type: betLabel,
                     leverage: leverage,
                     amount: amount,
                     pnl: -amount,
@@ -9205,6 +9294,9 @@
         updatePositionsDisplay();
         updateTradeHistory();
 
+        // Apply initial UI state for the default crypto tab
+        updateMarketForTab('crypto');
+
         // Refresh top ticker bar immediately so prices are not stale when entering the market
         updatePriceTicker().catch(() => {});
         // Add event listeners for leverage calculation
@@ -9218,8 +9310,15 @@
 
         document.querySelectorAll('[data-tab]').forEach(btn => {
           btn.onclick = () => {
-            document.querySelectorAll('[data-tab]').forEach(b => b.classList.remove('active'));
+            // Update active class AND inline styles (inline styles take precedence over CSS classes)
+            document.querySelectorAll('[data-tab]').forEach(b => {
+              b.classList.remove('active');
+              b.style.background = 'transparent';
+              b.style.color = '#94a3b8';
+            });
             btn.classList.add('active');
+            btn.style.background = 'rgba(240,185,11,0.15)';
+            btn.style.color = '#f0b90b';
             currentTab = btn.dataset.tab;
             // Stop sports countdown when leaving the sports tab
             if (sportsCountdownInterval) {
@@ -9244,6 +9343,8 @@
             stopOrderBookUpdates();
             const bannerEl = document.getElementById('priceBanner');
             if (bannerEl) bannerEl.style.display = 'none';
+            // Update UI panels for the new tab (sports vs trading)
+            updateMarketForTab(currentTab);
           };
         });
       } 
