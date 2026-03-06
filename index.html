@@ -10874,9 +10874,12 @@
       const dexLabel = t.dexId === 'aerodrome' ? '🔵 Aerodrome' : (t.dexId === 'uniswap_v3' ? '🦄 Uniswap V3' : t.dexId);
       const urls = tlDexUrls(t.tokenAddress, t.poolAddress);
 
-      // Use JSON-encoded data attributes so no JS injection is possible via token names/addresses
-      const safeName   = t.tokenName.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
-      const safeSym    = t.tokenSymbol.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+      // Escape HTML to prevent XSS via token names/addresses from API data
+      function tlEscHtml(s) {
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+      }
+      const safeName   = tlEscHtml(t.tokenName);
+      const safeSym    = tlEscHtml(t.tokenSymbol);
       const safePool   = /^0x[0-9a-fA-F]{40}$/.test(t.poolAddress)   ? t.poolAddress   : '';
       const safeAddr   = /^0x[0-9a-fA-F]{40}$/.test(t.tokenAddress)  ? t.tokenAddress  : '';
 
@@ -10924,7 +10927,7 @@
           if (pools.length > 0) tlNewTokens = pools;
         }
       } catch (e) {
-        console.log('[LiveMarkets] fetch error:', e.message);
+        console.error('[LiveMarkets] fetch error:', e);
       } finally {
         tlLiveLoading = false;
         // Re-render only if the Live Markets tab is still active
@@ -10960,6 +10963,10 @@
       const existing = document.getElementById('tlLiveDetailModal');
       if (existing) existing.remove();
 
+      // Escape for safe innerHTML insertion
+      const safeTokenName = String(tokenName).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+      const safeTokenSymbol = String(tokenSymbol).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+
       // Find the pool in state
       const allPools = [...tlLiveTokens, ...tlNewTokens];
       const rawPool = allPools.find(p => {
@@ -10979,7 +10986,7 @@
 
       // GeckoTerminal embeddable chart
       const chartHtml = urls.gecko
-        ? `<iframe src="${urls.gecko}" style="width:100%;height:300px;border:none;border-radius:10px;" loading="lazy"></iframe>`
+        ? `<iframe src="${urls.gecko}" sandbox="allow-scripts allow-same-origin" style="width:100%;height:300px;border:none;border-radius:10px;" loading="lazy"></iframe>`
         : `<div style="height:120px;display:flex;align-items:center;justify-content:center;color:#475569;font-size:0.9em;">No chart available</div>`;
 
       const modal = document.createElement('div');
@@ -10990,8 +10997,8 @@
           <div style="background:linear-gradient(135deg,#1e3a5f,#2d1b69);padding:24px 28px;">
             <div style="display:flex;justify-content:space-between;align-items:flex-start;">
               <div>
-                <h2 style="color:#f1f5f9;margin:0 0 4px;font-size:1.4em;">${tokenName}</h2>
-                <span style="background:rgba(96,165,250,0.2);color:#60a5fa;padding:4px 14px;border-radius:999px;font-size:0.83em;font-weight:600;">$${tokenSymbol}</span>
+                <h2 style="color:#f1f5f9;margin:0 0 4px;font-size:1.4em;">${safeTokenName}</h2>
+                <span style="background:rgba(96,165,250,0.2);color:#60a5fa;padding:4px 14px;border-radius:999px;font-size:0.83em;font-weight:600;">$${safeTokenSymbol}</span>
               </div>
               <div style="text-align:right;">
                 <div style="font-size:1.35em;font-weight:700;color:#fbbf24;">${priceStr}</div>
