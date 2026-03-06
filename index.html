@@ -6777,6 +6777,8 @@
         let tradeHistoryList = [];
         let liquidationHistory = []; // Track liquidation events
         let liquidationMonitorInterval = null; // Interval for checking liquidations
+        let markPrices = {}; // Unified mark price cache: { symbol: latestPrice }
+        let markPricePollingInterval = null; // Polls Binance for non-selected position symbols
         let binanceWebSocket = null; // WebSocket connection to Binance (trade ticks)
         let priceUpdateMethod = 'websocket'; // 'websocket' or 'polling'
         // Lightweight Charts state
@@ -6942,10 +6944,8 @@
 
           openPositions.forEach(pos => {
             if (pos.isSportsBet) { totalMarginUsed += pos.amount; return; }
-            let currentPrice = pos.asset.basePrice || pos.entryPrice;
-            if (selectedAsset && selectedAsset.symbol === pos.asset.symbol && priceHistory.length > 0) {
-              currentPrice = priceHistory[priceHistory.length - 1]?.c || currentPrice;
-            }
+            // Use unified mark price via centralised helper
+            let currentPrice = getCurrentMarkPrice(pos);
             const priceDiff = currentPrice - pos.entryPrice;
             const pnl = pos.type === 'long' ? priceDiff * pos.leverage * (pos.amount / pos.entryPrice) :
                                               -priceDiff * pos.leverage * (pos.amount / pos.entryPrice);
@@ -7201,6 +7201,40 @@
             reason: null
           };
         }
+
+        /**
+         * Calculate Binance-style margin ratio for a position.
+         * Margin Ratio = Maintenance Margin / Account Equity × 100%
+         * Where:
+         *   Unrealized PNL  = price_diff × leverage × (margin / entryPrice)
+         *   Account Equity  = margin + unrealized PNL
+         *   Maintenance Margin = margin × (liq_threshold / 100)
+         * Returns a percentage (0–100+). At 100% the position would be liquidated.
+         */
+        function calculateMarginRatio(position, currentPrice) {
+          if (!position.entryPrice || position.entryPrice === 0) return 0;
+          const priceDiff = currentPrice - position.entryPrice;
+          const pnl = position.type === 'long'
+            ? priceDiff * position.leverage * (position.amount / position.entryPrice)
+            : -priceDiff * position.leverage * (position.amount / position.entryPrice);
+          const equity = position.amount + pnl;
+          if (equity <= 0) return 100;
+          const maintenanceMargin = position.amount * (LIQUIDATION_CONFIG.LIQUIDATION_THRESHOLD_PERCENT / 100);
+          return Math.min(100, (maintenanceMargin / equity) * 100);
+        }
+
+        /**
+         * Return the current mark price for a position using the unified cache.
+         * Priority: markPrices map → priceHistory (selected asset only) → asset.basePrice → entryPrice.
+         * Centralised here so updatePositionsDisplay() and updatePnlSummary() stay in sync.
+         */
+        function getCurrentMarkPrice(pos) {
+          return markPrices[pos.asset.symbol]
+            || (selectedAsset && selectedAsset.symbol === pos.asset.symbol && priceHistory.length > 0
+                ? priceHistory[priceHistory.length - 1]?.c : null)
+            || pos.asset.basePrice
+            || pos.entryPrice;
+        }
         
         /**
          * Execute liquidation for a position
@@ -7380,10 +7414,8 @@
               return;
             }
 
-            let currentPrice = pos.asset.basePrice || pos.entryPrice;
-            if (selectedAsset && selectedAsset.symbol === pos.asset.symbol && priceHistory.length > 0) {
-              currentPrice = priceHistory[priceHistory.length - 1]?.c || currentPrice;
-            }
+            // Use unified mark price via centralised helper — ensures data consistency
+            let currentPrice = getCurrentMarkPrice(pos);
             const priceDiff = currentPrice - pos.entryPrice;
             const pnl = pos.type === 'long' ? priceDiff * pos.leverage * (pos.amount / pos.entryPrice)
                                             : -priceDiff * pos.leverage * (pos.amount / pos.entryPrice);
@@ -7391,6 +7423,7 @@
             const pnlColor = pnl >= 0 ? '#0ecb81' : '#f6465d';
 
             const equityPercent = calculatePositionEquity(pos, currentPrice);
+            const marginRatio = calculateMarginRatio(pos, currentPrice);
             let riskColor = '#0ecb81';
             let riskLabel = 'Healthy';
             if (equityPercent <= LIQUIDATION_CONFIG.LIQUIDATION_THRESHOLD_PERCENT) {
@@ -7428,7 +7461,7 @@
                 </td>
                 <td style="padding:8px; text-align:right;">
                   <div style="font-size:0.85em; color:${riskColor}; font-weight:600;">${riskLabel}</div>
-                  <div style="font-size:0.7em; color:#64748b; margin-top:2px;">${equityPercent.toFixed(1)}% equity</div>
+                  <div style="font-size:0.7em; color:#64748b; margin-top:2px;">Margin: ${marginRatio.toFixed(1)}%</div>
                 </td>
                 <td style="padding:8px 12px; text-align:right;">
                   <button onclick="closePosition(${idx})" style="padding:4px 10px; background:transparent; border:1px solid #f6465d; color:#f6465d; border-radius:4px; cursor:pointer; font-size:0.8em; white-space:nowrap;">Close</button>
@@ -7729,6 +7762,9 @@
           setBannerEl('banner24hVol', '$' + (vol24h / 1e6).toFixed(1) + 'M');
           setBannerEl('bannerMarkPrice', '$' + asset.basePrice.toLocaleString());
           setBannerEl('bannerIndexPrice', '$' + (asset.basePrice * (1 - 0.0002)).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}));
+          // Seed unified mark price cache with the asset's known base price so that
+          // any open positions for this symbol immediately reflect a reasonable price.
+          if (asset.basePrice > 0) markPrices[asset.symbol] = asset.basePrice;
           startOrderBookUpdates();
           document.getElementById('chartFooter').style.display = 'block';
           document.getElementById('clubHistoryView').style.display = 'none';
@@ -7993,6 +8029,12 @@
             // Start liquidation monitoring when first position is opened
             if (openPositions.length === 1) {
               startLiquidationMonitoring();
+              // Also seed mark price and start unified polling for all position symbols
+              markPrices[selectedAsset.symbol] = currentPrice;
+              startMarkPricePolling();
+            } else {
+              // Seed mark price for the new position's symbol
+              markPrices[selectedAsset.symbol] = currentPrice;
             }
 
           recordTransaction(tx.hash, 'Market', `Opened ${type.toUpperCase()} ${selectedAsset.symbol} ${leverage}x at $${currentPrice.toFixed(2)}`, {amount: amount, token: 'USDC', to: TREASURY_WALLET_ADDRESS});
@@ -8118,9 +8160,10 @@
             // Remove from open positions
             openPositions.splice(idx, 1);
             
-            // Stop liquidation monitoring if no positions remain
+            // Stop liquidation monitoring and mark price polling if no positions remain
             if (openPositions.length === 0) {
               stopLiquidationMonitoring();
+              stopMarkPricePolling();
             }
             
             updatePositionsDisplay();
@@ -8406,6 +8449,8 @@
           // Keep selectedAsset.basePrice in sync so open positions show the latest price
           if (selectedAsset && price > 0) {
             selectedAsset.basePrice = price;
+            // Store in unified mark price cache so all open positions use the same source
+            markPrices[selectedAsset.symbol] = price;
           }
         }
         
@@ -8582,7 +8627,90 @@
             console.log('⏹️ Stopped real-time price updates');
           }
         }
-        
+
+        // === UNIFIED MARK PRICE POLLING ===
+
+        // Map internal symbols to Binance spot/futures ticker symbols
+        const SYMBOL_TO_BINANCE_TICKER = {
+          'BTCUSD': 'BTCUSDT', 'ETHUSD': 'ETHUSDT', 'BNBUSD': 'BNBUSDT',
+          'SOLUSD': 'SOLUSDT', 'XRPUSD': 'XRPUSDT', 'ADAUSD': 'ADAUSDT',
+          'DOGEUSD': 'DOGEUSDT', 'MATICUSD': 'MATICUSDT', 'DOTUSD': 'DOTUSDT',
+          'AVAXUSD': 'AVAXUSDT', 'LINKUSD': 'LINKUSDT', 'UNIUSD': 'UNIUSDT',
+          'ATOMUSD': 'ATOMUSDT', 'NEARUSD': 'NEARUSDT'
+        };
+
+        /**
+         * Fetch mark prices for all unique crypto symbols that have open positions.
+         * Uses Binance REST API (/api/v3/ticker/price) as the unified price source.
+         * Falls back to the asset's basePrice when the symbol is not supported.
+         */
+        async function fetchMarkPricesForOpenPositions() {
+          const symbols = [...new Set(
+            openPositions
+              .filter(p => !p.isSportsBet && p.asset && p.asset.symbol)
+              .map(p => p.asset.symbol)
+          )];
+          if (symbols.length === 0) return;
+
+          for (const symbol of symbols) {
+            // Skip the currently selected asset – its price is kept up-to-date
+            // by the kline WebSocket / polling mechanism already running.
+            if (selectedAsset && selectedAsset.symbol === symbol) continue;
+
+            const binanceTicker = SYMBOL_TO_BINANCE_TICKER[symbol];
+            if (!binanceTicker) {
+              // Non-crypto asset: keep existing basePrice as mark price
+              if (!markPrices[symbol]) {
+                const pos = openPositions.find(p => p.asset && p.asset.symbol === symbol);
+                if (pos) markPrices[symbol] = pos.asset.basePrice || pos.entryPrice;
+              }
+              continue;
+            }
+
+            try {
+              const resp = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${binanceTicker}`);
+              if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+              const data = await resp.json();
+              const price = parseFloat(data.price);
+              if (price > 0) {
+                markPrices[symbol] = price;
+                // Keep asset.basePrice in sync for liquidation checks
+                const pos = openPositions.find(p => p.asset && p.asset.symbol === symbol);
+                if (pos) pos.asset.basePrice = price;
+              }
+            } catch (err) {
+              console.warn(`[MarkPrice] Failed to fetch ${symbol}:`, err.message);
+            }
+          }
+
+          // Refresh display with updated prices
+          updatePositionsDisplay();
+          updatePnlSummary();
+        }
+
+        /**
+         * Start polling mark prices for all open positions every 5 seconds.
+         * Ensures consistent, real-time data across all positions regardless of
+         * which asset is currently selected in the chart.
+         */
+        function startMarkPricePolling() {
+          if (markPricePollingInterval) return; // already running
+          fetchMarkPricesForOpenPositions(); // immediate first fetch
+          markPricePollingInterval = setInterval(fetchMarkPricesForOpenPositions, 5000);
+          console.log('🔄 [MarkPrice] Started unified mark price polling (5s interval)');
+        }
+
+        /**
+         * Stop mark price polling (call when all positions are closed).
+         */
+        function stopMarkPricePolling() {
+          if (markPricePollingInterval) {
+            clearInterval(markPricePollingInterval);
+            markPricePollingInterval = null;
+            console.log('⏹️ [MarkPrice] Stopped unified mark price polling');
+          }
+        }
+
         // === BINANCE WEBSOCKET INTEGRATION ===
         
         /**
