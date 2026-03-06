@@ -2,3 +2,7 @@ name = "mogaland-plume-simulator"
 compatibility_date = "2025-01-01"
 compatibility_flags = ["nodejs_compat"]
 pages_build_output_dir = "dist"
+main = "worker.js"
+
+[vars]
+# Optional: set GECKOTERMINAL_API_KEY secret via `wrangler secret put` for higher rate limits

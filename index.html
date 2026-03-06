@@ -870,6 +870,30 @@
     .tl-tab.active { color: #60a5fa; border-bottom-color: #60a5fa; }
     .tl-trade-row { display: flex; gap: 10px; margin-top: 10px; }
     .tl-badge-new { background: #ef4444; color: white; font-size: 0.65em; padding: 2px 6px; border-radius: 999px; font-weight: 700; vertical-align: top; margin-left: 4px; }
+    /* Live Markets styles */
+    .tl-live-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; margin-bottom: 24px; }
+    .tl-live-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 14px; padding: 16px; cursor: pointer; transition: all 0.22s; }
+    .tl-live-card:hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(0,0,0,0.4); border-color: #60a5fa; }
+    .tl-live-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+    .tl-live-name { font-weight: 700; color: #f1f5f9; font-size: 0.97em; }
+    .tl-live-ticker { font-size: 0.78em; color: #60a5fa; background: rgba(96,165,250,0.12); padding: 2px 8px; border-radius: 999px; font-weight: 600; }
+    .tl-live-price { font-size: 1.15em; font-weight: 700; color: #fbbf24; margin-bottom: 4px; }
+    .tl-live-change-pos { color: #10b981; font-weight: 600; font-size: 0.85em; }
+    .tl-live-change-neg { color: #ef4444; font-weight: 600; font-size: 0.85em; }
+    .tl-live-stats { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; font-size: 0.75em; color: #64748b; }
+    .tl-live-stat { background: rgba(255,255,255,0.04); border-radius: 6px; padding: 4px 8px; }
+    .tl-live-dex-btn { display: inline-flex; align-items: center; gap: 4px; padding: 5px 10px; border-radius: 8px; font-size: 0.78em; font-weight: 600; text-decoration: none; border: none; cursor: pointer; transition: opacity 0.2s; }
+    .tl-live-dex-btn:hover { opacity: 0.85; }
+    .tl-dex-uniswap { background: rgba(255,0,122,0.15); color: #ff007a; border: 1px solid rgba(255,0,122,0.3); }
+    .tl-dex-aerodrome { background: rgba(59,130,246,0.15); color: #60a5fa; border: 1px solid rgba(59,130,246,0.3); }
+    .tl-dex-dexscreener { background: rgba(251,191,36,0.12); color: #fbbf24; border: 1px solid rgba(251,191,36,0.3); }
+    .tl-live-chart-wrap { width: 100%; height: 320px; border-radius: 12px; overflow: hidden; margin-bottom: 16px; border: 1px solid var(--border); background: #0f172a; }
+    .tl-live-loading { text-align: center; padding: 48px 0; color: #475569; font-size: 0.95em; }
+    .tl-swap-panel { background: rgba(16,185,129,0.07); border: 1px solid rgba(16,185,129,0.2); border-radius: 12px; padding: 14px; margin-top: 12px; }
+    .tl-swap-label { font-size: 0.8em; color: #94a3b8; margin-bottom: 8px; font-weight: 500; }
+    .tl-swap-input { width: 100%; box-sizing: border-box; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 10px; padding: 9px 12px; color: #f1f5f9; font-size: 0.93em; outline: none; margin-bottom: 8px; }
+    .tl-swap-input:focus { border-color: #10b981; }
+    .tl-swap-row { display: flex; gap: 8px; flex-wrap: wrap; }
 
     /* Profile Panel Styles */
     .profile-slide-panel {
@@ -6041,6 +6065,9 @@
         window.positionRefreshInterval = null;
       }
 
+      // Stop Live Markets polling when navigating away from Token Launch
+      if (typeof tlStopLiveFetch === 'function') tlStopLiveFetch();
+
       const content = document.getElementById('content');
       content.innerHTML = '';
 
@@ -10307,9 +10334,24 @@
     // ===== Token Launch (pump.fun-style on Base) =====
     let launchedTokens = JSON.parse(localStorage.getItem('tl_tokens') || '[]');
     let tlPendingImageDataUrl = null; // stores uploaded token logo data URL
-    let tlCurrentView = 'explore'; // 'explore' | 'create' | 'detail'
+    let tlCurrentView = 'explore'; // 'explore' | 'create' | 'live'
     let tlCurrentTradeMode = 'buy'; // 'buy' | 'sell'
     let tlSelectedToken = null;
+
+    // ── Live Markets state ───────────────────────────────────────────────
+    // Worker URL: update if you deploy to a custom subdomain
+    const TL_WORKER_URL = (function () {
+      const h = window.location.hostname;
+      // When running on Workers / Pages, the worker is on the same origin
+      if (h !== 'localhost' && h !== '127.0.0.1') return '';
+      // Local dev: point at the wrangler dev server
+      return 'http://localhost:8787';
+    })();
+    let tlLiveTokens = [];           // trending pools from GeckoTerminal
+    let tlNewTokens  = [];           // newest pools from GeckoTerminal
+    let tlLiveTab    = 'trending';   // 'trending' | 'new'
+    let tlLiveFetchTimer = null;
+    let tlLiveLoading = false;
 
     // Seed a few demo tokens if none exist
     if (launchedTokens.length === 0) {
@@ -10374,6 +10416,13 @@
       // Sort: newest first
       const sorted = [...launchedTokens].sort((a, b) => b.created - a.created);
 
+      const tabBar = `
+        <div class="tl-tabs" style="margin-bottom:24px;">
+          <button class="tl-tab ${tlCurrentView === 'explore' ? 'active' : ''}" onclick="tlShowExplore()">🪙 My Launches</button>
+          <button class="tl-tab ${tlCurrentView === 'live' ? 'active' : ''}" onclick="tlShowLive()">📡 Live Markets</button>
+          <button class="tl-tab ${tlCurrentView === 'create' ? 'active' : ''}" onclick="tlShowCreate()">+ Create</button>
+        </div>`;
+
       const exploreHtml = `
         <div>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
@@ -10385,10 +10434,6 @@
 
       const createHtml = `
         <div>
-          <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
-            <button onclick="tlShowExplore()" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:1.1em;">← Back</button>
-            <h3 style="color:#60a5fa;margin:0;">🚀 Launch a New Token</h3>
-          </div>
           <div class="tl-form-card">
             <div style="text-align:center;margin-bottom:20px;">
               <div style="font-size:3em;margin-bottom:8px;">🪙</div>
@@ -10420,7 +10465,12 @@
           </div>
         </div>`;
 
-      const viewHtml = tlCurrentView === 'create' ? createHtml : exploreHtml;
+      const liveHtml = tlBuildLiveMarketsHtml();
+
+      let viewHtml;
+      if (tlCurrentView === 'create') viewHtml = createHtml;
+      else if (tlCurrentView === 'live') viewHtml = liveHtml;
+      else viewHtml = exploreHtml;
 
       content.innerHTML = `
         <div style="max-width:1200px;margin:0 auto;padding:0 16px 80px;">
@@ -10430,20 +10480,31 @@
           </div>
           ${networkWarning}
           ${walletBanner}
+          ${tabBar}
           ${viewHtml}
         </div>`;
+
+      if (tlCurrentView === 'live') tlStartLiveFetch();
     }
 
+
     function tlShowExplore() {
+      tlStopLiveFetch();
       tlCurrentView = 'explore';
       tlSelectedToken = null;
       renderTokenLaunchSection();
     }
 
     function tlShowCreate() {
+      tlStopLiveFetch();
       if (!userAddress) return showNotification('🔗 Please connect your wallet first!', true);
       tlPendingImageDataUrl = null;
       tlCurrentView = 'create';
+      renderTokenLaunchSection();
+    }
+
+    function tlShowLive() {
+      tlCurrentView = 'live';
       renderTokenLaunchSection();
     }
 
@@ -10730,15 +10791,257 @@
       reader.readAsDataURL(file);
     }
 
+    // ── Live Markets helpers ──────────────────────────────────────────────
+
+    /**
+     * Build the inner HTML for the Live Markets view.
+     * Uses tlLiveTokens / tlNewTokens already in memory; fetching is separate.
+     */
+    function tlBuildLiveMarketsHtml() {
+      const tokens = tlLiveTab === 'new' ? tlNewTokens : tlLiveTokens;
+      const tabBtns = `
+        <div style="display:flex;gap:8px;margin-bottom:18px;align-items:center;flex-wrap:wrap;">
+          <button class="tl-tab ${tlLiveTab === 'trending' ? 'active' : ''}" onclick="tlSwitchLiveTab('trending')">🔥 Trending</button>
+          <button class="tl-tab ${tlLiveTab === 'new' ? 'active' : ''}" onclick="tlSwitchLiveTab('new')">🆕 New Pools</button>
+          <span style="margin-left:auto;font-size:0.78em;color:#475569;" id="tlLiveRefreshLabel">Auto-refresh every 30s · Data: GeckoTerminal</span>
+        </div>`;
+
+      if (tlLiveLoading && tokens.length === 0) {
+        return `<div id="tlLiveInner">${tabBtns}<div class="tl-live-loading">⏳ Loading live Base market data…</div></div>`;
+      }
+      if (tokens.length === 0) {
+        return `<div id="tlLiveInner">${tabBtns}<div class="tl-live-loading">📡 No live data yet. Fetching from GeckoTerminal…</div></div>`;
+      }
+
+      const cards = tokens.map(t => tlBuildLiveCard(t)).join('');
+      return `<div id="tlLiveInner">${tabBtns}<div class="tl-live-grid">${cards}</div></div>`;
+    }
+
+    /** Parse a GeckoTerminal pool object into a display-friendly structure. */
+    function tlParseLivePool(pool, included) {
+      const attr = pool.attributes || {};
+      const relationships = pool.relationships || {};
+
+      // Resolve base token name/symbol from included array
+      let tokenName = attr.name || '?';
+      let tokenSymbol = attr.base_token_symbol || tokenName.split('/')[0] || '?';
+      let tokenAddress = null;
+      if (relationships.base_token && relationships.base_token.data && included) {
+        const btId = relationships.base_token.data.id;
+        const bt = included.find(i => i.id === btId);
+        if (bt && bt.attributes) {
+          tokenName = bt.attributes.name || tokenName;
+          tokenSymbol = bt.attributes.symbol || tokenSymbol;
+          tokenAddress = bt.attributes.address || null;
+        }
+      }
+
+      const price = parseFloat(attr.base_token_price_usd) || 0;
+      const priceNative = parseFloat(attr.base_token_price_native_currency) || 0;
+      const change24h = parseFloat(attr.price_change_percentage?.h24) || 0;
+      const volume24h = parseFloat(attr.volume_usd?.h24) || 0;
+      const liquidity = parseFloat(attr.reserve_in_usd) || 0;
+      const poolAddress = attr.address || pool.id?.split('_').pop() || null;
+
+      return { tokenName, tokenSymbol, tokenAddress, price, priceNative, change24h, volume24h, liquidity, poolAddress, dexId: attr.dex_id || 'unknown' };
+    }
+
+    function tlFmtUsd(n) {
+      if (n >= 1e9) return '$' + (n / 1e9).toFixed(2) + 'B';
+      if (n >= 1e6) return '$' + (n / 1e6).toFixed(2) + 'M';
+      if (n >= 1e3) return '$' + (n / 1e3).toFixed(2) + 'K';
+      return '$' + n.toFixed(4);
+    }
+
+    function tlBuildLiveCard(pool) {
+      const t = tlParseLivePool(pool, pool._included);
+      const changeClass = t.change24h >= 0 ? 'tl-live-change-pos' : 'tl-live-change-neg';
+      const changeSign = t.change24h >= 0 ? '+' : '';
+      const dexLabel = t.dexId === 'aerodrome' ? '🔵 Aerodrome' : (t.dexId === 'uniswap_v3' ? '🦄 Uniswap V3' : t.dexId);
+
+      const uniswapUrl = t.tokenAddress
+        ? `https://app.uniswap.org/explore/tokens/base/${t.tokenAddress}`
+        : `https://app.uniswap.org/explore/tokens/base`;
+      const aerodromeUrl = t.tokenAddress
+        ? `https://aerodrome.finance/swap?to=${t.tokenAddress}`
+        : 'https://aerodrome.finance';
+      const dsUrl = t.poolAddress
+        ? `https://dexscreener.com/base/${t.poolAddress}`
+        : 'https://dexscreener.com/base';
+
+      return `
+        <div class="tl-live-card" onclick="tlOpenLiveDetail('${(t.poolAddress || '').replace(/'/g, '')}', '${(t.tokenAddress || '').replace(/'/g, '')}', '${t.tokenName.replace(/'/g, '')}', '${t.tokenSymbol.replace(/'/g, '')}')">
+          <div class="tl-live-header">
+            <div>
+              <div class="tl-live-name">${t.tokenName}</div>
+              <span class="tl-live-ticker">$${t.tokenSymbol}</span>
+            </div>
+            <span class="${changeClass}">${changeSign}${t.change24h.toFixed(2)}%</span>
+          </div>
+          <div class="tl-live-price">${t.price < 0.001 ? t.price.toExponential(3) : tlFmtUsd(t.price)}</div>
+          <div class="tl-live-stats">
+            <span class="tl-live-stat">Vol 24h: ${tlFmtUsd(t.volume24h)}</span>
+            <span class="tl-live-stat">Liq: ${tlFmtUsd(t.liquidity)}</span>
+            <span class="tl-live-stat">${dexLabel}</span>
+          </div>
+          <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">
+            <a href="${uniswapUrl}" target="_blank" rel="noopener noreferrer" class="tl-live-dex-btn tl-dex-uniswap" onclick="event.stopPropagation()">🦄 Uniswap</a>
+            <a href="${aerodromeUrl}" target="_blank" rel="noopener noreferrer" class="tl-live-dex-btn tl-dex-aerodrome" onclick="event.stopPropagation()">🔵 Aerodrome</a>
+            <a href="${dsUrl}" target="_blank" rel="noopener noreferrer" class="tl-live-dex-btn tl-dex-dexscreener" onclick="event.stopPropagation()">📈 Chart</a>
+          </div>
+        </div>`;
+    }
+
+    /** Fetch live pools from GeckoTerminal via the Cloudflare Worker (or direct fallback). */
+    async function tlFetchLiveData() {
+      if (tlLiveLoading) return;
+      tlLiveLoading = true;
+      try {
+        const base = TL_WORKER_URL || '';
+        const [trendRes, newRes] = await Promise.all([
+          fetch(base + '/api/live-markets'),
+          fetch(base + '/api/new-tokens')
+        ]);
+        if (trendRes.ok) {
+          const td = await trendRes.json();
+          const pools = (td.data || []).map(p => { p._included = td.included || []; return p; });
+          if (pools.length > 0) tlLiveTokens = pools;
+        }
+        if (newRes.ok) {
+          const nd = await newRes.json();
+          const pools = (nd.data || []).map(p => { p._included = nd.included || []; return p; });
+          if (pools.length > 0) tlNewTokens = pools;
+        }
+      } catch (e) {
+        console.log('[LiveMarkets] fetch error:', e.message);
+      } finally {
+        tlLiveLoading = false;
+        // Re-render only if the Live Markets tab is still active
+        if (tlCurrentView === 'live') {
+          const inner = document.getElementById('tlLiveInner');
+          if (inner) inner.outerHTML = tlBuildLiveMarketsHtml();
+          else renderTokenLaunchSection();
+        }
+      }
+    }
+
+    function tlStartLiveFetch() {
+      tlStopLiveFetch();
+      tlFetchLiveData();
+      tlLiveFetchTimer = setInterval(tlFetchLiveData, 30000);
+    }
+
+    function tlStopLiveFetch() {
+      if (tlLiveFetchTimer) { clearInterval(tlLiveFetchTimer); tlLiveFetchTimer = null; }
+    }
+
+    function tlSwitchLiveTab(tab) {
+      tlLiveTab = tab;
+      const inner = document.getElementById('tlLiveInner');
+      if (inner) inner.outerHTML = tlBuildLiveMarketsHtml();
+    }
+
+    /**
+     * Open a detail modal for a live (GeckoTerminal) pool/token.
+     * Shows GeckoTerminal embed chart, price stats, and DEX swap buttons.
+     */
+    function tlOpenLiveDetail(poolAddress, tokenAddress, tokenName, tokenSymbol) {
+      const existing = document.getElementById('tlLiveDetailModal');
+      if (existing) existing.remove();
+
+      // Find the pool in state
+      const allPools = [...tlLiveTokens, ...tlNewTokens];
+      const rawPool = allPools.find(p => {
+        const pa = (p.attributes || {}).address || p.id?.split('_').pop() || '';
+        return pa.toLowerCase() === (poolAddress || '').toLowerCase();
+      });
+      let stats = null;
+      if (rawPool) stats = tlParseLivePool(rawPool, rawPool._included);
+
+      const priceStr = stats ? (stats.price < 0.001 ? stats.price.toExponential(4) : tlFmtUsd(stats.price)) : '—';
+      const changeStr = stats ? `${stats.change24h >= 0 ? '+' : ''}${stats.change24h.toFixed(2)}%` : '—';
+      const changeColor = stats && stats.change24h >= 0 ? '#10b981' : '#ef4444';
+      const volStr = stats ? tlFmtUsd(stats.volume24h) : '—';
+      const liqStr = stats ? tlFmtUsd(stats.liquidity) : '—';
+
+      // GeckoTerminal embeddable chart
+      const chartHtml = poolAddress
+        ? `<iframe src="https://www.geckoterminal.com/base/pools/${poolAddress}?embed=1&info=0&swaps=0" style="width:100%;height:300px;border:none;border-radius:10px;" loading="lazy"></iframe>`
+        : `<div style="height:120px;display:flex;align-items:center;justify-content:center;color:#475569;font-size:0.9em;">No chart available</div>`;
+
+      const uniswapUrl = tokenAddress
+        ? `https://app.uniswap.org/explore/tokens/base/${tokenAddress}`
+        : 'https://app.uniswap.org';
+      const aerodromeUrl = tokenAddress
+        ? `https://aerodrome.finance/swap?to=${tokenAddress}`
+        : 'https://aerodrome.finance';
+      const dsUrl = poolAddress
+        ? `https://dexscreener.com/base/${poolAddress}`
+        : 'https://dexscreener.com/base';
+      const explorerUrl = tokenAddress
+        ? `https://basescan.org/token/${tokenAddress}`
+        : 'https://basescan.org';
+
+      const modal = document.createElement('div');
+      modal.id = 'tlLiveDetailModal';
+      modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:20000;padding:16px;overflow-y:auto;';
+      modal.innerHTML = `
+        <div style="background:#1e293b;border-radius:20px;padding:0;max-width:500px;width:100%;border:1px solid #334155;box-shadow:0 20px 60px rgba(0,0,0,0.7);overflow:hidden;">
+          <div style="background:linear-gradient(135deg,#1e3a5f,#2d1b69);padding:24px 28px;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+              <div>
+                <h2 style="color:#f1f5f9;margin:0 0 4px;font-size:1.4em;">${tokenName}</h2>
+                <span style="background:rgba(96,165,250,0.2);color:#60a5fa;padding:4px 14px;border-radius:999px;font-size:0.83em;font-weight:600;">$${tokenSymbol}</span>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-size:1.35em;font-weight:700;color:#fbbf24;">${priceStr}</div>
+                <div style="font-size:0.9em;font-weight:600;color:${changeColor};">${changeStr} (24h)</div>
+              </div>
+            </div>
+          </div>
+          <div style="padding:20px;">
+            <div style="margin-bottom:14px;">${chartHtml}</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+              <div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:12px;text-align:center;">
+                <div style="font-size:0.75em;color:#64748b;">Volume 24h</div>
+                <div style="font-weight:700;color:#f1f5f9;">${volStr}</div>
+              </div>
+              <div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:12px;text-align:center;">
+                <div style="font-size:0.75em;color:#64748b;">Liquidity</div>
+                <div style="font-weight:700;color:#f1f5f9;">${liqStr}</div>
+              </div>
+            </div>
+            <div style="margin-bottom:14px;">
+              <div style="font-size:0.82em;color:#94a3b8;margin-bottom:8px;font-weight:500;">🔁 Trade on Base DEX</div>
+              <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                <a href="${uniswapUrl}" target="_blank" rel="noopener noreferrer" class="tl-live-dex-btn tl-dex-uniswap" style="padding:8px 16px;font-size:0.88em;">🦄 Uniswap V3</a>
+                <a href="${aerodromeUrl}" target="_blank" rel="noopener noreferrer" class="tl-live-dex-btn tl-dex-aerodrome" style="padding:8px 16px;font-size:0.88em;">🔵 Aerodrome</a>
+                <a href="${dsUrl}" target="_blank" rel="noopener noreferrer" class="tl-live-dex-btn tl-dex-dexscreener" style="padding:8px 16px;font-size:0.88em;">📈 DexScreener</a>
+                <a href="${explorerUrl}" target="_blank" rel="noopener noreferrer" style="background:rgba(255,255,255,0.06);border:1px solid #334155;color:#94a3b8;padding:8px 16px;border-radius:8px;text-decoration:none;font-size:0.88em;">🔍 Basescan</a>
+              </div>
+            </div>
+            <div style="background:rgba(96,165,250,0.07);border:1px solid rgba(96,165,250,0.2);border-radius:10px;padding:10px 14px;font-size:0.8em;color:#94a3b8;margin-bottom:14px;">
+              ⚠️ <strong style="color:#fbbf24;">Educational simulator.</strong> Data is live from GeckoTerminal. Always DYOR before trading real assets. Connect MetaMask and use the DEX links above to trade.
+            </div>
+            <button onclick="document.getElementById('tlLiveDetailModal').remove()" style="width:100%;background:none;border:1px solid #334155;color:#94a3b8;padding:10px;border-radius:10px;cursor:pointer;font-size:0.9em;">Close</button>
+          </div>
+        </div>`;
+      document.body.appendChild(modal);
+      modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+    }
+
     window.renderTokenLaunchSection = renderTokenLaunchSection;
     window.tlShowExplore = tlShowExplore;
     window.tlShowCreate = tlShowCreate;
+    window.tlShowLive = tlShowLive;
     window.tlCreateToken = tlCreateToken;
     window.tlPreviewImage = tlPreviewImage;
     window.tlOpenDetail = tlOpenDetail;
     window.tlSwitchTradeTab = tlSwitchTradeTab;
     window.tlExecuteTrade = tlExecuteTrade;
     window.tlAddTokenToWallet = tlAddTokenToWallet;
+    window.tlSwitchLiveTab = tlSwitchLiveTab;
+    window.tlOpenLiveDetail = tlOpenLiveDetail;
 
     // NFT Staking functions
     function generateNFTCards(count, isStaked = false) {

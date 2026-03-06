@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Mogaland Plume Simulator - Static Site",
   "scripts": {
-    "build": "mkdir -p dist && cp index.html game.html mogalandplumesimulator.html _headers wrangler.toml dist/ && cp -r contracts dist/ 2>/dev/null || true"
+    "build": "mkdir -p dist && cp index.html game.html mogalandplumesimulator.html _headers wrangler.toml worker.js dist/ && cp -r contracts dist/ 2>/dev/null || true"
   },
   "private": true
 }
