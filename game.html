@@ -391,6 +391,13 @@ function showError(e){
 }
 window.addEventListener('error',e=>showError(e.error||e.message));
 window.addEventListener('unhandledrejection',e=>showError(e.reason));
+// Suppress benign SES/MetaMask lockdown console warnings
+(function(){
+  const _warn=console.warn.bind(console);
+  const _error=console.error.bind(console);
+  console.warn=function(...a){if(a.some(x=>BENIGN_ERR_REGEX.test(String(x))))return;_warn(...a);};
+  console.error=function(...a){if(a.some(x=>BENIGN_ERR_REGEX.test(String(x))))return;_error(...a);};
+})();
 
 /* ── Constants ── */
 const TREASURY='0xa959f26847211f71A22aDb087EBe50E0743e7D66';
@@ -2246,7 +2253,7 @@ function updateNPCBots(dtS){
 }
 
 /* ── Textures ── */
-function addTex(scene,key,w,h,fn){const c=document.createElement('canvas');c.width=w;c.height=h;fn(c.getContext('2d'));scene.textures.addCanvas(key,c);}
+function addTex(scene,key,w,h,fn){const c=document.createElement('canvas');c.width=w;c.height=h;fn(c.getContext('2d',{willReadFrequently:true}));scene.textures.addCanvas(key,c);}
 function px(ctx,x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(x,y,w,h);}
 
 function makeTextures(scene){
