@@ -6446,6 +6446,12 @@
           ]
         };
 
+        // The Odds API key (replace with your own key from https://the-odds-api.com – free 500 req/month)
+        // IMPORTANT: For production, proxy this through a Cloudflare Worker (/api/odds) to keep the key
+        // server-side. See wrangler.toml for the Worker setup. Leave as empty string to use
+        // strength-based fallback odds without any API calls.
+        const ODDS_API_KEY = '';
+
         // Fetch real sports data from TheSportsDB API
         async function fetchSportsData(team) {
           if (!team.teamId) return;
@@ -6493,11 +6499,111 @@
                 const opponent = isHome ? nextEvent.strAwayTeam : nextEvent.strHomeTeam;
                 const date = new Date(nextEvent.dateEvent).toLocaleDateString('en-US', {month: 'short', day: 'numeric'});
                 team.nextMatch = `${date} vs ${opponent}`;
+
+                // Store commence_time as ISO timestamp for bet-lock logic
+                // TheSportsDB provides dateEvent (YYYY-MM-DD) and strTime (HH:MM:SS) in UTC
+                if (nextEvent.dateEvent) {
+                  const timeStr = nextEvent.strTime || '00:00:00';
+                  team.commenceTime = new Date(`${nextEvent.dateEvent}T${timeStr}Z`).toISOString();
+                  team.nextEventId = nextEvent.idEvent;
+                }
               }
             }
           } catch (error) {
             console.log('Sports API error:', error);
           }
+        }
+
+        // Fetch upcoming odds from The Odds API (https://the-odds-api.com)
+        // sportKey examples: 'soccer_epl', 'basketball_nba', 'soccer_la_liga'
+        async function fetchUpcomingOdds(sportKey) {
+          if (!ODDS_API_KEY) return null;
+          try {
+            const url = `https://api.the-odds-api.com/v4/sports/${sportKey}/odds/?apiKey=${ODDS_API_KEY}&regions=eu&markets=h2h&oddsFormat=decimal`;
+            const res = await fetch(url).catch(() => null);
+            if (!res || !res.ok) return null;
+            return await res.json();
+          } catch (e) {
+            console.log('Odds API error:', e);
+            return null;
+          }
+        }
+
+        // Map team sport type to The Odds API sport key
+        function teamTypeToOddsSportKey(type) {
+          if (type === 'football') return 'soccer_epl';
+          if (type === 'basketball') return 'basketball_nba';
+          return 'soccer_epl';
+        }
+
+        // Returns seconds remaining until match commence_time (Infinity if unknown)
+        function getTimeToMatchSeconds(asset) {
+          if (!asset.commenceTime) return Infinity;
+          return Math.floor((new Date(asset.commenceTime).getTime() - Date.now()) / 1000);
+        }
+
+        // Returns true when betting should be locked (match starts in < 1 hour or already started)
+        function isBettingLocked(asset) {
+          const secs = getTimeToMatchSeconds(asset);
+          return secs !== Infinity && secs < 3600;
+        }
+
+        // Format a seconds value into a human-readable countdown string
+        function formatCountdown(seconds) {
+          if (seconds <= 0) return 'Match started / in progress';
+          const d = Math.floor(seconds / 86400);
+          const h = Math.floor((seconds % 86400) / 3600);
+          const m = Math.floor((seconds % 3600) / 60);
+          const s = seconds % 60;
+          if (d > 0) return `${d}d ${h}h ${m}m`;
+          if (h > 0) return `${h}h ${m}m ${s}s`;
+          return `${m}m ${s}s`;
+        }
+
+        // Calculate strength-based fallback odds (decimal format)
+        function calcFallbackOdds(teamStrength) {
+          const s = Math.max(0.3, Math.min(0.95, teamStrength));
+          const homeWin = parseFloat((1 / s).toFixed(2));
+          const draw    = parseFloat((1 / 0.28).toFixed(2));
+          const awayWin = parseFloat((1 / Math.max(0.05, 1 - s)).toFixed(2));
+          return { home: homeWin, draw, away: awayWin };
+        }
+
+        // Lookup match odds for an asset: try The Odds API first, fall back to strength-based
+        async function getMatchOdds(asset) {
+          if (ODDS_API_KEY) {
+            const sportKey = teamTypeToOddsSportKey(asset.type);
+            const oddsData = await fetchUpcomingOdds(sportKey);
+            if (oddsData && Array.isArray(oddsData)) {
+              const name = asset.symbol.toLowerCase();
+              const match = oddsData.find(ev =>
+                (ev.home_team || '').toLowerCase().includes(name) ||
+                (ev.away_team || '').toLowerCase().includes(name)
+              );
+              if (match && match.bookmakers && match.bookmakers.length > 0) {
+                const market = match.bookmakers[0].markets.find(m => m.key === 'h2h');
+                if (market) {
+                  const outcomes = market.outcomes;
+                  const homeOut = outcomes.find(o => o.name.toLowerCase().includes(name));
+                  const awayOut = outcomes.find(o => !o.name.toLowerCase().includes(name) && o.name !== 'Draw');
+                  const drawOut = outcomes.find(o => o.name === 'Draw');
+                  // Store commence_time from Odds API if available
+                  if (match.commence_time && !asset.commenceTime) {
+                    asset.commenceTime = match.commence_time;
+                  }
+                  return {
+                    home: homeOut ? Math.round(homeOut.price * 100) / 100 : calcFallbackOdds(asset.strength).home,
+                    draw: drawOut ? Math.round(drawOut.price * 100) / 100 : calcFallbackOdds(asset.strength).draw,
+                    away: awayOut ? Math.round(awayOut.price * 100) / 100 : calcFallbackOdds(asset.strength).away,
+                    source: 'live'
+                  };
+                }
+              }
+            }
+          }
+          // Fallback: derive odds from team strength
+          const fallback = calcFallbackOdds(asset.strength || 0.5);
+          return { ...fallback, source: 'estimated' };
         }
 
         // Auto-update sports data periodically
@@ -6538,6 +6644,11 @@
           if (sportsUpdateInterval) {
             clearInterval(sportsUpdateInterval);
             sportsUpdateInterval = null;
+          }
+          // Also stop any running countdown timer
+          if (typeof sportsCountdownInterval !== 'undefined' && sportsCountdownInterval) {
+            clearInterval(sportsCountdownInterval);
+            sportsCountdownInterval = null;
           }
         }
 
@@ -6955,6 +7066,9 @@
           });
         }
 
+        // Interval reference for sports countdown timer in the club history view
+        let sportsCountdownInterval = null;
+
         function showClubHistory(asset) {
           selectedAsset = asset;
           document.getElementById('selectedAsset').textContent = asset.symbol;
@@ -6969,6 +7083,12 @@
           if (badge) badge.style.display = 'none';
           destroyLightweightChart();
 
+          // Stop any previous countdown interval
+          if (sportsCountdownInterval) {
+            clearInterval(sportsCountdownInterval);
+            sportsCountdownInterval = null;
+          }
+
           const view = document.getElementById('clubHistoryView');
           view.style.display = 'block';
           
@@ -6980,9 +7100,12 @@
             </div>
           `;
           
-          // Fetch real sports data
-          fetchSportsData(asset).then(() => {
-            // Calculate win rate from recent form using single reduce operation
+          // Fetch real sports data + odds concurrently
+          Promise.all([
+            fetchSportsData(asset),
+            getMatchOdds(asset)
+          ]).then(([, odds]) => {
+            // Calculate win rate from recent form
             const { wins, losses, draws } = asset.recentForm.reduce((acc, match) => {
               if (match.includes(': W ')) acc.wins++;
               else if (match.includes(': L ')) acc.losses++;
@@ -6992,8 +7115,24 @@
             
             const totalGames = asset.recentForm.length;
             const winRate = totalGames > 0 ? ((wins / totalGames) * 100).toFixed(0) : '0';
-            
-            // Display with enhanced stats including win percentage
+
+            // Build upcoming match + lock section
+            const secsToMatch = getTimeToMatchSeconds(asset);
+            const locked = isBettingLocked(asset);
+            const matchTimeStr = asset.commenceTime
+              ? new Date(asset.commenceTime).toLocaleString('en-US', {
+                  month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZoneName: 'short'
+                })
+              : 'TBD';
+
+            const lockBadge = locked
+              ? `<span style="background:#ef4444; color:white; padding:3px 8px; border-radius:4px; font-size:0.85em; font-weight:bold;">🔒 BETTING CLOSED</span>`
+              : `<span style="background:#10b981; color:white; padding:3px 8px; border-radius:4px; font-size:0.85em; font-weight:bold;">✅ BETTING OPEN</span>`;
+
+            const oddsSourceBadge = odds.source === 'live'
+              ? `<span style="font-size:0.75em; color:#60a5fa;">(live odds)</span>`
+              : `<span style="font-size:0.75em; color:#94a3b8;">(estimated)</span>`;
+
             view.innerHTML = `
               <div style="background:rgba(16,185,129,0.1); padding:12px; border-radius:8px; margin-bottom:16px;">
                 <strong>📊 Team Performance:</strong><br>
@@ -7009,8 +7148,32 @@
                     <span style="color:#ef4444;">✗ ${losses}L</span>
                   </div>
                 </div>
-                <div style="margin-top:8px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.1);">
-                  <strong>🔜 Next Match: ${asset.nextMatch}</strong>
+              </div>
+
+              <div style="background:rgba(96,165,250,0.12); padding:14px; border-radius:8px; margin-bottom:14px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; margin-bottom:8px;">
+                  <strong>🔜 Upcoming Match: ${asset.nextMatch || 'TBD'}</strong>
+                  <span id="sportsBetLockBadge">${lockBadge}</span>
+                </div>
+                <div style="font-size:0.9em; opacity:0.85; margin-bottom:6px;">
+                  📅 Kick-off: <strong>${matchTimeStr}</strong>
+                </div>
+                <div id="sportsCountdownEl" style="font-size:0.95em; color:#fbbf24; font-weight:bold; margin-bottom:10px;">
+                  ${secsToMatch === Infinity ? '⏰ Match time not available' : (locked ? '🔒 Betting locked – match starts in less than 1 hour' : `⏳ Betting closes in: ${formatCountdown(secsToMatch - 3600)}`)}
+                </div>
+                <div style="display:flex; gap:12px; flex-wrap:wrap;">
+                  <div style="background:rgba(16,185,129,0.15); padding:8px 14px; border-radius:6px; text-align:center; flex:1; min-width:80px;">
+                    <div style="font-size:0.8em; opacity:0.7;">WIN ${oddsSourceBadge}</div>
+                    <div style="font-size:1.3em; font-weight:bold; color:#10b981;">${odds.home}×</div>
+                  </div>
+                  <div style="background:rgba(251,191,36,0.15); padding:8px 14px; border-radius:6px; text-align:center; flex:1; min-width:80px;">
+                    <div style="font-size:0.8em; opacity:0.7;">DRAW</div>
+                    <div style="font-size:1.3em; font-weight:bold; color:#fbbf24;">${odds.draw}×</div>
+                  </div>
+                  <div style="background:rgba(239,68,68,0.15); padding:8px 14px; border-radius:6px; text-align:center; flex:1; min-width:80px;">
+                    <div style="font-size:0.8em; opacity:0.7;">LOSE</div>
+                    <div style="font-size:1.3em; font-weight:bold; color:#ef4444;">${odds.away}×</div>
+                  </div>
                 </div>
               </div>
               
@@ -7029,9 +7192,39 @@
               <div style="background:rgba(59,130,246,0.1); padding:12px; border-radius:8px; margin-top:12px;">
                 <strong>💰 Place Your Bet with Sepolia USDC:</strong><br>
                 Predict if <strong>${asset.symbol}</strong> will WIN or LOSE their next match!<br>
-                <span style="font-size:0.9em; opacity:0.9;">Win Probability: <span style="color:#10b981; font-weight:bold;">${winRate}%</span> | Use the controls on the right to place your bet with leverage.</span>
+                <span id="sportsBetInfo" style="font-size:0.9em; opacity:0.9;">
+                  Win Probability: <span style="color:#10b981; font-weight:bold;">${winRate}%</span> |
+                  ${locked ? '<span style="color:#ef4444; font-weight:bold;">Betting is locked – match is less than 1 hour away.</span>' : 'Use the controls on the right to place your bet with leverage.'}
+                </span>
               </div>
             `;
+
+            // Start live countdown update every second
+            if (asset.commenceTime && !locked) {
+              sportsCountdownInterval = setInterval(() => {
+                const el = document.getElementById('sportsCountdownEl');
+                if (!el) { clearInterval(sportsCountdownInterval); sportsCountdownInterval = null; return; }
+                const remaining = getTimeToMatchSeconds(asset);
+                if (remaining < 3600) {
+                  el.textContent = '🔒 Betting locked – match starts in less than 1 hour';
+                  el.style.color = '#ef4444';
+                  clearInterval(sportsCountdownInterval);
+                  sportsCountdownInterval = null;
+                  // Update lock badge without recursing into showClubHistory
+                  const lockEl = document.getElementById('sportsBetLockBadge');
+                  if (lockEl) {
+                    lockEl.innerHTML = `<span style="background:#ef4444; color:white; padding:3px 8px; border-radius:4px; font-size:0.85em; font-weight:bold;">🔒 BETTING CLOSED</span>`;
+                  }
+                  const betInfoEl = document.getElementById('sportsBetInfo');
+                  if (betInfoEl) {
+                    betInfoEl.innerHTML = '<span style="color:#ef4444; font-weight:bold;">Betting is locked – match is less than 1 hour away.</span>';
+                  }
+                } else {
+                  el.textContent = `⏳ Betting closes in: ${formatCountdown(remaining - 3600)}`;
+                }
+              }, 1000);
+            }
+
           }).catch(error => {
             console.error('Error fetching sports data:', error);
             view.innerHTML = `
@@ -7140,6 +7333,17 @@
             return;
           }
 
+          // Enforce 1-hour bet cutoff for sports markets
+          if (currentTab === 'sports' && isBettingLocked(selectedAsset)) {
+            showNotification('🔒 Betting is closed – match starts in less than 1 hour!', true);
+            const statusEl = document.getElementById('tradeStatus');
+            if (statusEl) {
+              statusEl.textContent = '🔒 Betting locked – less than 1 hour to kick-off';
+              statusEl.style.color = '#ef4444';
+            }
+            return;
+          }
+
           try {
             showNotification(`🔄 Opening ${type.toUpperCase()} position...`, false);
             
@@ -7166,6 +7370,7 @@
               const position = {
                 asset: selectedAsset,
                 type: type, // 'long' = WIN, 'short' = LOSE
+                betType: type, // Captured explicitly for settlement closure
                 amount: amount,
                 leverage: leverage,
                 openTime: new Date().toLocaleTimeString(),
@@ -7191,63 +7396,98 @@
               document.getElementById('positionAmount').value = '';
               document.getElementById('leverageInfo').style.display = 'none';
               
-              // Simulate match result after 15 seconds
-              setTimeout(() => {
+              // Schedule settlement: try to fire at actual match end (+95 min for football, +48 min for basketball)
+              // Fall back to 15-second simulation when no commence_time is available
+              const matchDurationMs = selectedAsset.type === 'basketball' ? 48 * 60 * 1000 : 95 * 60 * 1000;
+              const commenceMs = selectedAsset.commenceTime ? new Date(selectedAsset.commenceTime).getTime() : 0;
+              const now = Date.now();
+              // settlementMs: expected end of match in ms from now
+              const settlementMs = commenceMs > 0
+                ? Math.max(commenceMs + matchDurationMs - now, 30000) // at least 30s from now
+                : 15000; // demo fallback
+
+              setTimeout(async () => {
                 const idx = openPositions.findIndex(p => p === position);
-                if (idx !== -1) {
-                  // Use team strength to determine outcome
-                  const winChance = type === 'long' ? selectedAsset.strength : (1 - selectedAsset.strength);
-                  const won = Math.random() < winChance;
-                  
-                  const profit = amount * leverage * 0.9; // 90% profit if win
-                  
-                  if (won) {
-                    // Transfer winnings from treasury to user
-                    const totalPayout = amount + profit; // Return bet + profit
-                    if (transferFromTreasury(totalPayout)) {
-                      tradeHistoryList.push({
-                        asset: selectedAsset,
-                        type: type === 'long' ? 'WIN' : 'LOSE',
-                        leverage: leverage,
-                        amount: amount,
-                        pnl: profit,
-                        closeTime: new Date().toLocaleTimeString()
-                      });
-                      showNotification(`🏆 Match result: ${selectedAsset.symbol} - You won $${profit.toFixed(2)} from treasury!`, false);
-                      recordTransaction(null, 'Sports Bet', `${selectedAsset.symbol} WIN - Treasury paid $${profit.toFixed(2)} USDC profit`, {amount: profit, token: 'USDC', from: TREASURY_WALLET_ADDRESS, to: userAddress});
+                if (idx === -1) return;
+
+                // Attempt to fetch final score from TheSportsDB
+                let won = null;
+                if (position.asset.nextEventId && position.asset.teamId) {
+                  try {
+                    const resultUrl = `https://www.thesportsdb.com/api/v1/json/3/lookupevent.php?id=${position.asset.nextEventId}`;
+                    const res = await fetch(resultUrl).catch(() => null);
+                    if (res && res.ok) {
+                      const data = await res.json();
+                      const ev = data.events && data.events[0];
+                      if (ev && ev.intHomeScore !== null && ev.intAwayScore !== null) {
+                        const isHome = String(ev.idHomeTeam) === String(position.asset.teamId);
+                        const homeScore = parseInt(ev.intHomeScore);
+                        const awayScore = parseInt(ev.intAwayScore);
+                        const isDraw = homeScore === awayScore;
+                        const teamWon = isHome ? homeScore > awayScore : awayScore > homeScore;
+                        // Draws treated as a loss for both WIN and LOSE bets (no draw market in this UI)
+                        won = isDraw ? false : (position.betType === 'long' ? teamWon : !teamWon);
+                      }
                     }
-                  } else {
-                    // Loss - money stays in treasury
+                  } catch (e) {
+                    console.log('Settlement fetch error:', e);
+                  }
+                }
+
+                // Fall back to strength-based simulation if no live result available
+                if (won === null) {
+                  const winChance = position.betType === 'long' ? position.asset.strength : (1 - position.asset.strength);
+                  won = Math.random() < winChance;
+                }
+
+                const profit = amount * leverage * 0.9; // 90% profit if win
+
+                if (won) {
+                  const totalPayout = amount + profit;
+                  if (transferFromTreasury(totalPayout)) {
                     tradeHistoryList.push({
                       asset: selectedAsset,
-                      type: type === 'long' ? 'WIN' : 'LOSE',
+                      type: position.betType === 'long' ? 'WIN' : 'LOSE',
                       leverage: leverage,
                       amount: amount,
-                      pnl: -amount,
+                      pnl: profit,
                       closeTime: new Date().toLocaleTimeString()
                     });
-                    showNotification(`🏆 Match result: ${selectedAsset.symbol} - You lost $${amount.toFixed(2)} to treasury`, true);
-                    recordTransaction(null, 'Sports Bet', `${selectedAsset.symbol} LOSS - $${amount.toFixed(2)} USDC kept by treasury`, {amount: amount, token: 'USDC', from: userAddress, to: TREASURY_WALLET_ADDRESS});
+                    showNotification(`🏆 Match result: ${selectedAsset.symbol} - You won $${profit.toFixed(2)} from treasury!`, false);
+                    recordTransaction(null, 'Sports Bet', `${selectedAsset.symbol} WIN - Treasury paid $${profit.toFixed(2)} USDC profit`, {amount: profit, token: 'USDC', from: TREASURY_WALLET_ADDRESS, to: userAddress});
                   }
-                  
-                  // Track trading volume for leaderboard (closing bet)
-                  const category = position.category || 'sports';
-                  updateTradingVolume(category, amount);
-                  
-                  openPositions.splice(idx, 1);
-                  
-                  updatePositionsDisplay();
-                  updateTradeHistory();
-                  updateTradingBalance();
+                } else {
+                  tradeHistoryList.push({
+                    asset: selectedAsset,
+                    type: position.betType === 'long' ? 'WIN' : 'LOSE',
+                    leverage: leverage,
+                    amount: amount,
+                    pnl: -amount,
+                    closeTime: new Date().toLocaleTimeString()
+                  });
+                  showNotification(`🏆 Match result: ${selectedAsset.symbol} - You lost $${amount.toFixed(2)} to treasury`, true);
+                  recordTransaction(null, 'Sports Bet', `${selectedAsset.symbol} LOSS - $${amount.toFixed(2)} USDC kept by treasury`, {amount: amount, token: 'USDC', from: userAddress, to: TREASURY_WALLET_ADDRESS});
                 }
-              }, 15000);
+
+                // Track trading volume for leaderboard (closing bet)
+                const category = position.category || 'sports';
+                updateTradingVolume(category, amount);
+
+                openPositions.splice(idx, 1);
+                updatePositionsDisplay();
+                updateTradeHistory();
+                updateTradingBalance();
+              }, settlementMs);
               
               updatePositionsDisplay();
               updateTradingBalance();
               
               const statusEl = document.getElementById('tradeStatus');
               if (statusEl) {
-                statusEl.textContent = `⏳ Bet placed: ${selectedAsset.symbol} to ${betType} | Result in 15s`;
+                const settleLabel = selectedAsset.commenceTime
+                  ? `when match ends (${new Date(new Date(selectedAsset.commenceTime).getTime() + (selectedAsset.type === 'basketball' ? 48 : 95) * 60000).toLocaleTimeString()})`
+                  : 'in 15s (demo)';
+                statusEl.textContent = `⏳ Bet placed: ${selectedAsset.symbol} to ${betType} | Settles ${settleLabel}`;
                 statusEl.style.color = '#fbbf24';
               }
               return;
@@ -7310,7 +7550,7 @@
           
           // Handle sports bets separately
           if (position.isSportsBet) {
-            showNotification('Sports bets are settled automatically after 15 seconds!', true);
+            showNotification('Sports bets are settled automatically after the match ends!', true);
             return;
           }
           
@@ -8373,6 +8613,11 @@
             document.querySelectorAll('[data-tab]').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             currentTab = btn.dataset.tab;
+            // Stop sports countdown when leaving the sports tab
+            if (sportsCountdownInterval) {
+              clearInterval(sportsCountdownInterval);
+              sportsCountdownInterval = null;
+            }
             renderAssets();
             selectedAsset = null;
             document.getElementById('selectedAsset').textContent = 'None';
