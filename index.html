@@ -6269,7 +6269,7 @@
 
             <!-- A) TOP NAV BAR -->
             <div style="background:#131722; border-bottom:1px solid #2a2d3a; padding:0 16px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; min-height:52px;">
-              <span style="font-weight:700; font-size:1.1em; color:#f0b90b; white-space:nowrap;">📊 Futures Pro</span>
+              <span id="marketNavTitle" style="font-weight:700; font-size:1.1em; color:#f0b90b; white-space:nowrap;">📊 Futures Pro</span>
               <div style="display:flex; gap:4px; flex-wrap:wrap; flex:1;">
                 <button class="nav-btn active" data-tab="crypto" style="padding:6px 14px; border-radius:4px; border:none; background:rgba(240,185,11,0.15); color:#f0b90b; cursor:pointer; font-size:0.85em;">🪙 Crypto</button>
                 <button class="nav-btn" data-tab="stocks" style="padding:6px 14px; border-radius:4px; border:none; background:transparent; color:#94a3b8; cursor:pointer; font-size:0.85em;">📈 Stocks</button>
@@ -6304,7 +6304,7 @@
             </div>
 
             <!-- MAIN BODY -->
-            <div style="display:flex; height:calc(100vh - 52px - 200px); min-height:560px;">
+            <div id="tradingMainBody" style="display:flex; height:calc(100vh - 52px - 200px); min-height:560px;">
 
               <!-- C1) ASSET LIST PANEL -->
               <div style="width:200px; min-width:160px; background:#131722; border-right:1px solid #2a2d3a; overflow-y:auto; flex-shrink:0;">
@@ -6446,7 +6446,7 @@
             </div><!-- end main body flex row -->
 
             <!-- E) BOTTOM POSITIONS TABLE -->
-            <div style="background:#131722; border-top:1px solid #2a2d3a; min-height:160px; display:flex; flex-direction:column;">
+            <div id="tradingPositionsTable" style="background:#131722; border-top:1px solid #2a2d3a; min-height:160px; display:flex; flex-direction:column;">
 
               <!-- Tab bar -->
               <div style="display:flex; align-items:center; border-bottom:1px solid #2a2d3a; padding:0 12px;">
@@ -6471,6 +6471,9 @@
               </div>
 
             </div><!-- end bottom positions -->
+
+            <!-- SPORTSBOOK VIEW - shown when Sports tab is active, replaces trading layout -->
+            <div id="sportsbookView" style="display:none; background:#0d1421; flex:1; overflow:hidden;"></div>
 
           </div>
         `;
@@ -6525,7 +6528,7 @@
             {symbol: "EURJPY", name: "EUR/JPY", tvSymbol: "FX:EURJPY", basePrice: 161.0, volatility: 0.009}
           ],
           sports: [
-            {symbol: "Real Madrid", type: "football", teamId: "133602", league: "La Liga", strength: 0.85, nextMatch: "vs Barcelona", recentForm: [
+            {symbol: "Real Madrid", type: "football", teamId: "133739", league: "La Liga", strength: 0.85, nextMatch: "vs Barcelona", recentForm: [
               "Feb 5, 2026: W 3-1 vs Barcelona (La Liga)",
               "Jan 29, 2026: W 2-0 vs Atletico Madrid (Copa)",
               "Jan 22, 2026: L 1-2 vs Bayern Munich (UCL)"
@@ -6534,6 +6537,11 @@
               "Feb 4, 2026: W 2-1 vs Atletico Madrid",
               "Jan 28, 2026: L 0-2 vs Bayern Munich",
               "Jan 21, 2026: W 3-0 vs Sevilla"
+            ]},
+            {symbol: "Atletico Madrid", type: "football", teamId: "133618", league: "La Liga", strength: 0.78, nextMatch: "vs Sevilla", recentForm: [
+              "Feb 3, 2026: D 1-1 vs Sevilla",
+              "Jan 27, 2026: L 0-2 vs Real Madrid",
+              "Jan 20, 2026: W 3-1 vs Valencia"
             ]},
             {symbol: "Man City", type: "football", teamId: "133613", league: "Premier League", strength: 0.88, nextMatch: "vs Liverpool", recentForm: [
               "Feb 5, 2026: W 4-1 vs Chelsea",
@@ -6544,6 +6552,31 @@
               "Feb 4, 2026: W 3-2 vs Chelsea",
               "Jan 28, 2026: L 1-3 vs Arsenal",
               "Jan 21, 2026: D 2-2 vs Man City"
+            ]},
+            {symbol: "Arsenal", type: "football", teamId: "133610", league: "Premier League", strength: 0.81, nextMatch: "vs Chelsea", recentForm: [
+              "Feb 5, 2026: W 3-1 vs Man City",
+              "Jan 29, 2026: W 2-0 vs Liverpool",
+              "Jan 22, 2026: W 4-0 vs Everton"
+            ]},
+            {symbol: "Chelsea", type: "football", teamId: "133615", league: "Premier League", strength: 0.74, nextMatch: "vs Arsenal", recentForm: [
+              "Feb 5, 2026: L 1-4 vs Man City",
+              "Jan 29, 2026: D 1-1 vs Tottenham",
+              "Jan 22, 2026: L 1-3 vs Liverpool"
+            ]},
+            {symbol: "Bayern Munich", type: "football", teamId: "132694", league: "Bundesliga", strength: 0.87, nextMatch: "vs Borussia Dortmund", recentForm: [
+              "Feb 4, 2026: W 3-0 vs Dortmund (DFB Cup)",
+              "Jan 28, 2026: W 4-1 vs Bayer Leverkusen",
+              "Jan 21, 2026: W 2-0 vs RB Leipzig"
+            ]},
+            {symbol: "PSG", type: "football", teamId: "133726", league: "Ligue 1", strength: 0.86, nextMatch: "vs Marseille", recentForm: [
+              "Feb 5, 2026: W 4-0 vs Lens",
+              "Jan 29, 2026: W 2-0 vs Lyon",
+              "Jan 22, 2026: W 3-1 vs Monaco"
+            ]},
+            {symbol: "Juventus", type: "football", teamId: "133621", league: "Serie A", strength: 0.76, nextMatch: "vs Inter Milan", recentForm: [
+              "Feb 4, 2026: D 1-1 vs AC Milan",
+              "Jan 28, 2026: W 2-0 vs Napoli",
+              "Jan 21, 2026: L 0-2 vs Inter Milan"
             ]},
             {symbol: "Lakers", type: "basketball", teamId: "134864", league: "NBA", strength: 0.78, nextMatch: "vs Warriors", recentForm: [
               "Feb 5, 2026: W 112-108 vs Warriors",
@@ -6559,6 +6592,16 @@
               "Feb 4, 2026: W 118-105 vs Nets",
               "Feb 1, 2026: W 105-98 vs Lakers",
               "Jan 27, 2026: W 112-108 vs Heat"
+            ]},
+            {symbol: "Heat", type: "basketball", teamId: "134858", league: "NBA", strength: 0.72, nextMatch: "vs Celtics", recentForm: [
+              "Feb 4, 2026: L 100-115 vs Celtics",
+              "Feb 1, 2026: W 110-102 vs Nets",
+              "Jan 28, 2026: D 105-105 vs Bucks (OT)"
+            ]},
+            {symbol: "Bucks", type: "basketball", teamId: "134861", league: "NBA", strength: 0.80, nextMatch: "vs Celtics", recentForm: [
+              "Feb 3, 2026: W 125-110 vs Nets",
+              "Feb 1, 2026: W 118-112 vs Heat",
+              "Jan 28, 2026: L 108-115 vs Warriors"
             ]}
           ]
         };
@@ -6736,16 +6779,10 @@
           sportsUpdateInterval = setInterval(() => {
             if (currentTab === 'sports') {
               console.log('Auto-updating sports data...');
-              assetsData.sports.forEach(team => {
-                fetchSportsData(team);
+              Promise.all(assetsData.sports.map(team => fetchSportsData(team))).then(() => {
+                // Refresh sportsbook display after data is fetched
+                setTimeout(() => renderSportsbookMatches(currentSbFilter), 100);
               });
-              
-              // Refresh display if on sports tab
-              if (selectedAsset && selectedAsset.type) {
-                setTimeout(() => {
-                  showClubHistory(selectedAsset);
-                }, 2000);
-              }
             }
           }, 5 * 60 * 1000); // 5 minutes
           
@@ -6770,6 +6807,9 @@
         }
 
         let currentTab = 'crypto';
+        // Sportsbook state
+        let sportsBetSlip = [];
+        let currentSbFilter = 'all';
         let selectedAsset = null;
         let chart = null;
         let priceHistory = [];
@@ -7542,69 +7582,471 @@
         function updateMarketForTab(tab) {
           const isSports = tab === 'sports';
 
-          // Show/hide order book sidebar (not relevant for sports)
-          const obSidebar = document.getElementById('orderBookSidebar');
-          if (obSidebar) obSidebar.style.display = isSports ? 'none' : 'flex';
-
-          // Show/hide margin mode and leverage panels (not relevant for sports)
-          const marginPanel = document.getElementById('marginModePanel');
-          if (marginPanel) marginPanel.style.display = isSports ? 'none' : 'flex';
-          const leveragePanel = document.getElementById('leveragePanel');
-          if (leveragePanel) leveragePanel.style.display = isSports ? 'none' : 'block';
-
-          // Change Long/Short/Draw button labels for sports betting context
-          const longBtn = document.getElementById('longBtn');
-          const shortBtn = document.getElementById('shortBtn');
-          const drawBtn = document.getElementById('drawBtn');
-          if (longBtn) {
-            longBtn.innerHTML = isSports ? '🏆 BET WIN' : '▲ Long';
-            longBtn.style.background = isSports ? '#10b981' : '#0ecb81';
-            longBtn.style.color = isSports ? '#fff' : '#000';
-          }
-          if (shortBtn) {
-            shortBtn.innerHTML = isSports ? '📉 BET LOSE' : '▼ Short';
-            shortBtn.style.background = isSports ? '#ef4444' : '#f6465d';
-            shortBtn.style.color = '#fff';
-          }
-          if (drawBtn) {
-            drawBtn.style.display = isSports ? 'flex' : 'none';
+          // Update nav title branding
+          const navTitle = document.getElementById('marketNavTitle');
+          if (navTitle) {
+            navTitle.textContent = isSports ? '🏆 Sportsbook' : '📊 Futures Pro';
           }
 
-          // Show sportsbook landing when entering sports tab and no team selected
+          const tradingBody = document.getElementById('tradingMainBody');
+          const tradingPositions = document.getElementById('tradingPositionsTable');
+          const sportsbookView = document.getElementById('sportsbookView');
+
           if (isSports) {
-            const view = document.getElementById('clubHistoryView');
-            if (view && view.style.display === 'none') {
-              view.style.display = 'block';
-              view.innerHTML = `
-                <div style="padding:24px 16px; text-align:center;">
-                  <div style="font-size:2.5em; margin-bottom:12px;">⚽ 🏀</div>
-                  <h3 style="color:#60a5fa; margin-bottom:8px;">Sports Betting Market</h3>
-                  <p style="opacity:0.7; margin-bottom:20px; font-size:0.95em;">Select a team from the left panel to view upcoming matches, live odds, and place your bet.</p>
-                  <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-bottom:20px;">
-                    <div style="background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.3); padding:12px 20px; border-radius:8px; min-width:140px;">
-                      <div style="color:#10b981; font-weight:bold; font-size:1.05em; margin-bottom:4px;">⚽ Football</div>
-                      <div style="opacity:0.7; font-size:0.82em;">La Liga • Premier League • UCL</div>
-                    </div>
-                    <div style="background:rgba(96,165,250,0.12); border:1px solid rgba(96,165,250,0.3); padding:12px 20px; border-radius:8px; min-width:140px;">
-                      <div style="color:#60a5fa; font-weight:bold; font-size:1.05em; margin-bottom:4px;">🏀 Basketball</div>
-                      <div style="opacity:0.7; font-size:0.82em;">NBA</div>
-                    </div>
-                  </div>
-                  <div style="background:rgba(240,185,11,0.08); border:1px solid rgba(240,185,11,0.2); padding:10px 14px; border-radius:8px; font-size:0.85em; max-width:380px; margin:0 auto;">
-                    <strong style="color:#f0b90b;">How it works:</strong>
-                    <ol style="text-align:left; margin:8px 0 0; padding-left:18px; opacity:0.85; line-height:1.7;">
-                      <li>Select a team from the left panel</li>
-                      <li>Review upcoming match &amp; odds</li>
-                      <li>Enter your bet amount (USDC)</li>
-                      <li>Click <strong>BET WIN</strong>, <strong>DRAW</strong>, or <strong>BET LOSE</strong></li>
-                      <li>Settlement auto-runs at match end</li>
-                    </ol>
-                  </div>
-                </div>
-              `;
+            // Switch to full sportsbook UI
+            if (tradingBody) tradingBody.style.display = 'none';
+            if (tradingPositions) tradingPositions.style.display = 'none';
+            if (sportsbookView) {
+              sportsbookView.style.display = 'block';
+              renderSportsbookUI();
             }
+          } else {
+            // Show trading layout, hide sportsbook
+            if (tradingBody) tradingBody.style.display = 'flex';
+            if (tradingPositions) tradingPositions.style.display = 'flex';
+            if (sportsbookView) sportsbookView.style.display = 'none';
+
+            // Restore trading panel visibility
+            const obSidebar = document.getElementById('orderBookSidebar');
+            if (obSidebar) obSidebar.style.display = 'flex';
+            const marginPanel = document.getElementById('marginModePanel');
+            if (marginPanel) marginPanel.style.display = 'flex';
+            const leveragePanel = document.getElementById('leveragePanel');
+            if (leveragePanel) leveragePanel.style.display = 'block';
+
+            // Restore Long/Short button labels
+            const longBtn = document.getElementById('longBtn');
+            const shortBtn = document.getElementById('shortBtn');
+            const drawBtn = document.getElementById('drawBtn');
+            if (longBtn) { longBtn.innerHTML = '▲ Long'; longBtn.style.background = '#0ecb81'; longBtn.style.color = '#000'; }
+            if (shortBtn) { shortBtn.innerHTML = '▼ Short'; shortBtn.style.background = '#f6465d'; shortBtn.style.color = '#fff'; }
+            if (drawBtn) drawBtn.style.display = 'none';
           }
         }
+
+        // ==================== SPORTSBOOK UI ====================
+
+        function renderSportsbookUI() {
+          const view = document.getElementById('sportsbookView');
+          if (!view) return;
+
+          view.innerHTML = `
+            <div style="display:flex; height:calc(100vh - 52px); min-height:600px; background:#0d1421; font-family:'Inter',sans-serif;">
+
+              <!-- Left: Sport Categories -->
+              <div style="width:160px; min-width:140px; background:#0b0e1a; border-right:1px solid #1e2535; overflow-y:auto; flex-shrink:0;">
+                <div style="padding:8px 12px; font-size:0.7em; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.06em; border-bottom:1px solid #1e2535; margin-bottom:4px;">SPORTS</div>
+                <div id="sbCatAll" onclick="filterSportsbookCategory('all')" style="padding:8px 12px; cursor:pointer; font-size:0.85em; color:#fff; background:rgba(240,185,11,0.12); border-left:3px solid #f0b90b; transition:all 0.15s;">🏟️ All Sports</div>
+                <div id="sbCatFootball" onclick="filterSportsbookCategory('football')" style="padding:8px 12px; cursor:pointer; font-size:0.85em; color:#94a3b8; border-left:3px solid transparent; transition:all 0.15s;">⚽ Football</div>
+                <div style="padding:2px 12px 2px 24px; font-size:0.75em; color:#4b5563; cursor:pointer; line-height:1.7;" onclick="filterSportsbookCategory('football')">La Liga</div>
+                <div style="padding:2px 12px 2px 24px; font-size:0.75em; color:#4b5563; cursor:pointer; line-height:1.7;" onclick="filterSportsbookCategory('football')">Premier League</div>
+                <div style="padding:2px 12px 2px 24px; font-size:0.75em; color:#4b5563; cursor:pointer; line-height:1.7;" onclick="filterSportsbookCategory('football')">Bundesliga</div>
+                <div style="padding:2px 12px 2px 24px; font-size:0.75em; color:#4b5563; cursor:pointer; line-height:1.7;" onclick="filterSportsbookCategory('football')">Serie A</div>
+                <div style="padding:2px 12px 2px 24px; font-size:0.75em; color:#4b5563; cursor:pointer; line-height:1.7;" onclick="filterSportsbookCategory('football')">Ligue 1</div>
+                <div id="sbCatBasketball" onclick="filterSportsbookCategory('basketball')" style="padding:8px 12px; cursor:pointer; font-size:0.85em; color:#94a3b8; border-left:3px solid transparent; margin-top:4px; transition:all 0.15s;">🏀 Basketball</div>
+                <div style="padding:2px 12px 2px 24px; font-size:0.75em; color:#4b5563; cursor:pointer; line-height:1.7;" onclick="filterSportsbookCategory('basketball')">NBA</div>
+              </div>
+
+              <!-- Center: Match Listings -->
+              <div style="flex:1; min-width:0; overflow-y:auto; background:#0d1421;">
+                <div style="padding:10px 12px; border-bottom:1px solid #1e2535; display:flex; align-items:center; justify-content:space-between; background:#0b0e1a;">
+                  <span style="font-size:0.85em; font-weight:700; color:#e2e8f0;">📅 Upcoming Matches</span>
+                  <button onclick="refreshSportsbookData()" style="padding:3px 10px; background:#1e2535; border:1px solid #2a2d3a; color:#94a3b8; border-radius:4px; cursor:pointer; font-size:0.75em;">↻ Refresh</button>
+                </div>
+                <div id="sbMatchListings" style="padding:8px 10px;">
+                  <div style="text-align:center; padding:30px; color:#64748b; font-size:0.9em;">⏳ Loading matches...</div>
+                </div>
+              </div>
+
+              <!-- Right: Bet Slip -->
+              <div style="width:276px; min-width:250px; background:#0b0e1a; border-left:1px solid #1e2535; display:flex; flex-direction:column; flex-shrink:0;">
+                <div style="padding:10px 12px; border-bottom:1px solid #1e2535; display:flex; align-items:center; justify-content:space-between;">
+                  <span style="font-weight:700; font-size:0.92em; color:#f0b90b;">📋 BET SLIP</span>
+                  <span id="sbBetSlipCount" style="background:rgba(240,185,11,0.2); color:#f0b90b; padding:2px 7px; border-radius:10px; font-size:0.75em; font-weight:700;">0</span>
+                </div>
+                <div id="sbBetSlipItems" style="flex:1; overflow-y:auto; padding:8px;">
+                  <div style="text-align:center; padding:24px 12px; color:#64748b; font-size:0.82em; line-height:1.5;">
+                    <div style="font-size:1.8em; margin-bottom:8px;">🎯</div>
+                    Click on any odds button to add a selection to your bet slip
+                  </div>
+                </div>
+                <div id="sbBetSlipFooter" style="display:none; padding:10px 12px; border-top:1px solid #1e2535;">
+                  <div style="margin-bottom:8px;">
+                    <label style="font-size:0.75em; color:#94a3b8; display:block; margin-bottom:4px; font-weight:600;">STAKE PER BET (USDC)</label>
+                    <input type="number" id="sbBetAmount" placeholder="0.00" min="1" step="0.01" oninput="updateBetSlipTotals()" style="width:100%; padding:8px 10px; background:#0d1421; border:1px solid #2a2d3a; border-radius:4px; color:#fff; font-size:0.9em; box-sizing:border-box;"/>
+                    <div style="display:flex; gap:3px; margin-top:5px;">
+                      <button onclick="setSbAmountPercent(25)" style="flex:1; padding:4px 2px; background:#0d1421; border:1px solid #2a2d3a; color:#94a3b8; border-radius:3px; cursor:pointer; font-size:0.7em;">25%</button>
+                      <button onclick="setSbAmountPercent(50)" style="flex:1; padding:4px 2px; background:#0d1421; border:1px solid #2a2d3a; color:#94a3b8; border-radius:3px; cursor:pointer; font-size:0.7em;">50%</button>
+                      <button onclick="setSbAmountPercent(75)" style="flex:1; padding:4px 2px; background:#0d1421; border:1px solid #2a2d3a; color:#94a3b8; border-radius:3px; cursor:pointer; font-size:0.7em;">75%</button>
+                      <button onclick="setSbAmountPercent(100)" style="flex:1; padding:4px 2px; background:#0d1421; border:1px solid #2a2d3a; color:#94a3b8; border-radius:3px; cursor:pointer; font-size:0.7em;">Max</button>
+                    </div>
+                  </div>
+                  <div id="sbTotalStakeRow" style="display:flex; justify-content:space-between; margin-bottom:3px; font-size:0.78em;">
+                    <span style="color:#94a3b8;">Total Stake</span>
+                    <span id="sbTotalStakeAmt" style="color:#e2e8f0;">0.00 USDC</span>
+                  </div>
+                  <div id="sbPotWinRow" style="display:flex; justify-content:space-between; margin-bottom:10px; font-size:0.78em;">
+                    <span style="color:#94a3b8;">Potential Win</span>
+                    <span id="sbPotWinAmt" style="color:#10b981; font-weight:700;">0.00 USDC</span>
+                  </div>
+                  <button onclick="placeSportsBetFromSlip()" style="width:100%; padding:11px; background:linear-gradient(135deg,#10b981,#059669); color:#fff; border:none; border-radius:5px; cursor:pointer; font-weight:700; font-size:0.88em; letter-spacing:0.02em;">🏆 PLACE BET</button>
+                  <button onclick="clearBetSlip()" style="width:100%; padding:6px; background:transparent; border:1px solid #2a2d3a; color:#94a3b8; border-radius:4px; cursor:pointer; font-size:0.75em; margin-top:5px;">Clear All</button>
+                  <p style="font-size:0.68em; color:#475569; text-align:center; margin:6px 0 0;">Wallet balance: <span id="sbWalletBalance" style="color:#f0b90b;">${tradingUSDCBalance.toFixed(2)} USDC</span></p>
+                </div>
+
+                <!-- Active Bets -->
+                <div style="border-top:1px solid #1e2535; padding:8px 12px; max-height:200px; overflow-y:auto;">
+                  <div style="font-size:0.7em; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:6px;">ACTIVE BETS</div>
+                  <div id="sbActiveBets"></div>
+                </div>
+              </div>
+            </div>
+          `;
+
+          // Populate match listings
+          renderSportsbookMatches(currentSbFilter);
+          updateSbActiveBets();
+          // Fetch fresh data from TheSportsDB in background
+          refreshSportsbookData();
+        }
+
+        function filterSportsbookCategory(type) {
+          currentSbFilter = type;
+          const catIdMap = { all: 'sbCatAll', football: 'sbCatFootball', basketball: 'sbCatBasketball' };
+          Object.entries(catIdMap).forEach(([cat, elId]) => {
+            const el = document.getElementById(elId);
+            if (el) {
+              const isActive = cat === type;
+              el.style.background = isActive ? 'rgba(240,185,11,0.12)' : 'transparent';
+              el.style.color = isActive ? '#fff' : '#94a3b8';
+              el.style.borderLeft = isActive ? '3px solid #f0b90b' : '3px solid transparent';
+            }
+          });
+          renderSportsbookMatches(type);
+        }
+
+        function renderSportsbookMatches(filter) {
+          const container = document.getElementById('sbMatchListings');
+          if (!container) return;
+
+          const sports = assetsData.sports || [];
+          const now = Date.now();
+          const teams = filter === 'all' ? sports : sports.filter(t => t.type === filter);
+
+          // Identify live vs upcoming
+          const liveTeams = teams.filter(t => {
+            if (!t.commenceTime) return false;
+            const start = new Date(t.commenceTime).getTime();
+            const duration = t.type === 'basketball' ? 48 * 60 * 1000 : 95 * 60 * 1000;
+            return start <= now && now <= start + duration;
+          });
+
+          const upcomingTeams = teams.filter(t => {
+            if (!t.commenceTime) return true;
+            return new Date(t.commenceTime).getTime() > now;
+          });
+
+          let html = '';
+
+          // LIVE section
+          if (liveTeams.length > 0) {
+            html += `
+              <div style="margin-bottom:10px;">
+                <div style="display:flex; align-items:center; gap:8px; padding:6px 4px; margin-bottom:6px;">
+                  <span style="background:#ef4444; color:#fff; padding:2px 8px; border-radius:3px; font-size:0.72em; font-weight:700;">● LIVE</span>
+                  <span style="font-size:0.78em; color:#94a3b8;">${liveTeams.length} match${liveTeams.length !== 1 ? 'es' : ''} in progress</span>
+                </div>
+                <div style="border-radius:6px; overflow:hidden; border:1px solid #1e2535;">
+                  ${liveTeams.map(t => buildMatchCard(t, true)).join('')}
+                </div>
+              </div>
+            `;
+          }
+
+          // Group upcoming by league
+          const leagues = {};
+          upcomingTeams.forEach(t => {
+            const lg = t.league || 'Other';
+            if (!leagues[lg]) leagues[lg] = [];
+            leagues[lg].push(t);
+          });
+
+          Object.entries(leagues).forEach(([league, leagueTeams]) => {
+            const icon = leagueTeams[0].type === 'football' ? '⚽' : '🏀';
+            html += `
+              <div style="margin-bottom:10px; border-radius:6px; overflow:hidden; border:1px solid #1e2535;">
+                <div style="padding:7px 12px; background:#0f1729; border-bottom:1px solid #1e2535; display:flex; align-items:center; gap:6px;">
+                  <span style="font-size:0.82em; font-weight:700; color:#60a5fa;">${icon} ${league}</span>
+                </div>
+                ${leagueTeams.map(t => buildMatchCard(t, false)).join('')}
+              </div>
+            `;
+          });
+
+          if (html === '') {
+            html = '<div style="text-align:center; padding:40px; color:#64748b; font-size:0.88em;">No matches available. Click ↻ Refresh to load latest data.</div>';
+          }
+
+          container.innerHTML = html;
+        }
+
+        // Delay between sequential bet placements (allows tx to settle)
+        const SB_BET_PLACEMENT_DELAY_MS = 600;
+
+        function buildMatchCard(team, isLive) {
+          const odds = calcFallbackOdds(team.strength || 0.5);
+          const locked = isBettingLocked(team);
+          const isFootball = team.type === 'football';
+          // Use team index instead of symbol string in onclick to avoid any escaping issues
+          const teamIdx = (assetsData.sports || []).findIndex(t => t === team);
+
+          const matchTimeStr = team.commenceTime
+            ? new Date(team.commenceTime).toLocaleString('en-US', {
+                weekday: 'short', month: 'short', day: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+              })
+            : 'Date TBD';
+
+          // Extract opponent from nextMatch string - split on 'vs' and take what follows
+          const opponent = team.nextMatch
+            ? (team.nextMatch.split(/\bvs\b/i).pop() || '').trim() || 'TBD'
+            : 'TBD';
+
+          const slipItem = sportsBetSlip.find(b => b.asset === team);
+
+          const makeOddsBtn = (type, label, oddsVal, color) => {
+            const isSelected = slipItem && slipItem.betType === type;
+            if (locked) {
+              return `<div style="flex:1; padding:9px 4px; text-align:center; background:#0a0d18; border:1px solid #1e2535; border-radius:4px; opacity:0.45; min-width:54px;">
+                <div style="font-size:0.68em; color:#64748b; margin-bottom:2px;">${label}</div>
+                <div style="font-size:0.95em; font-weight:700; color:#475569;">${oddsVal}×</div>
+              </div>`;
+            }
+            return `<div onclick="addToBetSlip(${teamIdx},'${type}',${oddsVal})"
+              style="flex:1; padding:9px 4px; text-align:center; background:${isSelected ? color + '28' : '#0a0d18'}; border:1px solid ${isSelected ? color : '#1e2535'}; border-radius:4px; cursor:pointer; min-width:54px; transition:all 0.15s;">
+              <div style="font-size:0.68em; color:#94a3b8; margin-bottom:2px;">${label}</div>
+              <div style="font-size:0.95em; font-weight:700; color:${isSelected ? color : '#e2e8f0'};">${oddsVal}×</div>
+            </div>`;
+          };
+
+          return `
+            <div style="padding:10px 12px; border-bottom:1px solid #1e2535; background:transparent; transition:background 0.15s;">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+                <span style="font-size:0.72em; color:#64748b;">${isLive ? team.league + ' • ' : ''}${isLive ? '<span style="color:#ef4444; font-weight:700;">● LIVE</span>' : matchTimeStr}</span>
+                ${locked && !isLive ? '<span style="font-size:0.68em; color:#ef4444; background:rgba(239,68,68,0.1); padding:1px 6px; border-radius:2px;">Closed</span>' : ''}
+              </div>
+              <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                <div style="flex:1;">
+                  <div style="font-weight:700; font-size:0.92em; color:#e2e8f0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${team.symbol}</div>
+                  <div style="font-size:0.78em; color:#64748b; margin-top:1px;">vs ${opponent}</div>
+                </div>
+              </div>
+              <div style="display:flex; gap:5px;">
+                ${makeOddsBtn('long', '1 WIN', odds.home, '#10b981')}
+                ${isFootball ? makeOddsBtn('draw', 'X DRAW', odds.draw, '#f59e0b') : ''}
+                ${makeOddsBtn('short', '2 LOSE', odds.away, '#ef4444')}
+              </div>
+            </div>
+          `;
+        }
+
+        function addToBetSlip(teamIdxOrSymbol, betType, odds) {
+          // Accept either numeric index or legacy symbol string
+          const sports = assetsData.sports || [];
+          const team = typeof teamIdxOrSymbol === 'number'
+            ? sports[teamIdxOrSymbol]
+            : sports.find(t => t.symbol === teamIdxOrSymbol);
+          if (!team) return;
+
+          const existing = sportsBetSlip.findIndex(b => b.asset === team);
+          if (existing >= 0) {
+            if (sportsBetSlip[existing].betType === betType) {
+              sportsBetSlip.splice(existing, 1); // toggle off
+            } else {
+              sportsBetSlip[existing].betType = betType;
+              sportsBetSlip[existing].odds = odds;
+            }
+          } else {
+            sportsBetSlip.push({ asset: team, betType, odds });
+          }
+
+          updateBetSlipDisplay();
+          renderSportsbookMatches(currentSbFilter);
+        }
+
+        function clearBetSlip() {
+          sportsBetSlip = [];
+          updateBetSlipDisplay();
+          renderSportsbookMatches(currentSbFilter);
+        }
+
+        function removeFromBetSlip(idx) {
+          sportsBetSlip.splice(idx, 1);
+          updateBetSlipDisplay();
+          renderSportsbookMatches(currentSbFilter);
+        }
+
+        function updateBetSlipDisplay() {
+          const countEl = document.getElementById('sbBetSlipCount');
+          const itemsEl = document.getElementById('sbBetSlipItems');
+          const footerEl = document.getElementById('sbBetSlipFooter');
+          const walletEl = document.getElementById('sbWalletBalance');
+
+          if (countEl) countEl.textContent = sportsBetSlip.length;
+          if (walletEl) walletEl.textContent = tradingUSDCBalance.toFixed(2) + ' USDC';
+
+          if (!itemsEl) return;
+
+          if (sportsBetSlip.length === 0) {
+            itemsEl.innerHTML = `<div style="text-align:center; padding:24px 12px; color:#64748b; font-size:0.82em; line-height:1.5;"><div style="font-size:1.8em; margin-bottom:8px;">🎯</div>Click on any odds button to add a selection to your bet slip</div>`;
+            if (footerEl) footerEl.style.display = 'none';
+            return;
+          }
+
+          if (footerEl) footerEl.style.display = 'block';
+
+          itemsEl.innerHTML = sportsBetSlip.map((bet, idx) => {
+            const betLabel = bet.betType === 'long' ? 'WIN' : bet.betType === 'draw' ? 'DRAW' : 'LOSE';
+            const betColor = bet.betType === 'long' ? '#10b981' : bet.betType === 'draw' ? '#f59e0b' : '#ef4444';
+            return `
+              <div style="padding:8px; background:#0d1421; border-radius:5px; margin-bottom:5px; border-left:3px solid ${betColor};">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:4px;">
+                  <div>
+                    <span style="font-weight:700; font-size:0.85em; color:#e2e8f0;">${bet.asset.symbol}</span>
+                    <span style="margin-left:5px; padding:1px 5px; border-radius:3px; font-size:0.68em; background:${betColor}22; color:${betColor}; font-weight:700;">${betLabel}</span>
+                  </div>
+                  <button onclick="removeFromBetSlip(${idx})" style="background:transparent; border:none; color:#475569; cursor:pointer; font-size:0.82em; padding:0 2px; line-height:1;">✕</button>
+                </div>
+                <div style="display:flex; justify-content:space-between; font-size:0.75em; color:#94a3b8;">
+                  <span>${bet.asset.league}</span>
+                  <span style="color:#f0b90b; font-weight:700;">Odds: ${bet.odds}×</span>
+                </div>
+              </div>
+            `;
+          }).join('');
+
+          updateBetSlipTotals();
+        }
+
+        function setSbAmountPercent(pct) {
+          const input = document.getElementById('sbBetAmount');
+          if (input) {
+            input.value = (tradingUSDCBalance * pct / 100).toFixed(2);
+            updateBetSlipTotals();
+          }
+        }
+
+        function updateBetSlipTotals() {
+          const input = document.getElementById('sbBetAmount');
+          const totalEl = document.getElementById('sbTotalStakeAmt');
+          const winEl = document.getElementById('sbPotWinAmt');
+          if (!input) return;
+
+          const amount = parseFloat(input.value) || 0;
+          const totalStake = amount * sportsBetSlip.length;
+          const totalWin = sportsBetSlip.reduce((sum, b) => sum + amount * b.odds, 0);
+
+          if (totalEl) totalEl.textContent = totalStake.toFixed(2) + ' USDC';
+          if (winEl) winEl.textContent = totalWin.toFixed(2) + ' USDC';
+        }
+
+        async function placeSportsBetFromSlip() {
+          if (sportsBetSlip.length === 0) {
+            showNotification('⚠️ Add at least one selection to your bet slip', true);
+            return;
+          }
+
+          const amountInput = document.getElementById('sbBetAmount');
+          const amount = parseFloat(amountInput ? amountInput.value : 0);
+
+          if (!amount || amount < 1) {
+            showNotification('⚠️ Enter a valid stake amount (min 1 USDC)', true);
+            return;
+          }
+
+          const totalNeeded = amount * sportsBetSlip.length;
+          if (totalNeeded > tradingUSDCBalance) {
+            showNotification(`⚠️ Insufficient balance. Need ${totalNeeded.toFixed(2)} USDC, have ${tradingUSDCBalance.toFixed(2)} USDC`, true);
+            return;
+          }
+
+          const betsToPlace = [...sportsBetSlip];
+          clearBetSlip();
+
+          for (const bet of betsToPlace) {
+            if (isBettingLocked(bet.asset)) {
+              showNotification(`🔒 Betting closed for ${bet.asset.symbol}`, true);
+              continue;
+            }
+
+            // Set globals expected by openPosition
+            selectedAsset = bet.asset;
+            const posInput = document.getElementById('positionAmount');
+            if (posInput) posInput.value = amount.toString();
+            // Sports bets always use 1x leverage
+            const levSel = document.getElementById('leverageSelect');
+            if (levSel) levSel.value = '1';
+            const levSlider = document.getElementById('leverageSlider');
+            if (levSlider) { levSlider.value = '1'; }
+            const levDisp = document.getElementById('leverageDisplay');
+            if (levDisp) levDisp.textContent = '1×';
+
+            await openPosition(bet.betType);
+            // Wait between bets to allow each transaction to be processed
+            await new Promise(r => setTimeout(r, SB_BET_PLACEMENT_DELAY_MS));
+          }
+
+          updateSbActiveBets();
+        }
+
+        function updateSbActiveBets() {
+          const container = document.getElementById('sbActiveBets');
+          if (!container) return;
+
+          const sportsBets = openPositions.filter(p => p.isSportsBet);
+
+          if (sportsBets.length === 0) {
+            container.innerHTML = '<div style="color:#475569; font-size:0.78em;">No active bets</div>';
+            return;
+          }
+
+          container.innerHTML = sportsBets.map(bet => {
+            const betLabel = bet.betType === 'long' ? 'WIN' : bet.betType === 'draw' ? 'DRAW' : 'LOSE';
+            const betColor = bet.betType === 'long' ? '#10b981' : bet.betType === 'draw' ? '#f59e0b' : '#ef4444';
+            return `
+              <div style="padding:5px 8px; background:#0d1421; border-radius:4px; margin-bottom:4px; border-left:2px solid ${betColor};">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <span style="font-weight:600; font-size:0.82em; color:#e2e8f0;">${bet.asset.symbol}</span>
+                  <span style="padding:1px 4px; border-radius:2px; font-size:0.67em; background:${betColor}22; color:${betColor};">${betLabel}</span>
+                </div>
+                <div style="font-size:0.72em; color:#64748b; margin-top:1px;">${bet.amount.toFixed(2)} USDC • Pending result</div>
+              </div>
+            `;
+          }).join('');
+        }
+
+        async function refreshSportsbookData() {
+          if (!assetsData.sports) return;
+          // Fetch all teams data in background
+          await Promise.all(assetsData.sports.map(team => fetchSportsData(team)));
+          // Re-render if still on sports tab
+          if (currentTab === 'sports') {
+            renderSportsbookMatches(currentSbFilter);
+          }
+        }
+
+        // ==================== END SPORTSBOOK UI ====================
+
+        // Expose sportsbook functions to window so onclick attributes in dynamic HTML can call them
+        window.addToBetSlip = addToBetSlip;
+        window.removeFromBetSlip = removeFromBetSlip;
+        window.clearBetSlip = clearBetSlip;
+        window.placeSportsBetFromSlip = placeSportsBetFromSlip;
+        window.filterSportsbookCategory = filterSportsbookCategory;
+        window.setSbAmountPercent = setSbAmountPercent;
+        window.updateBetSlipTotals = updateBetSlipTotals;
+        window.refreshSportsbookData = refreshSportsbookData;
+
 
         function renderAssets() {
           const container = document.getElementById('assetList');
