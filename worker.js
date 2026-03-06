@@ -79,7 +79,8 @@ export default {
     if (ohlcvMatch) {
       const poolAddr = ohlcvMatch[1].toLowerCase();
       const timeframe = url.searchParams.get('timeframe') || 'hour';
-      const limit = Math.min(parseInt(url.searchParams.get('limit') || '24', 10), 100);
+      const limitParam = parseInt(url.searchParams.get('limit') || '24', 10);
+      const limit = Math.min(isNaN(limitParam) ? 24 : limitParam, 100);
       return proxyGecko(
         `/networks/base/pools/${poolAddr}/ohlcv/${timeframe}?limit=${limit}&currency=usd`,
         env
