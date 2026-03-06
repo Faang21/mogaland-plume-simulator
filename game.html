@@ -374,7 +374,7 @@ kbd{padding:1px 4px;border-radius:4px;border:1px solid rgba(255,255,255,.22);bac
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js" crossorigin="anonymous"></script>
 <script>(function(){var t=document.getElementById('loadingText'),f=document.getElementById('loadingFill');if(t)t.textContent='Loading Phaser engine...';if(f)f.style.width='40%';})();</script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.55.2/phaser.min.js" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.60.0/phaser.min.js" crossorigin="anonymous"></script>
 <script>(function(){var t=document.getElementById('loadingText'),f=document.getElementById('loadingFill');if(t)t.textContent='Initializing world...';if(f)f.style.width='70%';})();</script>
 <script>
 (() => {
@@ -3117,7 +3117,7 @@ let _nearPlotIdx=null,_farmGfx=null; // farm plot state
 let _waveGfx=null,_waveGfx2=null,_waveTime=0,_waveFrameSkip=0,_city1WaterTiles=[]; // Ronin-quality wave animation
 let _isNight=false; // global night flag for vehicle lights
 let _vehicleLightGfx=null; // vehicle headlight graphics layer
-function clearWorld(scene){for(const g of lampGlows)scene.tweens.killTweensOf(g);if(worldCont)worldCont.destroy(true);worldCont=scene.add.container(0,0);lampGlows=[];buildingGlows=[];_vehicleLightGfx=null;_waveFrameSkip=0;}
+function clearWorld(scene){for(const g of lampGlows){if(g._glowTween){g._glowTween.stop();g._glowTween=null;}scene.tweens.killTweensOf(g);/* killTweensOf catches any other tweens on g beyond _glowTween */}if(worldCont)worldCont.destroy(true);worldCont=scene.add.container(0,0);lampGlows=[];buildingGlows=[];_vehicleLightGfx=null;_waveFrameSkip=0;}
 
 function updateDN(dtS){
   CLK.min=(CLK.min+CLK.speed*dtS)%(24*60);const m=CLK.min;
@@ -3162,8 +3162,8 @@ function decorateCity(scene,tiles,cont){
     const lx=tx*TILE+TILE/2,ly=ty*TILE+TILE/2;
     cont.add(scene.add.image(lx,ly,'lamp').setScale(1.2).setDepth(1.2));
     const g=scene.add.circle(lx+6,ly-8,14,0xfbbf24,.06).setDepth(1.1);
-    // ── Lamp glow pulse ──
-    scene.tweens.add({targets:g,alpha:0.15,radius:18,duration:2200+(Math.random()*500|0),yoyo:true,repeat:-1,ease:'Sine.easeInOut',delay:Math.random()*1200|0});
+    // ── Lamp glow pulse (null-guarded: defensive check per Phaser 3.55 null.radius bug, store ref for explicit cleanup) ──
+    if(g&&g.radius!==undefined){g._glowTween=scene.tweens.add({targets:g,alpha:0.15,radius:18,duration:2200+(Math.random()*500|0),yoyo:true,repeat:-1,ease:'Sine.easeInOut',delay:Math.random()*1200|0});}
     cont.add(g);lampGlows.push(g);
   };
   for(const ry of[12,28,44,8,CH-8])for(let x=10;x<CW-10;x+=6)
