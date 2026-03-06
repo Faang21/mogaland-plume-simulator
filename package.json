@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Mogaland Plume Simulator - Static Site",
   "scripts": {
-    "build": "mkdir -p dist && cp index.html game.html mogalandplumesimulator.html dist/"
+    "build": "mkdir -p dist && cp index.html game.html mogalandplumesimulator.html _headers dist/"
   },
   "private": true
 }
