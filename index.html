@@ -32,7 +32,22 @@
       
       // Global reference
       window.global = window.global || window;
-      
+
+      // Suppress benign SES/MetaMask lockdown console warnings
+      (function() {
+        const _warn = console.warn.bind(console);
+        const _error = console.error.bind(console);
+        const SES_REGEX = /SES|lockdown|Removing.*intrinsic|unpermitted intrinsic/i;
+        console.warn = function(...args) {
+          if (args.some(a => SES_REGEX.test(String(a)))) return;
+          _warn(...args);
+        };
+        console.error = function(...args) {
+          if (args.some(a => SES_REGEX.test(String(a)))) return;
+          _error(...args);
+        };
+      })();
+
       console.log('✅ Node.js polyfills loaded for WalletConnect v2');
     })();
   </script>
@@ -7414,7 +7429,7 @@
           canvas.height = CHART_HEIGHT;
           container.appendChild(canvas);
           
-          const ctx = canvas.getContext('2d');
+          const ctx = canvas.getContext('2d', { willReadFrequently: true });
           if (!ctx) return;
 
           if (chart) chart.destroy();
