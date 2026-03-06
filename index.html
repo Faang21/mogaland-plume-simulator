@@ -7099,7 +7099,7 @@
             const longLiqPrice = entryPrice * (1 - priceChangeToLiquidation);
             const shortLiqPrice = entryPrice * (1 + priceChangeToLiquidation);
 
-            const pnlUSDC = amount * (0.01 * leverage * 100) / 100;
+            const pnlUSDC = amount * 0.01 * leverage;
             const pnlPct = (pnlUSDC / amount) * 100;
 
             const fmt2 = (n) => n.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
