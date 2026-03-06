@@ -19,13 +19,19 @@ html,body{margin:0;padding:0;height:100%;background:#0b1020;font-family:Arial,sa
 }
 /* ── Virtual D-pad ── */
 #dpad{position:absolute;left:10px;bottom:14px;z-index:300;width:150px;height:150px;display:none;pointer-events:auto;}
-#dpad button{position:absolute;width:46px;height:46px;border-radius:10px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);color:#e2e8f0;font-size:22px;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:manipulation;display:flex;align-items:center;justify-content:center;padding:0;}
+#dpad button{position:absolute;width:46px;height:46px;border-radius:10px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);color:#e2e8f0;font-size:22px;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:none;display:flex;align-items:center;justify-content:center;padding:0;transition:background .08s,transform .08s;}
+#dpad button.active{background:rgba(99,102,241,.55);border-color:rgba(99,102,241,.8);transform:scale(.92);}
 #dpad .dup   {top:0;  left:52px;}
 #dpad .ddown {top:102px;left:52px;}
 #dpad .dleft {top:52px;left:0;}
 #dpad .dright{top:52px;left:104px;}
 #dpad .dact  {top:52px;left:52px;font-size:14px;background:rgba(14,165,233,.22);border-color:rgba(14,165,233,.45);}
+#dpad .dact.active{background:rgba(14,165,233,.6);}
+/* Show on any touch device or narrow screen */
 @media(pointer:coarse),(max-width:768px){#dpad{display:block;}}
+/* PC hint overlay (shown until first click on game canvas) */
+#pcHint{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.65);color:#e2e8f0;padding:10px 20px;border-radius:10px;border:1px solid rgba(255,255,255,.2);font-size:13px;text-align:center;pointer-events:none;z-index:200;transition:opacity .4s;}
+#pcHint.hidden{opacity:0;}
 /* ── Moga Messenger ── */
 #messengerPanel{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:680px;max-width:98vw;height:520px;max-height:96vh;background:#0f172a;border:1px solid rgba(255,255,255,.18);border-radius:16px;z-index:1000;box-shadow:0 12px 48px rgba(0,0,0,.85);overflow:hidden;flex-direction:column;}
 #msgrTitle{background:linear-gradient(90deg,#1e1b4b,#0c1a2e);padding:11px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,.1);flex-shrink:0;}
@@ -148,12 +154,14 @@ kbd{padding:1px 4px;border-radius:4px;border:1px solid rgba(255,255,255,.22);bac
     </div>
     <!-- Virtual D-pad for mobile -->
     <div id="dpad">
-      <button class="dup"   id="dUp">▲</button>
-      <button class="dleft" id="dLeft">◄</button>
-      <button class="dact"  id="dAct" ontouchstart="triggerInteract()" onclick="triggerInteract()">✋</button>
-      <button class="dright"id="dRight">►</button>
-      <button class="ddown" id="dDown">▼</button>
+      <button class="dup"   id="dUp"    aria-label="Move up">▲</button>
+      <button class="dleft" id="dLeft"  aria-label="Move left">◄</button>
+      <button class="dact"  id="dAct"   aria-label="Interact">✋</button>
+      <button class="dright"id="dRight" aria-label="Move right">►</button>
+      <button class="ddown" id="dDown"  aria-label="Move down">▼</button>
     </div>
+    <!-- PC keyboard focus hint (hidden on mobile / after first click) -->
+    <div id="pcHint" role="status" aria-live="polite" aria-label="Click the game area to enable keyboard controls">🖱️ Click here then use <kbd>WASD</kbd> / Arrow keys to move</div>
   </div>
 
   <aside id="ui">
@@ -2242,82 +2250,104 @@ function addTex(scene,key,w,h,fn){const c=document.createElement('canvas');c.wid
 function px(ctx,x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(x,y,w,h);}
 
 function makeTextures(scene){
-  /* Helper: draw an anime-style human (32x32) inspired by Ronin/Sky Mavis art */
+  /* ──────────────────────────────────────────────────────────────────────
+     Axie Infinity-inspired chibi character (32×32 px, Ronin/Sky Mavis style)
+     Layout:  rows  0-12 = BIG head (40% height)
+              rows 12-14 = neck
+              rows 14-21 = torso / outfit
+              rows 21-25 = lower body
+              rows 25-30 = shoes
+              rows 30-31 = ground shadow
+  ────────────────────────────────────────────────────────────────────── */
   function makeHuman(key,skinC,hairC,topC,btmC,shoeC,isDress,lipC){
     addTex(scene,key,32,32,c=>{const p=(x,y,w,h,col)=>px(c,x,y,w,h,col);
-      // ── Shadow ──
-      p(7,28,18,3,'rgba(0,0,0,.25)');
-      // ── Shoes with sole detail ──
-      p(9,24,6,4,shoeC);p(17,24,6,4,shoeC);
-      p(9,24,6,1,'rgba(0,0,0,.3)');p(17,24,6,1,'rgba(0,0,0,.3)'); // toe shadow
-      p(9,27,6,1,'rgba(255,255,255,.18)');p(17,27,6,1,'rgba(255,255,255,.18)'); // shine
+      // ── Ground shadow ──
+      p(8,30,16,2,'rgba(0,0,0,.28)');
+      // ── Shoes (rounded, cute) ──
+      p(9,25,6,5,shoeC);p(17,25,6,5,shoeC);
+      p(9,25,6,1,'rgba(0,0,0,.35)');p(17,25,6,1,'rgba(0,0,0,.35)');
+      p(9,29,6,1,'rgba(255,255,255,.20)');p(17,29,6,1,'rgba(255,255,255,.20)');
       if(isDress){
-        // ── Dress/skirt with layers ──
-        p(8,18,16,7,btmC);p(7,21,18,4,btmC); // skirt body + flare
-        p(9,24,4,1,btmC);p(19,24,4,1,btmC); // hem
-        p(7,21,18,1,'rgba(255,255,255,.18)'); // highlight
-        // Bodice
-        p(10,10,12,9,topC);p(9,11,14,8,topC);
-        p(8,11,2,5,topC);p(22,11,2,5,topC); // short sleeves
-        p(14,9,4,3,skinC); // neckline
-        p(15,10,2,8,'rgba(255,255,255,.18)'); // center shine
-        // Bare arms
-        p(7,14,3,9,skinC);p(22,14,3,9,skinC);
-        p(7,22,3,1,'rgba(0,0,0,.1)');p(22,22,3,1,'rgba(0,0,0,.1)');
-      } else {
-        // ── Pants with belt & seam ──
-        p(10,18,5,8,btmC);p(17,18,5,8,btmC);p(14,18,4,4,btmC);
-        p(12,19,1,6,'rgba(0,0,0,.2)');p(20,19,1,6,'rgba(0,0,0,.2)'); // seams
-        // Belt
-        p(9,17,14,2,'#6b3a1f');p(14,17,4,2,'#b45309');p(15,17,2,2,'#fbbf24'); // buckle+shine
-        // Shirt/jacket
-        p(9,9,14,9,topC);p(8,10,16,8,topC);
-        p(13,8,6,4,topC);p(14,7,4,3,skinC); // collar + neck visible
-        p(15,10,2,7,'rgba(255,255,255,.18)'); // center shine/buttons
+        // ── Skirt (wide flare, Axie-chibi style) ──
+        p(6,18,20,7,btmC);p(5,21,22,4,btmC);
+        p(6,18,20,1,'rgba(255,255,255,.25)');p(6,21,20,1,'rgba(0,0,0,.1)');
+        // ── Bodice ──
+        p(9,14,14,5,topC);p(9,14,14,1,'rgba(255,255,255,.25)');
+        p(8,16,2,3,topC);p(22,16,2,3,topC); // short cap sleeves
+        p(14,13,4,3,skinC); // neckline gap
+        p(15,15,2,4,'rgba(255,255,255,.18)');
+        // ── Bare arms (chibi short) ──
+        p(6,16,3,7,skinC);p(23,16,3,7,skinC);
+        p(6,22,3,1,'rgba(0,0,0,.12)');p(23,22,3,1,'rgba(0,0,0,.12)');
+      }else{
+        // ── Pants (short chibi legs) ──
+        p(10,21,5,5,btmC);p(17,21,5,5,btmC);p(14,21,4,3,btmC);
+        p(12,23,1,3,'rgba(0,0,0,.22)');p(20,23,1,3,'rgba(0,0,0,.22)'); // seams
+        // Belt (visible above pants)
+        p(9,20,14,2,'#5b3a29');p(14,20,4,2,'#b45309');p(15,20,2,2,'#fbbf24');
+        // ── Shirt / jacket ──
+        p(9,14,14,7,topC);p(8,15,16,6,topC);
+        p(13,13,6,3,topC);p(14,13,4,2,skinC); // collar + visible neck
+        p(15,15,2,6,'rgba(255,255,255,.18)'); // center shine / buttons
         // Sleeves
-        p(7,10,2,9,topC);p(23,10,2,9,topC);
-        // Hands/wrists
-        p(7,18,3,3,skinC);p(22,18,3,3,skinC);
+        p(7,15,2,7,topC);p(23,15,2,7,topC);
+        // Wrists/hands
+        p(7,21,3,3,skinC);p(22,21,3,3,skinC);
         // Pocket
-        p(10,11,3,3,'rgba(0,0,0,.12)');
+        p(10,16,3,2,'rgba(0,0,0,.14)');
       }
-      // ── Neck ──
-      p(14,7,4,5,skinC);p(13,8,6,3,skinC);
-      // ── Head (rounded, anime proportions) ──
-      p(11,1,10,8,skinC);p(10,2,12,7,skinC);p(11,8,10,1,skinC); // rounded head
-      p(10,1,1,7,'rgba(0,0,0,.06)');p(21,1,1,7,'rgba(0,0,0,.06)'); // side shadow
+      // ── Neck (short, chibi) ──
+      p(14,11,4,5,skinC);p(13,12,6,3,skinC);
+      // ══════════════════════════════════════════════════════════════
+      //  BIG CHIBI HEAD  — rows 0-12, width 16 px centered
+      //  Axie Infinity-style: large round face, huge expressive eyes
+      // ══════════════════════════════════════════════════════════════
+      // Main head block (rounded)
+      p(9,0,14,13,skinC);p(8,1,16,12,skinC);
+      p(8,1,1,11,'rgba(0,0,0,.07)');p(23,1,1,11,'rgba(0,0,0,.07)'); // edge shadow
+      // Cheek blush (Axie-signature cute flush)
+      p(8,8,4,3,'rgba(255,105,90,.32)');p(20,8,4,3,'rgba(255,105,90,.32)');
       // ── Hair ──
-      p(10,0,12,3,hairC);p(9,0,2,8,hairC);p(21,0,2,8,hairC); // top + sides
-      p(10,1,3,3,hairC);p(19,1,3,3,hairC); // front fringe
-      if(isDress){p(9,7,2,7,hairC);p(21,7,2,7,hairC);} // long hair sides
-      // ── Eyebrows ──
-      p(11,3,4,1,hairC);p(17,3,4,1,hairC);
-      // ── Eyes (white + iris + pupil + top lash + glint) ──
-      p(11,4,5,3,'rgba(255,255,255,.95)');p(17,4,5,3,'rgba(255,255,255,.95)'); // whites
-      p(12,4,3,3,'#1a56db');p(18,4,3,3,'#1a56db'); // iris
-      p(13,5,2,2,'#0c1445');p(19,5,2,2,'#0c1445'); // pupil
-      p(11,4,5,1,'#111827');p(17,4,5,1,'#111827'); // top lash
-      p(13,4,1,1,'rgba(255,255,255,.9)');p(19,4,1,1,'rgba(255,255,255,.9)'); // glint
-      // ── Nose (subtle) ──
-      p(15,6,2,1,'rgba(0,0,0,.18)');
-      // ── Mouth / Lips ──
-      p(13,7,6,2,lipC||'#c2410c');
-      p(14,7,4,1,'rgba(255,255,255,.2)'); // lip shine
-      // ── Cheek blush ──
-      p(10,5,2,2,'rgba(255,140,140,.22)');p(20,5,2,2,'rgba(255,140,140,.22)');
+      p(8,0,16,3,hairC);p(8,0,2,10,hairC);p(22,0,2,10,hairC); // top + side panels
+      p(9,1,4,3,hairC);p(19,1,4,3,hairC); // front fringe tufts
+      if(isDress){p(8,9,2,4,hairC);p(22,9,2,4,hairC);} // longer side strands
+      p(12,0,8,1,'rgba(255,255,255,.24)'); // hair top shine
+      // ── Eyebrows (thick, expressive) ──
+      p(10,3,5,1,hairC);p(17,3,5,1,hairC);
+      // ── LEFT EYE — Axie-large (7 × 6 px) ──
+      p(9,4,7,6,'rgba(255,255,255,.96)');   // sclera
+      p(10,5,5,5,'#1a56db');               // iris (vivid blue)
+      p(11,6,3,3,'#0c1445');               // pupil
+      p(9,4,7,1,'#111827');                // thick top lash
+      p(9,9,7,1,'#111827');                // bottom lash
+      p(10,5,2,2,'rgba(255,255,255,.97)'); // big sparkle highlight
+      p(12,7,1,1,'rgba(255,255,255,.65)'); // secondary sparkle
+      // ── RIGHT EYE — Axie-large (7 × 6 px) ──
+      p(16,4,7,6,'rgba(255,255,255,.96)');  // sclera
+      p(17,5,5,5,'#1a56db');               // iris
+      p(18,6,3,3,'#0c1445');               // pupil
+      p(16,4,7,1,'#111827');               // thick top lash
+      p(16,9,7,1,'#111827');               // bottom lash
+      p(17,5,2,2,'rgba(255,255,255,.97)'); // big sparkle highlight
+      p(19,7,1,1,'rgba(255,255,255,.65)'); // secondary sparkle
+      // ── Nose (tiny, cute dot) ──
+      p(15,10,2,1,'rgba(0,0,0,.20)');
+      // ── Mouth / lips (Axie-style W-smile) ──
+      p(11,11,10,2,lipC||'#f43f5e');
+      p(12,11,3,1,'rgba(255,255,255,.35)');p(16,11,3,1,'rgba(255,255,255,.35)'); // lip shine
     });
   }
   /* Player & NPC textures — male & female, multiple outfits */
   makeHuman('human_m_default','#fde68a','#92400e','#2563eb','#1e3a5f','#1f2937',false);
   makeHuman('human_m_suit',   '#fde68a','#111827','#1f2937','#111827','#0f172a',false);
-  makeHuman('human_m_sport',  '#fde68a','#92400e','#f59e0b','#0ea5e9','#374151',false);
-  makeHuman('human_m_casual', '#fde68a','#b45309','#22c55e','#334155','#1f2937',false);
-  makeHuman('human_m_formal', '#fde68a','#0f172a','#374151','#111827','#0f172a',false);
-  makeHuman('human_f_default','#fde68a','#111827','#ec4899','#db2777','#7c3aed',true,'#f87171');
-  makeHuman('human_f_suit',   '#fde68a','#0f172a','#475569','#334155','#1f2937',false,'#f87171');
-  makeHuman('human_f_sport',  '#fde68a','#111827','#f0abfc','#a855f7','#6d28d9',true,'#f87171');
+  makeHuman('human_m_sport',  '#fde68a','#d97706','#f59e0b','#0ea5e9','#374151',false);
+  makeHuman('human_m_casual', '#fde68a','#b45309','#22c55e','#0f4c8a','#1f2937',false);
+  makeHuman('human_m_formal', '#fde68a','#0f172a','#334155','#111827','#0f172a',false);
+  makeHuman('human_f_default','#fde68a','#111827','#ec4899','#be185d','#7c3aed',true,'#f87171');
+  makeHuman('human_f_suit',   '#fde68a','#0f172a','#6366f1','#1e1b4b','#1f2937',false,'#f9a8d4');
+  makeHuman('human_f_sport',  '#fde68a','#111827','#f0abfc','#a855f7','#6d28d9',true,'#f9a8d4');
   makeHuman('human_f_casual', '#fde68a','#92400e','#fbbf24','#ec4899','#be185d',true,'#f87171');
-  makeHuman('human_f_formal', '#fde68a','#0f172a','#a78bfa','#6d28d9','#4c1d95',true,'#f87171');
+  makeHuman('human_f_formal', '#fde68a','#0f172a','#a78bfa','#6d28d9','#4c1d95',true,'#f9a8d4');
   /* Beach/swimwear textures for beach NPCs */
   makeHuman('human_f_beach',  '#fcd9b6','#fde68a','#ec4899','#0ea5e9','#fcd9b6',true,'#f87171');
   makeHuman('human_m_beach',  '#fcd9b6','#f59e0b','#0ea5e9','#0ea5e9','#fcd9b6',false);
@@ -5302,22 +5332,53 @@ function showPlayerProfile(playerData){
 window.showPlayerProfile=showPlayerProfile;
 
 /* ─────────────────────────────────────────────────────────────────────────
-   VIRTUAL D-PAD — mobile touch movement
+   VIRTUAL D-PAD — reliable pointer-event movement (PC + Mobile)
 ───────────────────────────────────────────────────────────────────────── */
 const _touch={up:false,down:false,left:false,right:false};
 (function setupDpad(){
+  /* Map of activePointerId → direction, used to release on global pointerup */
+  const _held=new Map();
   const map=[['dUp','up'],['dDown','down'],['dLeft','left'],['dRight','right']];
   map.forEach(([id,dir])=>{
     const btn=document.getElementById(id);if(!btn)return;
-    const on=e=>{e.preventDefault();_touch[dir]=true;};
-    const off=e=>{e.preventDefault();_touch[dir]=false;};
-    btn.addEventListener('touchstart',on,{passive:false});
-    btn.addEventListener('touchend',off,{passive:false});
-    btn.addEventListener('touchcancel',off,{passive:false});
-    btn.addEventListener('mousedown',on);
-    btn.addEventListener('mouseup',off);
-    btn.addEventListener('mouseleave',off);
+    const press=e=>{
+      e.preventDefault();
+      try{btn.setPointerCapture(e.pointerId);}catch(_){/* setPointerCapture may fail on some older browsers — safe to ignore */}
+      _touch[dir]=true;
+      _held.set(e.pointerId,dir);
+      btn.classList.add('active');
+    };
+    const release=e=>{
+      _touch[dir]=false;
+      _held.delete(e.pointerId);
+      btn.classList.remove('active');
+    };
+    btn.addEventListener('pointerdown',press,{passive:false});
+    btn.addEventListener('pointerup',release,{passive:false});
+    btn.addEventListener('pointercancel',release,{passive:false});
+    btn.addEventListener('pointerleave',release,{passive:false});
+    /* Fallback mouse events for browsers without Pointer Events */
+    btn.addEventListener('mousedown',e=>{e.preventDefault();_touch[dir]=true;btn.classList.add('active');});
+    btn.addEventListener('mouseup',e=>{_touch[dir]=false;btn.classList.remove('active');});
+    btn.addEventListener('mouseleave',e=>{_touch[dir]=false;btn.classList.remove('active');});
   });
+  /* Interact (centre) button */
+  const actBtn=document.getElementById('dAct');
+  if(actBtn){
+    actBtn.addEventListener('pointerdown',e=>{e.preventDefault();actBtn.classList.add('active');triggerInteract();});
+    actBtn.addEventListener('pointerup',()=>actBtn.classList.remove('active'));
+    actBtn.addEventListener('pointercancel',()=>actBtn.classList.remove('active'));
+  }
+  /* Global safety: if a pointer is released anywhere, clear its direction */
+  document.addEventListener('pointerup',e=>{
+    if(_held.has(e.pointerId)){_touch[_held.get(e.pointerId)]=false;_held.delete(e.pointerId);}
+    /* Also clear all buttons' active class to prevent stuck state */
+    if(_held.size===0){for(const d of Object.keys(_touch))_touch[d]=false; /* safety: ensure no stuck directions when all dpad pointers are released */
+      document.querySelectorAll('#dpad button').forEach(b=>b.classList.remove('active'));}
+  },{passive:true});
+  document.addEventListener('pointercancel',e=>{
+    if(_held.has(e.pointerId)){_touch[_held.get(e.pointerId)]=false;_held.delete(e.pointerId);}
+  },{passive:true});
 })();
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -5863,7 +5924,7 @@ const phaserCfg={
     preload(){var t=document.getElementById('loadingText'),f=document.getElementById('loadingFill');if(t)t.textContent='Loading assets...';if(f)f.style.width='90%';makeTextures(this);},
     create(){
       document.getElementById('loading').style.display='none';
-      this.me=this.add.container(32*TILE,32*TILE).setDepth(10);
+      this.me=this.add.container(32*TILE,28*TILE).setDepth(10);
       const meLabel=getNickname();
       const meLabelObj=this.add.text(-18,-44,meLabel,{fontSize:'12px',color:'#a5f3fc',fontStyle:'bold'});
       this.meLabel=meLabelObj; // store ref for nickname updates
@@ -5933,7 +5994,7 @@ const phaserCfg={
           const{poi,d}=nearPOI(this.me.x,this.me.y);
           /* Hoe button visibility: player on grass, not on a plot, owns hoe */
           const tx=Math.floor(this.me.x/TILE),ty=Math.floor(this.me.y/TILE);
-          const onGrass=cityTiles&&ty>=0&&ty<CH&&tx>=0&&tx<CW&&cityTiles[ty]&&cityTiles[ty][tx]===TT.G;
+          const onGrass=(()=>{const at=currentCity===3?city3Tiles:currentCity===2?city2Tiles:cityTiles;return at&&ty>=0&&ty<CH&&tx>=0&&tx<CW&&at[ty]&&at[ty][tx]===TT.G;})();
           const noPlot=!S.plots.find(p=>p.tx===tx&&p.ty===ty)&&!_npcPlots.find(p=>p.tx===tx&&p.ty===ty);
           const btnHoe=document.getElementById('btnHoe');
           if(btnHoe)btnHoe.style.display=(S.inv.hoe>0&&onGrass&&noPlot&&WS.zone==='CITY')?'block':'none';
@@ -6059,10 +6120,20 @@ const phaserCfg={
 };
 const game=new Phaser.Game(phaserCfg);
 // Ensure the game canvas gets keyboard focus when user interacts with the page
-function _focusGameCanvas(){const c=game.canvas;if(c){c.setAttribute('tabindex','0');c.focus();}}
+function _focusGameCanvas(){
+  const c=game.canvas;if(c){c.setAttribute('tabindex','0');c.focus();}
+  // Hide the PC hint once the user clicks the game area
+  const hint=document.getElementById('pcHint');if(hint){hint.classList.add('hidden');setTimeout(()=>{hint.style.display='none';},400);} // 400ms matches the CSS transition duration
+}
 document.getElementById('game').addEventListener('click',_focusGameCanvas,{passive:true});
-// On mobile, also focus on first touch
-document.getElementById('game').addEventListener('touchstart',_focusGameCanvas,{passive:true,once:true});
+// On mobile, also focus on first touch and hide the hint
+document.getElementById('game').addEventListener('pointerdown',e=>{
+  _focusGameCanvas();
+  // Reset any stuck d-pad state on direct canvas touch
+  if(e.target===game.canvas){for(const d of Object.keys(_touch))_touch[d]=false;}
+},{passive:true,once:false});
+// Hide hint immediately on touch devices
+if(window.matchMedia('(pointer:coarse)').matches){const h=document.getElementById('pcHint');if(h)h.style.display='none';}
 window.addEventListener('resize',()=>{
   const isMobile=window.innerWidth<=MOBILE_BREAKPOINT;
   const w=isMobile?window.innerWidth:Math.max(400,window.innerWidth-320);
