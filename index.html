@@ -3192,8 +3192,67 @@
       }
     }
     window.connectWalletConnect = connectWalletConnect;
-    
-    // Function to connect wallet from within the app (after email/X login)
+
+    /**
+     * Detect installed wallets and add a "Detected" badge to the matching
+     * login buttons. Runs after DOM is ready.
+     */
+    function detectInstalledWallets() {
+      const eth = window.ethereum;
+      const providers = eth && eth.providers ? eth.providers : (eth ? [eth] : []);
+
+      const isMetaMask = providers.some(p => p.isMetaMask && !p.isBraveWallet) || (eth && eth.isMetaMask && !eth.isBraveWallet);
+      const isTrust = providers.some(p => p.isTrust || p.isTrustWallet) || (eth && (eth.isTrust || eth.isTrustWallet));
+      const hasOKX = !!(window.okxwallet || window.okex);
+
+      const walletMap = [
+        { onclickStr: 'connectMetaMask()', detected: isMetaMask },
+        { onclickStr: 'connectOKX()',       detected: hasOKX },
+        { onclickStr: 'connectTrustWallet()', detected: isTrust },
+      ];
+
+      walletMap.forEach(({ onclickStr, detected }) => {
+        const btn = document.querySelector(`button[onclick="${onclickStr}"]`);
+        if (!btn) return;
+        // Remove any stale badge
+        const old = btn.querySelector('.wallet-detected-badge');
+        if (old) old.remove();
+        if (detected) {
+          btn.style.borderColor = '#10b981';
+          btn.style.boxShadow = '0 0 0 2px rgba(16,185,129,0.25)';
+          const badge = document.createElement('span');
+          badge.className = 'wallet-detected-badge';
+          badge.style.cssText = 'font-size:0.62em; background:#10b981; color:#fff; padding:1px 6px; border-radius:3px; margin-left:8px; vertical-align:middle;';
+          badge.textContent = 'Detected';
+          btn.appendChild(badge);
+        }
+      });
+
+      // If no specific wallet detected but window.ethereum exists, mark a generic fallback
+      if (!isMetaMask && !isTrust && !hasOKX && eth) {
+        const mmBtn = document.querySelector('button[onclick="connectMetaMask()"]');
+        if (mmBtn) {
+          mmBtn.style.borderColor = '#60a5fa';
+          const badge = document.createElement('span');
+          badge.className = 'wallet-detected-badge';
+          badge.style.cssText = 'font-size:0.62em; background:#3b82f6; color:#fff; padding:1px 6px; border-radius:3px; margin-left:8px; vertical-align:middle;';
+          badge.textContent = 'Available';
+          mmBtn.appendChild(badge);
+        }
+      }
+    }
+
+    // Run wallet detection once the page loads (non-blocking)
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', detectInstalledWallets);
+    } else {
+      // Page already loaded: run immediately and also after 500ms to catch async-injecting wallets
+      detectInstalledWallets();
+      setTimeout(detectInstalledWallets, 500);
+    }
+    window.detectInstalledWallets = detectInstalledWallets;
+
+
     function connectWalletFromApp() {
       if (userAddress) {
         showNotification("Wallet already connected!", false);
@@ -6961,20 +7020,20 @@
 
         const assetsData = {
           crypto: [
-            {symbol: "BTCUSD", name: "Bitcoin", tvSymbol: "BINANCE:BTCUSDT", binanceSymbol: "BTCUSDT", basePrice: 45000, volatility: 0.025},
-            {symbol: "ETHUSD", name: "Ethereum", tvSymbol: "BINANCE:ETHUSDT", binanceSymbol: "ETHUSDT", basePrice: 2500, volatility: 0.030},
-            {symbol: "BNBUSD", name: "BNB", tvSymbol: "BINANCE:BNBUSDT", binanceSymbol: "BNBUSDT", basePrice: 320, volatility: 0.028},
-            {symbol: "SOLUSD", name: "Solana", tvSymbol: "BINANCE:SOLUSDT", binanceSymbol: "SOLUSDT", basePrice: 100, volatility: 0.040},
-            {symbol: "ADAUSD", name: "Cardano", tvSymbol: "BINANCE:ADAUSDT", binanceSymbol: "ADAUSDT", basePrice: 0.50, volatility: 0.035},
-            {symbol: "XRPUSD", name: "Ripple", tvSymbol: "BINANCE:XRPUSDT", binanceSymbol: "XRPUSDT", basePrice: 0.60, volatility: 0.032},
-            {symbol: "DOTUSD", name: "Polkadot", tvSymbol: "BINANCE:DOTUSDT", binanceSymbol: "DOTUSDT", basePrice: 7.50, volatility: 0.038},
-            {symbol: "MATICUSD", name: "Polygon", tvSymbol: "BINANCE:MATICUSDT", binanceSymbol: "MATICUSDT", basePrice: 0.85, volatility: 0.042},
-            {symbol: "LINKUSD", name: "Chainlink", tvSymbol: "BINANCE:LINKUSDT", binanceSymbol: "LINKUSDT", basePrice: 15.00, volatility: 0.036},
-            {symbol: "UNIUSD", name: "Uniswap", tvSymbol: "BINANCE:UNIUSDT", binanceSymbol: "UNIUSDT", basePrice: 6.50, volatility: 0.040},
-            {symbol: "DOGEUSD", name: "Dogecoin", tvSymbol: "BINANCE:DOGEUSDT", binanceSymbol: "DOGEUSDT", basePrice: 0.08, volatility: 0.055},
-            {symbol: "AVAXUSD", name: "Avalanche", tvSymbol: "BINANCE:AVAXUSDT", binanceSymbol: "AVAXUSDT", basePrice: 35, volatility: 0.045},
-            {symbol: "ATOMUSD", name: "Cosmos", tvSymbol: "BINANCE:ATOMUSDT", binanceSymbol: "ATOMUSDT", basePrice: 9, volatility: 0.038},
-            {symbol: "NEARUSD", name: "NEAR Protocol", tvSymbol: "BINANCE:NEARUSDT", binanceSymbol: "NEARUSDT", basePrice: 4, volatility: 0.048}
+            {symbol: "BTCUSD", name: "Bitcoin", tvSymbol: "BINANCE:BTCUSDT", binanceSymbol: "BTCUSDT", basePrice: 85000, volatility: 0.025},
+            {symbol: "ETHUSD", name: "Ethereum", tvSymbol: "BINANCE:ETHUSDT", binanceSymbol: "ETHUSDT", basePrice: 2000, volatility: 0.030},
+            {symbol: "BNBUSD", name: "BNB", tvSymbol: "BINANCE:BNBUSDT", binanceSymbol: "BNBUSDT", basePrice: 580, volatility: 0.028},
+            {symbol: "SOLUSD", name: "Solana", tvSymbol: "BINANCE:SOLUSDT", binanceSymbol: "SOLUSDT", basePrice: 130, volatility: 0.040},
+            {symbol: "ADAUSD", name: "Cardano", tvSymbol: "BINANCE:ADAUSDT", binanceSymbol: "ADAUSDT", basePrice: 0.65, volatility: 0.035},
+            {symbol: "XRPUSD", name: "Ripple", tvSymbol: "BINANCE:XRPUSDT", binanceSymbol: "XRPUSDT", basePrice: 2.20, volatility: 0.032},
+            {symbol: "DOTUSD", name: "Polkadot", tvSymbol: "BINANCE:DOTUSDT", binanceSymbol: "DOTUSDT", basePrice: 5.50, volatility: 0.038},
+            {symbol: "MATICUSD", name: "Polygon", tvSymbol: "BINANCE:MATICUSDT", binanceSymbol: "MATICUSDT", basePrice: 0.40, volatility: 0.042},
+            {symbol: "LINKUSD", name: "Chainlink", tvSymbol: "BINANCE:LINKUSDT", binanceSymbol: "LINKUSDT", basePrice: 13.00, volatility: 0.036},
+            {symbol: "UNIUSD", name: "Uniswap", tvSymbol: "BINANCE:UNIUSDT", binanceSymbol: "UNIUSDT", basePrice: 7.50, volatility: 0.040},
+            {symbol: "DOGEUSD", name: "Dogecoin", tvSymbol: "BINANCE:DOGEUSDT", binanceSymbol: "DOGEUSDT", basePrice: 0.17, volatility: 0.055},
+            {symbol: "AVAXUSD", name: "Avalanche", tvSymbol: "BINANCE:AVAXUSDT", binanceSymbol: "AVAXUSDT", basePrice: 22, volatility: 0.045},
+            {symbol: "ATOMUSD", name: "Cosmos", tvSymbol: "BINANCE:ATOMUSDT", binanceSymbol: "ATOMUSDT", basePrice: 5, volatility: 0.038},
+            {symbol: "NEARUSD", name: "NEAR Protocol", tvSymbol: "BINANCE:NEARUSDT", binanceSymbol: "NEARUSDT", basePrice: 2.8, volatility: 0.048}
           ],
           stocks: [
             {symbol: "AAPL", name: "Apple Inc.", tvSymbol: "NASDAQ:AAPL", yahooSymbol: "AAPL", basePrice: 225, volatility: 0.015},
@@ -7110,7 +7169,7 @@
             if (eventsData && eventsData.results) {
               team.recentForm = eventsData.results.slice(0, 6).map(event => {
                   const date = new Date(event.dateEvent).toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'});
-                  const isHome = event.idHomeTeam === team.teamId;
+                  const isHome = String(event.idHomeTeam) === String(team.teamId);
                   const opponent = isHome ? event.strAwayTeam : event.strHomeTeam;
                   const score = isHome ? `${event.intHomeScore}-${event.intAwayScore}` : `${event.intAwayScore}-${event.intHomeScore}`;
                   
@@ -7130,8 +7189,13 @@
             }
             
             if (nextData && nextData.events && nextData.events.length > 0) {
-                const nextEvent = nextData.events[0];
-                const isHome = nextEvent.idHomeTeam === team.teamId;
+                // Prefer events from the team's primary league; fall back to first event
+                const leagueWord = (team.league || '').toLowerCase().split(/\s+/).find(w => w.length > 3) || '';
+                const relevantEvent = (leagueWord && nextData.events.find(ev =>
+                  ev.strLeague && ev.strLeague.toLowerCase().includes(leagueWord)
+                )) || nextData.events[0];
+                const nextEvent = relevantEvent;
+                const isHome = String(nextEvent.idHomeTeam) === String(team.teamId);
                 const opponent = isHome ? nextEvent.strAwayTeam : nextEvent.strHomeTeam;
                 const date = new Date(nextEvent.dateEvent).toLocaleDateString('en-US', {month: 'short', day: 'numeric'});
                 team.nextMatch = `${date} vs ${opponent}`;
@@ -7497,6 +7561,7 @@
         // Indicator state
         const activeIndicators = new Set();
         let emaLine20 = null, emaLine50 = null;
+        let bbUpperLine = null, bbMiddleLine = null, bbLowerLine = null;
         let currentRSIPeriod = 14; // Default RSI period; changeable via setRSIPeriod()
 
         function toggleIndicator(name) {
@@ -7508,6 +7573,11 @@
               if (emaLine20 && lwChart) { try { lwChart.removeSeries(emaLine20); } catch(e){} emaLine20 = null; }
               if (emaLine50 && lwChart) { try { lwChart.removeSeries(emaLine50); } catch(e){} emaLine50 = null; }
             }
+            if (name === 'BB') {
+              if (bbUpperLine && lwChart) { try { lwChart.removeSeries(bbUpperLine); } catch(e){} bbUpperLine = null; }
+              if (bbMiddleLine && lwChart) { try { lwChart.removeSeries(bbMiddleLine); } catch(e){} bbMiddleLine = null; }
+              if (bbLowerLine && lwChart) { try { lwChart.removeSeries(bbLowerLine); } catch(e){} bbLowerLine = null; }
+            }
             if (name === 'RSI') {
               const rsiPanel = document.getElementById('rsiPanel');
               if (rsiPanel) rsiPanel.style.display = 'none';
@@ -7517,6 +7587,9 @@
             if (btn) { btn.style.background = '#1e3a5f'; btn.style.color = '#60a5fa'; btn.style.borderColor = '#60a5fa'; }
             if (name === 'EMA' && lwChart && lwCandleSeries) {
               addEMALines();
+            }
+            if (name === 'BB' && lwChart && lwCandleSeries) {
+              addBBLines();
             }
             if (name === 'RSI') {
               const rsiPanel = document.getElementById('rsiPanel');
@@ -7578,6 +7651,53 @@
               emaLine50.setData(ema50Data);
             } catch(e) { console.warn('EMA50 error:', e); }
           }
+        }
+
+        function calculateBollingerBands(data, period, multiplier) {
+          period = period || 20;
+          multiplier = multiplier || 2;
+          if (!data || data.length < period) return [];
+          const valid = data.filter(d => d && typeof d.close === 'number' && !isNaN(d.close) && d.time != null);
+          if (valid.length < period) return [];
+          const result = [];
+          for (let i = period - 1; i < valid.length; i++) {
+            const slice = valid.slice(i - period + 1, i + 1);
+            const mean = slice.reduce((s, d) => s + d.close, 0) / period;
+            const variance = slice.reduce((s, d) => s + Math.pow(d.close - mean, 2), 0) / period;
+            const stdDev = Math.sqrt(variance);
+            result.push({
+              time: valid[i].time,
+              upper: mean + multiplier * stdDev,
+              middle: mean,
+              lower: mean - multiplier * stdDev
+            });
+          }
+          return result;
+        }
+
+        function addBBLines() {
+          if (!lwChart || !lwCandleSeries) return;
+          const data = priceHistory.map(p => ({ time: Math.floor(p.x / 1000), close: p.c }));
+          if (!data || data.length < 20) return;
+
+          const bbData = calculateBollingerBands(data, 20, 2);
+          if (bbData.length === 0) return;
+
+          try {
+            if (bbUpperLine) { lwChart.removeSeries(bbUpperLine); bbUpperLine = null; }
+            bbUpperLine = lwChart.addLineSeries({ color: 'rgba(96,165,250,0.8)', lineWidth: 1, priceLineVisible: false, lastValueVisible: false, lineStyle: 2 });
+            bbUpperLine.setData(bbData.map(d => ({ time: d.time, value: d.upper })));
+          } catch(e) { console.warn('BB upper error:', e); }
+          try {
+            if (bbMiddleLine) { lwChart.removeSeries(bbMiddleLine); bbMiddleLine = null; }
+            bbMiddleLine = lwChart.addLineSeries({ color: 'rgba(240,185,11,0.7)', lineWidth: 1, priceLineVisible: false, lastValueVisible: false });
+            bbMiddleLine.setData(bbData.map(d => ({ time: d.time, value: d.middle })));
+          } catch(e) { console.warn('BB middle error:', e); }
+          try {
+            if (bbLowerLine) { lwChart.removeSeries(bbLowerLine); bbLowerLine = null; }
+            bbLowerLine = lwChart.addLineSeries({ color: 'rgba(96,165,250,0.8)', lineWidth: 1, priceLineVisible: false, lastValueVisible: false, lineStyle: 2 });
+            bbLowerLine.setData(bbData.map(d => ({ time: d.time, value: d.lower })));
+          } catch(e) { console.warn('BB lower error:', e); }
         }
 
         function updateRSIDisplay() {
@@ -9979,6 +10099,8 @@
             lwChart = null;
             lwCandleSeries = null;
             lwVolumeSeries = null;
+            emaLine20 = null; emaLine50 = null;
+            bbUpperLine = null; bbMiddleLine = null; bbLowerLine = null;
           }
         }
 
@@ -9988,21 +10110,43 @@
          */
         async function loadBinanceKlines(binanceSymbol, interval, limit = 100) {
           try {
+            // Try Binance Futures (fapi) first
             const url = `https://fapi.binance.com/fapi/v1/klines?symbol=${binanceSymbol}&interval=${interval}&limit=${limit}`;
             const resp = await fetch(url);
-            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-            const raw = await resp.json();
-            return raw.map(k => ({
-              time: Math.floor(k[0] / 1000),
-              open: parseFloat(k[1]),
-              high: parseFloat(k[2]),
-              low: parseFloat(k[3]),
-              close: parseFloat(k[4]),
-              volume: parseFloat(k[5])
-            }));
-          } catch (err) {
-            console.warn('[Binance Futures Klines] Failed to fetch:', err.message);
-            return [];
+            if (resp.ok) {
+              const raw = await resp.json();
+              if (Array.isArray(raw) && raw.length > 0) {
+                return raw.map(k => ({
+                  time: Math.floor(k[0] / 1000),
+                  open: parseFloat(k[1]),
+                  high: parseFloat(k[2]),
+                  low: parseFloat(k[3]),
+                  close: parseFloat(k[4]),
+                  volume: parseFloat(k[5])
+                }));
+              }
+            }
+            throw new Error(`HTTP ${resp.status} or empty response`);
+          } catch (futuresErr) {
+            console.warn('[Binance Futures Klines] Failed:', futuresErr.message, '– trying spot API');
+            try {
+              // Fall back to Binance Spot (api) for symbols not on futures
+              const spotUrl = `https://api.binance.com/api/v3/klines?symbol=${binanceSymbol}&interval=${interval}&limit=${limit}`;
+              const spotResp = await fetch(spotUrl);
+              if (!spotResp.ok) throw new Error(`Spot HTTP ${spotResp.status}`);
+              const raw = await spotResp.json();
+              return raw.map(k => ({
+                time: Math.floor(k[0] / 1000),
+                open: parseFloat(k[1]),
+                high: parseFloat(k[2]),
+                low: parseFloat(k[3]),
+                close: parseFloat(k[4]),
+                volume: parseFloat(k[5])
+              }));
+            } catch (spotErr) {
+              console.warn('[Binance Spot Klines] Also failed:', spotErr.message);
+              return [];
+            }
           }
         }
 
@@ -10152,9 +10296,10 @@
               // Populate priceHistory from klines so RSI and other indicators have data
               priceHistory = klines.map(k => ({ x: k.time * 1000, o: k.open, h: k.high, l: k.low, c: k.close }));
 
-              // Update price display with latest close
+              // Update price display with latest close and sync basePrice
               const last = klines[klines.length - 1];
               updatePriceDisplay(last.close);
+              if (last.close > 0) asset.basePrice = last.close;
 
               // Start kline WebSocket for real-time updates
               connectKlineWebSocket(asset.binanceSymbol, interval);
@@ -10164,7 +10309,9 @@
               if (srcEl) srcEl.textContent = 'Binance Futures (real-time)';
 
               lwChart.timeScale().fitContent();
-              // Refresh RSI if active
+              // Re-apply active indicators after data load
+              if (activeIndicators.has('EMA') && priceHistory.length >= 20) addEMALines();
+              if (activeIndicators.has('BB') && priceHistory.length >= 20) addBBLines();
               if (activeIndicators.has('RSI')) updateRSIDisplay();
               return true;
             }
@@ -10188,11 +10335,16 @@
 
               const last = yKlines[yKlines.length - 1];
               updatePriceDisplay(last.close);
+              // Also update asset basePrice so order-book and other UI stay accurate
+              if (last.close > 0) asset.basePrice = last.close;
 
               const srcEl = document.getElementById('chartDataSource');
               if (srcEl) srcEl.textContent = 'Yahoo Finance (real)';
 
               lwChart.timeScale().fitContent();
+              // Re-apply active indicators after data load
+              if (activeIndicators.has('EMA') && priceHistory.length >= 20) addEMALines();
+              if (activeIndicators.has('BB') && priceHistory.length >= 20) addBBLines();
               if (activeIndicators.has('RSI')) updateRSIDisplay();
               return true;
             }
@@ -10210,6 +10362,9 @@
           const srcEl = document.getElementById('chartDataSource');
           if (srcEl) srcEl.textContent = 'Simulated';
 
+          // Re-apply active indicators after data load
+          if (activeIndicators.has('EMA') && priceHistory.length >= 20) addEMALines();
+          if (activeIndicators.has('BB') && priceHistory.length >= 20) addBBLines();
           if (activeIndicators.has('RSI')) updateRSIDisplay();
           return true;
         }
@@ -10261,6 +10416,80 @@
 
           // Minimum price movement ratio to record a new priceHistory candle (0.01%)
           const KLINE_PRICE_UPDATE_THRESHOLD = 0.0001;
+
+          // Shared kline message handler used by both futures and spot WebSockets
+          function handleKlineMessage(event) {
+            try {
+              const msg = JSON.parse(event.data);
+              const k = msg.k;
+              if (!k) return;
+
+              const candle = {
+                time: Math.floor(k.t / 1000),
+                open: parseFloat(k.o),
+                high: parseFloat(k.h),
+                low:  parseFloat(k.l),
+                close: parseFloat(k.c)
+              };
+
+              if (lwCandleSeries) lwCandleSeries.update(candle);
+
+              if (lwVolumeSeries) {
+                lwVolumeSeries.update({
+                  time: candle.time,
+                  value: parseFloat(k.v),
+                  color: candle.close >= candle.open ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'
+                });
+              }
+
+              // Update price display and internal price history
+              const price = candle.close;
+              updatePriceDisplay(price);
+
+              // Keep priceHistory in sync for position P&L
+              if (priceHistory.length > 0) {
+                const last = priceHistory[priceHistory.length - 1];
+                if (Math.abs(last.c - price) / last.c > KLINE_PRICE_UPDATE_THRESHOLD) {
+                  priceHistory.push({ x: k.t, o: candle.open, h: candle.high, l: candle.low, c: price });
+                  if (priceHistory.length > 200) priceHistory.shift();
+                }
+              } else {
+                priceHistory.push({ x: k.t, o: candle.open, h: candle.high, l: candle.low, c: price });
+              }
+
+              updatePositionsDisplay();
+              updateLeverageInfo();
+            } catch (e) {
+              console.error('[LWCharts] Kline WS parse error:', e);
+            }
+          }
+
+          function attachSpotKlineWS() {
+            try {
+              const spotWsUrl = `wss://stream.binance.com:9443/ws/${binanceSymbol.toLowerCase()}@kline_${interval}`;
+              lwKlineWebSocket = new WebSocket(spotWsUrl);
+              lwKlineWebSocket.onopen = () => {
+                const badge = document.getElementById('chartLiveBadge');
+                if (badge) badge.style.display = 'inline-flex';
+              };
+              lwKlineWebSocket.onmessage = handleKlineMessage;
+              lwKlineWebSocket.onerror = () => {
+                const badge = document.getElementById('chartLiveBadge');
+                if (badge) badge.style.display = 'none';
+                startRealTimePriceUpdates();
+              };
+              lwKlineWebSocket.onclose = () => {
+                lwKlineWebSocket = null;
+                const badge = document.getElementById('chartLiveBadge');
+                if (badge) badge.style.display = 'none';
+              };
+            } catch(_) {
+              const badge = document.getElementById('chartLiveBadge');
+              if (badge) badge.style.display = 'none';
+              startRealTimePriceUpdates();
+            }
+          }
+
           const wsUrl = `wss://fstream.binance.com/ws/${binanceSymbol.toLowerCase()}@kline_${interval}`;
           try {
             lwKlineWebSocket = new WebSocket(wsUrl);
@@ -10271,57 +10500,12 @@
               if (badge) badge.style.display = 'inline-flex';
             };
 
-            lwKlineWebSocket.onmessage = (event) => {
-              try {
-                const msg = JSON.parse(event.data);
-                const k = msg.k;
-                if (!k) return;
-
-                const candle = {
-                  time: Math.floor(k.t / 1000),
-                  open: parseFloat(k.o),
-                  high: parseFloat(k.h),
-                  low:  parseFloat(k.l),
-                  close: parseFloat(k.c)
-                };
-
-                if (lwCandleSeries) lwCandleSeries.update(candle);
-
-                if (lwVolumeSeries) {
-                  lwVolumeSeries.update({
-                    time: candle.time,
-                    value: parseFloat(k.v),
-                    color: candle.close >= candle.open ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'
-                  });
-                }
-
-                // Update price display and internal price history
-                const price = candle.close;
-                updatePriceDisplay(price);
-
-                // Keep priceHistory in sync for position P&L
-                if (priceHistory.length > 0) {
-                  const last = priceHistory[priceHistory.length - 1];
-                  if (Math.abs(last.c - price) / last.c > KLINE_PRICE_UPDATE_THRESHOLD) {
-                    priceHistory.push({ x: k.t, o: candle.open, h: candle.high, l: candle.low, c: price });
-                    if (priceHistory.length > 200) priceHistory.shift();
-                  }
-                } else {
-                  priceHistory.push({ x: k.t, o: candle.open, h: candle.high, l: candle.low, c: price });
-                }
-
-                updatePositionsDisplay();
-                updateLeverageInfo();
-              } catch (e) {
-                console.error('[LWCharts] Kline WS parse error:', e);
-              }
-            };
+            lwKlineWebSocket.onmessage = handleKlineMessage;
 
             lwKlineWebSocket.onerror = () => {
-              console.warn('[LWCharts] Kline WS error, falling back to polling');
-              const badge = document.getElementById('chartLiveBadge');
-              if (badge) badge.style.display = 'none';
-              startRealTimePriceUpdates();
+              console.warn('[LWCharts] Futures Kline WS error, trying spot WebSocket');
+              lwKlineWebSocket = null;
+              attachSpotKlineWS();
             };
 
             lwKlineWebSocket.onclose = () => {
@@ -10423,6 +10607,33 @@
 
         // Refresh top ticker bar immediately so prices are not stale when entering the market
         updatePriceTicker().catch(() => {});
+
+        // Fetch live Binance prices in background and update basePrice for all crypto assets
+        (async function refreshAllCryptoPrices() {
+          try {
+            const symbols = assetsData.crypto.map(a => a.binanceSymbol).filter(Boolean);
+            if (!symbols.length) return;
+            const tickerUrl = `https://fapi.binance.com/fapi/v1/ticker/price?symbols=${encodeURIComponent(JSON.stringify(symbols))}`;
+            const resp = await fetch(tickerUrl).catch(() => null);
+            if (resp && resp.ok) {
+              const tickers = await resp.json();
+              if (Array.isArray(tickers)) {
+                tickers.forEach(t => {
+                  const asset = assetsData.crypto.find(a => a.binanceSymbol === t.symbol);
+                  const price = parseFloat(t.price);
+                  if (asset && price > 0) asset.basePrice = price;
+                });
+                // If the selected asset is crypto, refresh its display
+                if (selectedAsset && selectedAsset.binanceSymbol) {
+                  const fresh = assetsData.crypto.find(a => a.symbol === selectedAsset.symbol);
+                  if (fresh) updatePriceDisplay(fresh.basePrice);
+                }
+              }
+            }
+          } catch (e) {
+            console.warn('[refreshAllCryptoPrices]', e.message);
+          }
+        })();
         // Add event listeners for leverage calculation
         const positionInput = document.getElementById('positionAmount');
         const leverageSelect = document.getElementById('leverageSelect');
