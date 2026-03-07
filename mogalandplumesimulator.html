@@ -371,7 +371,7 @@
       width: 380px;
       background: #0f121a;
       border-left: 1px solid #1e2535;
-      z-index: 99;
+      z-index: 200;
       transform: translateX(100%);
       transition: transform 0.35s ease;
       box-shadow: -10px 0 35px rgba(0,0,0,0.7);
@@ -388,7 +388,13 @@
       align-items: center;
     }
 
-    .gear-icon, .close-slide {
+    .account-title {
+      font-weight: 600;
+      font-size: 1rem;
+      color: #e2e8f0;
+    }
+
+    .gear-icon, .close-slide, .close-panel {
       background: none;
       border: none;
       color: #94a3b8;
@@ -513,7 +519,7 @@
       width: 380px;
       background: #0f121a;
       border-left: 1px solid #1e2535;
-      z-index: 99;
+      z-index: 200;
       transform: translateX(100%);
       transition: transform 0.35s ease;
       box-shadow: -10px 0 35px rgba(0,0,0,0.7);
@@ -521,7 +527,7 @@
     }
     .back-profile-panel:not(.hidden) { transform: translateX(0); }
 
-    .panel-content { padding: 24px; }
+    .panel-content { padding: 24px; padding-bottom: 80px; }
     .panel-header {
       display: flex;
       justify-content: space-between;
