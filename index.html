@@ -940,7 +940,7 @@
       width: 380px;
       background: #0f121a;
       border-left: 1px solid #1e2535;
-      z-index: 99;
+      z-index: 200;
       transform: translateX(100%);
       transition: transform 0.35s ease;
       box-shadow: -10px 0 35px rgba(0,0,0,0.7);
@@ -1091,7 +1091,7 @@
       width: 380px;
       background: #0f121a;
       border-left: 1px solid #1e2535;
-      z-index: 99;
+      z-index: 200;
       transform: translateX(100%);
       transition: transform 0.35s ease;
       box-shadow: -10px 0 35px rgba(0,0,0,0.7);
@@ -4028,9 +4028,14 @@
 
     // Profile panel functions
     window.showProfile = function() {
-      document.getElementById('profileSlidePanel').classList.remove('hidden');
-      // Refresh data when profile is opened
-      fetchRealBalances();
+      const panel = document.getElementById('profileSlidePanel');
+      if (panel.classList.contains('hidden')) {
+        panel.classList.remove('hidden');
+        // Refresh data when profile is opened
+        fetchRealBalances();
+      } else {
+        panel.classList.add('hidden');
+      }
     }
 
     window.closeProfileSlide = function() {
