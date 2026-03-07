@@ -2876,6 +2876,25 @@
     const mockOtp = "123456";
     let loginMethod = null; // 'wallet', 'email', or 'x'
     let walletConnected = false;
+
+    /**
+     * Generate a deterministic 40-char hex pseudo-address from a login identifier
+     * (email or X handle). This is used so non-wallet users get a stable key for
+     * localStorage persistence across sessions.
+     */
+    function generatePseudoAddress(input) {
+      let h = 5381;
+      for (let i = 0; i < input.length; i++) {
+        h = ((h << 5) + h + input.charCodeAt(i)) & 0xffffffff;
+      }
+      h = h >>> 0;
+      const parts = [];
+      for (let i = 0; i < 5; i++) {
+        h = ((h * 1664525 + 1013904223) >>> 0);
+        parts.push(h.toString(16).padStart(8, '0'));
+      }
+      return '0x' + parts.join('');
+    }
     
     function sendEmailCode() {
       try {
@@ -2899,7 +2918,12 @@
       try {
         const otpValue = document.getElementById('otpInput').value.trim();
         if (otpValue === mockOtp) {
+          const email = document.getElementById('emailInput').value.trim();
+          // Assign a stable pseudo-address so localStorage keys are consistent
+          userAddress = generatePseudoAddress('email:' + email.toLowerCase());
           enterDashboard("Email");
+          loadUserTradingVolume();
+          pullUserDataFromCloud().catch(() => {});
         } else {
           showNotification("Wrong OTP", true);
         }
@@ -2918,7 +2942,11 @@
         if (!xUsernameRegex.test(handle)) {
           return showNotification("Please enter a valid X username (e.g., @username)", true);
         }
+        // Assign a stable pseudo-address so localStorage keys are consistent
+        userAddress = generatePseudoAddress('x:' + handle.toLowerCase());
         enterDashboard("X");
+        loadUserTradingVolume();
+        pullUserDataFromCloud().catch(() => {});
       } catch (error) {
         console.error("X login error:", error);
         showNotification("Error with X login. Please try again.", true);
@@ -3114,8 +3142,11 @@
         
         enterDashboard(walletType);
         
-        // Load user trading volume data
+        // Load user trading volume data (from localStorage first)
         loadUserTradingVolume();
+
+        // Pull cloud-synced data in background so it overlays localStorage
+        pullUserDataFromCloud().catch(() => {});
 
         // Load check-in, achievements
         loadCheckinData();
@@ -5571,6 +5602,7 @@
       if (!userAddress) return;
       localStorage.setItem(`tradingVolume_${userAddress}`, JSON.stringify(userTradingVolume));
       localStorage.setItem(`volumeRewards_${userAddress}`, volumeRewardsClaimable.toString());
+      scheduleCloudSync();
     }
 
     function loadUserTradingVolume() {
@@ -5631,12 +5663,17 @@
 
       // Load staking pool data
       if (typeof loadStakingPoolData === 'function') loadStakingPoolData();
+
+      // Load open positions and trade history (market section state)
+      loadOpenPositions();
+      loadTradeHistory();
     }
     
     // Helper function to save mogaland points to localStorage
     function saveMogalandPoints() {
       if (userAddress) {
         localStorage.setItem(`mogalandPoints_${userAddress}`, mogalandPoints);
+        scheduleCloudSync();
       }
     }
 
@@ -5644,6 +5681,7 @@
     function saveStakedUSDC() {
       if (userAddress) {
         localStorage.setItem(`stakedUSDC_${userAddress}`, stakedUSDC.toString());
+        scheduleCloudSync();
       }
     }
     
@@ -5651,6 +5689,7 @@
     function saveStakedNFTsData() {
       if (userAddress) {
         localStorage.setItem(`stakedNFTs_${userAddress}`, JSON.stringify(stakedNFTsData));
+        scheduleCloudSync();
       }
     }
 
@@ -5660,6 +5699,57 @@
         localStorage.setItem(`completedTasks_${userAddress}`, completedTasks.toString());
         localStorage.setItem(`questionIndex_${userAddress}`, currentQuestionIndex.toString());
         localStorage.setItem(`nftMinted_${userAddress}`, nftMinted.toString());
+        scheduleCloudSync();
+      }
+    }
+
+    // Helper functions to save/load open positions and trade history
+    function saveOpenPositions() {
+      if (!userAddress) return;
+      // Only persist non-sports-bet positions; sports bets rely on setTimeout which won't
+      // survive a page reload, so they are excluded to avoid orphaned entries.
+      const toSave = (typeof openPositions !== 'undefined' ? openPositions : [])
+        .filter(p => !p.isSportsBet);
+      localStorage.setItem(`openPositions_${userAddress}`, JSON.stringify(toSave));
+      scheduleCloudSync();
+    }
+
+    function loadOpenPositions() {
+      if (!userAddress) return;
+      try {
+        const saved = localStorage.getItem(`openPositions_${userAddress}`);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && typeof openPositions !== 'undefined') {
+            openPositions = parsed;
+          }
+        }
+      } catch (e) {
+        console.error('[Positions] Error loading openPositions from localStorage:', e);
+      }
+    }
+
+    function saveTradeHistory() {
+      if (!userAddress) return;
+      try {
+        const list = typeof tradeHistoryList !== 'undefined' ? tradeHistoryList : [];
+        localStorage.setItem(`tradeHistory_${userAddress}`, JSON.stringify(list.slice(-200)));
+        scheduleCloudSync();
+      } catch (e) {
+        console.error('[TradeHistory] Error saving:', e);
+      }
+    }
+
+    function loadTradeHistory() {
+      if (!userAddress) return;
+      try {
+        const saved = localStorage.getItem(`tradeHistory_${userAddress}`);
+        if (saved && typeof tradeHistoryList !== 'undefined') {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) tradeHistoryList = parsed;
+        }
+      } catch (e) {
+        console.error('[TradeHistory] Error loading:', e);
       }
     }
 
@@ -5669,6 +5759,73 @@
       
       // Treasury USDC display is hidden from users (for dev only)
       // Treasury balance is tracked internally: ${treasuryUSDCBalance.toLocaleString()} USDC
+    }
+
+    // ── Cloudflare KV cloud sync ───────────────────────────────────────────
+    // Collects all localStorage-persisted user data and pushes it to the worker
+    // KV namespace (PUT /api/user-data/:address).  Falls back silently when the
+    // worker has no USER_DATA_KV binding or when called without a userAddress.
+    let _cloudSyncTimeout = null;
+
+    function scheduleCloudSync() {
+      if (!userAddress) return;
+      if (_cloudSyncTimeout) clearTimeout(_cloudSyncTimeout);
+      // Debounce: wait 3 s after last change before sending to avoid hammering the API
+      _cloudSyncTimeout = setTimeout(pushUserDataToCloud, 3000);
+    }
+
+    async function pushUserDataToCloud() {
+      if (!userAddress) return;
+      try {
+        const payload = {
+          tradingVolume: JSON.parse(localStorage.getItem(`tradingVolume_${userAddress}`) || 'null'),
+          volumeRewards: localStorage.getItem(`volumeRewards_${userAddress}`),
+          mogalandPoints: localStorage.getItem(`mogalandPoints_${userAddress}`),
+          stakedNFTs: JSON.parse(localStorage.getItem(`stakedNFTs_${userAddress}`) || 'null'),
+          stakedUSDC: localStorage.getItem(`stakedUSDC_${userAddress}`),
+          completedTasks: localStorage.getItem(`completedTasks_${userAddress}`),
+          questionIndex: localStorage.getItem(`questionIndex_${userAddress}`),
+          nftMinted: localStorage.getItem(`nftMinted_${userAddress}`),
+          stakingPool: JSON.parse(localStorage.getItem(`stakingPool_${userAddress}`) || 'null'),
+          openPositions: JSON.parse(localStorage.getItem(`openPositions_${userAddress}`) || '[]'),
+          tradeHistory: JSON.parse(localStorage.getItem(`tradeHistory_${userAddress}`) || '[]'),
+          updatedAt: Date.now(),
+        };
+        await fetch(`/api/user-data/${encodeURIComponent(userAddress)}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+      } catch (e) {
+        console.warn('[CloudSync] Push failed (offline or KV not configured):', e.message);
+      }
+    }
+
+    async function pullUserDataFromCloud() {
+      if (!userAddress) return;
+      try {
+        const res = await fetch(`/api/user-data/${encodeURIComponent(userAddress)}`);
+        if (!res.ok) return;
+        const json = await res.json();
+        if (!json.ok || !json.data) return;
+        const d = json.data;
+        // Merge cloud data into localStorage (cloud wins on conflict)
+        if (d.tradingVolume) localStorage.setItem(`tradingVolume_${userAddress}`, JSON.stringify(d.tradingVolume));
+        if (d.volumeRewards != null) localStorage.setItem(`volumeRewards_${userAddress}`, d.volumeRewards);
+        if (d.mogalandPoints != null) localStorage.setItem(`mogalandPoints_${userAddress}`, d.mogalandPoints);
+        if (d.stakedNFTs) localStorage.setItem(`stakedNFTs_${userAddress}`, JSON.stringify(d.stakedNFTs));
+        if (d.stakedUSDC != null) localStorage.setItem(`stakedUSDC_${userAddress}`, d.stakedUSDC);
+        if (d.completedTasks != null) localStorage.setItem(`completedTasks_${userAddress}`, d.completedTasks);
+        if (d.questionIndex != null) localStorage.setItem(`questionIndex_${userAddress}`, d.questionIndex);
+        if (d.nftMinted != null) localStorage.setItem(`nftMinted_${userAddress}`, d.nftMinted);
+        if (d.stakingPool) localStorage.setItem(`stakingPool_${userAddress}`, JSON.stringify(d.stakingPool));
+        if (Array.isArray(d.openPositions)) localStorage.setItem(`openPositions_${userAddress}`, JSON.stringify(d.openPositions));
+        if (Array.isArray(d.tradeHistory)) localStorage.setItem(`tradeHistory_${userAddress}`, JSON.stringify(d.tradeHistory));
+        // Re-apply loaded data into runtime state
+        loadUserTradingVolume();
+      } catch (e) {
+        console.warn('[CloudSync] Pull failed (offline or KV not configured):', e.message);
+      }
     }
     
     // Process gas fee for actions (now uses ETH instead of USDC)
@@ -7556,8 +7713,10 @@
           const spreadEl = document.getElementById('orderBookSpread');
           if (!asksEl || !bidsEl || !price) return;
 
-          const spread = price * (volatility || 0.001) * 0.5;
-          const { decimals: priceDecimals } = getTickInfo(price);
+          // Use tick-based spread so best bid/ask are always very close (1-3 ticks apart),
+          // matching real exchange behaviour regardless of asset volatility.
+          const { tick, decimals: priceDecimals } = getTickInfo(price);
+          const spread = tick * (1 + Math.random() * 2);
           const fmt = (p) => p.toLocaleString(undefined, {minimumFractionDigits: priceDecimals, maximumFractionDigits: priceDecimals});
 
           const askRows = [];
@@ -8054,6 +8213,7 @@
           
           // Remove from open positions
           openPositions.splice(idx, 1);
+          saveOpenPositions();
           
           // Show liquidation notification
           showNotification(
@@ -8239,6 +8399,7 @@
 
         // Update trade history
         function updateTradeHistory() {
+          saveTradeHistory();
           const container = document.getElementById('tradeHistory');
           if (!container) return;
 
@@ -9167,6 +9328,7 @@
               };
 
               openPositions.push(position);
+              saveOpenPositions();
               tradingUSDCBalance -= amount;
               transferToTreasury(amount); // Move bet amount to treasury
 
@@ -9272,6 +9434,7 @@
                 updateTradingVolume(category, amount);
 
                 openPositions.splice(idx, 1);
+                saveOpenPositions();
                 updatePositionsDisplay();
                 updateTradeHistory();
                 updateTradingBalance();
@@ -9305,6 +9468,7 @@
             };
 
             openPositions.push(position);
+            saveOpenPositions();
             tradingUSDCBalance -= amount;
             transferToTreasury(amount); // Move position to treasury
             
@@ -9441,6 +9605,7 @@
             
             // Remove from open positions
             openPositions.splice(idx, 1);
+            saveOpenPositions();
             
             // Stop liquidation monitoring and mark price polling if no positions remain
             if (openPositions.length === 0) {
@@ -10118,6 +10283,8 @@
         const TIMEFRAME_TO_BINANCE = {
           '1m': '1m', '5m': '5m', '15m': '15m', '1h': '1h', '4h': '4h', '1d': '1d'
         };
+        // Generation counter to detect and discard stale async chart loads
+        let chartLoadId = 0;
 
         /**
          * Destroy existing Lightweight Chart instance and kline WebSocket
@@ -10254,6 +10421,8 @@
             console.warn('[LWCharts] Library not loaded');
             return false;
           }
+          // Capture generation ID so stale async responses can be discarded
+          const myLoadId = ++chartLoadId;
 
           const container = document.getElementById('priceChart');
           if (!container) return false;
@@ -10322,6 +10491,8 @@
           // Fetch real OHLC data from Binance for crypto
           if (asset.binanceSymbol) {
             const klines = await loadBinanceKlines(asset.binanceSymbol, interval, 150);
+            // Discard if a newer chart load started while we were waiting
+            if (myLoadId !== chartLoadId) return false;
             if (klines.length > 0) {
               lwCandleSeries.setData(klines.map(k => ({
                 time: k.time, open: k.open, high: k.high, low: k.low, close: k.close
@@ -10359,6 +10530,8 @@
           // For non-crypto with Yahoo Finance symbol: fetch real OHLC data
           if (asset.yahooSymbol) {
             const yKlines = await loadYahooKlines(asset.yahooSymbol, interval);
+            // Discard if a newer chart load started while we were waiting
+            if (myLoadId !== chartLoadId) return false;
             if (yKlines.length > 0) {
               lwCandleSeries.setData(yKlines.map(k => ({
                 time: k.time, open: k.open, high: k.high, low: k.low, close: k.close
@@ -10636,6 +10809,9 @@
         }
 
         renderAssets();
+        // Restore persisted positions and trade history before rendering
+        loadOpenPositions();
+        loadTradeHistory();
         if (assetsData.crypto.length > 0) selectAsset(assetsData.crypto[0]);
         updateTradingBalance();
         updatePositionsDisplay();
@@ -11155,7 +11331,10 @@
     }
 
     function saveStakingPoolData() {
-      if (userAddress) localStorage.setItem(`stakingPool_${userAddress}`, JSON.stringify(stakingPoolData));
+      if (userAddress) {
+        localStorage.setItem(`stakingPool_${userAddress}`, JSON.stringify(stakingPoolData));
+        scheduleCloudSync();
+      }
     }
 
     function loadStakingPoolData() {

@@ -5,3 +5,19 @@ pages_build_output_dir = "dist"
 
 [vars]
 # Optional: set GECKOTERMINAL_API_KEY secret via `wrangler secret put` for higher rate limits
+
+# ── KV Namespaces ──────────────────────────────────────────────────────────────
+# To enable Cloudflare KV persistence, create the namespaces and bind them here:
+#
+#   wrangler kv:namespace create LOGIN_HISTORY_KV
+#   wrangler kv:namespace create USER_DATA_KV
+#
+# Then uncomment the section below and replace the placeholder IDs:
+#
+# [[kv_namespaces]]
+# binding = "LOGIN_HISTORY_KV"
+# id = "<your-LOGIN_HISTORY_KV-namespace-id>"
+#
+# [[kv_namespaces]]
+# binding = "USER_DATA_KV"
+# id = "<your-USER_DATA_KV-namespace-id>"
