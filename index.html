@@ -4754,6 +4754,10 @@
     let stakedNFTsData = []; // [{nftId, apy, stakedTime, rewards}]
     let lastRewardClaim = Date.now();
 
+    // NFT Staking Dashboard state (declared here to be accessible before renderNFTStakingDashboard)
+    let nftActiveTab = 'pools';
+    let nftRewardInterval = null;
+
     // Staking Pool state (MOGA token staking)
     let stakingPoolData = {}; // { poolId: { staked, rewardDebt, stakedTime } }
     let spContractInstance = null;  // StakingPool ethers.Contract instance (on-chain)
@@ -6049,6 +6053,8 @@
 
       // Stop staking pool live polling when navigating away
       if (typeof spStopPolling === 'function') spStopPolling();
+      // Stop NFT reward live ticker when navigating away
+      if (nftRewardInterval) { clearInterval(nftRewardInterval); nftRewardInterval = null; }
 
       const content = document.getElementById('content');
       content.innerHTML = '';
@@ -10132,115 +10138,8 @@
       }
       else if (id === 'nft') {
         loadUserNFTs(); // Load NFTs from wallet
-        content.innerHTML = `
-          <h2 style="text-align:center; margin:40px 0; color:#60a5fa;">NFT Staking</h2>
-          <p style="text-align:center; font-size:1.2em; color:#94a3b8; margin-bottom:16px;">
-            Stake your Mogaland NFTs and earn rewards on ${getActiveNetwork().name}
-          </p>
-          <p style="text-align:center; font-size:0.9em; color:#64748b; margin-bottom:8px;">
-            NFT Contract (${getActiveNetwork().name}): <span style="color:#60a5fa; font-family:monospace;">${NFT_CONTRACT_ADDRESS}</span> | 
-            <a href="${getActiveNetwork().explorer}/address/${NFT_CONTRACT_ADDRESS}" target="_blank" style="color:#60a5fa;">View on Explorer</a>
-          </p>
-          <p style="text-align:center; font-size:0.9em; color:#64748b; margin-bottom:8px;">
-            Collection Owner: <span style="color:#10b981; font-family:monospace;">${TREASURY_WALLET_ADDRESS.slice(0,8)}...${TREASURY_WALLET_ADDRESS.slice(-6)}</span> | 
-            <a href="${getActiveNetwork().explorer}/address/${TREASURY_WALLET_ADDRESS}" target="_blank" style="color:#60a5fa;">View Treasury</a>
-          </p>
-
-          <!-- OpenSea Marketplace Integration -->
-          <div style="background:linear-gradient(135deg,rgba(37,99,235,0.1),rgba(139,92,246,0.1)); border:1px solid rgba(59,130,246,0.3); border-radius:16px; padding:24px; margin:20px 0; text-align:center;">
-            <h3 style="color:#60a5fa; margin-bottom:16px;">🌊 OpenSea Marketplace</h3>
-            <p style="color:#94a3b8; margin-bottom:20px; font-size:0.95em;">
-              Trade Mogaland NFTs on OpenSea Testnet • All sales proceeds go to treasury
-            </p>
-            <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
-              <a href="https://testnets.opensea.io/assets/sepolia/${NFT_CONTRACT_ADDRESS}" target="_blank" 
-                 style="background:linear-gradient(90deg,#2563eb,#1e40af); color:white; padding:12px 24px; border-radius:10px; text-decoration:none; font-weight:600; display:inline-flex; align-items:center; gap:8px; transition:all 0.3s;">
-                📦 View Collection
-              </a>
-              <a href="https://testnets.opensea.io/${TREASURY_WALLET_ADDRESS}" target="_blank"
-                 style="background:linear-gradient(90deg,#8b5cf6,#7c3aed); color:white; padding:12px 24px; border-radius:10px; text-decoration:none; font-weight:600; display:inline-flex; align-items:center; gap:8px; transition:all 0.3s;">
-                🏪 Treasury Marketplace
-              </a>
-              <button onclick="openListNFTModal()" 
-                      style="background:linear-gradient(90deg,#10b981,#059669); color:white; padding:12px 24px; border-radius:10px; border:none; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:8px; transition:all 0.3s;">
-                🏷️ List Your NFT
-              </button>
-            </div>
-            <div style="margin-top:16px; padding-top:16px; border-top:1px solid rgba(255,255,255,0.1);">
-              <div style="display:flex; gap:24px; justify-content:center; font-size:0.9em; color:#94a3b8;">
-                <div>
-                  <span style="color:#60a5fa;">Collection:</span> Mogaland NFTs
-                </div>
-                <div>
-                  <span style="color:#60a5fa;">Network:</span> ${getActiveNetwork().name}
-                </div>
-                <div>
-                  <span style="color:#60a5fa;">Royalty:</span> 5% to Treasury
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="stats-grid">
-            <div class="stats-card">
-              <h4>Your NFTs</h4>
-              <div class="stats-value" style="color:#60a5fa;">${userNFTs.length + mintedNFTs.length}</div>
-            </div>
-            <div class="stats-card">
-              <h4>Staked NFTs</h4>
-              <div class="stats-value" style="color:#10b981;">${stakedNFTsData.length}</div>
-            </div>
-            <div class="stats-card">
-              <h4>Total Claimable</h4>
-              <div class="stats-value" style="color:#fbbf24;">${(calculateTotalRewards() + (volumeRewardsClaimable || 0) + (mogalandPoints * LEARNING_POINTS_TO_USDC_RATE)).toFixed(4)} USDC</div>
-              <div style="font-size:0.75em; color:#94a3b8; margin-top:4px;">
-                ${calculateTotalRewards().toFixed(4)} NFT + ${(volumeRewardsClaimable || 0).toFixed(4)} Volume + ${(mogalandPoints * LEARNING_POINTS_TO_USDC_RATE).toFixed(4)} Points
-              </div>
-            </div>
-            <div class="stats-card">
-              <h4>Trading Volume</h4>
-              <div class="stats-value" style="color:#c084fc;">${(userTradingVolume.total || 0).toFixed(2)} USDC</div>
-            </div>
-          </div>
-
-          ${!walletConnected && loginMethod !== 'wallet' ? `
-            <div style="background:rgba(239,68,68,0.1); border:1px solid #ef4444; border-radius:12px; padding:20px; margin:20px 0; text-align:center;">
-              <p style="color:#ef4444; font-size:1.1em; margin-bottom:12px;">⚠️ Wallet Not Connected</p>
-              <p style="color:#94a3b8; margin-bottom:16px;">Connect your wallet to interact with NFTs</p>
-              <button class="btn-primary" onclick="connectWalletFromApp()">Connect Wallet</button>
-            </div>
-          ` : ''}
-
-          <div style="display:flex; justify-content:space-between; align-items:center; margin:32px 0 16px;">
-            <h3 style="color:#60a5fa;">Available NFTs (${userNFTs.length + mintedNFTs.length})</h3>
-            ${mogalandPoints >= 1000 ? `
-              <button class="btn-primary" style="background:linear-gradient(90deg,#c084fc,#a855f7);" onclick="redeemPointsForUSDC()">
-                🎁 Redeem ${mogalandPoints} Points → ${(mogalandPoints/1000).toFixed(2)} USDC
-              </button>
-            ` : `
-              <span style="color:#64748b;">Need 1000+ points to redeem</span>
-            `}
-          </div>
-          
-          <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:20px; margin-bottom:60px;">
-            ${generateNFTCardsFromWallet(false)}
-          </div>
-
-          <h3 style="color:#60a5fa; margin:32px 0 16px;">Staked NFTs (${stakedNFTsData.length})</h3>
-          <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:20px;">
-            ${generateNFTCardsFromWallet(true)}
-          </div>
-
-          <div style="position:fixed; bottom:90px; left:50%; transform:translateX(-50%); background:rgba(15,23,42,0.95); backdrop-filter:blur(10px); border:1px solid var(--border); border-radius:60px; padding:12px 32px; display:flex; gap:16px; z-index:90; box-shadow:0 8px 30px rgba(0,0,0,0.6);">
-            <button class="btn-primary" style="padding:14px 28px;" onclick="stakeSelectedNFTs()">Stake Selected</button>
-            <button class="btn-primary" style="background:linear-gradient(90deg,var(--danger),#f87171); padding:14px 28px;" onclick="unstakeSelectedNFTs()">Unstake</button>
-            <button class="btn-primary" style="background:linear-gradient(90deg,#10b981,#34d399); padding:14px 28px;" onclick="claimAllRewards()">Claim Rewards</button>
-          </div>
-          
-          <p style="text-align:center; margin-top:40px; color:#64748b; font-size:0.9em;">
-            ⛽ Gas Fee: ${GAS_FEE_ETH} ${getNetworkCurrency()} per transaction | APY varies by NFT rarity
-          </p>
-        `;}
+        renderNFTStakingDashboard();
+      }
       else if (id === 'game') {
         const activeNet = getActiveNetwork();
         const gameWallet = (walletConnected || loginMethod === 'wallet') ? userAddress : null;
@@ -10860,8 +10759,20 @@
     window.toggleSelectNFT = function(id) {
       if (selectedNFTs.has(id)) selectedNFTs.delete(id);
       else selectedNFTs.add(id);
-      showSection('nft');
-      showNotification(selectedNFTs.has(id) ? `NFT #${id} dipilih` : `NFT #${id} dibatalkan`, false);
+      // Refresh only the current NFT tab content
+      const tc = document.getElementById('nftTabContent');
+      if (tc) {
+        tc.innerHTML = renderNFTTab(nftActiveTab);
+        // Update selection counters in tab bar using data-tab attributes
+        document.querySelectorAll('.nft-tab[data-tab="mynfts"]').forEach(b => {
+          b.textContent = `📦 My NFTs (${userNFTs.length + mintedNFTs.length})`;
+        });
+        document.querySelectorAll('.nft-tab[data-tab="staked"]').forEach(b => {
+          b.textContent = `🔒 Staked (${stakedNFTsData.length})`;
+        });
+      } else {
+        showSection('nft');
+      }
     }
 
     window.stakeSelectedNFTs = async function() {
@@ -11006,6 +10917,513 @@
       return 'Legendary';
     }
     
+    // ===== NFT STAKING DASHBOARD =====
+    // Tab state: 'pools' | 'mynfts' | 'staked' | 'rewards' | 'convert'
+    // (nftActiveTab and nftRewardInterval declared earlier at top of startApp)
+
+    // Pool definitions based on NFT rarity tiers from learning
+    const NFT_LEARNING_POOLS = [
+      { id: 'common',    rarity: 'Common',    icon: '📗', apy: 5,  color: '#22c55e', tvl: 12400, minStake: 1, maxStake: 50,  desc: 'Basic learning modules (Intro to Blockchain)' },
+      { id: 'rare',      rarity: 'Rare',      icon: '💙', apy: 10, color: '#3b82f6', tvl: 8750,  minStake: 1, maxStake: 20,  desc: 'Intermediate modules (DeFi, Wallets)' },
+      { id: 'epic',      rarity: 'Epic',      icon: '💜', apy: 15, color: '#a855f7', tvl: 4200,  minStake: 1, maxStake: 10,  desc: 'Advanced modules (Smart Contracts, NFTs)' },
+      { id: 'legendary', rarity: 'Legendary', icon: '🔥', apy: 20, color: '#f59e0b', tvl: 1900,  minStake: 1, maxStake: 5,   desc: '100% Course Completion Achievement NFTs' }
+    ];
+
+    function renderNFTStakingDashboard() {
+      const content = document.getElementById('content');
+      const totalNFTRewards = calculateTotalRewards();
+      const totalClaimable = totalNFTRewards + (volumeRewardsClaimable || 0) + (mogalandPoints * LEARNING_POINTS_TO_USDC_RATE);
+      const totalStakedValue = stakedNFTsData.length * 100; // 100 USDC per NFT
+      const overallAPY = stakedNFTsData.length > 0
+        ? (stakedNFTsData.reduce((s, n) => s + (n.apy || 0), 0) / stakedNFTsData.length).toFixed(1)
+        : '—';
+      const totalTVL = NFT_LEARNING_POOLS.reduce((s, p) => s + p.tvl, 0);
+
+      content.innerHTML = `
+        <style>
+          .nft-dash-header { background: linear-gradient(135deg, rgba(37,99,235,0.15), rgba(139,92,246,0.15)); border: 1px solid rgba(99,102,241,0.35); border-radius: 20px; padding: 24px 28px; margin-bottom: 24px; }
+          .nft-tab-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 24px; background: rgba(15,23,42,0.6); border-radius: 14px; padding: 6px; }
+          .nft-tab { flex: 1; min-width: 90px; padding: 10px 6px; border: none; border-radius: 10px; background: transparent; color: #94a3b8; font-size: 0.85em; font-weight: 600; cursor: pointer; transition: all 0.2s; white-space: nowrap; text-align: center; }
+          .nft-tab.active { background: linear-gradient(90deg, #2563eb, #7c3aed); color: white; }
+          .nft-tab:hover:not(.active) { background: rgba(99,102,241,0.15); color: #e2e8f0; }
+          .pool-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 18px; padding: 20px; transition: all 0.25s; position: relative; overflow: hidden; }
+          .pool-card:hover { transform: translateY(-4px); box-shadow: 0 16px 32px rgba(0,0,0,0.45); }
+          .pool-apy-badge { position: absolute; top: 16px; right: 16px; font-weight: 800; font-size: 1.1em; }
+          .pool-tvl-bar { height: 5px; border-radius: 3px; background: rgba(255,255,255,0.08); margin: 10px 0; overflow: hidden; }
+          .pool-tvl-fill { height: 100%; border-radius: 3px; transition: width 0.5s; }
+          .reward-progress-wrap { background: rgba(15,23,42,0.6); border-radius: 14px; padding: 20px; margin-bottom: 16px; }
+          .reward-bar-bg { height: 10px; border-radius: 6px; background: rgba(255,255,255,0.08); overflow: hidden; margin: 8px 0; }
+          .reward-bar-fill { height: 100%; border-radius: 6px; transition: width 0.6s ease; }
+          .nft-grid-card { background: var(--card-bg); border: 2px solid var(--border); border-radius: 16px; overflow: hidden; transition: all 0.25s; position: relative; cursor: pointer; }
+          .nft-grid-card:hover { transform: translateY(-5px); box-shadow: 0 16px 28px rgba(0,0,0,0.4); }
+          .nft-grid-card.selected-stake { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59,130,246,0.4); }
+          .nft-grid-card.selected-unstake { border-color: #ef4444; box-shadow: 0 0 0 2px rgba(239,68,68,0.4); }
+          .nft-art { height: 180px; display: flex; align-items: center; justify-content: center; font-size: 2.2em; font-weight: 800; color: white; position: relative; }
+          .nft-rarity-tag { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); font-size: 0.72em; padding: 3px 10px; border-radius: 999px; font-weight: 700; white-space: nowrap; }
+          .convert-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 18px; padding: 24px; margin-bottom: 16px; }
+          .nft-action-bar { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); background: rgba(10,14,28,0.97); backdrop-filter: blur(14px); border: 1px solid var(--border); border-radius: 60px; padding: 10px 24px; display: flex; gap: 12px; z-index: 90; box-shadow: 0 8px 32px rgba(0,0,0,0.7); }
+          .btn-stake { background: linear-gradient(90deg,#059669,#10b981); color: white; padding: 12px 22px; border-radius: 999px; border: none; font-weight: 700; cursor: pointer; transition: all 0.2s; font-size: 0.9em; }
+          .btn-stake:hover { filter: brightness(1.15); transform: scale(1.04); }
+          .btn-unstake { background: linear-gradient(90deg,#dc2626,#ef4444); color: white; padding: 12px 22px; border-radius: 999px; border: none; font-weight: 700; cursor: pointer; transition: all 0.2s; font-size: 0.9em; }
+          .btn-unstake:hover { filter: brightness(1.15); transform: scale(1.04); }
+          .btn-claim { background: linear-gradient(90deg,#d97706,#fbbf24); color: #0f172a; padding: 12px 22px; border-radius: 999px; border: none; font-weight: 700; cursor: pointer; transition: all 0.2s; font-size: 0.9em; }
+          .btn-claim:hover { filter: brightness(1.1); transform: scale(1.04); }
+          @media (max-width: 640px) {
+            .nft-tab { min-width: 60px; font-size: 0.78em; padding: 9px 4px; }
+            .pool-card { padding: 14px; }
+            .nft-action-bar { padding: 8px 16px; gap: 8px; }
+            .btn-stake, .btn-unstake, .btn-claim { padding: 10px 14px; font-size: 0.82em; }
+          }
+        </style>
+
+        <!-- Header -->
+        <div class="nft-dash-header">
+          <div style="display:flex; flex-wrap:wrap; gap:16px; justify-content:space-between; align-items:center;">
+            <div>
+              <div style="font-size:1.4em; font-weight:800; color:#e2e8f0; margin-bottom:4px;">🏦 NFT Learning Staking</div>
+              <div style="color:#94a3b8; font-size:0.9em;">Stake Learning NFTs → Earn APY rewards • ${getActiveNetwork().name}</div>
+            </div>
+            ${walletConnected || loginMethod === 'wallet'
+              ? `<div style="background:rgba(16,185,129,0.1); border:1px solid #10b981; border-radius:12px; padding:10px 18px; font-size:0.85em; color:#10b981;">✅ ${userAddress ? userAddress.slice(0,6)+'...'+userAddress.slice(-4) : 'Connected'}</div>`
+              : `<button class="btn-primary" onclick="connectWalletFromApp()" style="padding:10px 20px;">🔌 Connect Wallet</button>`
+            }
+          </div>
+          <div style="display:flex; flex-wrap:wrap; gap:20px; margin-top:20px;">
+            <div style="flex:1; min-width:110px;">
+              <div style="font-size:0.75em; color:#64748b; margin-bottom:4px;">TOTAL STAKED VALUE</div>
+              <div style="font-size:1.5em; font-weight:800; color:#60a5fa;">$${totalStakedValue.toLocaleString()}</div>
+            </div>
+            <div style="flex:1; min-width:110px;">
+              <div style="font-size:0.75em; color:#64748b; margin-bottom:4px;">PORTFOLIO APY</div>
+              <div style="font-size:1.5em; font-weight:800; color:#10b981;">${overallAPY}%</div>
+            </div>
+            <div style="flex:1; min-width:110px;">
+              <div style="font-size:0.75em; color:#64748b; margin-bottom:4px;">PENDING REWARDS</div>
+              <div style="font-size:1.5em; font-weight:800; color:#fbbf24;">${totalClaimable.toFixed(4)} USDC</div>
+            </div>
+            <div style="flex:1; min-width:110px;">
+              <div style="font-size:0.75em; color:#64748b; margin-bottom:4px;">TOTAL POOL TVL</div>
+              <div style="font-size:1.5em; font-weight:800; color:#c084fc;">$${totalTVL.toLocaleString()}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab Bar -->
+        <div class="nft-tab-bar">
+          <button class="nft-tab ${nftActiveTab==='pools'?'active':''}" data-tab="pools" onclick="switchNFTTab('pools')">🌾 Learning Pools</button>
+          <button class="nft-tab ${nftActiveTab==='mynfts'?'active':''}" data-tab="mynfts" onclick="switchNFTTab('mynfts')">📦 My NFTs (${userNFTs.length + mintedNFTs.length})</button>
+          <button class="nft-tab ${nftActiveTab==='staked'?'active':''}" data-tab="staked" onclick="switchNFTTab('staked')">🔒 Staked (${stakedNFTsData.length})</button>
+          <button class="nft-tab ${nftActiveTab==='rewards'?'active':''}" data-tab="rewards" onclick="switchNFTTab('rewards')">🎁 Rewards</button>
+          <button class="nft-tab ${nftActiveTab==='convert'?'active':''}" data-tab="convert" onclick="switchNFTTab('convert')">🔄 Convert</button>
+        </div>
+
+        <!-- Tab Content -->
+        <div id="nftTabContent">
+          ${renderNFTTab(nftActiveTab)}
+        </div>
+
+        <!-- Action Bar (always visible) -->
+        <div class="nft-action-bar">
+          <button class="btn-stake" onclick="stakeSelectedNFTs()">✅ Stake Selected</button>
+          <button class="btn-unstake" onclick="unstakeSelectedNFTs()">↩️ Unstake</button>
+          <button class="btn-claim" onclick="claimAllRewards()">💰 Claim All</button>
+          <button onclick="openListNFTModal()" style="background:rgba(99,102,241,0.2); border:1px solid rgba(99,102,241,0.4); color:#818cf8; padding:12px 18px; border-radius:999px; font-weight:600; cursor:pointer; font-size:0.9em; transition:all 0.2s;" onmouseover="this.style.background='rgba(99,102,241,0.35)'" onmouseout="this.style.background='rgba(99,102,241,0.2)'">🏷️ List</button>
+        </div>
+
+        <p style="text-align:center; margin:12px 0 80px; color:#374151; font-size:0.82em;">
+          ⛽ Gas: ${GAS_FEE_ETH} ${getNetworkCurrency()} per tx &nbsp;•&nbsp;
+          <a href="${getActiveNetwork().explorer}/address/${NFT_CONTRACT_ADDRESS}" target="_blank" style="color:#4b5563;">NFT Contract</a> &nbsp;•&nbsp;
+          APY varies by learning NFT rarity
+        </p>
+      `;
+
+      // Start live reward ticker (updates the main rewards counter element)
+      if (nftRewardInterval) clearInterval(nftRewardInterval);
+      nftRewardInterval = setInterval(() => {
+        const el = document.getElementById('nftTotalRewardDisplay');
+        if (el) {
+          const total = calculateTotalRewards() + (volumeRewardsClaimable || 0) + (mogalandPoints * LEARNING_POINTS_TO_USDC_RATE);
+          el.textContent = total.toFixed(6) + ' USDC';
+        } else {
+          clearInterval(nftRewardInterval);
+          nftRewardInterval = null;
+        }
+      }, 3000);
+    }
+
+    function switchNFTTab(tab) {
+      nftActiveTab = tab;
+      const tc = document.getElementById('nftTabContent');
+      if (tc) tc.innerHTML = renderNFTTab(tab);
+      document.querySelectorAll('.nft-tab').forEach(b => {
+        b.classList.toggle('active', b.getAttribute('data-tab') === tab);
+      });
+    }
+
+    function renderNFTTab(tab) {
+      if (tab === 'pools')   return renderPoolsTab();
+      if (tab === 'mynfts')  return renderMyNFTsTab();
+      if (tab === 'staked')  return renderStakedTab();
+      if (tab === 'rewards') return renderRewardsTab();
+      if (tab === 'convert') return renderConvertTab();
+      return '';
+    }
+
+    function getRarityColor(rarity) {
+      return { Common: '#22c55e', Rare: '#3b82f6', Epic: '#a855f7', Legendary: '#f59e0b' }[rarity] || '#64748b';
+    }
+
+    function getRarityGradient(rarity) {
+      return {
+        Common:    'linear-gradient(135deg,#064e3b,#065f46)',
+        Rare:      'linear-gradient(135deg,#1e3a8a,#1d4ed8)',
+        Epic:      'linear-gradient(135deg,#4c1d95,#7c3aed)',
+        Legendary: 'linear-gradient(135deg,#78350f,#d97706)'
+      }[rarity] || 'linear-gradient(135deg,#1e293b,#334155)';
+    }
+
+    function renderPoolsTab() {
+      const maxTVL = Math.max(...NFT_LEARNING_POOLS.map(p => p.tvl));
+      let html = `
+        <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:20px; margin-bottom:20px;">
+      `;
+      NFT_LEARNING_POOLS.forEach(pool => {
+        const userStakedInPool = stakedNFTsData.filter(n => n.rarity === pool.rarity).length;
+        const tvlPct = Math.round((pool.tvl / maxTVL) * 100);
+        const nftsAvail = [...userNFTs, ...mintedNFTs].filter(n => (n.rarity || 'Common') === pool.rarity).length;
+        html += `
+          <div class="pool-card" style="border-color:${pool.color}33;">
+            <div class="pool-apy-badge" style="color:${pool.color};">${pool.apy}% APY</div>
+            <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+              <div style="font-size:2.2em; line-height:1;">${pool.icon}</div>
+              <div>
+                <div style="font-weight:800; font-size:1.05em; color:#e2e8f0;">${pool.rarity} Pool</div>
+                <div style="font-size:0.75em; color:#64748b;">${pool.desc}</div>
+              </div>
+            </div>
+            <div class="pool-tvl-bar">
+              <div class="pool-tvl-fill" style="width:${tvlPct}%; background:${pool.color};"></div>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:0.8em; color:#94a3b8; margin-bottom:12px;">
+              <span>TVL: <b style="color:${pool.color};">$${pool.tvl.toLocaleString()}</b></span>
+              <span>Min/Max: ${pool.minStake}–${pool.maxStake} NFTs</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:0.8em; color:#94a3b8; margin-bottom:14px;">
+              <span>You staked: <b style="color:#10b981;">${userStakedInPool}</b></span>
+              <span>Available: <b style="color:#60a5fa;">${nftsAvail}</b></span>
+            </div>
+            <canvas id="apyChart_${pool.id}" height="48" style="width:100%; display:block; margin-bottom:12px; border-radius:6px; opacity:0.8;"></canvas>
+            <div style="display:flex; gap:8px;">
+              <button onclick="switchNFTTab('mynfts')" style="flex:1; background:linear-gradient(90deg,#059669,#10b981); color:white; border:none; border-radius:10px; padding:10px; font-weight:700; cursor:pointer; font-size:0.85em; transition:all 0.2s;" onmouseover="this.style.filter='brightness(1.15)'" onmouseout="this.style.filter='brightness(1)'">✅ Stake NFT</button>
+              <button onclick="switchNFTTab('staked')" style="flex:1; background:linear-gradient(90deg,#991b1b,#ef4444); color:white; border:none; border-radius:10px; padding:10px; font-weight:700; cursor:pointer; font-size:0.85em; transition:all 0.2s;" onmouseover="this.style.filter='brightness(1.15)'" onmouseout="this.style.filter='brightness(1)'">↩️ Unstake</button>
+            </div>
+          </div>
+        `;
+      });
+      html += '</div>';
+
+      // Draw mini APY sparklines after render
+      setTimeout(() => {
+        NFT_LEARNING_POOLS.forEach(pool => {
+          const canvas = document.getElementById(`apyChart_${pool.id}`);
+          if (!canvas) return;
+          const ctx = canvas.getContext('2d');
+          canvas.width = canvas.offsetWidth || 240;
+          // Simulate last 12 APY data points (slight variation around base APY)
+          const base = pool.apy;
+          const pts = Array.from({length: 12}, (_, i) => base + (Math.sin(i * 0.8 + pool.apy) * 1.5));
+          const min = Math.min(...pts) - 0.5, max = Math.max(...pts) + 0.5;
+          const w = canvas.width, h = canvas.height;
+          ctx.clearRect(0, 0, w, h);
+          // Gradient fill
+          const grad = ctx.createLinearGradient(0, 0, 0, h);
+          grad.addColorStop(0, pool.color + '55');
+          grad.addColorStop(1, pool.color + '00');
+          ctx.beginPath();
+          pts.forEach((v, i) => {
+            const x = (i / (pts.length - 1)) * w;
+            const y = h - ((v - min) / (max - min)) * h * 0.85 - 4;
+            i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+          });
+          ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.closePath();
+          ctx.fillStyle = grad; ctx.fill();
+          // Line
+          ctx.beginPath();
+          pts.forEach((v, i) => {
+            const x = (i / (pts.length - 1)) * w;
+            const y = h - ((v - min) / (max - min)) * h * 0.85 - 4;
+            i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+          });
+          ctx.strokeStyle = pool.color; ctx.lineWidth = 2; ctx.stroke();
+          // Latest APY label
+          ctx.fillStyle = pool.color; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'right';
+          ctx.fillText(`${pts[pts.length-1].toFixed(1)}%`, w - 4, 12);
+        });
+      }, 80);
+
+      return html;
+    }
+
+    function renderMyNFTsTab() {
+      const allNFTs = [...userNFTs, ...mintedNFTs];
+      if (allNFTs.length === 0) {
+        return `
+          <div style="text-align:center; padding:60px 20px; color:#64748b;">
+            <div style="font-size:3em; margin-bottom:16px;">🎓</div>
+            <div style="font-size:1.1em; margin-bottom:8px; color:#94a3b8;">No Learning NFTs Yet</div>
+            <p style="max-width:360px; margin:0 auto 24px; font-size:0.9em; line-height:1.6;">
+              Complete 100 learning tasks in the <b style="color:#60a5fa;">Learning</b> section to mint your first NFT and start earning APY rewards.
+            </p>
+            <button class="btn-primary" onclick="showSection('learning', event)">📚 Go to Learning</button>
+          </div>
+        `;
+      }
+      let html = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+          <div style="color:#94a3b8; font-size:0.9em;">${allNFTs.length} NFT(s) available to stake • Click to select, then hit <b style="color:#10b981;">Stake Selected</b></div>
+          <span style="color:#60a5fa; font-size:0.85em;">${selectedNFTs.size} selected</span>
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:16px; margin-bottom:20px;">
+      `;
+      allNFTs.forEach((nft, idx) => {
+        const nftId = nft.id || idx;
+        const rarity = nft.rarity || 'Common';
+        const apy = nft.apy || nftAPYs[rarity] || 5;
+        const isSelected = selectedNFTs.has(nftId);
+        const source = nft.source === 'learning' ? '🎓 Learning NFT' : '💼 Wallet NFT';
+        html += `
+          <div class="nft-grid-card ${isSelected ? 'selected-stake' : ''}" onclick="toggleSelectNFT('${nftId}')">
+            <div class="nft-art" style="background:${getRarityGradient(rarity)};">
+              <div style="text-align:center;">
+                <div>MOGA</div>
+                <div style="font-size:0.65em; opacity:0.8;">#${String(nftId).padStart(4,'0')}</div>
+              </div>
+              <div class="nft-rarity-tag" style="background:${getRarityColor(rarity)}22; color:${getRarityColor(rarity)}; border:1px solid ${getRarityColor(rarity)}44;">${rarity}</div>
+              ${isSelected ? '<div style="position:absolute;top:10px;right:10px;background:#3b82f6;color:white;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:0.85em;">✓</div>' : ''}
+            </div>
+            <div style="padding:12px;">
+              <div style="font-weight:700; margin-bottom:4px; color:#e2e8f0;">MOGA #${String(nftId).padStart(4,'0')}</div>
+              <div style="font-size:0.8em; color:#64748b; margin-bottom:6px;">${source}</div>
+              <div style="display:flex; justify-content:space-between; font-size:0.82em;">
+                <span style="color:#10b981; font-weight:600;">APY ${apy}%</span>
+                <span style="color:${getRarityColor(rarity)};">${rarity}</span>
+              </div>
+              <div style="margin-top:8px; padding:6px 10px; border-radius:8px; background:${isSelected ? 'rgba(59,130,246,0.2)' : 'rgba(16,185,129,0.1)'}; color:${isSelected ? '#60a5fa' : '#10b981'}; font-size:0.78em; text-align:center; font-weight:600;">
+                ${isSelected ? '✓ Selected for Staking' : 'Click to Select'}
+              </div>
+            </div>
+          </div>
+        `;
+      });
+      html += '</div>';
+      return html;
+    }
+
+    function renderStakedTab() {
+      if (stakedNFTsData.length === 0) {
+        return `
+          <div style="text-align:center; padding:60px 20px; color:#64748b;">
+            <div style="font-size:3em; margin-bottom:16px;">🔒</div>
+            <div style="font-size:1.1em; color:#94a3b8; margin-bottom:8px;">No Staked NFTs</div>
+            <p style="font-size:0.9em;">Go to <b style="color:#60a5fa;">My NFTs</b> tab, select NFTs, then click <b style="color:#10b981;">Stake Selected</b>.</p>
+          </div>
+        `;
+      }
+      let html = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+          <div style="color:#94a3b8; font-size:0.9em;">${stakedNFTsData.length} NFT(s) staked and earning rewards</div>
+          <span style="color:#ef4444; font-size:0.85em;">${selectedNFTs.size} selected for unstake</span>
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:16px; margin-bottom:20px;">
+      `;
+      stakedNFTsData.forEach(nft => {
+        const nftId = nft.nftId;
+        const rarity = nft.rarity || 'Common';
+        const apy = nft.apy || nftAPYs[rarity] || 5;
+        const rewards = calculateNFTRewards(nft);
+        const isSelected = selectedNFTs.has(nftId);
+        const stakedDays = ((Date.now() - nft.stakedTime) / 86400000).toFixed(1);
+        // Progress bar: rewards as % of daily target (dailyTarget = 100 * apy/365/100)
+        const dailyTarget = 100 * apy / 365 / 100;
+        const progressPct = Math.min(100, (rewards / Math.max(dailyTarget, 0.0001)) * 100);
+        html += `
+          <div class="nft-grid-card ${isSelected ? 'selected-unstake' : ''}" onclick="toggleSelectNFT('${nftId}')">
+            <div class="nft-art" style="background:${getRarityGradient(rarity)};">
+              <div style="text-align:center;">
+                <div>MOGA</div>
+                <div style="font-size:0.65em; opacity:0.8;">#${String(nftId).padStart(4,'0')}</div>
+              </div>
+              <div class="nft-rarity-tag" style="background:${getRarityColor(rarity)}22; color:${getRarityColor(rarity)}; border:1px solid ${getRarityColor(rarity)}44;">${rarity}</div>
+              <div style="position:absolute;top:10px;left:10px;background:#10b981;color:white;border-radius:999px;padding:2px 8px;font-size:0.68em;font-weight:700;">STAKED</div>
+              ${isSelected ? '<div style="position:absolute;top:10px;right:10px;background:#ef4444;color:white;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:0.85em;">✓</div>' : ''}
+            </div>
+            <div style="padding:12px;">
+              <div style="font-weight:700; margin-bottom:2px; color:#e2e8f0;">MOGA #${String(nftId).padStart(4,'0')}</div>
+              <div style="display:flex; justify-content:space-between; font-size:0.8em; margin-bottom:6px;">
+                <span style="color:#10b981;">APY ${apy}%</span>
+                <span style="color:#94a3b8;">${stakedDays}d staked</span>
+              </div>
+              <div style="font-size:0.78em; color:#64748b; margin-bottom:4px;">Rewards earned</div>
+              <div class="reward-bar-bg">
+                <div class="reward-bar-fill" style="width:${progressPct}%; background:linear-gradient(90deg,#10b981,#34d399);"></div>
+              </div>
+              <div style="font-size:0.82em; color:#10b981; font-weight:600; margin-bottom:6px;">
+                ${rewards.toFixed(6)} USDC
+              </div>
+              <div style="padding:6px 10px; border-radius:8px; background:${isSelected ? 'rgba(239,68,68,0.15)' : 'rgba(239,68,68,0.08)'}; color:${isSelected ? '#ef4444' : '#94a3b8'}; font-size:0.78em; text-align:center; font-weight:600;">
+                ${isSelected ? '✓ Selected for Unstake' : 'Click to Select Unstake'}
+              </div>
+            </div>
+          </div>
+        `;
+      });
+      html += '</div>';
+      return html;
+    }
+
+    function renderRewardsTab() {
+      const nftR = calculateTotalRewards();
+      const volR = volumeRewardsClaimable || 0;
+      const ptR  = mogalandPoints * LEARNING_POINTS_TO_USDC_RATE;
+      const total = nftR + volR + ptR;
+      const maxR = Math.max(total, 0.001);
+      const claimHistory = JSON.parse(localStorage.getItem(`claimHistory_${userAddress}`) || '[]');
+      return `
+        <div style="max-width:640px; margin:0 auto;">
+          <!-- Live rewards counter -->
+          <div style="background:linear-gradient(135deg,rgba(251,191,36,0.1),rgba(245,158,11,0.05)); border:1px solid rgba(251,191,36,0.3); border-radius:16px; padding:24px; text-align:center; margin-bottom:24px;">
+            <div style="font-size:0.85em; color:#94a3b8; margin-bottom:8px; text-transform:uppercase; letter-spacing:1px;">Total Claimable Rewards</div>
+            <div style="font-size:2.8em; font-weight:800; color:#fbbf24;" id="nftTotalRewardDisplay">${total.toFixed(6)} USDC</div>
+            <button class="btn-claim" style="margin-top:16px; padding:14px 40px; font-size:1em;" onclick="claimAllRewards()">💰 Claim All Rewards</button>
+          </div>
+
+          <!-- Reward Breakdown -->
+          <div class="reward-progress-wrap">
+            <div style="font-weight:700; color:#e2e8f0; margin-bottom:16px;">Reward Breakdown</div>
+
+            <div style="margin-bottom:14px;">
+              <div style="display:flex; justify-content:space-between; font-size:0.85em; margin-bottom:4px;">
+                <span style="color:#10b981;">🔒 NFT Staking Rewards (${stakedNFTsData.length} staked)</span>
+                <span style="color:#10b981; font-weight:700;">${nftR.toFixed(6)} USDC</span>
+              </div>
+              <div class="reward-bar-bg">
+                <div class="reward-bar-fill" style="width:${Math.round((nftR/maxR)*100)}%; background:linear-gradient(90deg,#059669,#10b981);"></div>
+              </div>
+            </div>
+
+            <div style="margin-bottom:14px;">
+              <div style="display:flex; justify-content:space-between; font-size:0.85em; margin-bottom:4px;">
+                <span style="color:#3b82f6;">📊 Trading Volume Rewards</span>
+                <span style="color:#3b82f6; font-weight:700;">${volR.toFixed(6)} USDC</span>
+              </div>
+              <div class="reward-bar-bg">
+                <div class="reward-bar-fill" style="width:${Math.round((volR/maxR)*100)}%; background:linear-gradient(90deg,#1d4ed8,#3b82f6);"></div>
+              </div>
+            </div>
+
+            <div style="margin-bottom:14px;">
+              <div style="display:flex; justify-content:space-between; font-size:0.85em; margin-bottom:4px;">
+                <span style="color:#c084fc;">🎓 Learning Points (${mogalandPoints} pts @ 0.001)</span>
+                <span style="color:#c084fc; font-weight:700;">${ptR.toFixed(6)} USDC</span>
+              </div>
+              <div class="reward-bar-bg">
+                <div class="reward-bar-fill" style="width:${Math.round((ptR/maxR)*100)}%; background:linear-gradient(90deg,#7c3aed,#c084fc);"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- APY info per staked NFT -->
+          ${stakedNFTsData.length > 0 ? `
+            <div class="reward-progress-wrap">
+              <div style="font-weight:700; color:#e2e8f0; margin-bottom:12px;">Per-NFT Earning Rate</div>
+              ${stakedNFTsData.map(nft => {
+                const dailyEarn = (nft.apy / 365 / 100 * 100).toFixed(5);
+                return `<div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.05); font-size:0.85em;">
+                  <span style="color:#94a3b8;">MOGA #${String(nft.nftId).padStart(4,'0')} <span style="color:${getRarityColor(nft.rarity)};">(${nft.rarity})</span></span>
+                  <span style="color:#10b981;">${dailyEarn} USDC/day @ ${nft.apy}% APY</span>
+                </div>`;
+              }).join('')}
+            </div>
+          ` : ''}
+
+          <!-- Claim History -->
+          ${claimHistory.length > 0 ? `
+            <div class="reward-progress-wrap">
+              <div style="font-weight:700; color:#e2e8f0; margin-bottom:12px;">Claim History</div>
+              ${claimHistory.slice(-8).reverse().map(h => `
+                <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.05); font-size:0.82em;">
+                  <span style="color:#94a3b8;">${new Date(h.time).toLocaleString()}</span>
+                  <span style="color:#fbbf24;">+${Number(h.amount).toFixed(4)} USDC</span>
+                </div>
+              `).join('')}
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }
+
+    function renderConvertTab() {
+      const pts = mogalandPoints || 0;
+      const usdcVal = (pts / 1000).toFixed(3);
+      const ptProgress = Math.min(100, Math.round((pts / 1000) * 100));
+      return `
+        <div style="max-width:600px; margin:0 auto;">
+          <!-- Points to USDC -->
+          <div class="convert-card">
+            <div style="font-size:1.1em; font-weight:800; color:#e2e8f0; margin-bottom:4px;">🎓 Convert Learning Points → USDC</div>
+            <div style="color:#64748b; font-size:0.85em; margin-bottom:16px;">Earn points by completing learning modules, then redeem for USDC rewards</div>
+            <div style="display:flex; justify-content:space-between; font-size:0.85em; margin-bottom:6px;">
+              <span style="color:#c084fc; font-weight:600;">${pts} Points</span>
+              <span style="color:#94a3b8;">1000 pts = 1 USDC</span>
+            </div>
+            <div class="reward-bar-bg" style="height:12px; margin-bottom:12px;">
+              <div class="reward-bar-fill" style="width:${ptProgress}%; background:linear-gradient(90deg,#7c3aed,#c084fc);"></div>
+            </div>
+            <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+              <div style="flex:1; background:rgba(139,92,246,0.1); border:1px solid rgba(139,92,246,0.3); border-radius:12px; padding:16px; text-align:center;">
+                <div style="font-size:0.75em; color:#94a3b8; margin-bottom:4px;">You have</div>
+                <div style="font-size:1.6em; font-weight:800; color:#c084fc;">${pts}</div>
+                <div style="font-size:0.75em; color:#64748b;">points</div>
+              </div>
+              <div style="color:#64748b; font-size:1.5em;">→</div>
+              <div style="flex:1; background:rgba(251,191,36,0.1); border:1px solid rgba(251,191,36,0.3); border-radius:12px; padding:16px; text-align:center;">
+                <div style="font-size:0.75em; color:#94a3b8; margin-bottom:4px;">You receive</div>
+                <div style="font-size:1.6em; font-weight:800; color:#fbbf24;">${usdcVal}</div>
+                <div style="font-size:0.75em; color:#64748b;">USDC</div>
+              </div>
+            </div>
+            <button class="btn-primary" style="width:100%; margin-top:16px; padding:14px; ${pts >= 1000 ? 'background:linear-gradient(90deg,#7c3aed,#c084fc);' : 'opacity:0.4; cursor:not-allowed;'}" 
+              ${pts >= 1000 ? 'onclick="redeemPointsForUSDC()"' : 'disabled'}>
+              ${pts >= 1000 ? `🎁 Redeem ${pts} Points → ${usdcVal} USDC` : `Need ${1000 - pts} more points to redeem`}
+            </button>
+            <p style="font-size:0.78em; color:#475569; margin-top:8px; text-align:center;">⛽ Gas fee: ${GAS_FEE_ETH} ${getNetworkCurrency()}</p>
+          </div>
+
+          <!-- OpenSea Listing -->
+          <div class="convert-card">
+            <div style="font-size:1.1em; font-weight:800; color:#e2e8f0; margin-bottom:4px;">🌊 List NFTs on OpenSea</div>
+            <div style="color:#64748b; font-size:0.85em; margin-bottom:16px;">Trade your Mogaland learning NFTs • All sales proceeds go to treasury</div>
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+              <a href="https://testnets.opensea.io/assets/sepolia/${NFT_CONTRACT_ADDRESS}" target="_blank" 
+                 style="flex:1; min-width:120px; background:linear-gradient(90deg,#2563eb,#1e40af); color:white; padding:12px 16px; border-radius:10px; text-decoration:none; font-weight:600; display:flex; align-items:center; justify-content:center; gap:6px; font-size:0.85em; transition:all 0.2s;" onmouseover="this.style.filter='brightness(1.15)'" onmouseout="this.style.filter='brightness(1)'">
+                📦 View Collection
+              </a>
+              <button onclick="openListNFTModal()" style="flex:1; min-width:120px; background:linear-gradient(90deg,#059669,#10b981); color:white; padding:12px 16px; border-radius:10px; border:none; font-weight:600; cursor:pointer; font-size:0.85em; transition:all 0.2s;" onmouseover="this.style.filter='brightness(1.15)'" onmouseout="this.style.filter='brightness(1)'">
+                🏷️ List Your NFT
+              </button>
+            </div>
+            <div style="margin-top:12px; padding-top:12px; border-top:1px solid rgba(255,255,255,0.06); display:flex; gap:16px; flex-wrap:wrap; font-size:0.8em; color:#64748b;">
+              <span>Network: <b style="color:#94a3b8;">${getActiveNetwork().name}</b></span>
+              <span>Royalty: <b style="color:#94a3b8;">5% to Treasury</b></span>
+              <span>Contract: <a href="${getActiveNetwork().explorer}/address/${NFT_CONTRACT_ADDRESS}" target="_blank" style="color:#60a5fa;">${NFT_CONTRACT_ADDRESS.slice(0,8)}...</a></span>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    window.switchNFTTab = switchNFTTab;
+
     function generateNFTCardsFromWallet(isStaked) {
       let html = '';
       const nftsToShow = isStaked ? stakedNFTsData : [...userNFTs, ...mintedNFTs];
@@ -11138,6 +11556,7 @@
         });
         
         selectedNFTs.clear();
+        nftActiveTab = 'staked';
         showSection('nft');
         
         recordTransaction(stakeTx.hash, 'NFT Stake', `Staked ${nftCount} NFT(s)`, {to: NFT_CONTRACT_ADDRESS});
@@ -11189,6 +11608,7 @@
       
       const count = selectedNFTs.size;
       selectedNFTs.clear();
+      nftActiveTab = 'mynfts';
       showSection('nft');
       showNotification(`✅ Successfully unstaked ${count} NFT(s) | Gas: ${GAS_FEE_ETH} ${getNetworkCurrency()}`);
       recordTransaction(null, 'NFT Unstake', `Unstaked ${count} NFT(s)`, {});
@@ -11259,6 +11679,15 @@
         saveMogalandPoints();
       }
       
+      // Save claim history for rewards tab
+      if (userAddress) {
+        const hist = JSON.parse(localStorage.getItem(`claimHistory_${userAddress}`) || '[]');
+        hist.push({ time: Date.now(), amount: totalRewards });
+        if (hist.length > 20) hist.splice(0, hist.length - 20);
+        localStorage.setItem(`claimHistory_${userAddress}`, JSON.stringify(hist));
+      }
+
+      nftActiveTab = 'rewards';
       showSection('nft');
       showNotification(
         `✅ Claimed ${totalRewards.toFixed(4)} USDC total!<br>` + 
@@ -11296,6 +11725,7 @@
         // Save updated points to localStorage
         saveMogalandPoints();
         
+        nftActiveTab = 'convert';
         showSection('nft');
         showNotification(`✅ Redeemed points for ${usdcAmount.toFixed(2)} USDC | Gas: ${GAS_FEE_ETH} ${getNetworkCurrency()}`);
         recordTransaction(null, 'Redeem', `Redeemed points for ${usdcAmount.toFixed(2)} USDC`, {amount: usdcAmount, token: 'USDC', from: TREASURY_WALLET_ADDRESS, to: userAddress});
