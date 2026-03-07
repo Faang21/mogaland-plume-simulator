@@ -3204,6 +3204,7 @@ function clearWorld(scene){for(const g of lampGlows){if(g._glowTween){g._glowTwe
 /* ── Interior NPC Bot System ── */
 let interiorNPCs=[]; // [{x,y,name,role,avatar,greeting,bldgKey}]
 let _npcDialogActive=null;
+const NPC_INTERACTION_RADIUS=100; // pixels — distance within which player can interact with interior NPC
 
 // NPC definitions for each building type
 function getInteriorNPCDefs(bk){
@@ -3277,7 +3278,11 @@ function addInteriorNPCSprites(scene,bk,cont){
       const img=scene.add.image(0,-2,npcTexKey).setScale(0.95).setOrigin(.5,.78);
       scene.tweens.add({targets:img,y:-5,duration:1100+Math.random()*500,yoyo:true,repeat:-1,ease:'Sine.easeInOut',delay:Math.random()*600});
       npcCont.add(img);
-    }catch(e){}
+    }catch(e){
+      // Fallback: colored circle when NPC texture unavailable
+      const fb=scene.add.graphics();fb.fillStyle(0x6366f1,1);fb.fillCircle(0,-10,12);npcCont.add(fb);
+      console.warn('[NPC] Sprite load failed for '+def.name+':',e);
+    }
     // NPC name tag
     const tag=scene.add.text(0,-46,def.name,{fontSize:'9px',color:'#fbbf24',fontStyle:'bold',backgroundColor:'rgba(0,0,0,.7)',padding:{x:4,y:2}}).setOrigin(.5,1).setDepth(36);
     npcCont.add(tag);
@@ -4993,12 +4998,16 @@ function triggerInteract(sceneRef){
     let nearestNPC=null,nearestDist=Infinity;
     for(const npc of interiorNPCs){
       const d=Math.hypot(scene.me.x-npc.x,scene.me.y-npc.y);
-      if(d<100&&d<nearestDist){nearestDist=d;nearestNPC=npc;}
+      if(d<NPC_INTERACTION_RADIUS&&d<nearestDist){nearestDist=d;nearestNPC=npc;}
     }
     if(nearestNPC){
       showNPCDialog(nearestNPC);
       renderBuildingPanel();
-      logChat('[💬 '+nearestNPC.name+'] "'+nearestNPC.greeting.slice(0,80)+'…"',false,'#a78bfa');
+      // Truncate greeting at a word boundary for clean chat log display
+      const maxLen=90;
+      const raw=nearestNPC.greeting;
+      const preview=raw.length>maxLen?raw.slice(0,raw.lastIndexOf(' ',maxLen))+'…':raw;
+      logChat('[💬 '+nearestNPC.name+'] "'+preview+'"',false,'#a78bfa');
       return;
     }
     const ex=(interior.exitX+.5)*TILE,ey=(interior.exitY+.5)*TILE;
