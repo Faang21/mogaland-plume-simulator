@@ -125,7 +125,8 @@
   <!-- TradingView Widget -->
   <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
   <!-- TradingView Lightweight Charts - high-performance candlestick charts -->
-  <script src="https://unpkg.com/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
+  <script src="https://unpkg.com/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"
+          onerror="(function(){var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js';document.head.appendChild(s);})()"></script>
 
   <style>
     :root {
@@ -8780,8 +8781,13 @@
             
             const displayName = asset.name || asset.symbol;
             const subtitle = asset.type ? ` (${asset.type})` : asset.league ? ` - ${asset.league}` : '';
-            
-            div.innerHTML = `<strong>${displayName}</strong><span style="opacity:0.7; font-size:0.85em;">${subtitle}</span>${isSelected ? '<span style="float:right;color:#60a5fa;font-size:0.85em;">✓</span>' : ''}`;
+            let priceHtml = '';
+            if (currentTab !== 'sports' && asset.basePrice) {
+              const decimals = asset.basePrice < 10 ? 4 : 2;
+              const priceStr = '$' + asset.basePrice.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: decimals});
+              priceHtml = `<div style="font-size:0.82em; color:#0ecb81; font-weight:600; margin-top:2px;">${priceStr}</div>`;
+            }
+            div.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:flex-start;"><div><strong>${displayName}</strong><div style="opacity:0.7; font-size:0.82em;">${subtitle}</div>${priceHtml}</div>${isSelected ? '<span style="color:#60a5fa;font-size:0.85em; flex-shrink:0; padding-top:2px;">✓</span>' : ''}</div>`;
             div.onclick = currentTab === 'sports' ? () => showClubHistory(asset) : () => selectAsset(asset);
             container.appendChild(div);
           });
@@ -8995,6 +9001,8 @@
           // Seed unified mark price cache with the asset's known base price so that
           // any open positions for this symbol immediately reflect a reasonable price.
           if (asset.basePrice > 0) markPrices[asset.symbol] = asset.basePrice;
+          // Show base price immediately so banner never shows "-" while klines load
+          updatePriceDisplay(asset.basePrice);
           startOrderBookUpdates();
           document.getElementById('chartFooter').style.display = 'block';
           document.getElementById('clubHistoryView').style.display = 'none';
@@ -9005,6 +9013,13 @@
           // Show timeframe bar and live badge
           const tfBar = document.getElementById('chartTimeframeBar');
           if (tfBar) tfBar.style.display = 'flex';
+
+          // Show the chart container immediately with a loading indicator (prevents blank area)
+          const priceChartEl = document.getElementById('priceChart');
+          if (priceChartEl) {
+            priceChartEl.style.display = 'block';
+            priceChartEl.innerHTML = `<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; min-height:${CHART_HEIGHT}px; color:#64748b; gap:12px;"><div style="font-size:1.5em;">⏳</div><div style="font-size:0.9em;">Loading ${asset.symbol} chart…</div></div>`;
+          }
 
           // Try Lightweight Charts first (for all assets)
           initLightweightChart(asset, currentChartTimeframe).then(ok => {
@@ -9458,117 +9473,39 @@
           container.innerHTML = '';
           container.style.display = 'block';
 
-          // Use TradingView widget if tvSymbol is available
-          if (asset.tvSymbol && typeof TradingView !== 'undefined') {
-            try {
-              // Create TradingView Advanced Chart Widget
-              new TradingView.widget({
-                "width": container.offsetWidth || 700,
-                "height": CHART_HEIGHT,
-                "symbol": asset.tvSymbol,
-                "interval": "15",
-                "timezone": "Etc/UTC",
-                "theme": "dark",
-                "style": "1",
-                "locale": "en",
-                "toolbar_bg": "#0a2540",
-                "enable_publishing": false,
-                "hide_side_toolbar": false,
-                "allow_symbol_change": false,
-                "container_id": "priceChart",
-                "backgroundColor": "#0a2540",
-                "gridColor": "rgba(255, 255, 255, 0.06)",
-                "hide_legend": false,
-                "save_image": false
-              });
-              
-              // Fetch current price from TradingView
-              fetchTradingViewPrice(asset);
-              
-              return;
-            } catch (e) {
-              console.log('TradingView widget error, trying CoinGecko:', e);
-            }
-          }
-
-          // Second fallback: Try CoinGecko chart for crypto assets
-          if (currentTab === 'crypto' && asset.symbol) {
-            try {
-              const coinGeckoIds = {
-                'BTCUSD': 'bitcoin',
-                'ETHUSD': 'ethereum',
-                'BNBUSD': 'binancecoin',
-                'SOLUSD': 'solana',
-                'ADAUSD': 'cardano',
-                'XRPUSD': 'ripple',
-                'DOTUSD': 'polkadot',
-                'MATICUSD': 'matic-network',
-                'LINKUSD': 'chainlink',
-                'UNIUSD': 'uniswap',
-                'DOGEUSD': 'dogecoin',
-                'AVAXUSD': 'avalanche',
-                'ATOMUSD': 'cosmos',
-                'NEARUSD': 'near'
-              };
-              
-              const coinId = coinGeckoIds[asset.symbol];
-              if (coinId) {
-                container.innerHTML = `
-                  <div style="background: var(--card-bg); border-radius: 12px; padding: 16px; height: ${CHART_HEIGHT}px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-                    <iframe 
-                      src="https://www.coingecko.com/en/coins/${coinId}/chart_widget?height=${CHART_HEIGHT - 40}&width=100%" 
-                      style="border: none; width: 100%; height: ${CHART_HEIGHT - 40}px; border-radius: 8px;"
-                      frameborder="0"
-                      scrolling="no"
-                    ></iframe>
-                    <p style="margin-top: 8px; font-size: 0.85em; color: #94a3b8;">Data from CoinGecko</p>
-                  </div>
-                `;
-                
-                // Fetch current price
-                fetchCoinGeckoPrice(asset, coinId);
-                return;
-              }
-            } catch (e) {
-              console.log('CoinGecko chart error:', e);
-            }
-          }
-
-          // Third fallback: Use canvas-based chart
+          // Attempt to build a simulated canvas-based chart using the asset's basePrice.
+          // The TradingView Advanced Widget and CoinGecko iframe have been removed because
+          // they show third-party branding ("iklan") and do not update the in-page price banner.
+          priceHistory = generateOHLC(asset.basePrice);
           const canvas = document.createElement('canvas');
-          canvas.id = 'priceChart';
+          canvas.width = container.offsetWidth || 700;
           canvas.height = CHART_HEIGHT;
           container.appendChild(canvas);
-          
+
           const ctx = canvas.getContext('2d', { willReadFrequently: true });
           if (!ctx) return;
 
-          if (chart) chart.destroy();
-
-          priceHistory = generateOHLC(asset.basePrice);
-
-          // Try Chart.js if available
           if (typeof Chart !== 'undefined') {
             try {
-              chart = new Chart(ctx, {
-                type: 'candlestick',
+              new Chart(ctx, {
+                type: 'line',
                 data: {
                   datasets: [{
                     label: asset.symbol,
-                    data: priceHistory
-                  }, {
-                    label: 'Volume',
-                    type: 'bar',
-                    data: priceHistory.map(d => ({x: d.x, y: d.v || Math.floor(Math.random()*10000)})),
-                    yAxisID: 'volume',
-                    backgroundColor: 'rgba(59,130,246,0.4)'
+                    data: priceHistory.map(d => ({ x: d.x, y: d.c })),
+                    borderColor: '#10b981',
+                    borderWidth: 1.5,
+                    pointRadius: 0,
+                    fill: false,
+                    tension: 0.1
                   }]
                 },
                 options: {
+                  responsive: true,
+                  animation: false,
                   scales: {
-                    x: { type: 'time', time: { unit: 'minute' }, title: { display: true, text: 'Time' } },
-                    y: { title: { display: true, text: 'Price ($)' } },
-                    volume: { position: 'right', title: { display: true, text: 'Vol' }, grid: { drawOnChartArea: false } }
+                    x: { type: 'time', time: { unit: 'minute' }, ticks: { color: '#94a3b8' }, grid: { color: '#1e293b' } },
+                    y: { ticks: { color: '#94a3b8' }, grid: { color: '#1e293b' } }
                   },
                   plugins: { legend: { display: false } }
                 }
@@ -9580,6 +9517,9 @@
           } else {
             drawSimpleChart(canvas, ctx, priceHistory, asset);
           }
+
+          updatePriceDisplay(asset.basePrice);
+          fetchTradingViewPrice(asset);
         }
 
         // Fetch real-time price from a public API
@@ -10373,6 +10313,12 @@
 
           const interval = TIMEFRAME_TO_BINANCE[timeframe] || '1d';
 
+          // Populate chart with simulated data immediately so it is never empty while klines load
+          const simPreload = generateLWSimData(asset.basePrice, 60, interval);
+          lwCandleSeries.setData(simPreload.candles);
+          lwVolumeSeries.setData(simPreload.volumes);
+          lwChart.timeScale().fitContent();
+
           // Fetch real OHLC data from Binance for crypto
           if (asset.binanceSymbol) {
             const klines = await loadBinanceKlines(asset.binanceSymbol, interval, 150);
@@ -10721,6 +10667,8 @@
                   const fresh = assetsData.crypto.find(a => a.symbol === selectedAsset.symbol);
                   if (fresh) updatePriceDisplay(fresh.basePrice);
                 }
+                // Re-render asset list so all items show updated real prices
+                renderAssets();
               }
             }
           } catch (e) {
