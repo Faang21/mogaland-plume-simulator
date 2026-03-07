@@ -10,24 +10,34 @@
  *   GET /api/new-tokens            – Newest pools on Base via GeckoTerminal
  *   GET /api/token/:address        – Token detail (price, volume, liquidity)
  *   GET /api/ohlcv/:poolAddress    – OHLCV candles for a pool (for live chart)
+ *   GET /api/user-data/:address    – Load persisted user data from KV
+ *   PUT /api/user-data/:address    – Save persisted user data to KV
  *
  * All other paths → forwarded to static assets (Pages handles the response).
  *
  * NOTE: No private keys are stored or used here. All on-chain transactions
  * (buy/sell swaps) are signed client-side via the user's wallet (MetaMask /
  * WalletConnect). This worker is a CORS proxy only.
+ *
+ * KV Namespaces (bind via Cloudflare dashboard or wrangler.toml):
+ *   LOGIN_HISTORY_KV – login history records
+ *   USER_DATA_KV     – per-user portfolio / staking data
  */
 
 const GECKO_BASE = 'https://api.geckoterminal.com/api/v2';
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, PUT, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
   'Content-Type': 'application/json',
 };
 const ETH_ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/;
 const DEFAULT_OHLCV_LIMIT = 24;
 const MAX_OHLCV_LIMIT = 100;
+// User-data KV entry TTL: 180 days
+const USER_DATA_TTL = 60 * 60 * 24 * 180;
+// Maximum allowed size for a user-data payload (256 KB)
+const USER_DATA_MAX_BYTES = 256 * 1024;
 
 /**
  * Fetch a GeckoTerminal endpoint and return a Response with CORS headers.
@@ -122,6 +132,56 @@ export default {
       } catch (err) {
         console.error('[login-history] Error:', err);
         return new Response(JSON.stringify({ error: 'Bad request' }), { status: 400, headers: CORS_HEADERS });
+      }
+    }
+
+    // ── GET /api/user-data/:address ───────────────────────────────────────
+    // Load persisted user portfolio / staking data from KV.
+    // Falls back gracefully when USER_DATA_KV namespace is not configured.
+    const userDataMatch = path.match(/^\/api\/user-data\/([^/]+)$/);
+    if (userDataMatch && request.method === 'GET') {
+      const rawAddr = userDataMatch[1];
+      // Accept real 0x addresses and pseudo-addresses (40+ hex chars)
+      if (!ETH_ADDRESS_RE.test(rawAddr) && !/^0x[0-9a-f]{40,}$/i.test(rawAddr)) {
+        return new Response(JSON.stringify({ error: 'Invalid address' }), { status: 400, headers: CORS_HEADERS });
+      }
+      const addr = rawAddr.toLowerCase();
+      if (!env.USER_DATA_KV) {
+        return new Response(JSON.stringify({ ok: true, data: null, kvUnavailable: true }), { headers: CORS_HEADERS });
+      }
+      try {
+        const stored = await env.USER_DATA_KV.get(addr, { type: 'json' });
+        return new Response(JSON.stringify({ ok: true, data: stored || null }), { headers: CORS_HEADERS });
+      } catch (err) {
+        console.error('[user-data GET] KV error:', err);
+        return new Response(JSON.stringify({ error: 'KV read failed' }), { status: 500, headers: CORS_HEADERS });
+      }
+    }
+
+    // ── PUT /api/user-data/:address ───────────────────────────────────────
+    // Save persisted user portfolio / staking data to KV.
+    // Falls back gracefully when USER_DATA_KV namespace is not configured.
+    if (userDataMatch && request.method === 'PUT') {
+      const rawAddr = userDataMatch[1];
+      if (!ETH_ADDRESS_RE.test(rawAddr) && !/^0x[0-9a-f]{40,}$/i.test(rawAddr)) {
+        return new Response(JSON.stringify({ error: 'Invalid address' }), { status: 400, headers: CORS_HEADERS });
+      }
+      const addr = rawAddr.toLowerCase();
+      if (!env.USER_DATA_KV) {
+        return new Response(JSON.stringify({ ok: true, kvUnavailable: true }), { headers: CORS_HEADERS });
+      }
+      try {
+        const body = await request.text();
+        if (body.length > USER_DATA_MAX_BYTES) {
+          return new Response(JSON.stringify({ error: 'Payload too large' }), { status: 413, headers: CORS_HEADERS });
+        }
+        // Validate JSON before storing
+        JSON.parse(body);
+        await env.USER_DATA_KV.put(addr, body, { expirationTtl: USER_DATA_TTL });
+        return new Response(JSON.stringify({ ok: true }), { headers: CORS_HEADERS });
+      } catch (err) {
+        console.error('[user-data PUT] Error:', err);
+        return new Response(JSON.stringify({ error: 'Save failed' }), { status: 500, headers: CORS_HEADERS });
       }
     }
 
