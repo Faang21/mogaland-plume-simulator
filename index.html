@@ -373,6 +373,34 @@
     .light .mogaworld-logo, .light .header-logo {
       mix-blend-mode: normal;
     }
+    .mogaworld-brand-title,
+    .dash-mogaworld-brand-title {
+      font-weight: 800;
+      background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #06b6d4 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: 1px;
+      line-height: 1.1;
+    }
+    .mogaworld-brand-tagline,
+    .dash-mogaworld-brand-tagline {
+      color: #94a3b8;
+      font-style: italic;
+      letter-spacing: 0.5px;
+    }
+    .mogaworld-brand {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .mogaworld-brand-title { font-size: 2.8rem; }
+    .mogaworld-brand-tagline { font-size: 1.1rem; margin-top: 6px; }
+    .dash-mogaworld-brand {
+      text-align: center;
+      margin: 6px 0 10px 0;
+    }
+    .dash-mogaworld-brand-title { font-size: 2rem; }
+    .dash-mogaworld-brand-tagline { font-size: 0.95rem; margin-top: 4px; }
     .login-option {
       background: var(--primary);
       color: white;
@@ -1853,7 +1881,10 @@
 
   <!-- Login Page -->
   <div class="login-container" id="loginPage">
-    <img src="https://github.com/user-attachments/assets/88e000d5-d27e-4446-973f-8fb18b662a42" alt="Mogaworld – Learning, playing and earning" class="mogaworld-logo" style="margin-bottom:30px;" onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<h1 style=\'margin-bottom:8px;\'>Mogaland Academy</h1><p class=\'subtitle\'>Playing, Learning, Earning</p>')">
+    <div class="mogaworld-brand">
+      <div class="mogaworld-brand-title">MogaWorld</div>
+      <div class="mogaworld-brand-tagline">Learning, Playing and Earning</div>
+    </div>
 
     <div style="margin-bottom: 30px;">
       <h3 style="margin-bottom: 15px; color: #60a5fa; font-size: 1.2rem;">Connect Wallet</h3>
@@ -1967,7 +1998,10 @@
       <button class="top-btn" onclick="showProfile()">Profile</button>
     </header>
 
-    <img src="https://github.com/user-attachments/assets/88e000d5-d27e-4446-973f-8fb18b662a42" alt="Mogaworld – Learning, playing and earning" class="mogaworld-logo" style="margin-bottom:10px; display:none;" onerror="this.style.display='none';">
+    <div class="dash-mogaworld-brand">
+      <div class="dash-mogaworld-brand-title">MogaWorld</div>
+      <div class="dash-mogaworld-brand-tagline">Learning, Playing and Earning</div>
+    </div>
 
     <!-- Live Price Ticker -->
     <div class="price-ticker-wrap" id="priceTicker">
