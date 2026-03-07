@@ -1563,6 +1563,229 @@
     .mkt-coin-change { font-size: 0.85rem; font-weight: 600; }
     .mkt-coin-up { color: #10b981; }
     .mkt-coin-down { color: #ef4444; }
+
+    /* ===== HOME PAGE MODERN REDESIGN ===== */
+    /* Tagline / hero branding */
+    .home-hero-tagline {
+      text-align: center;
+      padding: 20px 0 8px;
+      max-width: 1200px;
+      margin: 0 auto 20px;
+    }
+    .home-logo-text {
+      font-size: 2.2em;
+      font-weight: 900;
+      background: linear-gradient(135deg, #06b6d4, #3b82f6, #a855f7);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -1px;
+      margin-bottom: 8px;
+    }
+    .home-tagline {
+      font-size: 1em;
+      color: #94a3b8;
+      letter-spacing: 0.3px;
+    }
+    /* Hero check-in card */
+    .checkin-hero-card {
+      max-width: 1200px;
+      margin: 0 auto 28px;
+      background: linear-gradient(135deg, #0d1526 0%, #151d35 50%, #0d1526 100%);
+      border: 1px solid rgba(96,165,250,0.25);
+      border-radius: 24px;
+      padding: 28px;
+      box-shadow: 0 0 40px rgba(96,165,250,0.08), 0 8px 32px rgba(0,0,0,0.5);
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+      align-items: center;
+    }
+    @media (max-width: 640px) {
+      .checkin-hero-card { grid-template-columns: 1fr; gap: 24px; padding: 20px; }
+    }
+    .checkin-hero-title {
+      font-size: 1.4em;
+      font-weight: 800;
+      color: #e2e8f0;
+      margin-bottom: 6px;
+    }
+    .checkin-hero-subtitle {
+      font-size: 0.83em;
+      color: #64748b;
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+    /* Streak badge */
+    .streak-badge-display {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 18px;
+      border-radius: 14px;
+      margin-bottom: 20px;
+      transition: box-shadow 0.4s;
+    }
+    .streak-badge-display.newbie {
+      background: rgba(100,116,139,0.15);
+      border: 1px solid #475569;
+      color: #94a3b8;
+    }
+    .streak-badge-display.rising {
+      background: rgba(16,185,129,0.12);
+      border: 1px solid #10b981;
+      color: #34d399;
+      box-shadow: 0 0 12px rgba(16,185,129,0.25);
+    }
+    .streak-badge-display.veteran {
+      background: rgba(20,184,166,0.12);
+      border: 1px solid #14b8a6;
+      color: #2dd4bf;
+      box-shadow: 0 0 16px rgba(20,184,166,0.4);
+      animation: badge-glow-teal 2.5s ease-in-out infinite;
+    }
+    .streak-badge-display.elite {
+      background: rgba(96,165,250,0.12);
+      border: 1px solid #60a5fa;
+      color: #93c5fd;
+      box-shadow: 0 0 20px rgba(96,165,250,0.5);
+      animation: badge-glow-blue 2s ease-in-out infinite;
+    }
+    .streak-badge-display.legendary {
+      background: linear-gradient(135deg, rgba(168,85,247,0.15), rgba(236,72,153,0.15));
+      border: 1px solid #a855f7;
+      color: #d946ef;
+      box-shadow: 0 0 28px rgba(168,85,247,0.6), 0 0 50px rgba(236,72,153,0.2);
+      animation: badge-glow-legendary 1.5s ease-in-out infinite;
+    }
+    @keyframes badge-glow-teal {
+      0%, 100% { box-shadow: 0 0 12px rgba(20,184,166,0.35); }
+      50% { box-shadow: 0 0 24px rgba(20,184,166,0.65); }
+    }
+    @keyframes badge-glow-blue {
+      0%, 100% { box-shadow: 0 0 16px rgba(96,165,250,0.4); }
+      50% { box-shadow: 0 0 32px rgba(96,165,250,0.75); }
+    }
+    @keyframes badge-glow-legendary {
+      0%, 100% { box-shadow: 0 0 24px rgba(168,85,247,0.5), 0 0 45px rgba(236,72,153,0.2); }
+      50% { box-shadow: 0 0 40px rgba(168,85,247,0.85), 0 0 70px rgba(236,72,153,0.4); }
+    }
+    .badge-icon-big { font-size: 2em; line-height: 1; }
+    .badge-level-name { font-weight: 800; font-size: 1.05em; }
+    .badge-streak-count { font-size: 0.78em; opacity: 0.85; margin-top: 2px; }
+    /* Live points display on hero card */
+    .points-live-box {
+      background: rgba(245,158,11,0.08);
+      border: 1px solid rgba(245,158,11,0.25);
+      border-radius: 16px;
+      padding: 16px 20px;
+      text-align: center;
+      margin-bottom: 16px;
+    }
+    .points-live-label { font-size: 0.75em; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+    .points-live-value { font-size: 2.4em; font-weight: 900; color: #fbbf24; line-height: 1.1; }
+    .points-live-sub { font-size: 0.75em; color: #64748b; margin-top: 4px; }
+    /* Hero check-in button */
+    .checkin-hero-btn {
+      width: 100%;
+      padding: 16px;
+      border: none;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #f59e0b, #ef4444);
+      color: white;
+      font-size: 1.05em;
+      font-weight: 800;
+      cursor: pointer;
+      margin-bottom: 12px;
+      transition: filter 0.2s, transform 0.15s;
+      box-shadow: 0 4px 20px rgba(245,158,11,0.4);
+    }
+    .checkin-hero-btn:hover { filter: brightness(1.1); transform: translateY(-1px); }
+    .checkin-hero-btn:active { transform: translateY(1px); }
+    .checkin-done-msg {
+      width: 100%;
+      padding: 14px;
+      text-align: center;
+      border-radius: 14px;
+      background: rgba(16,185,129,0.1);
+      border: 1px solid rgba(16,185,129,0.3);
+      color: #34d399;
+      font-weight: 700;
+      margin-bottom: 12px;
+      font-size: 1em;
+    }
+    /* Convert points to staking button */
+    .convert-points-btn {
+      width: 100%;
+      padding: 13px;
+      border: 1px solid rgba(96,165,250,0.4);
+      border-radius: 14px;
+      background: rgba(96,165,250,0.08);
+      color: #60a5fa;
+      font-size: 0.92em;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .convert-points-btn:hover {
+      background: rgba(96,165,250,0.18);
+      border-color: #60a5fa;
+      box-shadow: 0 0 14px rgba(96,165,250,0.3);
+    }
+    /* Progress bar inline */
+    .pts-progress-track {
+      background: rgba(255,255,255,0.08);
+      border-radius: 999px;
+      height: 8px;
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+    .pts-progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #06b6d4, #3b82f6);
+      border-radius: 999px;
+      transition: width 0.6s ease;
+    }
+    /* CTA cards (quick actions) */
+    .cta-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 14px;
+      max-width: 1200px;
+      margin: 0 auto 28px;
+    }
+    .cta-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.22s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-color);
+      font-family: inherit;
+      font-size: 1em;
+    }
+    .cta-card:hover {
+      transform: translateY(-4px);
+      border-color: #60a5fa;
+      box-shadow: 0 0 18px rgba(96,165,250,0.2);
+    }
+    .cta-card-icon { font-size: 2em; }
+    .cta-card-label { font-size: 0.82em; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.3px; }
+    /* Streak level guide pills */
+    .streak-lvl-pill {
+      font-size: 0.7em;
+      padding: 3px 8px;
+      border-radius: 99px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
   </style>
 </head>
 <body>
@@ -4848,6 +5071,19 @@
       updateCheckinButton();
       updatePointDisplay();
       checkAllAchievements();
+      // Refresh home page if currently showing it so the updated streak/points are visible
+      if (document.getElementById('content') && document.querySelector('.checkin-hero-card')) {
+        showSection('home');
+      }
+    };
+
+    // Navigate directly to the NFT Staking convert tab
+    window.goToConvertTab = function() {
+      showSection('nft');
+      // After the NFT section renders, switch to the convert tab
+      setTimeout(() => {
+        if (typeof switchNFTTab === 'function') switchNFTTab('convert');
+      }, 100);
     };
 
     // ===== ACHIEVEMENT SYSTEM =====
@@ -6066,6 +6302,26 @@
       if (id === 'home') {
         // Refresh check-in data from localStorage so streak number is always up-to-date
         loadCheckinData();
+
+        // ---- Streak badge level ----
+        let badgeClass, badgeIcon, badgeLevelName, badgeNextDesc;
+        if (dailyStreak >= 30) {
+          badgeClass = 'legendary'; badgeIcon = '👑'; badgeLevelName = 'Legendary';
+          badgeNextDesc = 'Maximum badge level!';
+        } else if (dailyStreak >= 15) {
+          badgeClass = 'elite'; badgeIcon = '💎'; badgeLevelName = 'Elite';
+          badgeNextDesc = `${30 - dailyStreak} days to Legendary`;
+        } else if (dailyStreak >= 7) {
+          badgeClass = 'veteran'; badgeIcon = '🌟'; badgeLevelName = 'Veteran';
+          badgeNextDesc = `${15 - dailyStreak} days to Elite`;
+        } else if (dailyStreak >= 3) {
+          badgeClass = 'rising'; badgeIcon = '🔥'; badgeLevelName = 'Rising';
+          badgeNextDesc = `${7 - dailyStreak} days to Veteran`;
+        } else {
+          badgeClass = 'newbie'; badgeIcon = '🌱'; badgeLevelName = 'Newbie';
+          badgeNextDesc = dailyStreak >= 1 ? `${3 - dailyStreak} days to Rising` : 'Start your streak today!';
+        }
+
         // Build achievements HTML
         const badgesHTML = ACHIEVEMENTS.map(a => {
           const pts = BADGE_MOGA_POINTS[a.id] || 0;
@@ -6083,7 +6339,6 @@
 
         // Build 7-day check-in calendar — mark only the consecutive streak days back from lastCheckInDate
         const today = getTodayISO();
-        // Build a Set of ISO dates that are part of the current streak
         const streakDates = new Set();
         if (lastCheckInDate && dailyStreak > 0) {
           const base = new Date(lastCheckInDate + 'T00:00:00');
@@ -6103,38 +6358,113 @@
 
         const totalRewards = (calculateTotalRewards ? calculateTotalRewards() : 0) + (volumeRewardsClaimable || 0) + (mogalandPoints * LEARNING_POINTS_TO_USDC_RATE);
         const earnedCount = ACHIEVEMENTS.filter(a => earnedAchievements.has(a.id)).length;
+        const ptsToNextRedeem = 1000 - (mogalandPoints % 1000);
+        const ptsFillPct = Math.min(100, Math.round((mogalandPoints % 1000) / 10));
+        const nftStakedCount = (typeof stakedNFTsData !== 'undefined') ? stakedNFTsData.length : 0;
+        const todayRewardAmt = Math.min(dailyStreak + 1, 7) * 50;
 
         content.innerHTML = `
           <div style="max-width:1200px; margin:0 auto; padding:0 16px 60px; text-align:left;">
-            <h2 style="text-align:center; color:#60a5fa; margin-bottom:6px;">🏠 Dashboard</h2>
-            <p style="text-align:center; color:#94a3b8; margin-bottom:24px; font-size:0.95em;">Welcome back, ${userAddress ? userAddress.slice(0,8)+'…' : 'Explorer'}!</p>
 
-            <!-- Key Stats -->
+            <!-- Hero Branding -->
+            <div class="home-hero-tagline">
+              <div class="home-logo-text">🌍 Mogaworld</div>
+              <div class="home-tagline">Play · Learn · Earn — Your Web3 Journey Starts Here</div>
+              <div style="font-size:0.82em; color:#475569; margin-top:6px;">Welcome back, <span style="color:#60a5fa; font-weight:700;">${userAddress ? userAddress.slice(0,8)+'…' : 'Explorer'}</span></div>
+            </div>
+
+            <!-- === HERO: Daily Check-In Card === -->
+            <div class="checkin-hero-card">
+              <!-- Left: streak badge + calendar -->
+              <div>
+                <div class="checkin-hero-title">🗓️ Daily Check-In</div>
+                <div class="checkin-hero-subtitle">Log in every day to earn Moga Points. Higher streaks = bigger badges and bonus rewards!</div>
+
+                <!-- Streak badge -->
+                <div class="streak-badge-display ${badgeClass}">
+                  <span role="img" aria-label="${badgeLevelName} badge" class="badge-icon-big">${badgeIcon}</span>
+                  <div>
+                    <div class="badge-level-name">${badgeLevelName}</div>
+                    <div class="badge-streak-count">🔥 ${dailyStreak} day streak • ${badgeNextDesc}</div>
+                  </div>
+                </div>
+
+                <!-- 7-day calendar -->
+                <div style="margin-bottom:8px; font-size:0.75em; color:#64748b; text-transform:uppercase; letter-spacing:0.5px;">This Week</div>
+                <div class="checkin-bar" style="margin:0; justify-content:flex-start;">${days}</div>
+
+                <!-- Streak level guide -->
+                <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:14px;">
+                  <span class="streak-lvl-pill" style="background:rgba(100,116,139,0.2);color:#94a3b8;"><span aria-hidden="true">🌱</span> Newbie (0-2d)</span>
+                  <span class="streak-lvl-pill" style="background:rgba(16,185,129,0.15);color:#34d399;"><span aria-hidden="true">🔥</span> Rising (3-6d)</span>
+                  <span class="streak-lvl-pill" style="background:rgba(20,184,166,0.15);color:#2dd4bf;"><span aria-hidden="true">🌟</span> Veteran (7-14d)</span>
+                  <span class="streak-lvl-pill" style="background:rgba(96,165,250,0.15);color:#93c5fd;"><span aria-hidden="true">💎</span> Elite (15-29d)</span>
+                  <span class="streak-lvl-pill" style="background:rgba(168,85,247,0.15);color:#d946ef;"><span aria-hidden="true">👑</span> Legendary (30d+)</span>
+                </div>
+              </div>
+
+              <!-- Right: points balance + actions -->
+              <div>
+                <!-- Live points balance -->
+                <div class="points-live-box">
+                  <div class="points-live-label">⭐ Moga Points Balance</div>
+                  <div class="points-live-value">${mogalandPoints.toLocaleString()}</div>
+                  <div class="points-live-sub">≈ ${(mogalandPoints * LEARNING_POINTS_TO_USDC_RATE).toFixed(3)} USDC value</div>
+                </div>
+
+                <!-- Progress to next redeem threshold -->
+                <div style="display:flex; justify-content:space-between; font-size:0.75em; color:#94a3b8; margin-bottom:6px;">
+                  <span>Progress to Redeem (1,000 pts = 1 USDC)</span>
+                  <span>${mogalandPoints % 1000}/1000</span>
+                </div>
+                <div class="pts-progress-track">
+                  <div class="pts-progress-fill" style="width:${ptsFillPct}%;"></div>
+                </div>
+
+                <!-- Check-in action button -->
+                ${canCheckinToday() ? `
+                  <button class="checkin-hero-btn" onclick="claimDailyCheckin()">
+                    🎁 Claim Today's Reward &nbsp;+${todayRewardAmt} pts
+                  </button>
+                ` : `
+                  <div class="checkin-done-msg">✅ Checked in today!</div>
+                  <p style="font-size:0.78em; color:#64748b; text-align:center; margin-top:-8px; margin-bottom:12px;">Come back tomorrow for Day ${dailyStreak + 1} bonus</p>
+                `}
+
+                <!-- Convert points to NFT staking -->
+                <button class="convert-points-btn" onclick="goToConvertTab()">
+                  🔄 Convert Points → NFT Staking Pool
+                </button>
+                <p style="font-size:0.72em; color:#475569; text-align:center; margin-top:8px;">Points are redeemable as USDC or used as staking multipliers</p>
+              </div>
+            </div>
+
+            <!-- Quick Stats -->
             <div class="dash-grid">
               <div class="dash-card">
                 <div class="dc-icon">⭐</div>
-                <div class="dc-label">Points</div>
+                <div class="dc-label">Moga Points</div>
                 <div class="dc-value" style="color:#f59e0b;">${mogalandPoints.toLocaleString()}</div>
               </div>
               <div class="dash-card">
-                <div class="dc-icon">📚</div>
-                <div class="dc-label">Tasks Done</div>
-                <div class="dc-value" style="color:#60a5fa;">${completedTasks}/100</div>
+                <div class="dc-icon">🏦</div>
+                <div class="dc-label">NFTs Staked</div>
+                <div class="dc-value" style="color:#10b981;">${nftStakedCount}</div>
               </div>
               <div class="dash-card">
                 <div class="dc-icon">💰</div>
-                <div class="dc-label">Claimable</div>
-                <div class="dc-value" style="color:#10b981;">${totalRewards.toFixed(4)} USDC</div>
-              </div>
-              <div class="dash-card">
-                <div class="dc-icon">📊</div>
-                <div class="dc-label">Volume</div>
-                <div class="dc-value" style="color:#c084fc;">${(userTradingVolume.total || 0).toFixed(2)} USDC</div>
+                <div class="dc-label">Rewards Pending</div>
+                <div class="dc-value" style="color:#60a5fa;">${totalRewards.toFixed(4)} USDC</div>
               </div>
               <div class="dash-card">
                 <div class="streak-flame">🔥</div>
                 <div class="dc-label">Current Streak</div>
                 <div class="dc-value" style="color:#ef4444;">${dailyStreak} day${dailyStreak !== 1 ? 's' : ''}</div>
+              </div>
+              <div class="dash-card">
+                <div class="dc-icon">📚</div>
+                <div class="dc-label">Tasks Done</div>
+                <div class="dc-value" style="color:#c084fc;">${completedTasks}/100</div>
               </div>
               <div class="dash-card">
                 <div class="dc-icon">🏆</div>
@@ -6143,33 +6473,49 @@
               </div>
             </div>
 
-            <!-- Daily Check-In -->
-            <div class="dash-section-title">🗓️ Weekly Check-In</div>
-            <div class="checkin-bar">${days}</div>
-            ${canCheckinToday() ? `
-              <div style="text-align:center; margin-bottom:24px;">
-                <button class="btn-primary" style="max-width:280px; background:linear-gradient(135deg,#f59e0b,#ef4444); font-size:1.05em;" onclick="claimDailyCheckin()">
-                  🗓️ Claim Daily Reward (+${Math.min(dailyStreak+1,7)*50} pts)
-                </button>
-              </div>
-            ` : `
-              <p style="text-align:center; color:#10b981; margin-bottom:24px;">✅ Checked in today! Come back tomorrow for your streak bonus.</p>
-            `}
+            <!-- CTA Cards -->
+            <div class="dash-section-title">⚡ Explore Mogaworld</div>
+            <div class="cta-cards-grid">
+              <button class="cta-card" onclick="showSection('learning',event)">
+                <div class="cta-card-icon" aria-hidden="true">📚</div>
+                <div class="cta-card-label">Learning</div>
+                <div style="font-size:0.75em; color:#60a5fa; font-weight:600;">+pts per task</div>
+              </button>
+              <button class="cta-card" onclick="showSection('market',event)">
+                <div class="cta-card-icon" aria-hidden="true">📈</div>
+                <div class="cta-card-label">Market</div>
+                <div style="font-size:0.75em; color:#10b981; font-weight:600;">Trade &amp; Predict</div>
+              </button>
+              <button class="cta-card" onclick="showSection('nft',event)">
+                <div class="cta-card-icon" aria-hidden="true">🏦</div>
+                <div class="cta-card-label">NFT Staking</div>
+                <div style="font-size:0.75em; color:#f59e0b; font-weight:600;">Earn USDC</div>
+              </button>
+              <button class="cta-card" onclick="showSection('stakingpool',event)">
+                <div class="cta-card-icon" aria-hidden="true">🌾</div>
+                <div class="cta-card-label">Staking Pool</div>
+                <div style="font-size:0.75em; color:#a855f7; font-weight:600;">Pool Rewards</div>
+              </button>
+              <button class="cta-card" onclick="showSection('swap',event)">
+                <div class="cta-card-icon" aria-hidden="true">🔄</div>
+                <div class="cta-card-label">Swap</div>
+                <div style="font-size:0.75em; color:#94a3b8; font-weight:600;">Exchange Tokens</div>
+              </button>
+              <button class="cta-card" onclick="showSection('game',event)">
+                <div class="cta-card-icon" aria-hidden="true">🎮</div>
+                <div class="cta-card-label">Game</div>
+                <div style="font-size:0.75em; color:#34d399; font-weight:600;">Play &amp; Earn</div>
+              </button>
+              <button class="cta-card" onclick="showVolumeLeaderboard()">
+                <div class="cta-card-icon" aria-hidden="true">🏅</div>
+                <div class="cta-card-label">Leaderboard</div>
+                <div style="font-size:0.75em; color:#fbbf24; font-weight:600;">Top Traders</div>
+              </button>
+            </div>
 
             <!-- Achievements -->
             <div class="dash-section-title">🏅 Achievements (${earnedCount}/${ACHIEVEMENTS.length})</div>
             <div class="badge-grid">${badgesHTML}</div>
-
-            <!-- Quick Actions -->
-            <div class="dash-section-title">⚡ Quick Actions</div>
-            <div class="quick-actions">
-              <button class="qa-btn" onclick="showSection('learning',event)">📚 Start Learning</button>
-              <button class="qa-btn" onclick="showSection('market',event)">📈 Trade Now</button>
-              <button class="qa-btn" onclick="showSection('nft',event)">🏦 Stake NFTs</button>
-              <button class="qa-btn" onclick="showSection('swap',event)">🔄 Swap Tokens</button>
-              <button class="qa-btn" onclick="showSection('game',event)">🎮 Play Game</button>
-              <button class="qa-btn" onclick="showVolumeLeaderboard()">🏆 Leaderboard</button>
-            </div>
 
             <!-- Market Fear & Greed Index -->
             <div class="dash-section-title">😱 Market Fear &amp; Greed Index</div>
