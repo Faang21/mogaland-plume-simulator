@@ -366,6 +366,44 @@
       background: linear-gradient(135deg, var(--primary), #2563eb);
       border-color: #3b82f6;
     }
+    /* Wallet grid for login page */
+    .wallet-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .wallet-grid .wallet-choice {
+      margin: 0;
+      font-size: 0.95rem;
+      padding: 14px 10px;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .wallet-grid .wallet-choice .wicon { font-size: 1.6rem; }
+    .wallet-grid .wallet-choice span.wlabel { font-size: 0.85rem; }
+    .more-wallets-toggle {
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.2);
+      color: #94a3b8;
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      margin: 8px 0;
+      transition: all 0.2s;
+    }
+    .more-wallets-toggle:hover { background: rgba(255,255,255,0.05); color: #e2e8f0; }
+    .more-wallets-section { margin-top: 4px; }
+    .scan-qr-btn {
+      background: linear-gradient(135deg, rgba(16,185,129,0.3), rgba(16,185,129,0.5));
+      border: 2px solid #10b981;
+    }
+    .scan-qr-btn:hover {
+      background: linear-gradient(135deg, #10b981, #059669);
+      border-color: #059669;
+    }
     .input-field {
       width: 100%;
       padding: 14px;
@@ -1807,22 +1845,78 @@
 
     <div style="margin-bottom: 30px;">
       <h3 style="margin-bottom: 15px; color: #60a5fa; font-size: 1.2rem;">Connect Wallet</h3>
-      <button class="wallet-choice primary-wallet" onclick="connectMetaMask()">
-        <span style="font-size: 1.5rem; margin-right: 10px;">🦊</span>
-        MetaMask
+
+      <!-- Primary wallets grid -->
+      <div class="wallet-grid">
+        <button class="wallet-choice primary-wallet" onclick="connectMetaMask()">
+          <span class="wicon">🦊</span><span class="wlabel">MetaMask</span>
+        </button>
+        <button class="wallet-choice primary-wallet" onclick="connectOKX()">
+          <span class="wicon">⚫</span><span class="wlabel">OKX Wallet</span>
+        </button>
+        <button class="wallet-choice primary-wallet" onclick="connectTrustWallet()">
+          <span class="wicon">🛡️</span><span class="wlabel">Trust Wallet</span>
+        </button>
+        <button class="wallet-choice primary-wallet" onclick="connectCoinbaseWallet()">
+          <span class="wicon">🔵</span><span class="wlabel">Coinbase</span>
+        </button>
+        <button class="wallet-choice primary-wallet" onclick="connectRabby()">
+          <span class="wicon">🐇</span><span class="wlabel">Rabby</span>
+        </button>
+        <button class="wallet-choice primary-wallet" onclick="connectBitget()">
+          <span class="wicon">📊</span><span class="wlabel">Bitget</span>
+        </button>
+      </div>
+
+      <!-- Scan / WalletConnect -->
+      <button class="wallet-choice primary-wallet scan-qr-btn" onclick="connectWalletConnect()" style="margin-top:6px;">
+        <span style="font-size:1.4rem;margin-right:10px;">📱</span>
+        Scan QR / WalletConnect (any mobile wallet)
       </button>
-      <button class="wallet-choice primary-wallet" onclick="connectOKX()">
-        <span style="font-size: 1.5rem; margin-right: 10px;">⚫</span>
-        OKX Wallet
-      </button>
-      <button class="wallet-choice primary-wallet" onclick="connectTrustWallet()">
-        <span style="font-size: 1.5rem; margin-right: 10px;">🛡️</span>
-        Trust Wallet
-      </button>
-      <button class="wallet-choice primary-wallet" onclick="connectWalletConnect()">
-        <span style="font-size: 1.5rem; margin-right: 10px;">🔗</span>
-        WalletConnect
-      </button>
+
+      <!-- More wallets toggle -->
+      <button class="more-wallets-toggle" onclick="toggleMoreWallets()" id="moreWalletsBtn">▼ More Wallets</button>
+      <div id="moreWalletsSection" class="more-wallets-section" style="display:none;">
+        <div class="wallet-grid">
+          <button class="wallet-choice" onclick="connectPhantom()">
+            <span class="wicon">👻</span><span class="wlabel">Phantom</span>
+          </button>
+          <button class="wallet-choice" onclick="connectBrave()">
+            <span class="wicon">🦁</span><span class="wlabel">Brave</span>
+          </button>
+          <button class="wallet-choice" onclick="connectBybit()">
+            <span class="wicon">🟡</span><span class="wlabel">Bybit</span>
+          </button>
+          <button class="wallet-choice" onclick="connectTokenPocket()">
+            <span class="wicon">💼</span><span class="wlabel">TokenPocket</span>
+          </button>
+          <button class="wallet-choice" onclick="connectSafePal()">
+            <span class="wicon">🔒</span><span class="wlabel">SafePal</span>
+          </button>
+          <button class="wallet-choice" onclick="connectImToken()">
+            <span class="wicon">🪙</span><span class="wlabel">imToken</span>
+          </button>
+          <button class="wallet-choice" onclick="connectMathWallet()">
+            <span class="wicon">🔢</span><span class="wlabel">Math Wallet</span>
+          </button>
+          <button class="wallet-choice" onclick="connectCoin98()">
+            <span class="wicon">💯</span><span class="wlabel">Coin98</span>
+          </button>
+          <button class="wallet-choice" onclick="connectExodus()">
+            <span class="wicon">🌀</span><span class="wlabel">Exodus</span>
+          </button>
+          <button class="wallet-choice" onclick="connectRainbow()">
+            <span class="wicon">🌈</span><span class="wlabel">Rainbow</span>
+          </button>
+          <button class="wallet-choice" onclick="connectGate()">
+            <span class="wicon">🔑</span><span class="wlabel">Gate Wallet</span>
+          </button>
+          <button class="wallet-choice" onclick="connectWalletConnect()">
+            <span class="wicon">🔗</span><span class="wlabel">WalletConnect</span>
+          </button>
+        </div>
+      </div>
+
       <p style="margin-top: 15px; font-size: 0.85rem; color: #94a3b8;" id="networkInfoText">
         <strong>Testnet Required</strong><br>
         Connect your wallet to get started<br>
@@ -2421,7 +2515,7 @@
       
       try {
         // Check for OKX wallet first (more specific)
-        if ((saved.walletType === 'OKX') && (window.okxwallet || window.okex)) {
+        if ((saved.walletType === 'OKX' || saved.walletType === 'OKX Wallet') && (window.okxwallet || window.okex)) {
           await connectOKX();
           return true;
         }
@@ -2430,14 +2524,45 @@
           await connectWalletConnect();
           return true;
         }
-        // Then check for MetaMask
-        else if (saved.walletType === 'MetaMask' && window.ethereum) {
-          await connectMetaMask();
+        // Coinbase Wallet
+        else if (saved.walletType === 'Coinbase Wallet' && (window.coinbaseWalletExtension || (window.ethereum && window.ethereum.isCoinbaseWallet))) {
+          await connectCoinbaseWallet();
+          return true;
+        }
+        // Phantom
+        else if (saved.walletType === 'Phantom' && window.phantom && window.phantom.ethereum) {
+          await connectPhantom();
+          return true;
+        }
+        // Rabby
+        else if (saved.walletType === 'Rabby' && (window.rabby || (window.ethereum && window.ethereum.isRabby))) {
+          await connectRabby();
+          return true;
+        }
+        // Bitget
+        else if (saved.walletType === 'Bitget Wallet' && (window.bitkeep || (window.ethereum && window.ethereum.isBitKeep))) {
+          await connectBitget();
+          return true;
+        }
+        // Bybit
+        else if (saved.walletType === 'Bybit Wallet' && (window.bybitWallet || (window.ethereum && window.ethereum.isBybit))) {
+          await connectBybit();
           return true;
         }
         // Trust Wallet (uses ethereum but less specific)
         else if ((saved.walletType === 'Trust' || saved.walletType === 'Trust Wallet') && window.ethereum) {
           await connectTrustWallet();
+          return true;
+        }
+        // Then check for MetaMask
+        else if (saved.walletType === 'MetaMask' && window.ethereum) {
+          await connectMetaMask();
+          return true;
+        }
+        // Generic ethereum provider fallback for injected wallets not explicitly handled above
+        else if (window.ethereum) {
+          console.log(`[Auto-reconnect] Saved wallet '${saved.walletType}' not found; falling back to injected provider`);
+          await connectMetaMask();
           return true;
         }
       } catch (e) {
@@ -2736,7 +2861,11 @@
 
     function enterDashboard(method) {
       loginMethod = method.toLowerCase();
-      if (method === 'Wallet' || method === 'MetaMask' || method === 'OKX' || method === 'Trust' || method === 'Trust Wallet' || method === 'WalletConnect') {
+      if (method === 'Wallet' || method === 'MetaMask' || method === 'OKX' || method === 'Trust' || method === 'Trust Wallet' || method === 'WalletConnect'
+          || method === 'Coinbase Wallet' || method === 'Phantom' || method === 'Rabby' || method === 'Bitget Wallet'
+          || method === 'Brave Wallet' || method === 'Bybit Wallet' || method === 'TokenPocket' || method === 'SafePal'
+          || method === 'imToken' || method === 'Math Wallet' || method === 'Coin98' || method === 'Exodus'
+          || method === 'Rainbow' || method === 'Gate Wallet') {
         loginMethod = 'wallet';
         walletConnected = true;
       } else if (method === 'Email') {
@@ -2745,6 +2874,12 @@
         loginMethod = 'x';
       }
       console.log(`[Login] Method: ${loginMethod}, Wallet: ${walletConnected}`);
+
+      // Record login history to Cloudflare
+      if (typeof sendLoginHistory === 'function') {
+        sendLoginHistory(method, userAddress);
+      }
+
       showNotification(`Entered via ${method}`, false);
       document.getElementById('loginPage').classList.add('hidden');
       document.getElementById('mainApp').classList.remove('hidden');
@@ -3081,7 +3216,199 @@
       }
     }
     window.connectWalletConnect = connectWalletConnect;
-    
+
+    // ── Additional wallet connectors ──────────────────────────────────────────
+
+    function connectCoinbaseWallet() {
+      if (typeof ethers === 'undefined') return showNotification("Web3 libraries still loading. Please wait...", true);
+      const cbProvider = window.coinbaseWalletExtension || (window.ethereum && window.ethereum.isCoinbaseWallet ? window.ethereum : null);
+      if (!cbProvider) {
+        showNotification("Coinbase Wallet not found. Install from https://coinbase.com/wallet", true);
+        return;
+      }
+      connectWallet("Coinbase Wallet", () => new ethers.providers.Web3Provider(cbProvider));
+    }
+    window.connectCoinbaseWallet = connectCoinbaseWallet;
+
+    function connectPhantom() {
+      if (typeof ethers === 'undefined') return showNotification("Web3 libraries still loading. Please wait...", true);
+      const phantomEVM = window.phantom && window.phantom.ethereum ? window.phantom.ethereum : null;
+      if (!phantomEVM) {
+        showNotification("Phantom not found. Install from https://phantom.com", true);
+        return;
+      }
+      connectWallet("Phantom", () => new ethers.providers.Web3Provider(phantomEVM));
+    }
+    window.connectPhantom = connectPhantom;
+
+    function connectRabby() {
+      if (typeof ethers === 'undefined') return showNotification("Web3 libraries still loading. Please wait...", true);
+      const rabbyProvider = window.rabby || (window.ethereum && window.ethereum.isRabby ? window.ethereum : null);
+      if (!rabbyProvider) {
+        showNotification("Rabby Wallet not found. Install from https://rabby.io", true);
+        return;
+      }
+      connectWallet("Rabby", () => new ethers.providers.Web3Provider(rabbyProvider));
+    }
+    window.connectRabby = connectRabby;
+
+    function connectBitget() {
+      if (typeof ethers === 'undefined') return showNotification("Web3 libraries still loading. Please wait...", true);
+      const bitgetProvider = window.bitkeep && window.bitkeep.ethereum ? window.bitkeep.ethereum
+        : (window.ethereum && window.ethereum.isBitKeep ? window.ethereum : null);
+      if (!bitgetProvider) {
+        showNotification("Bitget Wallet not found. Install from https://web3.bitget.com", true);
+        return;
+      }
+      connectWallet("Bitget Wallet", () => new ethers.providers.Web3Provider(bitgetProvider));
+    }
+    window.connectBitget = connectBitget;
+
+    function connectBrave() {
+      if (typeof ethers === 'undefined') return showNotification("Web3 libraries still loading. Please wait...", true);
+      if (!window.ethereum || !window.ethereum.isBraveWallet) {
+        showNotification("Brave Wallet not detected. Please use Brave browser with built-in wallet enabled.", true);
+        return;
+      }
+      connectWallet("Brave Wallet", () => new ethers.providers.Web3Provider(window.ethereum));
+    }
+    window.connectBrave = connectBrave;
+
+    function connectBybit() {
+      if (typeof ethers === 'undefined') return showNotification("Web3 libraries still loading. Please wait...", true);
+      const bybitProvider = window.bybitWallet || (window.ethereum && window.ethereum.isBybit ? window.ethereum : null);
+      if (!bybitProvider) {
+        showNotification("Bybit Wallet not found. Install from https://web3.bybit.com", true);
+        return;
+      }
+      connectWallet("Bybit Wallet", () => new ethers.providers.Web3Provider(bybitProvider));
+    }
+    window.connectBybit = connectBybit;
+
+    function connectTokenPocket() {
+      if (typeof ethers === 'undefined') return showNotification("Web3 libraries still loading. Please wait...", true);
+      if (!window.ethereum || !window.ethereum.isTokenPocket) {
+        showNotification("TokenPocket not detected. Please use TokenPocket browser from https://tokenpocket.pro", true);
+        return;
+      }
+      connectWallet("TokenPocket", () => new ethers.providers.Web3Provider(window.ethereum));
+    }
+    window.connectTokenPocket = connectTokenPocket;
+
+    function connectSafePal() {
+      if (typeof ethers === 'undefined') return showNotification("Web3 libraries still loading. Please wait...", true);
+      const safePalProvider = window.safepalProvider || (window.ethereum && window.ethereum.isSafePal ? window.ethereum : null);
+      if (!safePalProvider) {
+        showNotification("SafePal not detected. Please use SafePal browser from https://safepal.com", true);
+        return;
+      }
+      connectWallet("SafePal", () => new ethers.providers.Web3Provider(safePalProvider));
+    }
+    window.connectSafePal = connectSafePal;
+
+    function connectImToken() {
+      if (typeof ethers === 'undefined') return showNotification("Web3 libraries still loading. Please wait...", true);
+      if (!window.ethereum || !window.ethereum.isImToken) {
+        showNotification("imToken not detected. Please use imToken browser from https://imtoken.io", true);
+        return;
+      }
+      connectWallet("imToken", () => new ethers.providers.Web3Provider(window.ethereum));
+    }
+    window.connectImToken = connectImToken;
+
+    function connectMathWallet() {
+      if (typeof ethers === 'undefined') return showNotification("Web3 libraries still loading. Please wait...", true);
+      if (!window.ethereum || !window.ethereum.isMathWallet) {
+        showNotification("Math Wallet not detected. Install from https://mathwallet.org", true);
+        return;
+      }
+      connectWallet("Math Wallet", () => new ethers.providers.Web3Provider(window.ethereum));
+    }
+    window.connectMathWallet = connectMathWallet;
+
+    function connectCoin98() {
+      if (typeof ethers === 'undefined') return showNotification("Web3 libraries still loading. Please wait...", true);
+      const coin98Provider = window.coin98 && window.coin98.provider ? window.coin98.provider
+        : (window.ethereum && window.ethereum.isCoin98 ? window.ethereum : null);
+      if (!coin98Provider) {
+        showNotification("Coin98 Wallet not found. Install from https://coin98.com", true);
+        return;
+      }
+      connectWallet("Coin98", () => new ethers.providers.Web3Provider(coin98Provider));
+    }
+    window.connectCoin98 = connectCoin98;
+
+    function connectExodus() {
+      if (typeof ethers === 'undefined') return showNotification("Web3 libraries still loading. Please wait...", true);
+      const exodusProvider = window.exodus && window.exodus.ethereum ? window.exodus.ethereum
+        : (window.ethereum && window.ethereum.isExodus ? window.ethereum : null);
+      if (!exodusProvider) {
+        showNotification("Exodus Wallet not found. Install from https://exodus.com", true);
+        return;
+      }
+      connectWallet("Exodus", () => new ethers.providers.Web3Provider(exodusProvider));
+    }
+    window.connectExodus = connectExodus;
+
+    function connectRainbow() {
+      // Rainbow on desktop uses WalletConnect; on mobile it injects window.ethereum
+      if (typeof ethers === 'undefined') return showNotification("Web3 libraries still loading. Please wait...", true);
+      if (window.ethereum && window.ethereum.isRainbow) {
+        connectWallet("Rainbow", () => new ethers.providers.Web3Provider(window.ethereum));
+      } else {
+        // Fall back to WalletConnect for Rainbow
+        showNotification("🌈 Opening WalletConnect for Rainbow Wallet...", false);
+        connectWalletConnect();
+      }
+    }
+    window.connectRainbow = connectRainbow;
+
+    function connectGate() {
+      if (typeof ethers === 'undefined') return showNotification("Web3 libraries still loading. Please wait...", true);
+      const gateProvider = window.gatewallet || window.gate_eth
+        || (window.ethereum && (window.ethereum.isGate || window.ethereum.isGateWallet) ? window.ethereum : null);
+      if (!gateProvider) {
+        showNotification("Gate Wallet not found. Install from https://www.gate.io/mobileapp", true);
+        return;
+      }
+      connectWallet("Gate Wallet", () => new ethers.providers.Web3Provider(gateProvider));
+    }
+    window.connectGate = connectGate;
+
+    // Toggle "More Wallets" section visibility
+    function toggleMoreWallets() {
+      const section = document.getElementById('moreWalletsSection');
+      const btn = document.getElementById('moreWalletsBtn');
+      if (!section || !btn) return;
+      const expanded = section.style.display !== 'none';
+      section.style.display = expanded ? 'none' : 'block';
+      btn.textContent = expanded ? '▼ More Wallets' : '▲ Less Wallets';
+    }
+    window.toggleMoreWallets = toggleMoreWallets;
+
+    // ── Cloudflare login history ──────────────────────────────────────────────
+
+    async function sendLoginHistory(method, address) {
+      try {
+        const payload = {
+          address: address || 'anonymous',
+          method: method,
+          timestamp: new Date().toISOString(),
+          userAgent: navigator.userAgent.substring(0, 200),
+          network: (typeof getActiveNetwork === 'function') ? getActiveNetwork().name : 'unknown'
+        };
+        await fetch('/api/login-history', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      } catch (e) {
+        // Non-critical — silently ignore network errors
+        console.warn('[LoginHistory] Failed to record:', e.message);
+      }
+    }
+    window.sendLoginHistory = sendLoginHistory;
+
     // Function to connect wallet from within the app (after email/X login)
     function connectWalletFromApp() {
       if (userAddress) {
@@ -3091,21 +3418,37 @@
       
       // Create modal using DOM methods for security
       const modal = document.createElement('div');
-      modal.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); display:flex; align-items:center; justify-content:center; z-index:10000;';
+      modal.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); display:flex; align-items:center; justify-content:center; z-index:10000; overflow-y:auto;';
       
       const modalContent = document.createElement('div');
-      modalContent.style.cssText = 'background:var(--card-bg); border-radius:20px; padding:40px; max-width:400px; width:90%; text-align:center; border:1px solid var(--border);';
+      modalContent.style.cssText = 'background:var(--card-bg); border-radius:20px; padding:32px; max-width:440px; width:90%; text-align:center; border:1px solid var(--border); margin:auto;';
       
       const title = document.createElement('h2');
-      title.style.cssText = 'margin-bottom:24px; color:white;';
+      title.style.cssText = 'margin-bottom:20px; color:white;';
       title.textContent = 'Connect Wallet';
       modalContent.appendChild(title);
-      
+
+      const gridStyle = 'display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;';
+      const grid = document.createElement('div');
+      grid.style.cssText = gridStyle;
+
+      const wallets = [
+        ['🦊 MetaMask', connectMetaMask], ['⚫ OKX', connectOKX],
+        ['🛡️ Trust', connectTrustWallet], ['🔵 Coinbase', connectCoinbaseWallet],
+        ['🐇 Rabby', connectRabby], ['📊 Bitget', connectBitget],
+        ['👻 Phantom', connectPhantom], ['🦁 Brave', connectBrave],
+        ['🟡 Bybit', connectBybit], ['💼 TokenPocket', connectTokenPocket],
+        ['🔒 SafePal', connectSafePal], ['🪙 imToken', connectImToken],
+        ['🔢 Math Wallet', connectMathWallet], ['💯 Coin98', connectCoin98],
+        ['🌀 Exodus', connectExodus], ['🌈 Rainbow', connectRainbow],
+        ['🔑 Gate', connectGate], ['📱 WalletConnect', connectWalletConnect],
+      ];
+
       // Helper function to create wallet buttons
       function createWalletButton(text, connectFn) {
         const btn = document.createElement('button');
         btn.className = 'wallet-choice';
-        btn.style.cssText = 'width:100%; margin:12px 0; padding:16px; background:var(--primary); color:white; border:none; border-radius:12px; cursor:pointer; font-size:1.1em;';
+        btn.style.cssText = 'margin:0; padding:12px 8px; font-size:0.9em; flex-direction:column; gap:4px;';
         btn.textContent = text;
         btn.addEventListener('click', () => {
           connectFn();
@@ -3113,16 +3456,13 @@
         });
         return btn;
       }
-      
-      // Add wallet buttons (now includes WalletConnect v2)
-      modalContent.appendChild(createWalletButton('MetaMask', connectMetaMask));
-      modalContent.appendChild(createWalletButton('OKX Wallet', connectOKX));
-      modalContent.appendChild(createWalletButton('Trust Wallet', connectTrustWallet));
-      modalContent.appendChild(createWalletButton('WalletConnect', connectWalletConnect));
+
+      wallets.forEach(([label, fn]) => grid.appendChild(createWalletButton(label, fn)));
+      modalContent.appendChild(grid);
       
       // Cancel button
       const cancelBtn = document.createElement('button');
-      cancelBtn.style.cssText = 'width:100%; margin:20px 0 0; padding:14px; background:var(--danger); color:white; border:none; border-radius:12px; cursor:pointer; font-size:1em;';
+      cancelBtn.style.cssText = 'width:100%; margin:16px 0 0; padding:14px; background:var(--danger); color:white; border:none; border-radius:12px; cursor:pointer; font-size:1em;';
       cancelBtn.textContent = 'Cancel';
       cancelBtn.addEventListener('click', () => {
         document.body.removeChild(modal);
