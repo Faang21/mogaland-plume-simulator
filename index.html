@@ -1857,6 +1857,15 @@
       <button class="login-option" onclick="confirmXLogin()">Confirm</button>
     </div>
 
+    <!-- Login History (recent accounts) -->
+    <div id="loginHistorySection" style="margin-top: 24px; display: none;">
+      <h3 style="margin-bottom: 10px; color: #60a5fa; font-size: 1rem; display: flex; justify-content: space-between; align-items: center;">
+        <span>🕑 Recent Logins</span>
+        <button onclick="clearLoginHistory()" style="background: none; border: none; color: #64748b; font-size: 0.75rem; cursor: pointer; padding: 2px 6px; border-radius: 4px;">Clear</button>
+      </h3>
+      <div id="loginHistoryList"></div>
+    </div>
+
     <div id="notification-area"></div>
   </div>
 
@@ -2515,6 +2524,100 @@
       }
     }
     
+    // ── Login History (stored in localStorage, no KV namespace required) ────
+    const LOGIN_HISTORY_KEY = 'mogaland_login_history';
+    const LOGIN_HISTORY_MAX = 5;
+
+    function saveLoginHistory(method, address) {
+      try {
+        const history = getLoginHistory();
+        const entry = {
+          method,
+          address: address || null,
+          timestamp: Date.now(),
+        };
+        // Remove duplicate entry for same address (if exists) before prepending
+        // Remove duplicate: same address (wallet) or same non-wallet method
+        const filtered = history.filter(e =>
+          address ? e.address !== address : (e.method !== method || e.address !== null)
+        );
+        const updated = [entry, ...filtered].slice(0, LOGIN_HISTORY_MAX);
+        localStorage.setItem(LOGIN_HISTORY_KEY, JSON.stringify(updated));
+      } catch (err) {
+        console.warn('[login-history] Could not save to localStorage:', err);
+      }
+    }
+
+    function getLoginHistory() {
+      try {
+        return JSON.parse(localStorage.getItem(LOGIN_HISTORY_KEY) || '[]');
+      } catch (err) {
+        console.warn('[login-history] Could not read from localStorage:', err);
+        return [];
+      }
+    }
+
+    function clearLoginHistory() {
+      localStorage.removeItem(LOGIN_HISTORY_KEY);
+      renderLoginHistory();
+    }
+    window.clearLoginHistory = clearLoginHistory;
+
+    const METHOD_ICONS = {
+      metamask: '🦊', okx: '⚫', trust: '🛡️', walletconnect: '🔗',
+      email: '📧', x: '𝕏',
+    };
+
+    function renderLoginHistory() {
+      const section = document.getElementById('loginHistorySection');
+      const list = document.getElementById('loginHistoryList');
+      if (!section || !list) return;
+      const history = getLoginHistory();
+      if (history.length === 0) {
+        section.style.display = 'none';
+        return;
+      }
+      section.style.display = 'block';
+      list.innerHTML = '';
+      history.forEach(entry => {
+        const icon = METHOD_ICONS[entry.method.toLowerCase().replace(/\s/g, '')] || '👤';
+        const label = entry.address
+          ? `${entry.address.slice(0, 6)}…${entry.address.slice(-4)}`
+          : entry.method;
+        const date = new Date(entry.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+        const item = document.createElement('div');
+        item.style.cssText = `
+          display:flex; align-items:center; gap:10px; padding:8px 12px;
+          margin-bottom:6px; background:rgba(255,255,255,0.05); border-radius:8px;
+          border:1px solid rgba(255,255,255,0.08); cursor:pointer; transition:background .2s;
+        `;
+        item.title = entry.address || entry.method;
+        item.onmouseenter = () => item.style.background = 'rgba(255,255,255,0.1)';
+        item.onmouseleave = () => item.style.background = 'rgba(255,255,255,0.05)';
+
+        const iconSpan = document.createElement('span');
+        iconSpan.style.cssText = 'font-size:1.3rem';
+        iconSpan.textContent = icon;
+
+        const textDiv = document.createElement('div');
+        textDiv.style.cssText = 'flex:1; min-width:0;';
+
+        const labelDiv = document.createElement('div');
+        labelDiv.style.cssText = 'font-size:0.85rem; color:#e2e8f0; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;';
+        labelDiv.textContent = label;
+
+        const metaDiv = document.createElement('div');
+        metaDiv.style.cssText = 'font-size:0.72rem; color:#64748b;';
+        metaDiv.textContent = `${entry.method} · ${date}`;
+
+        textDiv.appendChild(labelDiv);
+        textDiv.appendChild(metaDiv);
+        item.appendChild(iconSpan);
+        item.appendChild(textDiv);
+        list.appendChild(item);
+      });
+    }
+
     // Login UI functions - Available immediately (don't need ethers.js)
     function showEmailLogin() { toggleSections('emailLogin'); }
     function showXLogin() { toggleSections('xLogin'); }
@@ -2744,6 +2847,14 @@
       } else if (method === 'X') {
         loginMethod = 'x';
       }
+      // Save to local login history (no KV namespace required)
+      saveLoginHistory(method, userAddress || null);
+      // Fire-and-forget: also record to worker API (uses KV only when configured)
+      fetch('/api/login-history', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ method, address: userAddress || null }),
+      }).catch(err => console.warn('[login-history] API record failed:', err));
       console.log(`[Login] Method: ${loginMethod}, Wallet: ${walletConnected}`);
       showNotification(`Entered via ${method}`, false);
       document.getElementById('loginPage').classList.add('hidden');
@@ -13260,8 +13371,9 @@
 
     // Init - Wait for ethers to load, then start app
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', initializeApp);
+      document.addEventListener('DOMContentLoaded', () => { renderLoginHistory(); initializeApp(); });
     } else {
+      renderLoginHistory();
       initializeApp();
     }
   </script>
