@@ -6711,8 +6711,13 @@
                         Live price data
                       </div>
                       <!-- RSI Panel -->
-                      <div id="rsiPanel" style="display:none; height:80px; background:#131722; border-top:1px solid #2a2d3a; padding:8px 12px; align-items:center;">
-                        <span id="rsiValue" style="font-size:0.85em; font-weight:600; color:#f0b90b;">RSI: -</span>
+                      <div id="rsiPanel" style="display:none; height:80px; background:#131722; border-top:1px solid #2a2d3a; padding:8px 12px; align-items:center; gap:12px;">
+                        <span id="rsiValue" style="font-size:0.85em; font-weight:600; color:#f0b90b;">RSI(14): -</span>
+                        <div style="display:flex; gap:4px;">
+                          <button id="rsiPeriod7Btn" onclick="setRSIPeriod(7)" style="padding:2px 7px; background:transparent; border:1px solid #2a2d3a; color:#94a3b8; border-radius:3px; cursor:pointer; font-size:0.72em;">7</button>
+                          <button id="rsiPeriod14Btn" onclick="setRSIPeriod(14)" style="padding:2px 7px; background:rgba(240,185,11,0.15); border:1px solid #f0b90b; color:#f0b90b; border-radius:3px; cursor:pointer; font-size:0.72em;">14</button>
+                          <button id="rsiPeriod21Btn" onclick="setRSIPeriod(21)" style="padding:2px 7px; background:transparent; border:1px solid #2a2d3a; color:#94a3b8; border-radius:3px; cursor:pointer; font-size:0.72em;">21</button>
+                        </div>
                       </div>
                     </div>
 
@@ -6861,36 +6866,36 @@
             {symbol: "NEARUSD", name: "NEAR Protocol", tvSymbol: "BINANCE:NEARUSDT", binanceSymbol: "NEARUSDT", basePrice: 4, volatility: 0.048}
           ],
           stocks: [
-            {symbol: "AAPL", name: "Apple Inc.", tvSymbol: "NASDAQ:AAPL", basePrice: 190, volatility: 0.015},
-            {symbol: "TSLA", name: "Tesla Inc.", tvSymbol: "NASDAQ:TSLA", basePrice: 250, volatility: 0.045},
-            {symbol: "GOOGL", name: "Alphabet", tvSymbol: "NASDAQ:GOOGL", basePrice: 140, volatility: 0.020},
-            {symbol: "MSFT", name: "Microsoft", tvSymbol: "NASDAQ:MSFT", basePrice: 380, volatility: 0.018},
-            {symbol: "AMZN", name: "Amazon", tvSymbol: "NASDAQ:AMZN", basePrice: 155, volatility: 0.025},
-            {symbol: "NVDA", name: "NVIDIA", tvSymbol: "NASDAQ:NVDA", basePrice: 500, volatility: 0.040},
-            {symbol: "META", name: "Meta Platforms", tvSymbol: "NASDAQ:META", basePrice: 350, volatility: 0.030},
-            {symbol: "AMD", name: "AMD", tvSymbol: "NASDAQ:AMD", basePrice: 120, volatility: 0.038},
-            {symbol: "SPY", name: "S&P 500 ETF", tvSymbol: "AMEX:SPY", basePrice: 480, volatility: 0.012},
-            {symbol: "QQQ", name: "Nasdaq 100 ETF", tvSymbol: "NASDAQ:QQQ", basePrice: 420, volatility: 0.015}
+            {symbol: "AAPL", name: "Apple Inc.", tvSymbol: "NASDAQ:AAPL", yahooSymbol: "AAPL", basePrice: 225, volatility: 0.015},
+            {symbol: "TSLA", name: "Tesla Inc.", tvSymbol: "NASDAQ:TSLA", yahooSymbol: "TSLA", basePrice: 290, volatility: 0.045},
+            {symbol: "GOOGL", name: "Alphabet", tvSymbol: "NASDAQ:GOOGL", yahooSymbol: "GOOGL", basePrice: 175, volatility: 0.020},
+            {symbol: "MSFT", name: "Microsoft", tvSymbol: "NASDAQ:MSFT", yahooSymbol: "MSFT", basePrice: 420, volatility: 0.018},
+            {symbol: "AMZN", name: "Amazon", tvSymbol: "NASDAQ:AMZN", yahooSymbol: "AMZN", basePrice: 210, volatility: 0.025},
+            {symbol: "NVDA", name: "NVIDIA", tvSymbol: "NASDAQ:NVDA", yahooSymbol: "NVDA", basePrice: 880, volatility: 0.040},
+            {symbol: "META", name: "Meta Platforms", tvSymbol: "NASDAQ:META", yahooSymbol: "META", basePrice: 600, volatility: 0.030},
+            {symbol: "AMD", name: "AMD", tvSymbol: "NASDAQ:AMD", yahooSymbol: "AMD", basePrice: 150, volatility: 0.038},
+            {symbol: "SPY", name: "S&P 500 ETF", tvSymbol: "AMEX:SPY", yahooSymbol: "SPY", basePrice: 580, volatility: 0.012},
+            {symbol: "QQQ", name: "Nasdaq 100 ETF", tvSymbol: "NASDAQ:QQQ", yahooSymbol: "QQQ", basePrice: 500, volatility: 0.015}
           ],
           commodities: [
-            {symbol: "GOLD", name: "Gold", tvSymbol: "TVC:GOLD", basePrice: 2050, volatility: 0.010},
-            {symbol: "SILVER", name: "Silver", tvSymbol: "TVC:SILVER", basePrice: 24, volatility: 0.020},
-            {symbol: "OIL", name: "Crude Oil (WTI)", tvSymbol: "TVC:USOIL", basePrice: 75, volatility: 0.025},
-            {symbol: "NATGAS", name: "Natural Gas", tvSymbol: "TVC:NATURALGAS", basePrice: 2.80, volatility: 0.035},
-            {symbol: "COPPER", name: "Copper", tvSymbol: "TVC:COPPER", basePrice: 3.80, volatility: 0.022},
-            {symbol: "WHEAT", name: "Wheat", tvSymbol: "TVC:WHEAT", basePrice: 580, volatility: 0.028},
-            {symbol: "CORN", name: "Corn", tvSymbol: "TVC:CORN", basePrice: 420, volatility: 0.026}
+            {symbol: "GOLD", name: "Gold", tvSymbol: "TVC:GOLD", yahooSymbol: "GC=F", basePrice: 2900, volatility: 0.010},
+            {symbol: "SILVER", name: "Silver", tvSymbol: "TVC:SILVER", yahooSymbol: "SI=F", basePrice: 32, volatility: 0.020},
+            {symbol: "OIL", name: "Crude Oil (WTI)", tvSymbol: "TVC:USOIL", yahooSymbol: "CL=F", basePrice: 72, volatility: 0.025},
+            {symbol: "NATGAS", name: "Natural Gas", tvSymbol: "TVC:NATURALGAS", yahooSymbol: "NG=F", basePrice: 3.20, volatility: 0.035},
+            {symbol: "COPPER", name: "Copper", tvSymbol: "TVC:COPPER", yahooSymbol: "HG=F", basePrice: 4.30, volatility: 0.022},
+            {symbol: "WHEAT", name: "Wheat", tvSymbol: "TVC:WHEAT", yahooSymbol: "ZW=F", basePrice: 540, volatility: 0.028},
+            {symbol: "CORN", name: "Corn", tvSymbol: "TVC:CORN", yahooSymbol: "ZC=F", basePrice: 460, volatility: 0.026}
           ],
           forex: [
-            {symbol: "EURUSD", name: "EUR/USD", tvSymbol: "FX:EURUSD", basePrice: 1.085, volatility: 0.005},
-            {symbol: "GBPUSD", name: "GBP/USD", tvSymbol: "FX:GBPUSD", basePrice: 1.270, volatility: 0.006},
-            {symbol: "USDJPY", name: "USD/JPY", tvSymbol: "FX:USDJPY", basePrice: 148.5, volatility: 0.007},
-            {symbol: "AUDUSD", name: "AUD/USD", tvSymbol: "FX:AUDUSD", basePrice: 0.660, volatility: 0.008},
-            {symbol: "GBPJPY", name: "GBP/JPY", tvSymbol: "FX:GBPJPY", basePrice: 188.5, volatility: 0.009},
-            {symbol: "NZDUSD", name: "NZD/USD", tvSymbol: "FX:NZDUSD", basePrice: 0.610, volatility: 0.008},
-            {symbol: "USDCHF", name: "USD/CHF", tvSymbol: "FX:USDCHF", basePrice: 0.895, volatility: 0.006},
-            {symbol: "USDCAD", name: "USD/CAD", tvSymbol: "FX:USDCAD", basePrice: 1.360, volatility: 0.007},
-            {symbol: "EURJPY", name: "EUR/JPY", tvSymbol: "FX:EURJPY", basePrice: 161.0, volatility: 0.009}
+            {symbol: "EURUSD", name: "EUR/USD", tvSymbol: "FX:EURUSD", yahooSymbol: "EURUSD=X", basePrice: 1.045, volatility: 0.005},
+            {symbol: "GBPUSD", name: "GBP/USD", tvSymbol: "FX:GBPUSD", yahooSymbol: "GBPUSD=X", basePrice: 1.265, volatility: 0.006},
+            {symbol: "USDJPY", name: "USD/JPY", tvSymbol: "FX:USDJPY", yahooSymbol: "USDJPY=X", basePrice: 149.5, volatility: 0.007},
+            {symbol: "AUDUSD", name: "AUD/USD", tvSymbol: "FX:AUDUSD", yahooSymbol: "AUDUSD=X", basePrice: 0.625, volatility: 0.008},
+            {symbol: "GBPJPY", name: "GBP/JPY", tvSymbol: "FX:GBPJPY", yahooSymbol: "GBPJPY=X", basePrice: 189.0, volatility: 0.009},
+            {symbol: "NZDUSD", name: "NZD/USD", tvSymbol: "FX:NZDUSD", yahooSymbol: "NZDUSD=X", basePrice: 0.568, volatility: 0.008},
+            {symbol: "USDCHF", name: "USD/CHF", tvSymbol: "FX:USDCHF", yahooSymbol: "USDCHF=X", basePrice: 0.905, volatility: 0.006},
+            {symbol: "USDCAD", name: "USD/CAD", tvSymbol: "FX:USDCAD", yahooSymbol: "USDCAD=X", basePrice: 1.440, volatility: 0.007},
+            {symbol: "EURJPY", name: "EUR/JPY", tvSymbol: "FX:EURJPY", yahooSymbol: "EURJPY=X", basePrice: 156.2, volatility: 0.009}
           ],
           sports: [
             {symbol: "Real Madrid", type: "football", teamId: "133739", league: "La Liga", strength: 0.85, nextMatch: "vs Barcelona", recentForm: [
@@ -6986,15 +6991,13 @@
             const eventsUrl = `https://www.thesportsdb.com/api/v1/json/${API_KEY}/eventslast.php?id=${team.teamId}`;
             const nextUrl = `https://www.thesportsdb.com/api/v1/json/${API_KEY}/eventsnext.php?id=${team.teamId}`;
             
-            const [eventsRes, nextRes] = await Promise.all([
-              fetch(eventsUrl).catch(() => null),
-              fetch(nextUrl).catch(() => null)
+            const [eventsData, nextData] = await Promise.all([
+              fetchWithCORSFallback(eventsUrl).catch(() => null),
+              fetchWithCORSFallback(nextUrl).catch(() => null)
             ]);
             
-            if (eventsRes && eventsRes.ok) {
-              const eventsData = await eventsRes.json();
-              if (eventsData.results) {
-                team.recentForm = eventsData.results.slice(0, 6).map(event => {
+            if (eventsData && eventsData.results) {
+              team.recentForm = eventsData.results.slice(0, 6).map(event => {
                   const date = new Date(event.dateEvent).toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'});
                   const isHome = event.idHomeTeam === team.teamId;
                   const opponent = isHome ? event.strAwayTeam : event.strHomeTeam;
@@ -7013,12 +7016,9 @@
                   
                   return `${date}: ${result} ${score} vs ${opponent}`;
                 });
-              }
             }
             
-            if (nextRes && nextRes.ok) {
-              const nextData = await nextRes.json();
-              if (nextData.events && nextData.events.length > 0) {
+            if (nextData && nextData.events && nextData.events.length > 0) {
                 const nextEvent = nextData.events[0];
                 const isHome = nextEvent.idHomeTeam === team.teamId;
                 const opponent = isHome ? nextEvent.strAwayTeam : nextEvent.strHomeTeam;
@@ -7032,7 +7032,6 @@
                   team.commenceTime = new Date(`${nextEvent.dateEvent}T${timeStr}Z`).toISOString();
                   team.nextEventId = nextEvent.idEvent;
                 }
-              }
             }
           } catch (error) {
             console.log('Sports API error:', error);
@@ -7387,6 +7386,7 @@
         // Indicator state
         const activeIndicators = new Set();
         let emaLine20 = null, emaLine50 = null;
+        let currentRSIPeriod = 14; // Default RSI period; changeable via setRSIPeriod()
 
         function toggleIndicator(name) {
           const btn = document.getElementById('indicator' + name + 'Btn');
@@ -7413,6 +7413,21 @@
             }
           }
         }
+
+        window.setRSIPeriod = function(period) {
+          currentRSIPeriod = period;
+          // Update period button styles
+          [7, 14, 21].forEach(p => {
+            const btn = document.getElementById('rsiPeriod' + p + 'Btn');
+            if (btn) {
+              const isActive = p === period;
+              btn.style.background = isActive ? 'rgba(240,185,11,0.15)' : 'transparent';
+              btn.style.borderColor = isActive ? '#f0b90b' : '#2a2d3a';
+              btn.style.color = isActive ? '#f0b90b' : '#94a3b8';
+            }
+          });
+          updateRSIDisplay();
+        };
 
         function calculateEMA(data, period) {
           if (!data || data.length < period) return [];
@@ -7455,7 +7470,7 @@
         }
 
         function updateRSIDisplay() {
-          const RSI_PERIOD = 14;
+          const RSI_PERIOD = currentRSIPeriod || 14;
           if (!priceHistory || priceHistory.length < RSI_PERIOD + 1) return;
           const rsiEl = document.getElementById('rsiValue');
           if (!rsiEl) return;
@@ -7486,7 +7501,7 @@
           const rsi = avgLoss === 0 ? 100 : 100 - (100 / (1 + rs));
 
           const color = rsi > 70 ? '#f6465d' : rsi < 30 ? '#0ecb81' : '#f0b90b';
-          rsiEl.textContent = 'RSI: ' + rsi.toFixed(1);
+          rsiEl.textContent = `RSI(${RSI_PERIOD}): ` + rsi.toFixed(1);
           rsiEl.style.color = color;
         }
 
@@ -8673,6 +8688,32 @@
               // Fall back to legacy TradingView widget / Chart.js
               initChart(asset);
             }
+            // After chart loads, try to update banner with real 24h stats from Yahoo Finance
+            if (asset.yahooSymbol) {
+              const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(asset.yahooSymbol)}?interval=1d&range=5d`;
+              fetchWithCORSFallback(url).then(data => {
+                if (!data || !data.chart || !data.chart.result || !data.chart.result.length) return;
+                const meta = data.chart.result[0].meta || {};
+                const realPrice = meta.regularMarketPrice || meta.price;
+                const prevClose = meta.previousClose || meta.chartPreviousClose;
+                const setBE = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+                if (realPrice && realPrice > 0) {
+                  updatePriceDisplay(realPrice);
+                  if (prevClose && prevClose > 0) {
+                    const chg = ((realPrice - prevClose) / prevClose) * 100;
+                    setBE('banner24hChange', (chg >= 0 ? '+' : '') + chg.toFixed(2) + '%');
+                    const chgEl = document.getElementById('banner24hChange');
+                    if (chgEl) chgEl.style.color = chg >= 0 ? '#0ecb81' : '#f6465d';
+                  }
+                  const high = meta.regularMarketDayHigh || realPrice;
+                  const low  = meta.regularMarketDayLow  || realPrice;
+                  const vol  = meta.regularMarketVolume  || 0;
+                  setBE('banner24hHigh', '$' + high.toLocaleString(undefined, {minimumFractionDigits:2,maximumFractionDigits:2}));
+                  setBE('banner24hLow',  '$' + low.toLocaleString(undefined,  {minimumFractionDigits:2,maximumFractionDigits:2}));
+                  setBE('banner24hVol',  vol ? (vol / 1e6).toFixed(2) + 'M' : '-');
+                }
+              }).catch(() => {});
+            }
           });
 
           // Stop previous polling/WebSocket
@@ -9333,6 +9374,36 @@
                 console.log('[TradingView] Falling back to base price');
               }
             }
+
+            // Priority 3: Yahoo Finance for stocks, forex, commodities
+            if (asset.yahooSymbol) {
+              try {
+                const price = await fetchYahooPrice(asset.yahooSymbol);
+                if (price && price > 0) {
+                  updatePriceDisplay(price);
+                  // Update priceHistory
+                  if (priceHistory.length > 0) {
+                    const last = priceHistory[priceHistory.length - 1];
+                    const changeThreshold = calculatePriceChangeThreshold(last.c);
+                    if (Math.abs(last.c - price) > changeThreshold) {
+                      priceHistory.push({
+                        x: Date.now(), o: last.c,
+                        h: Math.max(last.c, price), l: Math.min(last.c, price), c: price
+                      });
+                      if (priceHistory.length > 80) priceHistory.shift();
+                      if (chart) chart.update();
+                      updatePositionsDisplay();
+                    }
+                  } else {
+                    priceHistory = generateOHLCFromRealPrice(price);
+                  }
+                  console.log(`[Yahoo Finance] Real price for ${asset.symbol}: ${price}`);
+                  return;
+                }
+              } catch (innerError) {
+                console.log(`[Yahoo Finance] Error for ${asset.symbol}:`, innerError.message);
+              }
+            }
             
             // Fallback to base price
             updatePriceDisplay(asset.basePrice);
@@ -9344,10 +9415,18 @@
         
         // Helper function to update price display safely
         function updatePriceDisplay(price) {
+          // Determine decimal precision: 4 decimals for prices < 10 (e.g., forex, some crypto), else 2
+          const decimals = price < 10 ? 4 : 2;
+          const fmtOpts = {minimumFractionDigits: 2, maximumFractionDigits: decimals};
           const priceEl = document.getElementById('currentPrice');
           if (priceEl) {
-            priceEl.textContent = `$${price.toLocaleString()}`;
+            priceEl.textContent = `$${price.toLocaleString(undefined, fmtOpts)}`;
           }
+          // Update banner mark/index price with real data
+          const markEl = document.getElementById('bannerMarkPrice');
+          if (markEl) markEl.textContent = '$' + price.toLocaleString(undefined, fmtOpts);
+          const idxEl = document.getElementById('bannerIndexPrice');
+          if (idxEl) idxEl.textContent = '$' + (price * (1 - 0.0002)).toLocaleString(undefined, fmtOpts);
           // Keep selectedAsset.basePrice in sync so open positions show the latest price
           if (selectedAsset && price > 0) {
             selectedAsset.basePrice = price;
@@ -9501,6 +9580,12 @@
                 return data[coinId].usd;
               }
             }
+
+            // Priority 3: Yahoo Finance for stocks, forex, commodities
+            if (asset.yahooSymbol) {
+              const price = await fetchYahooPrice(asset.yahooSymbol);
+              if (price && price > 0) return price;
+            }
           } catch (error) {
             console.log('[Price Fetch] Error:', error);
           }
@@ -9561,10 +9646,22 @@
 
             const binanceTicker = SYMBOL_TO_BINANCE_TICKER[symbol];
             if (!binanceTicker) {
-              // Non-crypto asset: keep existing basePrice as mark price
-              if (!markPrices[symbol]) {
-                const pos = openPositions.find(p => p.asset && p.asset.symbol === symbol);
-                if (pos) markPrices[symbol] = pos.asset.basePrice || pos.entryPrice;
+              // Non-crypto asset: try Yahoo Finance for live price
+              const pos = openPositions.find(p => p.asset && p.asset.symbol === symbol);
+              if (pos && pos.asset.yahooSymbol) {
+                try {
+                  const yPrice = await fetchYahooPrice(pos.asset.yahooSymbol);
+                  if (yPrice && yPrice > 0) {
+                    markPrices[symbol] = yPrice;
+                    pos.asset.basePrice = yPrice;
+                  } else if (!markPrices[symbol]) {
+                    markPrices[symbol] = pos.asset.basePrice || pos.entryPrice;
+                  }
+                } catch (_) {
+                  if (!markPrices[symbol] && pos) markPrices[symbol] = pos.asset.basePrice || pos.entryPrice;
+                }
+              } else if (!markPrices[symbol] && pos) {
+                markPrices[symbol] = pos.asset.basePrice || pos.entryPrice;
               }
               continue;
             }
@@ -9798,6 +9895,68 @@
         }
 
         /**
+         * Fetch historical OHLC klines from Yahoo Finance for stocks, forex, and commodities
+         * Returns array of {time, open, high, low, close, volume}
+         * Uses CORS proxy as fallback
+         */
+        async function loadYahooKlines(yahooSymbol, interval) {
+          // Map our internal timeframe to Yahoo Finance interval and range
+          const yahooPeriodMap = {
+            '1m':  { interval: '1m',  range: '1d'  },
+            '5m':  { interval: '5m',  range: '5d'  },
+            '15m': { interval: '15m', range: '5d'  },
+            '1h':  { interval: '60m', range: '1mo' },
+            '4h':  { interval: '1d',  range: '6mo' },
+            '1d':  { interval: '1d',  range: '6mo' }
+          };
+          const params = yahooPeriodMap[interval] || yahooPeriodMap['1d'];
+          const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}?interval=${params.interval}&range=${params.range}&includeTimestamps=true`;
+          try {
+            const data = await fetchWithCORSFallback(url);
+            if (!data || !data.chart || !data.chart.result || !data.chart.result.length) {
+              console.warn('[Yahoo Finance] No data for', yahooSymbol);
+              return [];
+            }
+            const result = data.chart.result[0];
+            const timestamps = result.timestamp || [];
+            const quote = result.indicators && result.indicators.quote && result.indicators.quote[0];
+            if (!quote || !timestamps.length) return [];
+            const klines = timestamps.map((t, i) => ({
+              time: t,
+              open:   parseFloat(quote.open[i])   || 0,
+              high:   parseFloat(quote.high[i])   || 0,
+              low:    parseFloat(quote.low[i])    || 0,
+              close:  parseFloat(quote.close[i])  || 0,
+              volume: parseFloat(quote.volume[i]) || 0
+            })).filter(k => k.close > 0 && k.time > 0);
+            console.log(`[Yahoo Finance] Loaded ${klines.length} klines for ${yahooSymbol}`);
+            return klines;
+          } catch (err) {
+            console.warn('[Yahoo Finance] Failed to fetch:', err.message);
+            return [];
+          }
+        }
+
+        /**
+         * Fetch current spot price from Yahoo Finance for a non-crypto asset
+         * Returns price number or null
+         */
+        async function fetchYahooPrice(yahooSymbol) {
+          try {
+            const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}?interval=1m&range=1d`;
+            const data = await fetchWithCORSFallback(url);
+            if (!data || !data.chart || !data.chart.result || !data.chart.result.length) return null;
+            const result = data.chart.result[0];
+            const meta = result.meta;
+            const price = meta && (meta.regularMarketPrice || meta.price);
+            return price && price > 0 ? price : null;
+          } catch (err) {
+            console.warn('[Yahoo Finance] Price fetch failed:', err.message);
+            return null;
+          }
+        }
+
+        /**
          * Initialize TradingView Lightweight Charts for an asset
          * Uses Binance kline data for crypto; simulated data for others
          */
@@ -9878,6 +10037,9 @@
                 color: k.close >= k.open ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'
               })));
 
+              // Populate priceHistory from klines so RSI and other indicators have data
+              priceHistory = klines.map(k => ({ x: k.time * 1000, o: k.open, h: k.high, l: k.low, c: k.close }));
+
               // Update price display with latest close
               const last = klines[klines.length - 1];
               updatePriceDisplay(last.close);
@@ -9890,20 +10052,53 @@
               if (srcEl) srcEl.textContent = 'Binance (real-time)';
 
               lwChart.timeScale().fitContent();
+              // Refresh RSI if active
+              if (activeIndicators.has('RSI')) updateRSIDisplay();
               return true;
             }
           }
 
-          // For non-crypto (stocks/forex/commodities): use simulated data
+          // For non-crypto with Yahoo Finance symbol: fetch real OHLC data
+          if (asset.yahooSymbol) {
+            const yKlines = await loadYahooKlines(asset.yahooSymbol, interval);
+            if (yKlines.length > 0) {
+              lwCandleSeries.setData(yKlines.map(k => ({
+                time: k.time, open: k.open, high: k.high, low: k.low, close: k.close
+              })));
+              lwVolumeSeries.setData(yKlines.map(k => ({
+                time: k.time,
+                value: k.volume || 0,
+                color: k.close >= k.open ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'
+              })));
+
+              // Populate priceHistory from Yahoo klines so RSI and other indicators have data
+              priceHistory = yKlines.map(k => ({ x: k.time * 1000, o: k.open, h: k.high, l: k.low, c: k.close }));
+
+              const last = yKlines[yKlines.length - 1];
+              updatePriceDisplay(last.close);
+
+              const srcEl = document.getElementById('chartDataSource');
+              if (srcEl) srcEl.textContent = 'Yahoo Finance (real)';
+
+              lwChart.timeScale().fitContent();
+              if (activeIndicators.has('RSI')) updateRSIDisplay();
+              return true;
+            }
+          }
+
+          // For non-crypto (stocks/forex/commodities): use simulated data anchored to basePrice
           const simData = generateLWSimData(asset.basePrice, 100, interval);
           lwCandleSeries.setData(simData.candles);
           lwVolumeSeries.setData(simData.volumes);
+          // Populate priceHistory from simulated candles so RSI works
+          priceHistory = simData.candles.map(k => ({ x: k.time * 1000, o: k.open, h: k.high, l: k.low, c: k.close }));
           updatePriceDisplay(asset.basePrice);
           lwChart.timeScale().fitContent();
 
           const srcEl = document.getElementById('chartDataSource');
-          if (srcEl) srcEl.textContent = 'TradingView';
+          if (srcEl) srcEl.textContent = 'Simulated';
 
+          if (activeIndicators.has('RSI')) updateRSIDisplay();
           return true;
         }
 
@@ -10033,9 +10228,13 @@
          */
         window.changeChartTimeframe = function(tf) {
           currentChartTimeframe = tf;
-          // Update button active state
+          // Update button active state (also override inline styles since CSS class alone won't override them)
           document.querySelectorAll('.tf-btn').forEach(btn => {
-            btn.classList.toggle('active', btn.textContent.trim() === tf);
+            const isActive = btn.textContent.trim() === tf;
+            btn.classList.toggle('active', isActive);
+            btn.style.background = isActive ? 'rgba(240,185,11,0.15)' : 'transparent';
+            btn.style.borderColor = isActive ? '#f0b90b' : '#2a2d3a';
+            btn.style.color = isActive ? '#f0b90b' : '#94a3b8';
           });
           if (selectedAsset && currentTab !== 'sports') {
             initLightweightChart(selectedAsset, tf).then(ok => {
