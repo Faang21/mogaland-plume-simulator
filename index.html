@@ -182,48 +182,72 @@
       66%  { background-position: 100% 100%, 50% 50%, 0% 0%, 50% 100%, 100% 0%, 0% 0%; }
       100% { background-position: 0% 50%, 100% 0%, 50% 100%, 0% 0%, 100% 100%, 0% 0%; }
     }
+    @keyframes scanLine {
+      0%   { transform: translateY(-100vh); opacity: 0; }
+      10%  { opacity: 0.08; }
+      90%  { opacity: 0.08; }
+      100% { transform: translateY(100vh); opacity: 0; }
+    }
+    @keyframes gridPulse {
+      0%, 100% { opacity: 0.55; }
+      50%       { opacity: 1; }
+    }
     * { margin:0; padding:0; box-sizing:border-box; }
     body {
       font-family: 'Segoe UI', Arial, sans-serif;
-      background: #010c1a;
+      background: #020b18;
       color: var(--text-color);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
     }
+    /* Futuristic deep-space aurora layer */
     body::before {
       content: '';
       position: fixed;
       top: -10%; left: -10%;
       width: 120%; height: 120%;
-      /* Aurora / crypto-neon background */
       background:
-        radial-gradient(circle, rgba(255,255,255,0.12) 1px, transparent 1px),
-        radial-gradient(ellipse 80% 60% at 10% 20%, rgba(0,229,255,0.22) 0%, transparent 55%),
-        radial-gradient(ellipse 70% 55% at 90% 10%, rgba(99,102,241,0.30) 0%, transparent 50%),
-        radial-gradient(ellipse 60% 50% at 50% 90%, rgba(0,212,170,0.20) 0%, transparent 55%),
-        radial-gradient(ellipse 55% 50% at 80% 55%, rgba(168,85,247,0.25) 0%, transparent 50%),
-        radial-gradient(ellipse 65% 45% at 30% 70%, rgba(16,185,129,0.15) 0%, transparent 50%),
-        linear-gradient(135deg, #010c1a 0%, #050e24 40%, #030d1c 70%, #010c1a 100%);
+        radial-gradient(circle, rgba(255,255,255,0.15) 1px, transparent 1px),
+        radial-gradient(ellipse 90% 70% at 5%  15%,  rgba(0,229,255,0.30) 0%, transparent 55%),
+        radial-gradient(ellipse 75% 60% at 95% 5%,   rgba(99,102,241,0.38) 0%, transparent 50%),
+        radial-gradient(ellipse 65% 55% at 50% 95%,  rgba(0,212,170,0.25) 0%, transparent 55%),
+        radial-gradient(ellipse 60% 55% at 85% 60%,  rgba(168,85,247,0.32) 0%, transparent 50%),
+        radial-gradient(ellipse 70% 50% at 25% 75%,  rgba(16,185,129,0.20) 0%, transparent 50%),
+        radial-gradient(ellipse 50% 40% at 60% 35%,  rgba(56,189,248,0.18) 0%, transparent 45%),
+        linear-gradient(160deg, #020b18 0%, #04102e 35%, #020d1f 65%, #010810 100%);
       background-size:
-        120px 120px,
-        200% 200%, 200% 200%, 200% 200%, 200% 200%, 200% 200%,
+        80px 80px,
+        200% 200%, 200% 200%, 200% 200%, 200% 200%, 200% 200%, 200% 200%,
         100% 100%;
-      z-index: -1;
+      z-index: -2;
       animation: catBgFloat 25s ease-in-out infinite, auroraShift 18s ease-in-out infinite;
     }
+    /* Futuristic neon circuit-grid + scan-line overlay */
     body::after {
       content: '';
       position: fixed;
       top: 0; left: 0;
       width: 100%; height: 100%;
-      /* Subtle hex/circuit mesh overlay */
       background-image:
-        repeating-linear-gradient(0deg,   transparent, transparent 59px, rgba(0,229,255,0.04) 60px),
-        repeating-linear-gradient(60deg,  transparent, transparent 59px, rgba(99,102,241,0.04) 60px),
-        repeating-linear-gradient(120deg, transparent, transparent 59px, rgba(0,212,170,0.03) 60px);
+        repeating-linear-gradient(0deg,   transparent, transparent 49px, rgba(0,229,255,0.07) 50px),
+        repeating-linear-gradient(90deg,  transparent, transparent 49px, rgba(0,229,255,0.07) 50px),
+        repeating-linear-gradient(60deg,  transparent, transparent 99px, rgba(99,102,241,0.05) 100px),
+        repeating-linear-gradient(120deg, transparent, transparent 99px, rgba(0,212,170,0.04) 100px);
       z-index: -1;
       pointer-events: none;
+      animation: gridPulse 6s ease-in-out infinite;
+    }
+    /* Moving horizontal scan line */
+    body .scan-line {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, rgba(0,229,255,0.5), rgba(99,102,241,0.5), transparent);
+      z-index: 0;
+      pointer-events: none;
+      animation: scanLine 8s linear infinite;
     }
     /* Theme toggle button */
     .theme-toggle {
@@ -312,19 +336,43 @@
       color: #fff;
     }
     .login-container {
-      background: rgba(0,0,0,0.5);
+      background: rgba(2, 11, 24, 0.75);
       border-radius: 20px;
-      padding: 80px 40px;
+      padding: 60px 40px;
       width: 100%;
       max-width: 500px;
       text-align: center;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.6);
-      border: 1px solid rgba(255,255,255,0.1);
-      margin: 120px auto;
+      box-shadow: 0 0 60px rgba(0,229,255,0.10), 0 10px 40px rgba(0,0,0,0.7), inset 0 1px 0 rgba(0,229,255,0.08);
+      border: 1px solid rgba(0,229,255,0.18);
+      margin: 80px auto;
+      position: relative;
+      overflow: hidden;
+    }
+    .login-container::before {
+      content: '';
+      position: absolute;
+      top: 0; left: -100%;
+      width: 60%; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(0,229,255,0.04), transparent);
+      animation: loginSheen 6s ease-in-out infinite;
+      pointer-events: none;
+    }
+    @keyframes loginSheen {
+      0%   { left: -100%; }
+      50%  { left: 150%; }
+      100% { left: 150%; }
     }
     h1 { font-size: 3.2rem; margin-bottom: 12px; }
     .subtitle { font-size: 1.3rem; opacity: 0.8; margin-bottom: 50px; }
     .mogaworld-logo { width: 100%; max-width: 340px; display: block; margin: 0 auto; }
+    .header-logo { max-width: 140px; height: auto; margin-right: auto; flex-shrink: 0; }
+    /* Remove white background from logo images via blend mode */
+    .mogaworld-logo, .header-logo {
+      mix-blend-mode: multiply;
+    }
+    .light .mogaworld-logo, .light .header-logo {
+      mix-blend-mode: normal;
+    }
     .login-option {
       background: var(--primary);
       color: white;
@@ -382,13 +430,7 @@
       display: flex;
       flex-direction: column;
       position: relative;
-      background: radial-gradient(ellipse at 20% 50%, rgba(13,110,253,0.18) 0%, transparent 60%),
-                  radial-gradient(ellipse at 80% 20%, rgba(139,92,246,0.15) 0%, transparent 50%),
-                  radial-gradient(ellipse at 60% 80%, rgba(16,185,129,0.1)  0%, transparent 50%),
-                  /* blockchain-style grid overlay */
-                  repeating-linear-gradient(0deg,   transparent, transparent 49px, rgba(13,110,253,0.07) 50px),
-                  repeating-linear-gradient(90deg,  transparent, transparent 49px, rgba(13,110,253,0.07) 50px),
-                  transparent;
+      background: transparent;
       overflow: hidden;
     }
     /* Animated star particles in dashboard background */
@@ -468,11 +510,17 @@
       opacity: 0;
     }
     header {
-      padding: 20px;
+      padding: 10px 20px;
       display: flex;
-      justify-content: flex-end;
+      justify-content: flex-start;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
+      background: rgba(2, 11, 24, 0.72);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid rgba(0,229,255,0.14);
+      box-shadow: 0 2px 20px rgba(0,0,0,0.5);
+      position: relative;
+      z-index: 100;
     }
     .top-btn {
       background: rgba(13,110,253,0.3);
@@ -1790,6 +1838,8 @@
   </style>
 </head>
 <body>
+  <!-- Futuristic scan-line overlay (always on) -->
+  <div class="scan-line" aria-hidden="true"></div>
   
   <!-- Theme Toggle Button (fixed, always visible) -->
   <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" aria-label="Toggle theme" aria-pressed="false">☀️ Light</button>
@@ -1884,6 +1934,7 @@
   <!-- Main Dashboard -->
   <div class="main-app hidden" id="mainApp">
     <header>
+      <img src="https://github.com/user-attachments/assets/88e000d5-d27e-4446-973f-8fb18b662a42" alt="Mogaland" class="header-logo" onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<span style=\'font-size:1.1rem;font-weight:700;color:#60a5fa;margin-right:auto;\'>Mogaland World</span>')">
       <div style="position: relative;">
         <button class="top-btn" id="walletBtn" onclick="toggleWalletDropdown()">Connect Wallet</button>
         <div class="wallet-dropdown" id="walletDropdown">
@@ -1916,7 +1967,7 @@
       <button class="top-btn" onclick="showProfile()">Profile</button>
     </header>
 
-    <img src="https://github.com/user-attachments/assets/88e000d5-d27e-4446-973f-8fb18b662a42" alt="Mogaworld – Learning, playing and earning" class="mogaworld-logo" style="margin-bottom:10px;" onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<h1 style=\'margin-bottom:8px;\'>Mogaland World</h1><div class=\'subtitle\'>Playing, learning and Earning</div>')">
+    <img src="https://github.com/user-attachments/assets/88e000d5-d27e-4446-973f-8fb18b662a42" alt="Mogaworld – Learning, playing and earning" class="mogaworld-logo" style="margin-bottom:10px; display:none;" onerror="this.style.display='none';">
 
     <!-- Live Price Ticker -->
     <div class="price-ticker-wrap" id="priceTicker">
