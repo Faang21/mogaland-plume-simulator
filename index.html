@@ -1768,7 +1768,7 @@
       <button class="nav-btn active" onclick="showSection('swap', event)">🔄 Swap</button>
       <button class="nav-btn" onclick="showSection('bridge', event)">🌉 Bridge</button>
       <button class="nav-btn" onclick="showSection('nft', event)">🏦 NFT</button>
-      <button class="nav-btn" onclick="showSection('tokenlaunch', event)">🚀 Token Launch</button>
+      <button class="nav-btn" onclick="showSection('stakingpool', event)">🌾 Staking Pool</button>
     </div>
 
     <!-- Daily Check-In Floating Button -->
@@ -4782,6 +4782,9 @@
     let stakedNFTsData = []; // [{nftId, apy, stakedTime, rewards}]
     let lastRewardClaim = Date.now();
 
+    // Staking Pool state (MOGA token staking)
+    let stakingPoolData = {}; // { poolId: { staked, rewardDebt, stakedTime } }
+
     // Trading Volume Tracking for Leaderboard
     let userTradingVolume = {
       crypto: 0,
@@ -5141,6 +5144,9 @@
       if (savedNftMinted === 'true') {
         nftMinted = true;
       }
+
+      // Load staking pool data
+      if (typeof loadStakingPoolData === 'function') loadStakingPoolData();
     }
     
     // Helper function to save mogaland points to localStorage
@@ -6918,6 +6924,12 @@
             updateTradeHistory();
           }
         }
+
+        // Expose trading-panel functions to global scope (needed by inline onclick handlers)
+        window.setMarginMode = setMarginMode;
+        window.updateLeverageSlider = updateLeverageSlider;
+        window.switchPosTab = switchPosTab;
+        window.setAmountPercent = setAmountPercent;
 
         // Order book state
         let orderBookInterval = null;
@@ -10315,6 +10327,9 @@
       else if (id === 'tokenlaunch') {
         renderTokenLaunchSection();
       }
+      else if (id === 'stakingpool') {
+        renderStakingPoolSection();
+      }
       else {
         content.innerHTML = `
           <h2 style="text-align:center; margin:40px 0;">${id.charAt(0).toUpperCase() + id.slice(1)}</h2>
@@ -11050,7 +11065,213 @@
     window.tlSwitchLiveTab = tlSwitchLiveTab;
     window.tlOpenLiveDetail = tlOpenLiveDetail;
 
-    // NFT Staking functions
+    // ===== Staking Pool =====
+    const STAKING_POOLS = [
+      { id: 'moga_usdc', name: 'MOGA / USDC', apy: 45, tvl: 1250000, token: 'MOGA', pair: 'USDC', icon: '💎', minStake: 10 },
+      { id: 'moga_eth',  name: 'MOGA / ETH',  apy: 62, tvl: 870000,  token: 'MOGA', pair: 'ETH',  icon: '🔷', minStake: 10 },
+      { id: 'moga_only', name: 'MOGA Stake',  apy: 28, tvl: 3400000, token: 'MOGA', pair: null,   icon: '🌾', minStake: 5 },
+      { id: 'plume_usdc',name: 'PLUME / USDC',apy: 55, tvl: 640000,  token: 'PLUME', pair: 'USDC', icon: '🪶', minStake: 5 },
+    ];
+
+    function getStakingPoolEarned(poolId) {
+      const entry = stakingPoolData[poolId];
+      if (!entry) return 0;
+      const pool = STAKING_POOLS.find(p => p.id === poolId);
+      if (!pool || !entry.staked || entry.staked <= 0) return entry.rewardDebt || 0;
+      const days = (Date.now() - entry.stakedTime) / 86400000;
+      const timeBased = entry.staked * (pool.apy / 100) * (days / 365);
+      return (entry.rewardDebt || 0) + timeBased;
+    }
+
+    function saveStakingPoolData() {
+      if (userAddress) localStorage.setItem(`stakingPool_${userAddress}`, JSON.stringify(stakingPoolData));
+    }
+
+    function loadStakingPoolData() {
+      if (!userAddress) return;
+      try {
+        const saved = localStorage.getItem(`stakingPool_${userAddress}`);
+        if (saved) stakingPoolData = JSON.parse(saved);
+      } catch (_) { stakingPoolData = {}; }
+    }
+
+    function renderStakingPoolSection() {
+      loadStakingPoolData();
+      const totalStaked = Object.values(stakingPoolData).reduce((s, e) => s + (e.staked || 0), 0);
+      const totalEarned = STAKING_POOLS.reduce((s, p) => s + getStakingPoolEarned(p.id), 0);
+
+      const poolCards = STAKING_POOLS.map(pool => {
+        const entry = stakingPoolData[pool.id] || { staked: 0, stakedTime: 0 };
+        const earned = getStakingPoolEarned(pool.id).toFixed(4);
+        const userStaked = (entry.staked || 0).toFixed(2);
+        const tvlM = pool.tvl >= 1e6 ? (pool.tvl / 1e6).toFixed(2) + 'M' : (pool.tvl / 1e3).toFixed(0) + 'K';
+        return `
+          <div style="background:#131722; border:1px solid #2a2d3a; border-radius:14px; padding:20px; display:flex; flex-direction:column; gap:12px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span style="font-size:1.8em;">${pool.icon}</span>
+              <div>
+                <div style="font-weight:700; font-size:1.05em; color:#e2e8f0;">${pool.name}</div>
+                <div style="font-size:0.8em; color:#94a3b8;">TVL: $${tvlM}</div>
+              </div>
+              <div style="margin-left:auto; text-align:right;">
+                <div style="font-size:1.3em; font-weight:700; color:#10b981;">${pool.apy}%</div>
+                <div style="font-size:0.75em; color:#94a3b8;">APY</div>
+              </div>
+            </div>
+            <div style="background:#0d1421; border-radius:8px; padding:12px; font-size:0.82em; color:#94a3b8; display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap;">
+              <div><div style="color:#64748b; margin-bottom:2px;">Your Stake</div><div style="color:#f0b90b; font-weight:600;">${userStaked} ${pool.token}</div></div>
+              <div><div style="color:#64748b; margin-bottom:2px;">Earned</div><div style="color:#10b981; font-weight:600;">${earned} USDC</div></div>
+              <div><div style="color:#64748b; margin-bottom:2px;">Min Stake</div><div style="color:#e2e8f0;">${pool.minStake} ${pool.token}</div></div>
+            </div>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <input type="number" id="spInput_${pool.id}" placeholder="Amount" min="${pool.minStake}" step="1"
+                style="flex:1; padding:8px 10px; background:#0d1421; border:1px solid #2a2d3a; border-radius:6px; color:#fff; font-size:0.9em; outline:none;" />
+              <button onclick="spStake('${pool.id}')"
+                style="padding:8px 14px; background:linear-gradient(90deg,#10b981,#059669); color:#fff; border:none; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.82em; white-space:nowrap;">
+                + Stake
+              </button>
+              <button onclick="spUnstake('${pool.id}')"
+                style="padding:8px 14px; background:linear-gradient(90deg,#ef4444,#dc2626); color:#fff; border:none; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.82em; white-space:nowrap;">
+                − Unstake
+              </button>
+              <button onclick="spClaim('${pool.id}')"
+                style="padding:8px 14px; background:linear-gradient(90deg,#f0b90b,#d97706); color:#000; border:none; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.82em; white-space:nowrap;">
+                Claim
+              </button>
+            </div>
+          </div>`;
+      }).join('');
+
+      const content = document.getElementById('content');
+      content.innerHTML = `
+        <div style="max-width:960px; margin:0 auto; padding:24px 16px 80px;">
+          <h2 style="text-align:center; color:#10b981; font-size:1.9em; margin-bottom:6px;">🌾 Staking Pool</h2>
+          <p style="text-align:center; color:#94a3b8; margin-bottom:24px; font-size:0.95em;">
+            Stake MOGA &amp; PLUME tokens to earn USDC rewards on ${getActiveNetwork().name}
+          </p>
+
+          ${!userAddress ? `
+            <div style="background:rgba(239,68,68,0.1); border:1px solid #ef4444; border-radius:12px; padding:20px; margin-bottom:24px; text-align:center;">
+              <p style="color:#ef4444; margin-bottom:12px;">⚠️ Connect your wallet to stake</p>
+              <button class="btn-primary" onclick="connectWalletFromApp()">Connect Wallet</button>
+            </div>
+          ` : ''}
+
+          <!-- Summary -->
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px,1fr)); gap:12px; margin-bottom:28px;">
+            <div style="background:#131722; border:1px solid #2a2d3a; border-radius:12px; padding:16px; text-align:center;">
+              <div style="font-size:0.8em; color:#94a3b8; margin-bottom:4px;">Total Staked</div>
+              <div style="font-size:1.5em; font-weight:700; color:#f0b90b;">${totalStaked.toFixed(2)}</div>
+              <div style="font-size:0.75em; color:#64748b;">MOGA / PLUME</div>
+            </div>
+            <div style="background:#131722; border:1px solid #2a2d3a; border-radius:12px; padding:16px; text-align:center;">
+              <div style="font-size:0.8em; color:#94a3b8; margin-bottom:4px;">Total Earned</div>
+              <div style="font-size:1.5em; font-weight:700; color:#10b981;">${totalEarned.toFixed(4)}</div>
+              <div style="font-size:0.75em; color:#64748b;">USDC</div>
+            </div>
+            <div style="background:#131722; border:1px solid #2a2d3a; border-radius:12px; padding:16px; text-align:center;">
+              <div style="font-size:0.8em; color:#94a3b8; margin-bottom:4px;">Pools Active</div>
+              <div style="font-size:1.5em; font-weight:700; color:#60a5fa;">${STAKING_POOLS.length}</div>
+              <div style="font-size:0.75em; color:#64748b;">available</div>
+            </div>
+            <div style="background:#131722; border:1px solid #2a2d3a; border-radius:12px; padding:16px; text-align:center;">
+              <div style="font-size:0.8em; color:#94a3b8; margin-bottom:4px;">Avg APY</div>
+              <div style="font-size:1.5em; font-weight:700; color:#c084fc;">${Math.round(STAKING_POOLS.reduce((s,p)=>s+p.apy,0)/STAKING_POOLS.length)}%</div>
+              <div style="font-size:0.75em; color:#64748b;">across pools</div>
+            </div>
+          </div>
+
+          <!-- Pool Cards -->
+          <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(420px,1fr)); gap:16px;">
+            ${poolCards}
+          </div>
+
+          <p style="text-align:center; margin-top:28px; color:#64748b; font-size:0.85em;">
+            ⛽ Gas Fee: ${GAS_FEE_ETH} ${getNetworkCurrency()} per transaction · Rewards accrue in real-time
+          </p>
+        </div>
+      `;
+    }
+
+    async function spStake(poolId) {
+      if (!userAddress) { showNotification('⚠️ Connect wallet first!', true); connectWalletFromApp(); return; }
+      const pool = STAKING_POOLS.find(p => p.id === poolId);
+      if (!pool) return;
+      const input = document.getElementById(`spInput_${poolId}`);
+      const amount = parseFloat(input?.value || 0);
+      if (isNaN(amount) || amount < pool.minStake) {
+        showNotification(`Minimum stake is ${pool.minStake} ${pool.token}!`, true);
+        return;
+      }
+      const gasPaid = await processGasFee(`staking-pool-stake: ${poolId}`);
+      if (!gasPaid) return;
+
+      if (!stakingPoolData[poolId]) stakingPoolData[poolId] = { staked: 0, stakedTime: Date.now(), rewardDebt: 0 };
+      // Accumulate time-based rewards earned so far into rewardDebt before resetting stakedTime
+      const currentEarned = getStakingPoolEarned(poolId);
+      stakingPoolData[poolId].rewardDebt = currentEarned;
+      stakingPoolData[poolId].staked = (stakingPoolData[poolId].staked || 0) + amount;
+      stakingPoolData[poolId].stakedTime = Date.now();
+      saveStakingPoolData();
+      showNotification(`✅ Staked ${amount} ${pool.token} in ${pool.name} pool!`);
+      if (input) input.value = '';
+      renderStakingPoolSection();
+    }
+
+    async function spUnstake(poolId) {
+      if (!userAddress) { showNotification('⚠️ Connect wallet first!', true); connectWalletFromApp(); return; }
+      const entry = stakingPoolData[poolId];
+      if (!entry || !entry.staked || entry.staked <= 0) {
+        showNotification('Nothing staked in this pool.', true);
+        return;
+      }
+      const input = document.getElementById(`spInput_${poolId}`);
+      const amount = parseFloat(input?.value || entry.staked);
+      if (isNaN(amount) || amount <= 0 || amount > entry.staked) {
+        showNotification(`Invalid amount. You have ${entry.staked} staked.`, true);
+        return;
+      }
+      const gasPaid = await processGasFee(`staking-pool-unstake: ${poolId}`);
+      if (!gasPaid) return;
+
+      // Accumulate time-based rewards into rewardDebt before adjusting staked amount
+      const currentEarnedUnstake = getStakingPoolEarned(poolId);
+      stakingPoolData[poolId].rewardDebt = currentEarnedUnstake;
+      stakingPoolData[poolId].staked = Math.max(0, entry.staked - amount);
+      stakingPoolData[poolId].stakedTime = Date.now();
+      saveStakingPoolData();
+      showNotification(`✅ Unstaked ${amount} tokens from pool!`);
+      if (input) input.value = '';
+      renderStakingPoolSection();
+    }
+
+    async function spClaim(poolId) {
+      if (!userAddress) { showNotification('⚠️ Connect wallet first!', true); connectWalletFromApp(); return; }
+      const earned = getStakingPoolEarned(poolId);
+      if (earned < 0.0001) {
+        showNotification('Rewards too small to claim yet.', true);
+        return;
+      }
+      const gasPaid = await processGasFee(`staking-pool-claim: ${poolId}`);
+      if (!gasPaid) return;
+
+      tradingUSDCBalance += earned;
+      if (stakingPoolData[poolId]) {
+        // Reset both rewardDebt and stakedTime so future rewards start from now
+        stakingPoolData[poolId].rewardDebt = 0;
+        stakingPoolData[poolId].stakedTime = Date.now();
+      }
+      saveStakingPoolData();
+      updateTradingBalance();
+      showNotification(`✅ Claimed ${earned.toFixed(4)} USDC from pool!`);
+      renderStakingPoolSection();
+    }
+
+    window.renderStakingPoolSection = renderStakingPoolSection;
+    window.spStake = spStake;
+    window.spUnstake = spUnstake;
+    window.spClaim = spClaim;
+
     function generateNFTCards(count, isStaked = false) {
       let html = '';
       for (let i = 1; i <= count; i++) {
