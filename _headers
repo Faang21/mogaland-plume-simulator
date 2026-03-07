@@ -5,3 +5,15 @@
   Permissions-Policy: camera=(), microphone=(), geolocation=()
   Cross-Origin-Opener-Policy: unsafe-none
   Cross-Origin-Embedder-Policy: unsafe-none
+
+/favicon.ico
+  Cache-Control: public, max-age=86400, must-revalidate
+
+/favicon.svg
+  Cache-Control: public, max-age=86400, must-revalidate
+
+/favicon.png
+  Cache-Control: public, max-age=86400, must-revalidate
+
+/apple-touch-icon.png
+  Cache-Control: public, max-age=86400, must-revalidate
