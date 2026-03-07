@@ -6,13 +6,13 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
  * @title MogalandTreasury
- * @dev Treasury contract for Mogaland Plume Simulator
+ * @dev Treasury contract for Mogaland Simulator
  * Features:
  * - Auto-receive ETH via receive() fallback
  * - Admin (CEO) can inject ETH directly
  * - Admin (CEO) can inject USDC (or any ERC-20)
  * - Balance queries for ETH and any ERC-20
- * - Compatible with EVM chains: Plume, EDU, Base, Sepolia
+ * - Compatible with EVM chains: ETH Sepolia, EDU Chain, Base Sepolia
  */
 contract MogalandTreasury is Ownable {
 

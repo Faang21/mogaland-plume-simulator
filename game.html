@@ -948,8 +948,8 @@ const _npcPlots=[
   {tx:34,ty:50,state:'watered',owner:'MogaCat42',readyAt:Date.now()+90000},
   {tx:35,ty:50,state:'seeded', owner:'MogaCat42',readyAt:0},
   {tx:34,ty:51,state:'hoed',   owner:'MogaCat42',readyAt:0},
-  {tx:50,ty:52,state:'ready',  owner:'PlumeWolf17',readyAt:0},
-  {tx:51,ty:52,state:'watered',owner:'PlumeWolf17',readyAt:Date.now()+60000},
+  {tx:50,ty:52,state:'ready',  owner:'SolWolf17',readyAt:0},
+  {tx:51,ty:52,state:'watered',owner:'SolWolf17',readyAt:Date.now()+60000},
   {tx:20,ty:52,state:'seeded', owner:'StarBear99',readyAt:0},
   {tx:21,ty:52,state:'ready',  owner:'StarBear99',readyAt:0},
   {tx:22,ty:52,state:'hoed',   owner:'StarBear99',readyAt:0},
@@ -1730,7 +1730,7 @@ function buyZooNFT(){
 window.buyZooNFT=buyZooNFT;
 
 function renderHollywoodStudio(){
-  const CELEB_NAMES=['Moga Star 🌟','Plume Idol 💃','Cyber Diva 🎤','Pixel Queen 👑','Neon Actress 🎭'];
+  const CELEB_NAMES=['Moga Star 🌟','Sol Idol 💃','Cyber Diva 🎤','Pixel Queen 👑','Neon Actress 🎭'];
   const celeb=CELEB_NAMES[Math.floor(Date.now()/10000)%CELEB_NAMES.length];
   return`<strong>🎬 Hollywood Studio — Coastal City</strong>
 <div style="font-size:11px;color:#94a3b8;margin:5px 0;">Celebrity hotspot · Film productions · Star sightings 🌟</div>
@@ -1751,7 +1751,7 @@ function meetCelebrity(){
   S.coins-=20;S.energy=Math.min(S.energy+15,S.energyMax);
   updateHUD();renderBuildingPanel();
   treasuryPay('CELEB_MEET:HollywoodStudio:$20USD',20);
-  const celeb=['Moga Star 🌟','Plume Idol 💃','Cyber Diva 🎤','Pixel Queen 👑','Neon Actress 🎭'][Math.floor(Math.random()*5)];
+  const celeb=['Moga Star 🌟','Sol Idol 💃','Cyber Diva 🎤','Pixel Queen 👑','Neon Actress 🎭'][Math.floor(Math.random()*5)];
   logChat('[🌟 Hollywood] Met '+celeb+' on set! +15 energy. Selfie taken 📸',false,'#fbbf24');
   saveProgress();
 }
@@ -1974,7 +1974,7 @@ window.convertCoins=convertCoins;
 
 /* ── 100-player pool ── */
 const PPOOL=(()=>{
-  const pf=['Moga','Plume','Tiger','Neon','Crypto','Star','Moon','Fire','Ice','Gold','Sky','Deep','Wild','Cyber','Pixel','Dark','Bright','Swift','Sharp','Zen'];
+  const pf=['Moga','Sol','Tiger','Neon','Crypto','Star','Moon','Fire','Ice','Gold','Sky','Deep','Wild','Cyber','Pixel','Dark','Bright','Swift','Sharp','Zen'];
   const ps=['Cat','Fox','Wolf','Bear','Eagle','Shark','Lion','Panda','Dragon','Whale','Hawk','Owl','Raven','Titan','Storm','Flash','Blade','Ghost','Pulse','Wave'];
   return Array.from({length:200},(_,i)=>{
     const n=pf[i%pf.length]+ps[Math.floor(i/pf.length)%ps.length]+(10+(i*7+13)%90);
@@ -2149,7 +2149,7 @@ function stopMulGame(){clearInterval(MG.tickInt);clearInterval(MG.cdInt);MG.run=
 
 /* ── NPC Walking Cat Bots ── */
 const NPC_TINTS=[0xfda4af,0x86efac,0x93c5fd,0xfde68a,0xc4b5fd,0xfbbf24,0xf87171,0x34d399,0x60a5fa,0xa78bfa,0xfb923c,0x4ade80,0xf0abfc,0x6ee7b7,0xfdba74];
-const NPC_NAMES=['MogaBot','PlumeAI','CatNPC','StarBot','NeonBot','CyberCat','PixelBot','SwiftAI','ZenCat','DarkBot','BladeNPC','GhostBot','TigerBot','MoonCat','FireBot'];
+const NPC_NAMES=['MogaBot','SolAI','CatNPC','StarBot','NeonBot','CyberCat','PixelBot','SwiftAI','ZenCat','DarkBot','BladeNPC','GhostBot','TigerBot','MoonCat','FireBot'];
 let npcBots=[];
 // Service-building standby positions per city (5 bots, one per service building)
 const NPC_STANDBY_POSITIONS={
