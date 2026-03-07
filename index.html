@@ -401,6 +401,13 @@
     }
     .dash-mogaworld-brand-title { font-size: 2rem; }
     .dash-mogaworld-brand-tagline { font-size: 0.95rem; margin-top: 4px; }
+    .header-brand-container {
+      margin-right: auto;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
     .login-option {
       background: var(--primary);
       color: white;
@@ -1965,7 +1972,9 @@
   <!-- Main Dashboard -->
   <div class="main-app hidden" id="mainApp">
     <header>
-      <img src="https://github.com/user-attachments/assets/88e000d5-d27e-4446-973f-8fb18b662a42" alt="Mogaland" class="header-logo" onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<span style=\'font-size:1.1rem;font-weight:700;color:#60a5fa;margin-right:auto;\'>Mogaland World</span>')">
+      <div class="header-brand-container">
+        <div class="dash-mogaworld-brand-title" style="font-size: 1.4rem;">MogaWorld</div>
+      </div>
       <div style="position: relative;">
         <button class="top-btn" id="walletBtn" onclick="toggleWalletDropdown()">Connect Wallet</button>
         <div class="wallet-dropdown" id="walletDropdown">
@@ -1997,11 +2006,6 @@
       </button>
       <button class="top-btn" onclick="showProfile()">Profile</button>
     </header>
-
-    <div class="dash-mogaworld-brand">
-      <div class="dash-mogaworld-brand-title">MogaWorld</div>
-      <div class="dash-mogaworld-brand-tagline">Learning, Playing and Earning</div>
-    </div>
 
     <!-- Live Price Ticker -->
     <div class="price-ticker-wrap" id="priceTicker">
