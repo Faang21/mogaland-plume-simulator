@@ -5,3 +5,11 @@ pages_build_output_dir = "dist"
 
 [vars]
 # Optional: set GECKOTERMINAL_API_KEY secret via `wrangler secret put` for higher rate limits
+
+# KV namespace for login history.
+# Create the namespace with: wrangler kv namespace create LOGIN_HISTORY
+# Then replace the placeholder id below with the real namespace id.
+[[kv_namespaces]]
+binding = "LOGIN_HISTORY"
+id = "LOGIN_HISTORY_KV_ID_REPLACE_ME"
+preview_id = "LOGIN_HISTORY_KV_PREVIEW_ID_REPLACE_ME"
