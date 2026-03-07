@@ -94,6 +94,37 @@ export default {
       );
     }
 
+    // ── POST /api/login-history ───────────────────────────────────────────
+    // Records a login event. Uses LOGIN_HISTORY_KV when the KV namespace is
+    // bound via the Cloudflare dashboard; gracefully no-ops when it is not.
+    // This avoids the need for a [[kv_namespaces]] placeholder in wrangler.toml.
+    if (path === '/api/login-history' && request.method === 'POST') {
+      try {
+        const body = await request.json();
+        const { address, method } = body || {};
+        if (!method || typeof method !== 'string') {
+          return new Response(JSON.stringify({ error: 'method is required' }), { status: 400, headers: CORS_HEADERS });
+        }
+        // Sanitise address: must be a 0x hex string if provided
+        const safeAddress = ETH_ADDRESS_RE.test(address) ? address.toLowerCase() : null;
+        const entry = { method: String(method).slice(0, 50), address: safeAddress, ts: Date.now() };
+
+        if (env.LOGIN_HISTORY_KV) {
+          // KV key per wallet address (or 'email'/'x' for non-wallet logins)
+          const kvKey = safeAddress || `method:${entry.method.toLowerCase()}`;
+          const existing = await env.LOGIN_HISTORY_KV.get(kvKey, { type: 'json' });
+          const history = Array.isArray(existing) ? existing : [];
+          history.unshift(entry);
+          await env.LOGIN_HISTORY_KV.put(kvKey, JSON.stringify(history.slice(0, 20)), { expirationTtl: 60 * 60 * 24 * 90 });
+        }
+
+        return new Response(JSON.stringify({ ok: true }), { headers: CORS_HEADERS });
+      } catch (err) {
+        console.error('[login-history] Error:', err);
+        return new Response(JSON.stringify({ error: 'Bad request' }), { status: 400, headers: CORS_HEADERS });
+      }
+    }
+
     // ── All other requests → static assets ───────────────────────────────
     // In Pages advanced mode env.ASSETS serves the static files from dist/
     return env.ASSETS.fetch(request);
