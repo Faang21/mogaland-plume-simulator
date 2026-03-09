@@ -2044,6 +2044,7 @@
       <button class="nav-btn" onclick="showSection('bridge', event)">🌉 Bridge</button>
       <button class="nav-btn" onclick="showSection('nft', event)">🏦 NFT</button>
       <button class="nav-btn" onclick="showSection('stakingpool', event)">🌾 Staking Pool</button>
+      <button class="nav-btn" onclick="showSection('analytics', event)">📊 Analytics</button>
     </div>
 
     <!-- Daily Check-In Floating Button -->
@@ -4886,6 +4887,12 @@
     let usdcBalance = "0.00";
     let nftMinted = false;
 
+    // ===== WATCHLIST & PRICE ALERTS =====
+    let watchlistItems = []; // [{symbol, name, category, basePrice}]
+    let priceAlerts = [];    // [{id, symbol, name, targetPrice, direction, category, triggered, triggeredAt, triggeredPrice}]
+    let priceAlertInterval = null; // Global interval to check alerts
+    const PRICE_ALERT_CHECK_INTERVAL_MS = 30000; // 30 seconds
+
     // Treasury Wallet Configuration
     const TREASURY_WALLET_ADDRESS = "0xa959f26847211f71A22aDb087EBe50E0743e7D66";
     // MogalandTreasury smart contract address (deploy MogalandTreasury.sol and update this)
@@ -5667,6 +5674,11 @@
       // Load open positions and trade history (market section state)
       loadOpenPositions();
       loadTradeHistory();
+
+      // Load watchlist and price alerts
+      loadWatchlist();
+      loadPriceAlerts();
+      startPriceAlertPolling();
     }
     
     // Helper function to save mogaland points to localStorage
@@ -5751,6 +5763,100 @@
       } catch (e) {
         console.error('[TradeHistory] Error loading:', e);
       }
+    }
+
+    // ===== WATCHLIST PERSISTENCE =====
+    function saveWatchlist() {
+      if (!userAddress) return;
+      localStorage.setItem(`watchlist_${userAddress}`, JSON.stringify(watchlistItems));
+    }
+
+    function loadWatchlist() {
+      if (!userAddress) return;
+      try {
+        const saved = localStorage.getItem(`watchlist_${userAddress}`);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) watchlistItems = parsed;
+        }
+      } catch (e) {
+        console.error('[Watchlist] Error loading:', e);
+      }
+    }
+
+    // ===== PRICE ALERTS PERSISTENCE =====
+    function savePriceAlerts() {
+      if (!userAddress) return;
+      localStorage.setItem(`priceAlerts_${userAddress}`, JSON.stringify(priceAlerts));
+    }
+
+    function loadPriceAlerts() {
+      if (!userAddress) return;
+      try {
+        const saved = localStorage.getItem(`priceAlerts_${userAddress}`);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) priceAlerts = parsed;
+        }
+      } catch (e) {
+        console.error('[PriceAlerts] Error loading:', e);
+      }
+    }
+
+    // ===== PRICE ALERT CHECKING =====
+    const COIN_ID_MAP_ALERTS = {
+      'BTCUSD': 'bitcoin', 'ETHUSD': 'ethereum', 'BNBUSD': 'binancecoin',
+      'SOLUSD': 'solana', 'ADAUSD': 'cardano', 'XRPUSD': 'ripple',
+      'DOTUSD': 'polkadot', 'MATICUSD': 'matic-network', 'LINKUSD': 'chainlink',
+      'UNIUSD': 'uniswap', 'DOGEUSD': 'dogecoin', 'AVAXUSD': 'avalanche-2',
+      'ATOMUSD': 'cosmos', 'NEARUSD': 'near'
+    };
+
+    async function fetchLivePriceForAlert(item) {
+      try {
+        if (item.category === 'crypto') {
+          const coinId = COIN_ID_MAP_ALERTS[item.symbol] || item.symbol.replace('USD', '').toLowerCase();
+          const data = await fetchWithCORSFallback(
+            `https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=usd`
+          );
+          if (data && data[coinId]) return data[coinId].usd;
+        }
+        return item.basePrice || null;
+      } catch(e) {
+        return item.basePrice || null;
+      }
+    }
+
+    async function checkPriceAlerts() {
+      const active = priceAlerts.filter(a => !a.triggered);
+      if (!active.length) return;
+      for (const alert of active) {
+        const price = await fetchLivePriceForAlert(alert);
+        if (!price) continue;
+        const triggered = alert.direction === 'above' ? price >= alert.targetPrice : price <= alert.targetPrice;
+        if (triggered) {
+          alert.triggered = true;
+          alert.triggeredAt = Date.now();
+          alert.triggeredPrice = price;
+          savePriceAlerts();
+          const msg = `🔔 Price Alert: ${alert.name} ${alert.direction === 'above' ? '≥' : '≤'} $${alert.targetPrice.toLocaleString()} (now $${price.toLocaleString()})`;
+          showNotification(msg, false);
+          if ('Notification' in window && Notification.permission === 'granted') {
+            try { new Notification('Mogaland Price Alert', { body: msg, icon: 'favicon.png' }); } catch(e) { /* silently ignore */ }
+          }
+          // Refresh analytics section if open
+          const content = document.getElementById('content');
+          if (content && content.dataset.section === 'analytics') {
+            const activeTab = content.dataset.analyticsTab || 'alerts';
+            renderAnalyticsSection(activeTab);
+          }
+        }
+      }
+    }
+
+    function startPriceAlertPolling() {
+      if (priceAlertInterval) return;
+      priceAlertInterval = setInterval(checkPriceAlerts, PRICE_ALERT_CHECK_INTERVAL_MS);
     }
 
     function updateTreasuryDisplay() {
@@ -11296,6 +11402,9 @@
       else if (id === 'stakingpool') {
         renderStakingPoolSection();
       }
+      else if (id === 'analytics') {
+        renderAnalyticsSection();
+      }
       else {
         content.innerHTML = `
           <h2 style="text-align:center; margin:40px 0;">${id.charAt(0).toUpperCase() + id.slice(1)}</h2>
@@ -11304,7 +11413,416 @@
       }
     }
 
-    // ===== MogaToken ERC-20 Contract (ABI + Bytecode for on-chain deployment) =====
+    // ===== ANALYTICS SECTION =====
+    function renderAnalyticsSection(activeTab) {
+      activeTab = activeTab || 'portfolio';
+      const content = document.getElementById('content');
+      content.dataset.section = 'analytics';
+      content.dataset.analyticsTab = activeTab;
+
+      // Load trade history from localStorage for stats
+      let tradeHistory = [];
+      if (userAddress) {
+        try {
+          const saved = localStorage.getItem(`tradeHistory_${userAddress}`);
+          if (saved) tradeHistory = JSON.parse(saved) || [];
+        } catch(e) {}
+      }
+
+      // ── Portfolio stats ──
+      const totalTrades  = tradeHistory.length;
+      const wins         = tradeHistory.filter(t => (t.pnl || 0) > 0).length;
+      const losses       = tradeHistory.filter(t => (t.pnl || 0) < 0).length;
+      const winRate      = totalTrades > 0 ? ((wins / totalTrades) * 100).toFixed(1) : '0.0';
+      const totalPnl     = tradeHistory.reduce((s, t) => s + (t.pnl || 0), 0);
+      const avgPnl       = totalTrades > 0 ? totalPnl / totalTrades : 0;
+      const bestTrade    = totalTrades > 0 ? tradeHistory.reduce((b, t) => t.pnl > b.pnl ? t : b, tradeHistory[0]) : null;
+      const worstTrade   = totalTrades > 0 ? tradeHistory.reduce((w, t) => t.pnl < w.pnl ? t : w, tradeHistory[0]) : null;
+
+      // Cumulative P&L for chart (last 50 trades)
+      const chartTrades  = tradeHistory.slice(-50);
+      let cum = 0;
+      const chartData    = chartTrades.map(t => { cum += (t.pnl || 0); return parseFloat(cum.toFixed(2)); });
+      const chartLabels  = chartTrades.map((_, i) => `#${tradeHistory.length - chartTrades.length + i + 1}`);
+
+      // ── Watchlist items HTML ──
+      function watchlistItemHtml(item) {
+        return `
+          <div id="wl-row-${item.symbol}" style="display:flex; align-items:center; gap:10px; padding:10px 14px; background:var(--card-bg); border-radius:8px; border:1px solid var(--border); margin-bottom:8px;">
+            <div style="flex:1;">
+              <div style="font-weight:600; font-size:0.95em;">${item.name}</div>
+              <div style="font-size:0.78em; color:#94a3b8;">${item.symbol} · ${item.category}</div>
+            </div>
+            <div id="wl-price-${item.symbol}" style="font-size:1em; font-weight:700; color:#f0b90b; min-width:80px; text-align:right;">
+              ${item.basePrice ? '$' + item.basePrice.toLocaleString() : '—'}
+            </div>
+            <div id="wl-change-${item.symbol}" style="font-size:0.8em; min-width:60px; text-align:right; color:#94a3b8;">—</div>
+            <button onclick="removeFromWatchlist('${item.symbol}')"
+              style="padding:4px 10px; background:transparent; border:1px solid #f6465d; color:#f6465d; border-radius:6px; cursor:pointer; font-size:0.8em;">✕</button>
+            <button onclick="showSection('market',event)"
+              style="padding:4px 10px; background:rgba(240,185,11,0.15); border:1px solid #f0b90b; color:#f0b90b; border-radius:6px; cursor:pointer; font-size:0.8em;">Trade</button>
+          </div>`;
+      }
+
+      // ── Price alerts HTML ──
+      function alertItemHtml(a) {
+        const statusColor = a.triggered ? '#0ecb81' : '#94a3b8';
+        const statusText  = a.triggered
+          ? `✅ Triggered @ $${(a.triggeredPrice||a.targetPrice).toLocaleString()} · ${new Date(a.triggeredAt).toLocaleString()}`
+          : `⏳ Waiting: ${a.direction === 'above' ? '≥' : '≤'} $${a.targetPrice.toLocaleString()}`;
+        return `
+          <div style="display:flex; align-items:flex-start; gap:10px; padding:10px 14px; background:var(--card-bg); border-radius:8px; border:1px solid var(--border); margin-bottom:8px;">
+            <div style="flex:1;">
+              <div style="font-weight:600; font-size:0.95em;">${a.name} <span style="font-size:0.8em; color:#94a3b8;">${a.symbol}</span></div>
+              <div style="font-size:0.8em; color:${statusColor}; margin-top:3px;">${statusText}</div>
+            </div>
+            <button onclick="removePriceAlert('${a.id}')"
+              style="padding:4px 10px; background:transparent; border:1px solid #f6465d; color:#f6465d; border-radius:6px; cursor:pointer; font-size:0.8em; white-space:nowrap;">Remove</button>
+          </div>`;
+      }
+
+      const watchlistHtml = watchlistItems.length
+        ? watchlistItems.map(watchlistItemHtml).join('')
+        : `<p style="color:#94a3b8; text-align:center; padding:30px 0;">No assets in watchlist yet. Use the form below to add assets.</p>`;
+
+      const alertsHtml = priceAlerts.length
+        ? priceAlerts.slice().reverse().map(alertItemHtml).join('')
+        : `<p style="color:#94a3b8; text-align:center; padding:30px 0;">No price alerts set. Create one below.</p>`;
+
+      // ── All assets flat list for dropdowns ──
+      const allAssetOptions = [
+        {symbol:'BTCUSD',name:'Bitcoin',category:'crypto',basePrice:85000},
+        {symbol:'ETHUSD',name:'Ethereum',category:'crypto',basePrice:2000},
+        {symbol:'BNBUSD',name:'BNB',category:'crypto',basePrice:580},
+        {symbol:'SOLUSD',name:'Solana',category:'crypto',basePrice:130},
+        {symbol:'ADAUSD',name:'Cardano',category:'crypto',basePrice:0.65},
+        {symbol:'XRPUSD',name:'Ripple',category:'crypto',basePrice:2.20},
+        {symbol:'DOTUSD',name:'Polkadot',category:'crypto',basePrice:5.50},
+        {symbol:'MATICUSD',name:'Polygon',category:'crypto',basePrice:0.40},
+        {symbol:'LINKUSD',name:'Chainlink',category:'crypto',basePrice:13.00},
+        {symbol:'UNIUSD',name:'Uniswap',category:'crypto',basePrice:7.50},
+        {symbol:'DOGEUSD',name:'Dogecoin',category:'crypto',basePrice:0.17},
+        {symbol:'AVAXUSD',name:'Avalanche',category:'crypto',basePrice:22},
+        {symbol:'AAPL',name:'Apple Inc.',category:'stocks',basePrice:225},
+        {symbol:'TSLA',name:'Tesla Inc.',category:'stocks',basePrice:290},
+        {symbol:'GOOGL',name:'Alphabet',category:'stocks',basePrice:175},
+        {symbol:'MSFT',name:'Microsoft',category:'stocks',basePrice:420},
+        {symbol:'NVDA',name:'NVIDIA',category:'stocks',basePrice:880},
+        {symbol:'GOLD',name:'Gold',category:'commodities',basePrice:2900},
+        {symbol:'OIL',name:'Crude Oil',category:'commodities',basePrice:72},
+        {symbol:'EURUSD',name:'EUR/USD',category:'forex',basePrice:1.045},
+        {symbol:'GBPUSD',name:'GBP/USD',category:'forex',basePrice:1.265},
+        {symbol:'USDJPY',name:'USD/JPY',category:'forex',basePrice:149.5}
+      ];
+      const assetOptionHtml = allAssetOptions.map(a =>
+        `<option value="${a.symbol}" data-name="${a.name}" data-cat="${a.category}" data-price="${a.basePrice}">${a.name} (${a.symbol})</option>`
+      ).join('');
+
+      const tabStyle = (tab) =>
+        `padding:8px 18px; border-radius:6px 6px 0 0; border:none; cursor:pointer; font-size:0.88em; font-weight:600; ` +
+        (activeTab === tab
+          ? 'background:var(--card-bg); color:#f0b90b; border-bottom:2px solid #f0b90b;'
+          : 'background:transparent; color:#94a3b8; border-bottom:2px solid transparent;');
+
+      content.innerHTML = `
+        <div style="max-width:900px; margin:0 auto; padding:16px 16px 80px;">
+
+          <!-- Header -->
+          <div style="margin-bottom:18px;">
+            <h2 style="font-size:1.4em; font-weight:700; color:var(--text-color); margin-bottom:4px;">📊 Analytics Hub</h2>
+            <p style="color:#94a3b8; font-size:0.88em;">Portfolio performance · Watchlist · Price Alerts</p>
+          </div>
+
+          <!-- Tabs -->
+          <div style="display:flex; gap:4px; border-bottom:1px solid var(--border); margin-bottom:20px;">
+            <button style="${tabStyle('portfolio')}" onclick="renderAnalyticsSection('portfolio')">📈 Portfolio</button>
+            <button style="${tabStyle('watchlist')}" onclick="renderAnalyticsSection('watchlist')">⭐ Watchlist</button>
+            <button style="${tabStyle('alerts')}" onclick="renderAnalyticsSection('alerts')">🔔 Alerts</button>
+          </div>
+
+          <!-- ══ PORTFOLIO TAB ══ -->
+          ${activeTab === 'portfolio' ? `
+            <!-- Stats grid -->
+            <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px; margin-bottom:20px;">
+              <div style="background:var(--card-bg); border-radius:10px; border:1px solid var(--border); padding:14px; text-align:center;">
+                <div style="color:#94a3b8; font-size:0.75em; text-transform:uppercase; letter-spacing:.06em;">Total Trades</div>
+                <div style="font-size:1.6em; font-weight:700; color:var(--text-color); margin-top:4px;">${totalTrades}</div>
+              </div>
+              <div style="background:var(--card-bg); border-radius:10px; border:1px solid var(--border); padding:14px; text-align:center;">
+                <div style="color:#94a3b8; font-size:0.75em; text-transform:uppercase; letter-spacing:.06em;">Win Rate</div>
+                <div style="font-size:1.6em; font-weight:700; color:${parseFloat(winRate)>=50?'#0ecb81':'#f6465d'}; margin-top:4px;">${winRate}%</div>
+              </div>
+              <div style="background:var(--card-bg); border-radius:10px; border:1px solid var(--border); padding:14px; text-align:center;">
+                <div style="color:#94a3b8; font-size:0.75em; text-transform:uppercase; letter-spacing:.06em;">Total P&L</div>
+                <div style="font-size:1.6em; font-weight:700; color:${totalPnl>=0?'#0ecb81':'#f6465d'}; margin-top:4px;">${totalPnl>=0?'+':''}$${Math.abs(totalPnl).toFixed(2)}</div>
+              </div>
+              <div style="background:var(--card-bg); border-radius:10px; border:1px solid var(--border); padding:14px; text-align:center;">
+                <div style="color:#94a3b8; font-size:0.75em; text-transform:uppercase; letter-spacing:.06em;">Avg P&L</div>
+                <div style="font-size:1.6em; font-weight:700; color:${avgPnl>=0?'#0ecb81':'#f6465d'}; margin-top:4px;">${avgPnl>=0?'+':''}$${Math.abs(avgPnl).toFixed(2)}</div>
+              </div>
+              <div style="background:var(--card-bg); border-radius:10px; border:1px solid var(--border); padding:14px; text-align:center;">
+                <div style="color:#94a3b8; font-size:0.75em; text-transform:uppercase; letter-spacing:.06em;">Wins / Losses</div>
+                <div style="font-size:1.2em; font-weight:700; color:var(--text-color); margin-top:4px;"><span style="color:#0ecb81;">${wins}</span> / <span style="color:#f6465d;">${losses}</span></div>
+              </div>
+              <div style="background:var(--card-bg); border-radius:10px; border:1px solid var(--border); padding:14px; text-align:center;">
+                <div style="color:#94a3b8; font-size:0.75em; text-transform:uppercase; letter-spacing:.06em;">Best Trade</div>
+                <div style="font-size:1.2em; font-weight:700; color:#0ecb81; margin-top:4px;">${bestTrade ? '+$'+Math.abs(bestTrade.pnl||0).toFixed(2) : '—'}</div>
+                ${bestTrade ? `<div style="font-size:0.7em; color:#94a3b8;">${bestTrade.asset?.symbol||bestTrade.asset?.name||''}</div>` : ''}
+              </div>
+              <div style="background:var(--card-bg); border-radius:10px; border:1px solid var(--border); padding:14px; text-align:center;">
+                <div style="color:#94a3b8; font-size:0.75em; text-transform:uppercase; letter-spacing:.06em;">Worst Trade</div>
+                <div style="font-size:1.2em; font-weight:700; color:#f6465d; margin-top:4px;">${worstTrade && (worstTrade.pnl||0) < 0 ? '-$'+Math.abs(worstTrade.pnl||0).toFixed(2) : '—'}</div>
+                ${worstTrade && (worstTrade.pnl||0) < 0 ? `<div style="font-size:0.7em; color:#94a3b8;">${worstTrade.asset?.symbol||worstTrade.asset?.name||''}</div>` : ''}
+              </div>
+            </div>
+
+            <!-- Cumulative P&L Chart -->
+            <div style="background:var(--card-bg); border-radius:12px; border:1px solid var(--border); padding:18px; margin-bottom:20px;">
+              <div style="font-weight:600; font-size:0.95em; margin-bottom:12px; color:var(--text-color);">📉 Cumulative P&L (last ${chartTrades.length} trades)</div>
+              ${totalTrades === 0
+                ? `<p style="color:#94a3b8; text-align:center; padding:30px 0;">No trades yet. Start trading in the Market section!</p>`
+                : `<canvas id="pnlChart" height="180"></canvas>`}
+            </div>
+
+            <!-- Recent trades table -->
+            ${totalTrades > 0 ? `
+            <div style="background:var(--card-bg); border-radius:12px; border:1px solid var(--border); padding:18px;">
+              <div style="font-weight:600; font-size:0.95em; margin-bottom:12px; color:var(--text-color);">📋 Recent Trades</div>
+              <div style="overflow-x:auto;">
+                <table style="width:100%; border-collapse:collapse; font-size:0.83em;">
+                  <thead>
+                    <tr style="color:#94a3b8; border-bottom:1px solid var(--border);">
+                      <th style="padding:6px 8px; text-align:left;">Asset</th>
+                      <th style="padding:6px 8px; text-align:left;">Type</th>
+                      <th style="padding:6px 8px; text-align:right;">Amount</th>
+                      <th style="padding:6px 8px; text-align:right;">P&L</th>
+                      <th style="padding:6px 8px; text-align:right;">Time</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${tradeHistory.slice().reverse().slice(0,20).map(t => {
+                      const pnl = t.pnl || 0;
+                      const assetName = t.asset?.symbol || t.asset?.name || (typeof t.asset === 'string' ? t.asset : '—');
+                      return `<tr style="border-bottom:1px solid rgba(51,65,85,0.5);">
+                        <td style="padding:6px 8px;">${assetName}</td>
+                        <td style="padding:6px 8px; color:${t.type==='long'||t.type==='WIN'?'#0ecb81':'#f6465d'};">${t.type||'—'}</td>
+                        <td style="padding:6px 8px; text-align:right;">$${(t.amount||0).toFixed(2)}</td>
+                        <td style="padding:6px 8px; text-align:right; font-weight:600; color:${pnl>=0?'#0ecb81':'#f6465d'}">${pnl>=0?'+':''}$${Math.abs(pnl).toFixed(2)}</td>
+                        <td style="padding:6px 8px; text-align:right; color:#94a3b8;">${t.closeTime||'—'}</td>
+                      </tr>`;
+                    }).join('')}
+                  </tbody>
+                </table>
+              </div>
+            </div>` : ''}
+          ` : ''}
+
+          <!-- ══ WATCHLIST TAB ══ -->
+          ${activeTab === 'watchlist' ? `
+            <div style="margin-bottom:16px;">
+              ${watchlistHtml}
+            </div>
+
+            <!-- Add to watchlist -->
+            <div style="background:var(--card-bg); border-radius:12px; border:1px solid var(--border); padding:18px;">
+              <div style="font-weight:600; font-size:0.95em; margin-bottom:12px; color:var(--text-color);">➕ Add to Watchlist</div>
+              <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                <select id="wlAssetSelect" style="flex:1; min-width:200px; padding:8px 10px; background:var(--input-bg); color:var(--input-color); border:1px solid var(--border); border-radius:6px; font-size:0.88em;">
+                  <option value="">— Select an asset —</option>
+                  ${assetOptionHtml}
+                </select>
+                <button onclick="addToWatchlistFromUI()"
+                  style="padding:8px 20px; background:#f0b90b; color:#000; border:none; border-radius:6px; font-weight:700; cursor:pointer; font-size:0.88em;">Add</button>
+                <button onclick="refreshWatchlistPrices()"
+                  style="padding:8px 16px; background:var(--card-bg); color:#94a3b8; border:1px solid var(--border); border-radius:6px; cursor:pointer; font-size:0.88em;">🔄 Refresh</button>
+              </div>
+            </div>
+          ` : ''}
+
+          <!-- ══ ALERTS TAB ══ -->
+          ${activeTab === 'alerts' ? `
+            <div style="margin-bottom:16px;">
+              ${alertsHtml}
+            </div>
+
+            <!-- Create alert form -->
+            <div style="background:var(--card-bg); border-radius:12px; border:1px solid var(--border); padding:18px;">
+              <div style="font-weight:600; font-size:0.95em; margin-bottom:12px; color:var(--text-color);">➕ Create Price Alert</div>
+              <div style="display:grid; gap:10px;">
+                <select id="alertAssetSelect" style="padding:8px 10px; background:var(--input-bg); color:var(--input-color); border:1px solid var(--border); border-radius:6px; font-size:0.88em;">
+                  <option value="">— Select an asset —</option>
+                  ${assetOptionHtml}
+                </select>
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                  <select id="alertDirection" style="flex:1; min-width:120px; padding:8px 10px; background:var(--input-bg); color:var(--input-color); border:1px solid var(--border); border-radius:6px; font-size:0.88em;">
+                    <option value="above">Price goes above</option>
+                    <option value="below">Price goes below</option>
+                  </select>
+                  <input id="alertTargetPrice" type="number" step="any" placeholder="Target price (USD)"
+                    style="flex:1; min-width:160px; padding:8px 10px; background:var(--input-bg); color:var(--input-color); border:1px solid var(--border); border-radius:6px; font-size:0.88em;" />
+                </div>
+                <button onclick="createPriceAlertFromUI()"
+                  style="padding:10px; background:linear-gradient(90deg,#f0b90b,#f59e0b); color:#000; border:none; border-radius:6px; font-weight:700; cursor:pointer;">🔔 Set Alert</button>
+                <p style="font-size:0.78em; color:#94a3b8; margin:0;">
+                  Alerts are checked every 30 seconds. Browser notifications will be requested when you set your first alert.
+                  ${!userAddress ? '<br><strong style="color:#f6465d;">⚠ Connect a wallet to save alerts across sessions.</strong>' : ''}
+                </p>
+              </div>
+            </div>
+          ` : ''}
+
+        </div>`;
+
+      // Draw P&L chart after DOM renders
+      if (activeTab === 'portfolio' && totalTrades > 0) {
+        requestAnimationFrame(() => {
+          const canvas = document.getElementById('pnlChart');
+          if (!canvas || !window.Chart) return;
+          const isProfit = totalPnl >= 0;
+          const gradientColor = isProfit ? 'rgba(14,203,129,0.2)' : 'rgba(246,70,93,0.2)';
+          const lineColor = isProfit ? '#0ecb81' : '#f6465d';
+          new Chart(canvas, {
+            type: 'line',
+            data: {
+              labels: chartLabels,
+              datasets: [{
+                label: 'Cumulative P&L (USDC)',
+                data: chartData,
+                fill: true,
+                backgroundColor: gradientColor,
+                borderColor: lineColor,
+                borderWidth: 2,
+                tension: 0.3,
+                pointRadius: chartData.length > 30 ? 0 : 3,
+                pointHoverRadius: 4
+              }]
+            },
+            options: {
+              responsive: true,
+              interaction: { mode: 'index', intersect: false },
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  callbacks: {
+                    label: ctx => {
+                      const val = ctx.parsed.y;
+                      return ` ${val >= 0 ? '+' : ''}$${val.toFixed(2)}`;
+                    }
+                  }
+                }
+              },
+              scales: {
+                x: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { color: 'rgba(148,163,184,0.1)' } },
+                y: {
+                  ticks: { color: '#94a3b8', font: { size: 10 }, callback: v => `$${v.toFixed(0)}` },
+                  grid: { color: 'rgba(148,163,184,0.1)' }
+                }
+              }
+            }
+          });
+        });
+      }
+
+      // Auto-fetch watchlist prices after render
+      if (activeTab === 'watchlist' && watchlistItems.length > 0) {
+        requestAnimationFrame(() => refreshWatchlistPrices());
+      }
+    }
+    window.renderAnalyticsSection = renderAnalyticsSection;
+
+    // ── Watchlist helpers ──
+    window.addToWatchlistFromUI = function() {
+      const sel = document.getElementById('wlAssetSelect');
+      if (!sel || !sel.value) { showNotification('Please select an asset.', true); return; }
+      const opt = sel.options[sel.selectedIndex];
+      const symbol = sel.value;
+      const name = opt.dataset.name || symbol;
+      const category = opt.dataset.cat || 'crypto';
+      const basePrice = parseFloat(opt.dataset.price) || 0;
+      if (watchlistItems.find(w => w.symbol === symbol)) {
+        showNotification(`${name} is already in your watchlist.`, true);
+        return;
+      }
+      watchlistItems.push({ symbol, name, category, basePrice });
+      saveWatchlist();
+      showNotification(`⭐ ${name} added to watchlist!`, false);
+      renderAnalyticsSection('watchlist');
+    };
+
+    window.removeFromWatchlist = function(symbol) {
+      watchlistItems = watchlistItems.filter(w => w.symbol !== symbol);
+      saveWatchlist();
+      renderAnalyticsSection('watchlist');
+    };
+
+    window.refreshWatchlistPrices = async function() {
+      for (const item of watchlistItems) {
+        try {
+          let price = null, change = null;
+          if (item.category === 'crypto') {
+            const coinId = COIN_ID_MAP_ALERTS[item.symbol] || item.symbol.replace('USD','').toLowerCase();
+            const data = await fetchWithCORSFallback(
+              `https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=usd&include_24hr_change=true`
+            );
+            if (data && data[coinId]) {
+              price = data[coinId].usd;
+              change = data[coinId].usd_24h_change;
+            }
+          }
+          if (price == null) price = item.basePrice;
+          const priceEl = document.getElementById(`wl-price-${item.symbol}`);
+          const changeEl = document.getElementById(`wl-change-${item.symbol}`);
+          if (priceEl) priceEl.textContent = '$' + price.toLocaleString(undefined, {maximumFractionDigits: price < 1 ? 6 : 2});
+          if (changeEl && change != null) {
+            changeEl.textContent = (change >= 0 ? '+' : '') + change.toFixed(2) + '%';
+            changeEl.style.color = change >= 0 ? '#0ecb81' : '#f6465d';
+          }
+        } catch(e) { /* silently skip */ }
+      }
+    };
+
+    // ── Price alert helpers ──
+    window.createPriceAlertFromUI = function() {
+      const sel = document.getElementById('alertAssetSelect');
+      if (!sel || !sel.value) { showNotification('Please select an asset.', true); return; }
+      const targetInput = document.getElementById('alertTargetPrice');
+      const target = parseFloat(targetInput?.value);
+      if (!target || isNaN(target) || target <= 0) { showNotification('Please enter a valid target price.', true); return; }
+      const direction = document.getElementById('alertDirection')?.value || 'above';
+      const opt = sel.options[sel.selectedIndex];
+      const symbol = sel.value;
+      const name = opt.dataset.name || symbol;
+      const category = opt.dataset.cat || 'crypto';
+      const basePrice = parseFloat(opt.dataset.price) || 0;
+
+      // Request browser notification permission
+      if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission().catch(() => {});
+      }
+
+      const alertId = (typeof crypto !== 'undefined' && crypto.randomUUID)
+        ? crypto.randomUUID()
+        : Date.now().toString(36) + Math.random().toString(36).slice(2);
+      const alert = {
+        id: alertId,
+        symbol, name, category, basePrice,
+        targetPrice: target,
+        direction,
+        triggered: false,
+        triggeredAt: null,
+        triggeredPrice: null
+      };
+      priceAlerts.push(alert);
+      savePriceAlerts();
+      showNotification(`🔔 Alert set: ${name} ${direction === 'above' ? '≥' : '≤'} $${target.toLocaleString()}`, false);
+      renderAnalyticsSection('alerts');
+    };
+
+    window.removePriceAlert = function(id) {
+      priceAlerts = priceAlerts.filter(a => a.id !== id);
+      savePriceAlerts();
+      renderAnalyticsSection('alerts');
+    };
     // Compiled from contracts/MogaToken.sol
     // Implements: ERC-20 · ERC-165 · EIP-2612 permit · EIP-7572 contractURI
     // Compatible with all wallets, DEX scanners (DexScreener/DexTools), Farcaster, and Uniswap.
