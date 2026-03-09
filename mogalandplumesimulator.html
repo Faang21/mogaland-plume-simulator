@@ -1178,7 +1178,7 @@
               <div class="card" style="flex:2; min-height:580px; padding:20px;">
                 <h3 id="viewTitle" style="color:#60a5fa; text-align:center; margin-bottom:8px;">Select to Predict</h3>
                 <!-- Real-time stats bar (shown when asset selected) -->
-                <div id="statsBar" style="display:none; background:#0f172a; border-radius:10px; padding:10px 14px; margin-bottom:10px; font-size:0.80em; display:none; flex-wrap:wrap; gap:12px; align-items:center;">
+                <div id="statsBar" style="display:none; background:#0f172a; border-radius:10px; padding:10px 14px; margin-bottom:10px; font-size:0.80em; flex-wrap:wrap; gap:12px; align-items:center;">
                   <span><span style="color:#64748b;">Mark</span> <strong id="statMark" style="color:#f0b90b;">—</strong></span>
                   <span><span style="color:#64748b;">Index</span> <strong id="statIndex" style="color:#e2e8f0;">—</strong></span>
                   <span><span style="color:#64748b;">24h Δ</span> <strong id="stat24h" style="color:#94a3b8;">—</strong></span>
@@ -1734,39 +1734,6 @@
         };
 
         // Fetch and update real prices for all non-sports assets
-        async function refreshMarketPrices() {
-          // Crypto: Binance REST API (supports CORS)
-          try {
-            const cryptoSymbols = assetsData.crypto.map(a => a.binanceSymbol).filter(Boolean);
-            const url = `https://api.binance.com/api/v3/ticker/price?symbols=${encodeURIComponent(JSON.stringify(cryptoSymbols))}`;
-            const tickers = await fetchWithProxy(url);
-            if (Array.isArray(tickers)) {
-              tickers.forEach(t => {
-                const asset = assetsData.crypto.find(a => a.binanceSymbol === t.symbol);
-                const price = parseFloat(t.price);
-                if (asset && price > 0) asset.basePrice = price;
-              });
-            }
-          } catch (_) {}
-
-          // Non-crypto: Yahoo Finance via proxy
-          const nonCryptoAssets = [...assetsData.stocks, ...assetsData.commodities, ...assetsData.forex].filter(a => a.yahooSymbol);
-          for (const asset of nonCryptoAssets) {
-            try {
-              const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(asset.yahooSymbol)}?interval=1d&range=2d`;
-              const data = await fetchWithProxy(url);
-              if (data && data.chart && data.chart.result && data.chart.result.length) {
-                const meta = data.chart.result[0].meta || {};
-                const price = meta.regularMarketPrice || meta.price;
-                if (price && price > 0) asset.basePrice = price;
-              }
-            } catch (_) {}
-          }
-
-          // Re-render asset list with updated prices
-          renderAssets();
-        }
-
         let currentTab = 'crypto';
         let selectedAsset = null;
         let chart = null;
@@ -2121,9 +2088,32 @@
     }
 
     // ===== STAKING POOL SECTION =====
-    // Single-asset pools: MOGA, wMOGA, ETH (Base), ETH (Arbitrum), BNB, EDU, USDC
-    // LP pools: wMOGA/USDC, wMOGA/ETH, MOGA/ETH, MOGA/BNB, MOGA/EDU, MOGA/USDC
+    // Single-asset pools via Aave V3 (Base) · LP pools via Aerodrome (Base)
     // wMOGA pegged 1:1 to MOGA — wrap/unwrap included
+
+    // DeFi Llama live yields cache
+    let _simDefiYields = null;
+    async function fetchSimDefiYields() {
+      if (_simDefiYields) return _simDefiYields;
+      try {
+        const r = await fetch('https://yields.llama.fi/pools');
+        if (!r.ok) return null;
+        const data = await r.json();
+        if (!data || !Array.isArray(data.data)) return null;
+        _simDefiYields = data.data;
+        return _simDefiYields;
+      } catch (_) { return null; }
+    }
+    function resolveSimPoolAPY(pool, yields) {
+      if (!yields) return pool.apy;
+      const isLP = pool.type === 'LP' || !!pool.pair;
+      const protocol = isLP ? 'aerodrome-finance' : 'aave-v3';
+      const sym = pool.token.toUpperCase();
+      const found = yields.find(y =>
+        y.project === protocol && y.chain.toLowerCase() === 'base' && y.symbol.toUpperCase().includes(sym)
+      );
+      return (found && found.apy > 0) ? parseFloat(found.apy.toFixed(2)) : pool.apy;
+    }
     const STAKING_POOLS_SIM = [
       // ── Single-asset pools ──────────────────────────────────────────────────
       { id: 'moga_only',   name: 'MOGA Stake',             apy: 28, tvl: 3400000, token: 'MOGA',  pair: null,   icon: '🌾', minStake: 5,    type: 'ERC20' },
@@ -2184,19 +2174,22 @@
         const userStaked = (entry.staked || 0).toFixed(decimals);
         const tvlM = pool.tvl >= 1e6 ? (pool.tvl / 1e6).toFixed(2) + 'M' : (pool.tvl / 1e3).toFixed(0) + 'K';
         const typeBadge = pool.pair ? `🔗 ${pool.token}/${pool.pair} LP` : `🪙 ${pool.token}`;
+        const isLP = pool.type === 'LP' || !!pool.pair;
+        const protocol = isLP ? 'Aerodrome' : 'Aave V3';
+        const protocolColor = isLP ? '#0ecb81' : '#b6509e';
         const netBadge = pool.network ? `<span style="font-size:0.68em; background:rgba(96,165,250,0.15); color:#60a5fa; border-radius:4px; padding:1px 5px; margin-left:4px;">${pool.network}</span>` : '';
         const wmogaBadge = pool.isWmoga ? `<span style="font-size:0.68em; background:rgba(251,191,36,0.15); color:#fbbf24; border-radius:4px; padding:1px 5px; margin-left:4px;">1:1 MOGA</span>` : '';
         const stepVal = ethTokens.includes(pool.token) ? '0.001' : pool.token === 'BNB' ? '0.01' : '1';
         return `
-          <div style="background:#1e293b; border:1px solid #334155; border-radius:14px; padding:20px; display:flex; flex-direction:column; gap:12px;">
+          <div id="sim_sp_card_${pool.id}" style="background:#1e293b; border:1px solid #334155; border-radius:14px; padding:20px; display:flex; flex-direction:column; gap:12px;">
             <div style="display:flex; align-items:center; gap:10px;">
               <span style="font-size:1.8em;">${pool.icon}</span>
               <div style="flex:1;">
                 <div style="font-weight:700; font-size:1.02em; color:#e2e8f0;">${pool.name}${netBadge}${wmogaBadge}</div>
-                <div style="font-size:0.74em; color:#64748b; margin-top:2px;">TVL: $${tvlM} &nbsp;·&nbsp; ${typeBadge}</div>
+                <div style="font-size:0.74em; color:#64748b; margin-top:2px;">TVL: $${tvlM} &nbsp;·&nbsp; ${typeBadge} &nbsp;·&nbsp; <span style="color:${protocolColor};">${protocol}</span></div>
               </div>
               <div style="text-align:right;">
-                <div style="font-size:1.3em; font-weight:700; color:#10b981;">${pool.apy}%</div>
+                <div id="sim_sp_apy_${pool.id}" style="font-size:1.3em; font-weight:700; color:#10b981;">${pool.apy}%</div>
                 <div style="font-size:0.72em; color:#94a3b8;">APY</div>
               </div>
             </div>
@@ -2267,27 +2260,107 @@
             </div>
             <div style="background:#1e293b; border:1px solid #334155; border-radius:12px; padding:14px; text-align:center;">
               <div style="font-size:0.75em; color:#94a3b8; margin-bottom:4px;">Avg APY</div>
-              <div style="font-size:1.35em; font-weight:700; color:#c084fc;">${Math.round(STAKING_POOLS_SIM.reduce((s,p)=>s+p.apy,0)/STAKING_POOLS_SIM.length)}%</div>
-              <div style="font-size:0.70em; color:#64748b;">across pools</div>
+              <div id="sim_sp_avg_apy" style="font-size:1.35em; font-weight:700; color:#c084fc;">${Math.round(STAKING_POOLS_SIM.reduce((s,p)=>s+p.apy,0)/STAKING_POOLS_SIM.length)}%</div>
+              <div style="font-size:0.70em; color:#64748b;">Aave V3 / Aerodrome</div>
             </div>
           </div>
 
           ${wMogaCard}
 
-          <div style="font-size:0.82em; color:#64748b; margin-bottom:10px; font-weight:600;">🪙 Single-Asset Pools</div>
+          <div style="font-size:0.82em; color:#64748b; margin-bottom:10px; font-weight:600;">
+            🪙 Single-Asset Pools
+            <span style="background:rgba(182,80,158,0.15); color:#b6509e; padding:2px 8px; border-radius:99px; margin-left:6px; font-weight:400;">Via Aave V3 (Base)</span>
+            <span id="sim_sp_live_badge" style="background:rgba(14,203,129,0.1); color:#0ecb81; padding:2px 8px; border-radius:99px; margin-left:4px; display:none; font-weight:400;">● Live APY</span>
+          </div>
           <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px,1fr)); gap:16px; margin-bottom:28px;">
             ${STAKING_POOLS_SIM.filter(p => !p.pair).map(buildCard).join('')}
           </div>
 
-          <div style="font-size:0.82em; color:#64748b; margin-bottom:10px; font-weight:600;">🔗 LP Pools (Higher APY)</div>
+          <div style="font-size:0.82em; color:#64748b; margin-bottom:10px; font-weight:600;">
+            🔗 LP Pools
+            <span style="background:rgba(14,203,129,0.15); color:#0ecb81; padding:2px 8px; border-radius:99px; margin-left:6px; font-weight:400;">Via Aerodrome (Base)</span>
+          </div>
           <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px,1fr)); gap:16px; margin-bottom:28px;">
             ${STAKING_POOLS_SIM.filter(p => p.pair).map(buildCard).join('')}
           </div>
 
+          <!-- Aave V3 / Aerodrome live yield rates panel -->
+          <div style="background:linear-gradient(90deg,rgba(182,80,158,0.1),rgba(14,203,129,0.05)); border:1px solid rgba(182,80,158,0.3); border-radius:14px; padding:16px 20px; margin-bottom:24px;">
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
+              <span style="font-size:1.4em;">📊</span>
+              <div style="flex:1;">
+                <div style="font-weight:700; color:#e2e8f0;">Aave V3 &amp; Aerodrome — Live Yield Rates (Base)</div>
+                <div style="font-size:0.78em; color:#94a3b8; margin-top:2px;">Updated from DeFi Llama · APY refresh on page load</div>
+              </div>
+              <span id="sim_defi_status" style="font-size:0.75em; color:#475569; background:#1e293b; padding:3px 10px; border-radius:99px;">Fetching…</span>
+            </div>
+            <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:8px;">
+              ${[
+                {id:'aave_usdc',sym:'USDC',icon:'💵',protocol:'Aave V3',color:'#b6509e'},
+                {id:'aave_weth',sym:'WETH',icon:'⬡',protocol:'Aave V3',color:'#b6509e'},
+                {id:'aave_eth',sym:'ETH',icon:'⬡',protocol:'Aave V3',color:'#b6509e'},
+                {id:'aero_moga_usdc',sym:'MOGA/USDC',icon:'💎',protocol:'Aerodrome',color:'#0ecb81'},
+                {id:'aero_moga_eth',sym:'MOGA/ETH',icon:'🔷',protocol:'Aerodrome',color:'#0ecb81'},
+                {id:'aero_wmoga',sym:'wMOGA/USDC',icon:'🌊',protocol:'Aerodrome',color:'#0ecb81'}
+              ].map(a => `
+                <div style="background:#1e293b; border-radius:10px; padding:10px; text-align:center;">
+                  <div style="font-size:1.3em;">${a.icon}</div>
+                  <div style="font-weight:600; color:#e2e8f0; font-size:0.82em; margin-top:3px;">${a.sym}</div>
+                  <div id="${a.id}" style="font-size:1.4em; font-weight:700; color:#10b981; margin:3px 0;">—%</div>
+                  <div style="font-size:0.68em; color:${a.color};">${a.protocol}</div>
+                </div>`).join('')}
+            </div>
+          </div>
+
           <p style="text-align:center; color:#64748b; font-size:0.80em; margin-top:24px;">
-            ⚡ Rewards accrue in real-time · wMOGA pegged 1:1 to MOGA · Simulator
+            ⚡ Rewards accrue in real-time · wMOGA pegged 1:1 to MOGA · Powered by Aave V3 &amp; Aerodrome
           </p>
         </div>`;
+
+      // Fetch live APY from DeFi Llama and update pool cards
+      fetchSimDefiYields().then(yields => {
+        const statusEl = document.getElementById('sim_defi_status');
+        if (statusEl) { statusEl.textContent = yields ? '● Live' : 'API unavailable'; if (yields) statusEl.style.color = '#0ecb81'; }
+
+        // Update Aave yield table
+        if (yields) {
+          const yieldMap = [
+            {id:'aave_usdc',sym:'USDC',proj:'aave-v3'},
+            {id:'aave_weth',sym:'WETH',proj:'aave-v3'},
+            {id:'aave_eth',sym:'ETH',proj:'aave-v3'},
+            {id:'aero_moga_usdc',sym:'USDC',proj:'aerodrome-finance'},
+            {id:'aero_moga_eth',sym:'WETH',proj:'aerodrome-finance'},
+            {id:'aero_wmoga',sym:'USDC',proj:'aerodrome-finance'}
+          ];
+          yieldMap.forEach(({id, sym, proj}) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const m = yields.find(y => y.project === proj && y.chain.toLowerCase() === 'base' && y.symbol.toUpperCase().includes(sym));
+            el.textContent = (m && m.apy > 0) ? parseFloat(m.apy).toFixed(2) + '%' : '—%';
+            if (m && m.apy > 0) el.style.color = '#0ecb81';
+          });
+        }
+
+        // Update pool card APY values
+        let liveCount = 0;
+        STAKING_POOLS_SIM.forEach(pool => {
+          const realApy = resolveSimPoolAPY(pool, yields);
+          if (realApy !== pool.apy) liveCount++;
+          const apyEl = document.getElementById(`sim_sp_apy_${pool.id}`);
+          if (apyEl) apyEl.textContent = realApy + '%';
+        });
+        if (liveCount > 0) {
+          const badge = document.getElementById('sim_sp_live_badge');
+          if (badge) badge.style.display = 'inline';
+        }
+
+        // Update avg APY
+        const avgEl = document.getElementById('sim_sp_avg_apy');
+        if (avgEl && yields) {
+          const total = STAKING_POOLS_SIM.reduce((s, p) => s + resolveSimPoolAPY(p, yields), 0);
+          avgEl.textContent = Math.round(total / STAKING_POOLS_SIM.length) + '%';
+        }
+      });
     }
 
     function simWrapMoga() {
