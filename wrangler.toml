@@ -6,6 +6,46 @@ pages_build_output_dir = "dist"
 [vars]
 # Optional: set GECKOTERMINAL_API_KEY secret via `wrangler secret put` for higher rate limits
 
+# ── Custom Domain ──────────────────────────────────────────────────────────────
+# Configure your custom domain in the Cloudflare Pages dashboard:
+#   Pages → Your project → Custom domains → Add a custom domain
+#
+# Recommended DNS setup (in Cloudflare DNS dashboard):
+#   Type   Name   Content              Proxy
+#   CNAME  @      <project>.pages.dev  Proxied (orange cloud ✓)
+#   CNAME  www    <project>.pages.dev  Proxied (orange cloud ✓)
+#
+# Then add a Redirect Rule (in Cloudflare dashboard → Rules → Redirect Rules)
+# to canonicalise www → non-www (or non-www → www):
+#   If: hostname equals www.yourdomain.com
+#   Then: Dynamic redirect to  concat("https://yourdomain.com", http.request.uri.path)  (301)
+
+# ── Cloudflare Pages – Recommended Settings (set in the dashboard) ─────────────
+# Build command : npm run build
+# Build output  : dist
+# Root directory: (leave blank or /)
+#
+# SSL/TLS mode  : Full (strict)   ← avoids mixed-content issues
+# Always Use HTTPS: ON            ← auto-redirect HTTP → HTTPS
+# Automatic HTTPS Rewrites: ON    ← fixes mixed-content links
+# HSTS (HTTP Strict Transport Security): max-age=31536000 + includeSubDomains + preload
+# Min TLS Version: TLS 1.2
+# Opportunistic Encryption: ON
+# TLS 1.3: ON
+#
+# Caching:
+#   Browser Cache TTL: Respect Existing Headers  ← honours _headers file above
+#   Cache Level: Standard
+#
+# Speed / Performance:
+#   Auto Minify: JavaScript ✓, CSS ✓, HTML ✓
+#   Brotli Compression: ON
+#
+# Security:
+#   Security Level: Medium
+#   Bot Fight Mode: ON
+#   Challenge Passage: 30 minutes
+
 # ── KV Namespaces ──────────────────────────────────────────────────────────────
 # To enable Cloudflare KV persistence, create the namespaces and bind them here:
 #
