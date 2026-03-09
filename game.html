@@ -6406,5 +6406,19 @@ updateHUD();
 renderTxHistory();
 })();
 </script>
+<!-- Farcaster Mini App SDK: signal ready() so the client dismisses its loading splash -->
+<script type="module">
+  (async () => {
+    const FARCASTER_SDK_TIMEOUT_MS = 2000;
+    try {
+      const timeoutPromise = new Promise(resolve => setTimeout(() => resolve(null), FARCASTER_SDK_TIMEOUT_MS));
+      const { sdk } = await import('https://esm.sh/@farcaster/mini-app-sdk');
+      const ctx = await Promise.race([sdk.context, timeoutPromise]);
+      if (ctx && ctx.client) {
+        await sdk.actions.ready({ disableNativeGestures: true });
+      }
+    } catch (_) { /* not in Farcaster context or SDK unavailable */ }
+  })();
+</script>
 </body>
 </html>

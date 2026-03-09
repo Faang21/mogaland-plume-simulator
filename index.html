@@ -1874,6 +1874,34 @@
   </style>
 </head>
 <body>
+  <!-- Farcaster Mini App detection: redirect to PixelAdventureGame (game.html) if running inside Farcaster client -->
+  <div id="farcasterSplash" style="position:fixed;inset:0;z-index:9999;background:#0b1020;display:flex;align-items:center;justify-content:center;" aria-hidden="true">
+    <div style="color:#64748b;font-size:14px;letter-spacing:0.05em;">⚡ Initializing…</div>
+  </div>
+  <script type="module">
+    (async () => {
+      const FARCASTER_SDK_TIMEOUT_MS = 2000;
+      const splash = document.getElementById('farcasterSplash');
+      const showDashboard = () => { if (splash) splash.style.display = 'none'; };
+      // Skip detection if already resolved in this session
+      if (sessionStorage.getItem('fcMiniApp') === '0') { showDashboard(); return; }
+      try {
+        const timeoutPromise = new Promise(resolve => setTimeout(() => resolve(null), FARCASTER_SDK_TIMEOUT_MS));
+        const { sdk } = await import('https://esm.sh/@farcaster/mini-app-sdk');
+        const ctx = await Promise.race([sdk.context, timeoutPromise]);
+        if (ctx && ctx.client) {
+          // Running inside Farcaster client — show PixelAdventureGame full screen
+          sessionStorage.setItem('fcMiniApp', '1');
+          window.location.replace('game.html');
+          return;
+        }
+      } catch (_) { /* not in Farcaster context or SDK unavailable */ }
+      // Normal browser access — show FullMogaDashboard
+      sessionStorage.setItem('fcMiniApp', '0');
+      showDashboard();
+    })();
+  </script>
+
   <!-- Futuristic scan-line overlay (always on) -->
   <div class="scan-line" aria-hidden="true"></div>
   
