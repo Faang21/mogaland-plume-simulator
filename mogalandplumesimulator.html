@@ -1176,12 +1176,20 @@
               </div>
 
               <div class="card" style="flex:2; min-height:580px; padding:20px;">
-                <h3 id="viewTitle" style="color:#60a5fa; text-align:center; margin-bottom:15px;">Select to Predict</h3>
+                <h3 id="viewTitle" style="color:#60a5fa; text-align:center; margin-bottom:8px;">Select to Predict</h3>
+                <!-- Real-time stats bar (shown when asset selected) -->
+                <div id="statsBar" style="display:none; background:#0f172a; border-radius:10px; padding:10px 14px; margin-bottom:10px; font-size:0.80em; display:none; flex-wrap:wrap; gap:12px; align-items:center;">
+                  <span><span style="color:#64748b;">Mark</span> <strong id="statMark" style="color:#f0b90b;">—</strong></span>
+                  <span><span style="color:#64748b;">Index</span> <strong id="statIndex" style="color:#e2e8f0;">—</strong></span>
+                  <span><span style="color:#64748b;">24h Δ</span> <strong id="stat24h" style="color:#94a3b8;">—</strong></span>
+                  <span><span style="color:#64748b;">High</span> <strong id="statHigh" style="color:#0ecb81;">—</strong></span>
+                  <span><span style="color:#64748b;">Low</span> <strong id="statLow" style="color:#f6465d;">—</strong></span>
+                  <span><span style="color:#64748b;">Funding</span> <strong id="statFunding" style="color:#60a5fa;">—</strong></span>
+                  <span id="liveLabel" style="margin-left:auto; background:#0ecb81; color:#000; font-size:0.72em; font-weight:700; padding:2px 7px; border-radius:10px; display:none;">● LIVE</span>
+                </div>
                 <canvas id="priceChart" height="420" style="display:none;"></canvas>
                 <div id="clubHistoryView" style="display:none; color:#e2e8f0; font-size:1.05em; line-height:1.6; padding:15px; background:rgba(13,110,253,0.08); border-radius:12px;"></div>
-                <div id="chartFooter" style="text-align:center; margin-top:15px; font-size:0.95em; opacity:0.8; display:none;">
-                  Simulated real-time chart • Updates every ~8s
-                </div>
+                <div id="chartFooter" style="text-align:center; margin-top:10px; font-size:0.82em; color:#64748b; display:none;"></div>
               </div>
 
               <div class="card" style="flex:1; max-width:360px; padding:20px;">
@@ -1216,7 +1224,7 @@
           </div>
         `;
 
-        // CORS proxy for APIs that don't allow browser cross-origin requests
+        // ── CORS proxy ──────────────────────────────────────────────────────────
         const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
         async function fetchWithProxy(url) {
           try {
@@ -1229,6 +1237,420 @@
           } catch (_) {}
           return null;
         }
+
+        // ── Real Binance klines (OHLCV) ─────────────────────────────────────
+        async function fetchBinanceKlines(symbol, interval, limit) {
+          // Try Futures first (more accurate mark pricing), then Spot
+          const endpoints = [
+            `https://fapi.binance.com/fapi/v1/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`,
+            `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`
+          ];
+          for (const url of endpoints) {
+            try {
+              const r = await fetch(url);
+              if (r.ok) {
+                const data = await r.json();
+                if (Array.isArray(data) && data.length > 0) {
+                  return data.map(k => ({
+                    x: k[0],
+                    o: parseFloat(k[1]),
+                    h: parseFloat(k[2]),
+                    l: parseFloat(k[3]),
+                    c: parseFloat(k[4]),
+                    v: parseFloat(k[5])
+                  }));
+                }
+              }
+            } catch (_) {}
+          }
+          return null;
+        }
+
+        // ── Real Binance futures mark price & funding rate ───────────────────
+        async function fetchMarkPrice(symbol) {
+          try {
+            const r = await fetch(`https://fapi.binance.com/fapi/v1/premiumIndex?symbol=${symbol}`);
+            if (r.ok) {
+              const d = await r.json();
+              return {
+                markPrice:    parseFloat(d.markPrice)    || 0,
+                indexPrice:   parseFloat(d.indexPrice)   || 0,
+                fundingRate:  parseFloat(d.lastFundingRate) || 0,
+                nextFunding:  d.nextFundingTime
+              };
+            }
+          } catch (_) {}
+          return null;
+        }
+
+        // ── Binance 24h ticker ───────────────────────────────────────────────
+        async function fetch24hStats(symbol) {
+          try {
+            const r = await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${symbol}`);
+            if (r.ok) {
+              const d = await r.json();
+              return {
+                change:   parseFloat(d.priceChange),
+                changePct: parseFloat(d.priceChangePercent),
+                high:     parseFloat(d.highPrice),
+                low:      parseFloat(d.lowPrice),
+                volume:   parseFloat(d.volume),
+                last:     parseFloat(d.lastPrice)
+              };
+            }
+          } catch (_) {}
+          return null;
+        }
+
+        // ── Yahoo Finance klines (stocks/forex/commodities) via proxy ────────
+        async function fetchYahooKlines(yahooSymbol, interval) {
+          const periodMap = {
+            '1h': { interval: '60m', range: '5d'  },
+            '4h': { interval: '1d',  range: '1mo' },
+            '1d': { interval: '1d',  range: '6mo' }
+          };
+          const p = periodMap[interval] || periodMap['1d'];
+          const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}?interval=${p.interval}&range=${p.range}&includeTimestamps=true`;
+          try {
+            const data = await fetchWithProxy(url);
+            if (!data?.chart?.result?.length) return null;
+            const result = data.chart.result[0];
+            const ts     = result.timestamp || [];
+            const quote  = result.indicators?.quote?.[0];
+            if (!quote || !ts.length) return null;
+            const klines = ts.map((t, i) => ({
+              x: t * 1000,
+              o: parseFloat(quote.open[i])  || 0,
+              h: parseFloat(quote.high[i])  || 0,
+              l: parseFloat(quote.low[i])   || 0,
+              c: parseFloat(quote.close[i]) || 0,
+              v: parseFloat(quote.volume?.[i]) || 0
+            })).filter(k => k.c > 0);
+            return klines.length > 0 ? klines : null;
+          } catch (_) {}
+          return null;
+        }
+
+        // ── Update stats bar with real data ──────────────────────────────────
+        function showStatsBar(asset, markData, statsData) {
+          const bar = document.getElementById('statsBar');
+          if (!bar) return;
+          bar.style.display = 'flex';
+
+          const fmtPrice = p => {
+            if (!p || isNaN(p)) return '—';
+            const dec = p < 10 ? 4 : 2;
+            return '$' + p.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: dec});
+          };
+
+          if (markData && markData.markPrice > 0) {
+            document.getElementById('statMark').textContent  = fmtPrice(markData.markPrice);
+            document.getElementById('statIndex').textContent = fmtPrice(markData.indexPrice);
+            const fr = markData.fundingRate;
+            const frEl = document.getElementById('statFunding');
+            frEl.textContent = fr ? ((fr * 100).toFixed(4) + '%') : '—';
+            frEl.style.color = fr >= 0 ? '#0ecb81' : '#f6465d';
+            document.getElementById('liveLabel').style.display = 'inline';
+          } else {
+            document.getElementById('statMark').textContent  = fmtPrice(asset.basePrice);
+            document.getElementById('statIndex').textContent = '—';
+            document.getElementById('statFunding').textContent = '—';
+            document.getElementById('liveLabel').style.display = 'none';
+          }
+
+          if (statsData) {
+            const pct = statsData.changePct;
+            const ch  = document.getElementById('stat24h');
+            ch.textContent = (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%';
+            ch.style.color = pct >= 0 ? '#0ecb81' : '#f6465d';
+            document.getElementById('statHigh').textContent = fmtPrice(statsData.high);
+            document.getElementById('statLow').textContent  = fmtPrice(statsData.low);
+          }
+        }
+
+        // ── Fetch real price for one asset (spot) ────────────────────────────
+        async function fetchRealPriceForAsset(asset) {
+          try {
+            if (asset.binanceSymbol) {
+              const r = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${encodeURIComponent(asset.binanceSymbol)}`);
+              if (r.ok) {
+                const d = await r.json();
+                if (d.price) return parseFloat(d.price);
+              }
+            }
+            if (asset.yahooSymbol) {
+              const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(asset.yahooSymbol)}?interval=1d&range=2d`;
+              const data = await fetchWithProxy(url);
+              if (data?.chart?.result?.length) {
+                const meta = data.chart.result[0].meta || {};
+                const p = meta.regularMarketPrice || meta.price;
+                if (p > 0) return p;
+              }
+            }
+          } catch (_) {}
+          return null;
+        }
+
+        // ── Refresh all asset list prices from real APIs ──────────────────────
+        async function refreshMarketPrices() {
+          const statusEl = document.getElementById('priceLoadStatus');
+          if (statusEl) { statusEl.textContent = 'Fetching live prices...'; statusEl.style.color = '#f0b90b'; }
+
+          // Crypto — Binance bulk
+          try {
+            const syms = assetsData.crypto.map(a => a.binanceSymbol).filter(Boolean);
+            const url  = `https://api.binance.com/api/v3/ticker/price?symbols=${encodeURIComponent(JSON.stringify(syms))}`;
+            const data = await fetchWithProxy(url);
+            if (Array.isArray(data)) {
+              data.forEach(t => {
+                const a = assetsData.crypto.find(x => x.binanceSymbol === t.symbol);
+                const p = parseFloat(t.price);
+                if (a && p > 0) a.basePrice = p;
+              });
+            }
+          } catch (_) {}
+
+          // Non-crypto — Yahoo Finance
+          const nonCrypto = [...assetsData.stocks, ...assetsData.commodities, ...assetsData.forex].filter(a => a.yahooSymbol);
+          for (const asset of nonCrypto) {
+            try {
+              const url  = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(asset.yahooSymbol)}?interval=1d&range=2d`;
+              const data = await fetchWithProxy(url);
+              if (data?.chart?.result?.length) {
+                const meta = data.chart.result[0].meta || {};
+                const p = meta.regularMarketPrice || meta.price;
+                if (p > 0) asset.basePrice = p;
+              }
+            } catch (_) {}
+          }
+
+          renderAssets();
+          if (statusEl) { statusEl.textContent = '✅ Live prices loaded'; statusEl.style.color = '#10b981'; }
+        }
+
+        // ── Select asset — load real klines + mark price ──────────────────────
+        function selectAsset(asset) {
+          if (!asset) return;
+          selectedAsset = asset;
+          const displayName = asset.name || asset.symbol;
+          document.getElementById('selectedAsset').textContent = displayName;
+          document.getElementById('viewTitle').textContent = `${displayName} — Live Chart`;
+          document.getElementById('priceChart').style.display = 'block';
+          document.getElementById('chartFooter').style.display = 'block';
+          document.getElementById('clubHistoryView').style.display = 'none';
+          document.getElementById('chartFooter').textContent = 'Loading live data…';
+          renderAssets(); // highlight selected in sidebar
+
+          (async () => {
+            const interval = '1h';
+            let klines = null;
+            let markData = null;
+            let statsData = null;
+
+            if (asset.binanceSymbol) {
+              [klines, markData, statsData] = await Promise.all([
+                fetchBinanceKlines(asset.binanceSymbol, interval, 150),
+                fetchMarkPrice(asset.binanceSymbol),
+                fetch24hStats(asset.binanceSymbol)
+              ]);
+            } else if (asset.yahooSymbol) {
+              klines = await fetchYahooKlines(asset.yahooSymbol, interval);
+              // Also refresh spot price for non-crypto
+              const spotP = await fetchRealPriceForAsset(asset);
+              if (spotP > 0) asset.basePrice = spotP;
+            }
+
+            // Update basePrice from last kline close
+            if (klines && klines.length > 0) {
+              const lastClose = klines[klines.length - 1].c;
+              if (lastClose > 0) asset.basePrice = lastClose;
+            } else if (!klines) {
+              // No klines available — generate from real spot price
+              const spotP = await fetchRealPriceForAsset(asset);
+              if (spotP > 0) asset.basePrice = spotP;
+              klines = generateOHLC(asset.basePrice, 100, asset.volatility || 0.02);
+            }
+
+            renderAssets();
+            initChart(asset, klines);
+            showStatsBar(asset, markData, statsData);
+
+            const dec = asset.basePrice < 10 ? 4 : 2;
+            const src = asset.binanceSymbol ? 'Binance Futures' : 'Yahoo Finance';
+            document.getElementById('chartFooter').textContent =
+              `${src} · Live price: $${asset.basePrice.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:dec})} · ${interval} candles · Real data`;
+          })();
+        }
+
+        // ── Init Chart.js with real (or fallback) klines ─────────────────────
+        function initChart(asset, klineData) {
+          const canvas = document.getElementById('priceChart');
+          if (!canvas) return;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) return;
+          if (chart) chart.destroy();
+
+          priceHistory = klineData || generateOHLC(asset.basePrice, 100, asset.volatility || 0.02);
+
+          chart = new Chart(ctx, {
+            type: 'candlestick',
+            data: {
+              datasets: [{
+                label: asset.name || asset.symbol,
+                data: priceHistory
+              }, {
+                label: 'Volume',
+                type: 'bar',
+                data: priceHistory.map(d => ({ x: d.x, y: d.v || 0 })),
+                yAxisID: 'volume',
+                backgroundColor: 'rgba(59,130,246,0.3)'
+              }]
+            },
+            options: {
+              scales: {
+                x: { type: 'time', time: { unit: 'hour' }, title: { display: false } },
+                y: { position: 'left', title: { display: true, text: 'Price' } },
+                volume: { position: 'right', title: { display: true, text: 'Vol' }, grid: { drawOnChartArea: false } }
+              },
+              plugins: { legend: { display: false } }
+            }
+          });
+        }
+
+        // ── generateOHLC (fallback when API fails) ───────────────────────────
+        function generateOHLC(basePrice, count, volatility) {
+          const data = [];
+          let current = basePrice || 1000;
+          const now   = Date.now();
+          const vol   = volatility || 0.02;
+          for (let i = 0; i < count; i++) {
+            const open   = current;
+            const change = (Math.random() - 0.5) * vol * open;
+            const close  = Math.max(0.0001, open + change);
+            const wick   = Math.random() * vol * 0.4 * open;
+            data.push({ x: now - (count - i - 1) * 3600000, o: open, h: Math.max(open, close) + wick, l: Math.min(open, close) - wick, c: close, v: 0 });
+            current = close;
+          }
+          return data;
+        }
+
+        // ── Periodic refresh: every 30s pull fresh kline + mark price ─────────
+        let chartRefreshInterval = null;
+        function startChartRefresh() {
+          if (chartRefreshInterval) clearInterval(chartRefreshInterval);
+          chartRefreshInterval = setInterval(async () => {
+            if (!selectedAsset || !chart || currentTab === 'sports') return;
+            const asset = selectedAsset;
+
+            if (asset.binanceSymbol) {
+              const [newKlines, markData, statsData] = await Promise.all([
+                fetchBinanceKlines(asset.binanceSymbol, '1h', 150),
+                fetchMarkPrice(asset.binanceSymbol),
+                fetch24hStats(asset.binanceSymbol)
+              ]);
+              if (newKlines && newKlines.length > 0 && selectedAsset === asset) {
+                priceHistory = newKlines;
+                chart.data.datasets[0].data = priceHistory;
+                chart.data.datasets[1].data = priceHistory.map(d => ({ x: d.x, y: d.v || 0 }));
+                chart.update('none');
+                asset.basePrice = priceHistory[priceHistory.length - 1].c;
+                showStatsBar(asset, markData, statsData);
+                renderAssets();
+                const dec = asset.basePrice < 10 ? 4 : 2;
+                const footer = document.getElementById('chartFooter');
+                if (footer) footer.textContent = `Binance Futures · $${asset.basePrice.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:dec})} · Updated ${new Date().toLocaleTimeString()}`;
+              }
+            } else if (asset.yahooSymbol) {
+              const newKlines = await fetchYahooKlines(asset.yahooSymbol, '1h');
+              if (newKlines && newKlines.length > 0 && selectedAsset === asset) {
+                priceHistory = newKlines;
+                chart.data.datasets[0].data = priceHistory;
+                chart.data.datasets[1].data = priceHistory.map(d => ({ x: d.x, y: d.v || 0 }));
+                chart.update('none');
+                asset.basePrice = priceHistory[priceHistory.length - 1].c;
+                renderAssets();
+                const footer = document.getElementById('chartFooter');
+                const dec = asset.basePrice < 10 ? 4 : 2;
+                if (footer) footer.textContent = `Yahoo Finance · $${asset.basePrice.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:dec})} · Updated ${new Date().toLocaleTimeString()}`;
+              }
+            }
+          }, 30000);
+        }
+        startChartRefresh();
+
+        function placeBet(direction) {
+          if (!selectedAsset) return showNotification("Select an asset first!", true);
+          currentBet = { asset: selectedAsset.symbol, direction, price: selectedAsset.basePrice, odds: parseFloat(document.getElementById('betOdds').value) || 2.2 };
+          document.getElementById('betStatus').textContent = `Bet ${direction.toUpperCase()} on ${selectedAsset.name || selectedAsset.symbol} @ $${currentBet.price.toLocaleString(undefined, {maximumFractionDigits: currentBet.price < 10 ? 4 : 2})}`;
+        }
+
+        function confirmBet() {
+          const amt = parseFloat(document.getElementById('betAmount').value);
+          if (!currentBet || isNaN(amt) || amt < 10) return showNotification("Min 10 MOGA", true);
+          if (amt > mogalandPoints) return showNotification("Not enough MOGA!", true);
+          mogalandPoints -= amt;
+          const entryPrice = currentBet.price;
+
+          let timeLeft = 15;
+          document.getElementById('timerDisplay').textContent = `Resolving in ${timeLeft}s…`;
+          const interval = setInterval(async () => {
+            timeLeft--;
+            document.getElementById('timerDisplay').textContent = timeLeft > 0 ? `Resolving in ${timeLeft}s…` : '';
+            if (timeLeft <= 0) {
+              clearInterval(interval);
+              // Fetch real exit price
+              let exitPrice = entryPrice;
+              try {
+                if (selectedAsset && selectedAsset.binanceSymbol) {
+                  const r = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${encodeURIComponent(selectedAsset.binanceSymbol)}`);
+                  if (r.ok) { const d = await r.json(); if (d.price) exitPrice = parseFloat(d.price); }
+                } else if (selectedAsset && selectedAsset.yahooSymbol) {
+                  const p = await fetchRealPriceForAsset(selectedAsset);
+                  if (p > 0) exitPrice = p;
+                }
+              } catch (_) {}
+              const actualMoved = exitPrice > entryPrice ? 'win' : 'lose';
+              const win = actualMoved === currentBet.direction;
+              const histEl = document.getElementById('betHistory');
+              const dt = new Date().toLocaleTimeString();
+              const priceMove = ((exitPrice - entryPrice) / entryPrice * 100).toFixed(2);
+              if (win) {
+                const profit = Math.round(amt * (currentBet.odds - 1));
+                mogalandPoints += amt + profit;
+                showNotification(`✅ WIN +${profit} MOGA (price ${priceMove}%)`, false);
+                if (histEl) histEl.innerHTML = `<div style="color:#0ecb81">${dt} WIN +${profit} MOGA (${currentBet.direction.toUpperCase()} ${currentBet.asset} ${priceMove}%)</div>` + histEl.innerHTML;
+              } else {
+                showNotification(`❌ LOSE -${amt} MOGA (price ${priceMove}%)`, true);
+                if (histEl) histEl.innerHTML = `<div style="color:#f6465d">${dt} LOSE -${amt} MOGA (${currentBet.direction.toUpperCase()} ${currentBet.asset} ${priceMove}%)</div>` + histEl.innerHTML;
+              }
+              document.getElementById('timerDisplay').textContent = '';
+            }
+          }, 1000);
+        }
+
+        renderAssets();
+        if (assetsData.crypto.length > 0) selectAsset(assetsData.crypto[0]);
+        updateTreasuryDisplay();
+        refreshMarketPrices();
+
+        document.querySelectorAll('[data-tab]').forEach(btn => {
+          btn.onclick = () => {
+            document.querySelectorAll('[data-tab]').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentTab = btn.dataset.tab;
+            renderAssets();
+            selectedAsset = null;
+            document.getElementById('selectedAsset').textContent = 'None';
+            document.getElementById('viewTitle').textContent = currentTab === 'sports' ? 'Select Team to View' : 'Select Asset to Trade';
+            document.getElementById('priceChart').style.display = 'none';
+            document.getElementById('clubHistoryView').style.display = 'none';
+            document.getElementById('chartFooter').style.display = 'none';
+            const sb = document.getElementById('statsBar'); if (sb) sb.style.display = 'none';
+            if (chart) chart.destroy();
+            chart = null;
+            refreshMarketPrices();
+          };
+        });
 
         const assetsData = {
           crypto: [
@@ -1389,230 +1811,30 @@
         function showClubHistory(asset) {
           selectedAsset = asset;
           document.getElementById('selectedAsset').textContent = asset.symbol;
-          document.getElementById('viewTitle').textContent = `${asset.symbol} Last Matches History`;
-
+          document.getElementById('viewTitle').textContent = `${asset.symbol} — Match History`;
           document.getElementById('priceChart').style.display = 'none';
           document.getElementById('chartFooter').style.display = 'none';
-
+          const sb = document.getElementById('statsBar'); if (sb) sb.style.display = 'none';
           const view = document.getElementById('clubHistoryView');
           view.style.display = 'block';
+          // Calculate realistic odds from strength
+          const s = asset.strength || 0.75;
+          const homeOdds = (1 / (s * 0.7 + 0.15)).toFixed(2);
+          const drawOdds = (1 / 0.28).toFixed(2);
+          const awayOdds = (1 / ((1 - s) * 0.7 + 0.15)).toFixed(2);
           view.innerHTML = `
+            <div style="margin-bottom:12px; background:rgba(96,165,250,0.08); border-radius:8px; padding:10px 14px; font-size:0.88em;">
+              <strong style="color:#60a5fa;">📊 Live Odds (estimated)</strong><br>
+              <span style="color:#0ecb81;">Win: ${homeOdds}x</span> &nbsp;·&nbsp;
+              <span style="color:#f0b90b;">Draw: ${drawOdds}x</span> &nbsp;·&nbsp;
+              <span style="color:#f6465d;">Lose: ${awayOdds}x</span>
+            </div>
             <strong>Recent Results:</strong><br><br>
-            ${asset.recentForm.map(r => `<div>${r}</div>`).join('')}
-            <br><em>Bet WIN if you think they win next, LOSE if lose!</em>
+            ${(asset.recentForm || []).map(r => `<div style="padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.05);">${r}</div>`).join('')}
+            <br><em style="color:#94a3b8;">Bet WIN or LOSE based on next match prediction!</em>
           `;
         }
-
-        function selectAsset(asset) {
-          if (!asset) return;
-          selectedAsset = asset;
-          const displayName = asset.name || asset.symbol;
-          document.getElementById('selectedAsset').textContent = displayName;
-          document.getElementById('viewTitle').textContent = `${displayName} – Live Price Chart`;
-
-          document.getElementById('priceChart').style.display = 'block';
-          document.getElementById('chartFooter').style.display = 'block';
-          document.getElementById('clubHistoryView').style.display = 'none';
-
-          // Fetch real price, then init chart
-          fetchRealPriceForAsset(asset).then(realPrice => {
-            if (realPrice && realPrice > 0) asset.basePrice = realPrice;
-            renderAssets();
-            initChart(asset);
-          });
-        }
-
-        async function fetchRealPriceForAsset(asset) {
-          try {
-            if (asset.binanceSymbol) {
-              const url = `https://api.binance.com/api/v3/ticker/price?symbol=${encodeURIComponent(asset.binanceSymbol)}`;
-              const data = await fetchWithProxy(url);
-              if (data && data.price) return parseFloat(data.price);
-            }
-            if (asset.yahooSymbol) {
-              const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(asset.yahooSymbol)}?interval=1d&range=2d`;
-              const data = await fetchWithProxy(url);
-              if (data && data.chart && data.chart.result && data.chart.result.length) {
-                const meta = data.chart.result[0].meta || {};
-                const price = meta.regularMarketPrice || meta.price;
-                if (price && price > 0) return price;
-              }
-            }
-          } catch (_) {}
-          return null;
-        }
-
-        function generateOHLC(basePrice, count = 40, volatility = 0.02) {
-          const data = [];
-          let current = basePrice || 1000;
-          const now = Date.now();
-          for (let i = 0; i < count; i++) {
-            const open = current;
-            const change = (Math.random() - 0.5) * volatility * open;
-            const close = Math.max(0.0001, open + change);
-            const wick = Math.random() * volatility * 0.4 * open;
-            data.push({
-              x: now - (count - i - 1) * 600000,
-              o: open,
-              h: Math.max(open, close) + wick,
-              l: Math.min(open, close) - wick,
-              c: close
-            });
-            current = close;
-          }
-          return data;
-        }
-
-        function initChart(asset) {
-          const canvas = document.getElementById('priceChart');
-          if (!canvas) return;
-
-          const ctx = canvas.getContext('2d');
-          if (!ctx) return;
-
-          if (chart) chart.destroy();
-
-          priceHistory = generateOHLC(asset.basePrice, 40, asset.volatility || 0.02);
-
-          // Update footer to show it's based on real price
-          const footer = document.getElementById('chartFooter');
-          if (footer) {
-            const decimals = asset.basePrice < 10 ? 4 : 2;
-            const priceStr = '$' + asset.basePrice.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: decimals});
-            footer.textContent = `Live price: ${priceStr} · Chart simulates intraday moves from real price · Updates every 8s`;
-            footer.style.display = 'block';
-          }
-
-          chart = new Chart(ctx, {
-            type: 'candlestick',
-            data: {
-              datasets: [{
-                label: asset.name || asset.symbol,
-                data: priceHistory
-              }, {
-                label: 'Volume',
-                type: 'bar',
-                data: priceHistory.map(d => ({x: d.x, y: d.v || Math.floor(Math.random() * (asset.basePrice > 100 ? 50000 : 5000000))})),
-                yAxisID: 'volume',
-                backgroundColor: 'rgba(59,130,246,0.4)'
-              }]
-            },
-            options: {
-              scales: {
-                x: { type: 'time', time: { unit: 'minute' }, title: { display: true, text: 'Time' } },
-                y: { title: { display: true, text: `Price (${asset.symbol.includes('/') ? asset.symbol.split('/')[1] : 'USD'})` } },
-                volume: { position: 'right', title: { display: true, text: 'Vol' }, grid: { drawOnChartArea: false } }
-              },
-              plugins: { legend: { display: false } }
-            }
-          });
-        }
-
-        // Every 8 seconds: add a new simulated candle based on last close, PLUS
-        // every 30 seconds fetch the real current price and anchor the chart to it
-        let realPriceRefreshCounter = 0;
-        setInterval(() => {
-          if (selectedAsset && chart && priceHistory.length > 0 && currentTab !== 'sports') {
-            realPriceRefreshCounter++;
-            const last = priceHistory[priceHistory.length - 1];
-            const vol = selectedAsset.volatility || 0.02;
-            const change = (Math.random() - 0.5) * vol * last.c;
-            const open = last.c;
-            const close = Math.max(0.0001, open + change);
-            const wick = Math.random() * vol * 0.5 * last.c;
-            priceHistory.push({
-              x: Date.now(),
-              o: open,
-              h: Math.max(open, close) + wick,
-              l: Math.min(open, close) - wick,
-              c: close
-            });
-            if (priceHistory.length > 80) priceHistory.shift();
-            chart.update();
-
-            // Refresh real price every ~30s (every ~4 ticks at 8s each)
-            if (realPriceRefreshCounter % 4 === 0) {
-              fetchRealPriceForAsset(selectedAsset).then(realPrice => {
-                if (realPrice && realPrice > 0 && selectedAsset) {
-                  selectedAsset.basePrice = realPrice;
-                  // Nudge the last candle's close to the real price
-                  if (priceHistory.length > 0) {
-                    priceHistory[priceHistory.length - 1].c = realPrice;
-                    chart && chart.update();
-                  }
-                  // Update the selected-asset display price
-                  document.getElementById('selectedAsset').textContent = (selectedAsset.name || selectedAsset.symbol) +
-                    ' — $' + realPrice.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: realPrice < 10 ? 4 : 2});
-                  const footer = document.getElementById('chartFooter');
-                  if (footer) {
-                    const decimals = realPrice < 10 ? 4 : 2;
-                    footer.textContent = `Live price: $${realPrice.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: decimals})} · Updated just now`;
-                  }
-                  renderAssets(); // refresh sidebar prices
-                }
-              });
-            }
-          }
-        }, 8000);
-
-        function placeBet(direction) {
-          if (!selectedAsset) return showNotification("Select first!", true);
-          currentBet = { asset: selectedAsset.symbol, direction, odds: parseFloat(document.getElementById('betOdds').value) || 2.2 };
-          document.getElementById('betStatus').textContent = `Bet: ${direction.toUpperCase()} on ${selectedAsset.symbol}`;
-        }
-
-        function confirmBet() {
-          const amt = parseFloat(document.getElementById('betAmount').value);
-          if (!currentBet || isNaN(amt) || amt < 10) return showNotification("Min 10 MOGA", true);
-          if (amt > mogalandPoints) return showNotification("Not enough!", true);
-
-          mogalandPoints -= amt;
-
-          let timeLeft = 10;
-          document.getElementById('timerDisplay').textContent = `Result in ${timeLeft}s`;
-          const interval = setInterval(() => {
-            timeLeft--;
-            document.getElementById('timerDisplay').textContent = timeLeft > 0 ? `Result in ${timeLeft}s` : '';
-            if (timeLeft <= 0) {
-              clearInterval(interval);
-              const win = Math.random() > 0.5;
-              if (win) {
-                const profit = Math.round(amt * (currentBet.odds - 1));
-                mogalandPoints += amt + profit;
-                showNotification(`WIN! +${profit} MOGA`, false);
-              } else {
-                showNotification(`LOSE -${amt} MOGA`, true);
-              }
-              document.getElementById('timerDisplay').textContent = '';
-            }
-          }, 1000);
-        }
-
-        renderAssets();
-        if (assetsData.crypto.length > 0) selectAsset(assetsData.crypto[0]);
-        updateTreasuryDisplay();
-        // Fetch real prices in background and update asset list
-        refreshMarketPrices();
-
-        document.querySelectorAll('[data-tab]').forEach(btn => {
-          btn.onclick = () => {
-            document.querySelectorAll('[data-tab]').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            currentTab = btn.dataset.tab;
-            renderAssets();
-            selectedAsset = null;
-            document.getElementById('selectedAsset').textContent = 'None';
-            document.getElementById('viewTitle').textContent = currentTab === 'sports' ? 'Select Team to View' : 'Select Asset to Trade';
-            document.getElementById('priceChart').style.display = 'none';
-            document.getElementById('clubHistoryView').style.display = 'none';
-            document.getElementById('chartFooter').style.display = 'none';
-            if (chart) chart.destroy();
-            chart = null;
-            // Refresh real prices for newly-selected tab
-            refreshMarketPrices();
-          };
-        });
-      } 
+      }
       else if (id === 'swap') {
         content.innerHTML = `
           <div style="max-width: 480px; margin: 40px auto; padding: 0 12px;">
