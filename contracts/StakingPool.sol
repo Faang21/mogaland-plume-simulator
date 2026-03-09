@@ -9,31 +9,52 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 /**
  * @title StakingPool
  * @dev   Multi-pool staking contract for the Mogaland ecosystem.
- *        Supports native ETH, ERC-20 tokens (e.g. USDC), and LP tokens
- *        (e.g. Aerodrome / Uniswap V3 LP positions on Base L2).
+ *        Supports native ETH, ERC-20 tokens (MOGA, wMOGA, USDC …), and LP tokens
+ *        (Aerodrome / Camelot / Uniswap V3 LP positions).
  *
  * Pool types
  * ──────────
- *  • ETH pool  – stakingToken = address(0); user calls stake(poolId, 0) with msg.value
+ *  • ETH pool    – stakingToken = address(0); user calls stake(poolId, 0) with msg.value
  *  • ERC-20 pool – stakingToken = token address; user approves then calls stake(poolId, amount)
- *  • LP token pool – same as ERC-20 pool but stakingToken is a DEX LP token
+ *  • LP pool     – same as ERC-20 pool; stakingToken is a DEX LP token
+ *  • wMOGA pool  – same as ERC-20 pool; stakingToken = wMOGA contract address
  *
  * Reward model
  * ────────────
  *  Each pool emits `rewardRate` reward-tokens per second, shared proportionally
  *  among all stakers (standard "reward-per-token accumulator" design).
  *
- * Deployment
- * ──────────
- *  1. Deploy this contract on Base (mainnet or Base Sepolia testnet) via Remix IDE.
- *  2. Fund the contract with reward tokens before adding pools.
- *  3. Call addPool() for each pool:
- *       – ETH pool:     addPool(address(0), <rewardToken>, <rate>)
- *       – USDC pool:    addPool(0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913, <rewardToken>, <rate>)
- *       – LP pool:      addPool(<lpTokenAddress>, <rewardToken>, <rate>)
- *  4. Point the frontend constant STAKING_POOL_CONTRACT to the deployed address.
+ * Deployment – Target Networks
+ * ────────────────────────────
+ *  Deploy on each of the following networks via Remix IDE:
+ *    ┌──────────────────┬───────────────────────────────────────────────────────┐
+ *    │ Network          │ Notes                                                 │
+ *    ├──────────────────┼───────────────────────────────────────────────────────┤
+ *    │ Base mainnet     │ USDC 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913      │
+ *    │                  │ WETH 0x4200000000000000000000000000000000000006        │
+ *    ├──────────────────┼───────────────────────────────────────────────────────┤
+ *    │ Arbitrum One     │ USDC 0xaf88d065e77c8cC2239327C5EDb3A432268e5831       │
+ *    │                  │ WETH 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1       │
+ *    ├──────────────────┼───────────────────────────────────────────────────────┤
+ *    │ EDU Chain        │ use wrapped versions of the above tokens or            │
+ *    │ (testnet)        │ deploy ERC-20 test tokens for reward                  │
+ *    ├──────────────────┼───────────────────────────────────────────────────────┤
+ *    │ Base Sepolia     │ Testnet only – for integration testing                 │
+ *    └──────────────────┴───────────────────────────────────────────────────────┘
  *
- * Base USDC address (mainnet): 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
+ *  Steps:
+ *  1. Deploy wMOGA.sol, passing the deployed MOGA address to the constructor.
+ *  2. Deploy this contract.
+ *  3. Fund the contract with reward tokens.
+ *  4. Call addPool() for each pool (name, stakingToken, rewardToken, rate):
+ *       – ETH pool:        addPool("ETH Stake",          address(0),   <reward>, <rate>)
+ *       – USDC pool:       addPool("USDC Stake",         <USDC>,       <reward>, <rate>)
+ *       – MOGA pool:       addPool("MOGA Stake",         <MOGA>,       <reward>, <rate>)
+ *       – wMOGA pool:      addPool("wMOGA Stake",        <wMOGA>,      <reward>, <rate>)
+ *       – wMOGA/USDC LP:   addPool("wMOGA/USDC LP",      <LP_addr>,    <reward>, <rate>)
+ *       – wMOGA/ETH LP:    addPool("wMOGA/ETH LP",       <LP_addr>,    <reward>, <rate>)
+ *  5. After deployment, update `index.html`: set `stakingContractAddress` in the
+ *     appropriate network entry inside the NETWORKS map.
  */
 contract StakingPool is Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
@@ -47,6 +68,7 @@ contract StakingPool is Ownable, ReentrancyGuard {
         uint256  rewardRate;            // Reward tokens emitted per second (in rewardToken wei)
         uint256  lastUpdateTime;        // Timestamp of the last rewardPerToken checkpoint
         uint256  rewardPerTokenStored;  // Cumulative reward-per-staked-token × 1e18
+        string   name;                  // Human-readable label shown in the UI
     }
 
     struct UserInfo {
@@ -64,6 +86,7 @@ contract StakingPool is Ownable, ReentrancyGuard {
 
     event PoolAdded(
         uint256 indexed poolId,
+        string  name,
         address stakingToken,
         address rewardToken,
         uint256 rewardRate
@@ -72,6 +95,7 @@ contract StakingPool is Ownable, ReentrancyGuard {
     event Unstaked(address indexed user, uint256 indexed poolId, uint256 amount);
     event RewardClaimed(address indexed user, uint256 indexed poolId, uint256 amount);
     event RewardRateUpdated(uint256 indexed poolId, uint256 newRewardRate);
+    event PoolNameUpdated(uint256 indexed poolId, string newName);
 
     // ─── Constructor ─────────────────────────────────────────────────────────
 
@@ -81,12 +105,14 @@ contract StakingPool is Ownable, ReentrancyGuard {
 
     /**
      * @notice Add a new staking pool.
+     * @param name          Human-readable label (e.g. "wMOGA/USDC LP").
      * @param stakingToken  address(0) for ETH pool; ERC-20 or LP token address otherwise.
      * @param rewardToken   ERC-20 token paid out as reward. Must not be address(0).
      * @param rewardRate    Reward tokens emitted per second (in rewardToken wei, e.g. 1e15
      *                      equals 0.001 tokens/s for an 18-decimal reward token).
      */
     function addPool(
+        string calldata name,
         address stakingToken,
         address rewardToken,
         uint256 rewardRate
@@ -103,10 +129,21 @@ contract StakingPool is Ownable, ReentrancyGuard {
             totalStaked:          0,
             rewardRate:           rewardRate,
             lastUpdateTime:       block.timestamp,
-            rewardPerTokenStored: 0
+            rewardPerTokenStored: 0,
+            name:                 name
         });
 
-        emit PoolAdded(poolId, stakingToken, rewardToken, rewardRate);
+        emit PoolAdded(poolId, name, stakingToken, rewardToken, rewardRate);
+    }
+
+    /**
+     * @notice Update the human-readable name of a pool (owner only).
+     */
+    function setPoolName(uint256 poolId, string calldata newName) external onlyOwner {
+        require(bytes(newName).length > 0,                                    "StakingPool: name cannot be empty");
+        require(address(pools[poolId].rewardToken) != address(0), "StakingPool: pool not found");
+        pools[poolId].name = newName;
+        emit PoolNameUpdated(poolId, newName);
     }
 
     /**
@@ -281,6 +318,13 @@ contract StakingPool is Ownable, ReentrancyGuard {
     {
         UserInfo storage u = userInfo[poolId][userAddr];
         return (u.amountStaked, u.rewardDebt);
+    }
+
+    /**
+     * @notice Returns the name of a pool.
+     */
+    function getPoolName(uint256 poolId) external view returns (string memory) {
+        return pools[poolId].name;
     }
 
     // ─── Safety ───────────────────────────────────────────────────────────────

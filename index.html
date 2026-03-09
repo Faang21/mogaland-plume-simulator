@@ -1993,12 +1993,16 @@
           </div>
         </div>
       </div>
-      <!-- Network Switcher (3 chains) -->
+      <!-- Network Switcher -->
       <div class="network-switcher" id="networkSwitcher">
         <button class="network-switcher-btn active" id="netBtn_sepolia"     onclick="switchNetwork('sepolia')">🔵 ETH Sepolia</button>
         <button class="network-switcher-btn"        id="netBtn_educhain"    onclick="switchNetwork('educhain')">🎓 EDU Testnet</button>
         <button class="network-switcher-btn"        id="netBtn_basesepolia" onclick="switchNetwork('basesepolia')">🔷 Base Sepolia</button>
+        <button class="network-switcher-btn"        id="netBtn_base"        onclick="switchNetwork('base')">🔵 Base</button>
+        <button class="network-switcher-btn"        id="netBtn_arbitrum"    onclick="switchNetwork('arbitrum')">🔶 Arbitrum</button>
       </div>
+      <!-- Mode badge: injected by JS from IS_MAINNET flag -->
+      <span id="networkModeBadge" style="display:none; font-size:0.7em; font-weight:700; padding:3px 9px; border-radius:99px; letter-spacing:0.03em; white-space:nowrap; margin-left:6px;"></span>
       <button class="top-btn" onclick="showVolumeLeaderboard()" style="background:linear-gradient(90deg,#fbbf24,#f59e0b); margin-left:8px;">
         🏆 Leaderboard
       </button>
@@ -2242,6 +2246,28 @@
     const maxEthersLoadAttempts = MAX_LOAD_TIMEOUT_MS / POLL_INTERVAL_MS; // 150 attempts
     let ethersLoadAttempts = 0;
     
+    // ─────────────────────────────────────────────────────────────────────────
+    // 🚀  MAINNET SWITCH
+    //
+    //  Set IS_MAINNET = true  →  app defaults to Base mainnet (production mode)
+    //  Set IS_MAINNET = false →  app defaults to ETH Sepolia  (development mode)
+    //
+    //  One-liner commands:
+    //    Switch to mainnet:  sed -i "s/const IS_MAINNET = false;/const IS_MAINNET = true;/"  index.html
+    //    Switch to testnet:  sed -i "s/const IS_MAINNET = true;/const IS_MAINNET = false;/"  index.html
+    //
+    //  Or use the helper scripts in /scripts:
+    //    node scripts/switch-network.js mainnet
+    //    node scripts/switch-network.js testnet
+    //
+    //  After switching to mainnet, fill in the TODO contract addresses in NETWORKS below.
+    // ─────────────────────────────────────────────────────────────────────────
+    const IS_MAINNET = false; // ← change this ONE value (or run the script above)
+
+    // Derived defaults – do NOT edit these; edit IS_MAINNET above instead
+    const DEFAULT_NETWORK_ID = IS_MAINNET ? 'base' : 'sepolia';
+    const DEFAULT_OPENSEA_BASE = IS_MAINNET ? 'https://opensea.io' : 'https://testnets.opensea.io';
+
     // Global constants for Sepolia network
     const SEPOLIA_CHAIN_ID = 11155111;
     const SEPOLIA_CHAIN_HEX = "0xaa36a7";
@@ -2263,12 +2289,32 @@
     const EDU_EXPLORER = "https://edu-chain-testnet.blockscout.com";
     const EDU_FAUCET = "https://educhain-community-faucet.vercel.app/";
 
-    // Base Sepolia constants
+    // Base Sepolia testnet constants
     const BASE_SEPOLIA_CHAIN_ID = 84532;
     const BASE_SEPOLIA_CHAIN_HEX = "0x14a34";
     const BASE_SEPOLIA_RPC_URL = "https://sepolia.base.org";
     const BASE_SEPOLIA_EXPLORER = "https://sepolia.basescan.org";
     const BASE_SEPOLIA_FAUCET = "https://www.coinbase.com/faucets/base-ethereum-sepolia-faucet";
+
+    // Base mainnet constants
+    const BASE_MAINNET_CHAIN_ID = 8453;
+    const BASE_MAINNET_CHAIN_HEX = "0x2105";
+    const BASE_MAINNET_RPC_URL = "https://mainnet.base.org";
+    const BASE_MAINNET_EXPLORER = "https://basescan.org";
+    // Base mainnet USDC (official Circle deployment)
+    const USDC_BASE_MAINNET = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
+    // Base mainnet WETH
+    const WETH_BASE_MAINNET = "0x4200000000000000000000000000000000000006";
+
+    // Arbitrum One mainnet constants
+    const ARBITRUM_CHAIN_ID = 42161;
+    const ARBITRUM_CHAIN_HEX = "0xa4b1";
+    const ARBITRUM_RPC_URL = "https://arb1.arbitrum.io/rpc";
+    const ARBITRUM_EXPLORER = "https://arbiscan.io";
+    // Arbitrum One USDC (native USDC from Circle)
+    const USDC_ARBITRUM = "0xaf88d065e77c8cC2239327C5EDb3A432268e5831";
+    // Arbitrum One WETH
+    const WETH_ARBITRUM = "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1";
 
     // Network configurations map
     const NETWORKS = {
@@ -2281,7 +2327,12 @@
         explorer: SEPOLIA_EXPLORER,
         faucet: SEPOLIA_FAUCET,
         currency: 'ETH',
-        label: '🔵 ETH Sepolia'
+        label: '🔵 ETH Sepolia',
+        isTestnet: true,
+        // TODO: replace after deploying on Sepolia
+        nftContractAddress: null,
+        stakingContractAddress: null,
+        wMogaAddress: null
       },
       educhain: {
         id: 'educhain',
@@ -2292,7 +2343,12 @@
         explorer: EDU_EXPLORER,
         faucet: EDU_FAUCET,
         currency: 'EDU',
-        label: '🎓 EDU Chain Testnet'
+        label: '🎓 EDU Chain Testnet',
+        isTestnet: true,
+        // TODO: replace after deploying on EDU Chain
+        nftContractAddress: null,
+        stakingContractAddress: null,
+        wMogaAddress: null
       },
       basesepolia: {
         id: 'basesepolia',
@@ -2303,23 +2359,126 @@
         explorer: BASE_SEPOLIA_EXPLORER,
         faucet: BASE_SEPOLIA_FAUCET,
         currency: 'ETH',
-        label: '🔷 Base Sepolia'
+        label: '🔷 Base Sepolia',
+        isTestnet: true,
+        // TODO: replace after deploying on Base Sepolia
+        nftContractAddress: null,
+        stakingContractAddress: null,
+        wMogaAddress: null
+      },
+      // ── MAINNET NETWORKS (activate by selecting in network switcher) ──────────
+      base: {
+        id: 'base',
+        name: 'Base',
+        chainId: BASE_MAINNET_CHAIN_ID,
+        chainHex: BASE_MAINNET_CHAIN_HEX,
+        rpcUrls: [BASE_MAINNET_RPC_URL],
+        explorer: BASE_MAINNET_EXPLORER,
+        faucet: null,
+        currency: 'ETH',
+        label: '🔵 Base',
+        isTestnet: false,
+        // Native token addresses
+        usdcAddress: USDC_BASE_MAINNET,
+        wethAddress: WETH_BASE_MAINNET,
+        // TODO: replace with your deployed mainnet contract addresses
+        nftContractAddress: null,
+        stakingContractAddress: null,
+        wMogaAddress: null
+      },
+      arbitrum: {
+        id: 'arbitrum',
+        name: 'Arbitrum One',
+        chainId: ARBITRUM_CHAIN_ID,
+        chainHex: ARBITRUM_CHAIN_HEX,
+        rpcUrls: [ARBITRUM_RPC_URL],
+        explorer: ARBITRUM_EXPLORER,
+        faucet: null,
+        currency: 'ETH',
+        label: '🔶 Arbitrum One',
+        isTestnet: false,
+        // Native token addresses
+        usdcAddress: USDC_ARBITRUM,
+        wethAddress: WETH_ARBITRUM,
+        // TODO: replace with your deployed mainnet contract addresses
+        nftContractAddress: null,
+        stakingContractAddress: null,
+        wMogaAddress: null
       }
     };
 
     // Active network – persisted in localStorage
-    let currentNetworkId = localStorage.getItem('currentNetworkId') || 'sepolia';
+    let currentNetworkId = localStorage.getItem('currentNetworkId') || DEFAULT_NETWORK_ID;
     function getActiveNetwork() { return NETWORKS[currentNetworkId] || NETWORKS.sepolia; }
+
     // Helper: returns the block explorer API base URL for the active network
     function getExplorerApiUrl() {
       const net = getActiveNetwork();
-      if (net.id === 'sepolia') return 'https://api-sepolia.etherscan.io/api';
+      if (net.id === 'sepolia')     return 'https://api-sepolia.etherscan.io/api';
       if (net.id === 'basesepolia') return 'https://api-sepolia.basescan.org/api';
-      if (net.id === 'educhain') return 'https://edu-chain-testnet.blockscout.com/api';
+      if (net.id === 'base')        return 'https://api.basescan.org/api';
+      if (net.id === 'arbitrum')    return 'https://api.arbiscan.io/api';
+      if (net.id === 'educhain')    return 'https://edu-chain-testnet.blockscout.com/api';
       return null;
     }
+
     // Helper: native currency symbol for the active network
     function getNetworkCurrency() { return getActiveNetwork().currency; }
+
+    // Helper: return the correct NFT contract address for the active network.
+    // Falls back to the testnet address while mainnet contracts are not yet deployed.
+    function getActiveNFTContractAddress() {
+      const net = getActiveNetwork();
+      // When mainnet contract is deployed, set net.nftContractAddress in the NETWORKS config above.
+      return net.nftContractAddress || NFT_CONTRACT_ADDRESS;
+    }
+
+    // Helper: return the active network's StakingPool contract address.
+    // Falls back to the global STAKING_POOL_CONTRACT constant (Sepolia testnet).
+    // To enable on-chain staking for a network, set `stakingContractAddress` in NETWORKS above.
+    function getActiveStakingContract() {
+      const net = getActiveNetwork();
+      return net.stakingContractAddress || STAKING_POOL_CONTRACT;
+    }
+
+    // Helper: return the active network's wMOGA contract address (or null if not deployed yet).
+    function getActiveWMogaAddress() {
+      const net = getActiveNetwork();
+      return net.wMogaAddress || null;
+    }
+
+    // Helper: return the OpenSea chain slug for the active network
+    function getOpenSeaChainSlug() {
+      const net = getActiveNetwork();
+      if (net.id === 'base')        return 'base';
+      if (net.id === 'arbitrum')    return 'arbitrum';
+      if (net.id === 'basesepolia') return 'base_sepolia';
+      if (net.id === 'sepolia')     return 'sepolia';
+      // Unknown network: fall back based on IS_MAINNET flag
+      return IS_MAINNET ? 'base' : 'sepolia';
+    }
+
+    // Helper: return the OpenSea base URL (mainnet or testnet) based on active network.
+    // Uses DEFAULT_OPENSEA_BASE (derived from IS_MAINNET) as the fallback.
+    function getOpenSeaBaseURL() {
+      const net = getActiveNetwork();
+      if (net.isTestnet !== undefined) {
+        return net.isTestnet ? 'https://testnets.opensea.io' : 'https://opensea.io';
+      }
+      return DEFAULT_OPENSEA_BASE;
+    }
+
+    // Helper: build an OpenSea collection URL for a contract address
+    function getOpenSeaContractURL(contractAddress) {
+      const base  = getOpenSeaBaseURL();
+      const chain = getOpenSeaChainSlug();
+      return `${base}/assets/${chain}/${contractAddress}`;
+    }
+
+    // Helper: build an OpenSea profile URL for a wallet address
+    function getOpenSeaProfileURL(walletAddress) {
+      return `${getOpenSeaBaseURL()}/${walletAddress}`;
+    }
 
     // WalletConnect v2 Project ID from https://cloud.reown.com (formerly WalletConnect Cloud)
     const WALLETCONNECT_PROJECT_ID = "51e44cec955a70475db9cc1900283704";
@@ -3653,11 +3812,27 @@
       const net = getActiveNetwork();
       const ethSubtitle = document.getElementById('ethNetworkSubtitle');
       if (ethSubtitle) ethSubtitle.textContent = `${net.name} • View on Explorer →`;
-      // Update faucet link on login page
+      // Update faucet link on login page (hide on mainnet networks that have no faucet)
       const faucetLink = document.getElementById('faucetLink');
       if (faucetLink) {
-        faucetLink.href = net.faucet;
-        faucetLink.textContent = `${net.name} Faucet`;
+        if (net.faucet) {
+          faucetLink.href = net.faucet;
+          faucetLink.textContent = `${net.name} Faucet`;
+          faucetLink.style.display = '';
+        } else {
+          faucetLink.style.display = 'none';
+        }
+      }
+      // Mode badge: MAINNET (green) or TESTNET (orange) – derived from IS_MAINNET flag
+      const badge = document.getElementById('networkModeBadge');
+      if (badge) {
+        if (IS_MAINNET) {
+          badge.textContent = '🟢 MAINNET';
+          badge.style.cssText = 'display:inline-block; font-size:0.7em; font-weight:700; padding:3px 9px; border-radius:99px; letter-spacing:0.03em; white-space:nowrap; margin-left:6px; background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.4);';
+        } else {
+          badge.textContent = '🟠 TESTNET';
+          badge.style.cssText = 'display:inline-block; font-size:0.7em; font-weight:700; padding:3px 9px; border-radius:99px; letter-spacing:0.03em; white-space:nowrap; margin-left:6px; background:rgba(251,146,60,0.12); color:#fb923c; border:1px solid rgba(251,146,60,0.35);';
+        }
       }
     }
 
@@ -4999,26 +5174,45 @@
       "function getUserPositions(address user) view returns (uint256[])"
     ];
 
-    // ── StakingPool On-Chain Contract (contracts/StakingPool.sol on Base) ──────
-    // Set this to the deployed contract address to enable live on-chain mode.
-    // Deploy via Remix IDE: compile contracts/StakingPool.sol (Solidity 0.8.20+),
-    // connect MetaMask to Base / Base Sepolia, then call addPool() for each pool.
-    const STAKING_POOL_CONTRACT = '0x0000000000000000000000000000000000000000'; // TODO: replace after deployment
+    // ── StakingPool On-Chain Contract (contracts/StakingPool.sol) ──────────────
+    // Global fallback address (Sepolia testnet placeholder).
+    // Per-network addresses are set in NETWORKS[id].stakingContractAddress above.
+    // Use getActiveStakingContract() everywhere in the UI instead of this constant directly.
+    const STAKING_POOL_CONTRACT = '0x0000000000000000000000000000000000000000'; // TODO: replace after Sepolia deployment
     const STAKING_POOL_ABI = [
-      'function addPool(address stakingToken, address rewardToken, uint256 rewardRate) external',
+      'function addPool(string calldata name, address stakingToken, address rewardToken, uint256 rewardRate) external',
       'function setRewardRate(uint256 poolId, uint256 newRewardRate) external',
+      'function setPoolName(uint256 poolId, string calldata newName) external',
       'function stake(uint256 poolId, uint256 amount) external payable',
       'function unstake(uint256 poolId, uint256 amount) external',
       'function claimReward(uint256 poolId) external',
       'function pendingReward(uint256 poolId, address userAddr) external view returns (uint256)',
       'function getUserInfo(uint256 poolId, address userAddr) external view returns (uint256 amountStaked, uint256 rewardDebt)',
-      'function pools(uint256) external view returns (address stakingToken, address rewardToken, uint256 totalStaked, uint256 rewardRate, uint256 lastUpdateTime, uint256 rewardPerTokenStored)',
+      'function getPoolName(uint256 poolId) external view returns (string)',
+      'function pools(uint256) external view returns (address stakingToken, address rewardToken, uint256 totalStaked, uint256 rewardRate, uint256 lastUpdateTime, uint256 rewardPerTokenStored, string name)',
       'function poolCount() external view returns (uint256)',
       'function owner() external view returns (address)',
-      'event PoolAdded(uint256 indexed poolId, address stakingToken, address rewardToken, uint256 rewardRate)',
+      'event PoolAdded(uint256 indexed poolId, string name, address stakingToken, address rewardToken, uint256 rewardRate)',
       'event Staked(address indexed user, uint256 indexed poolId, uint256 amount)',
       'event Unstaked(address indexed user, uint256 indexed poolId, uint256 amount)',
-      'event RewardClaimed(address indexed user, uint256 indexed poolId, uint256 amount)'
+      'event RewardClaimed(address indexed user, uint256 indexed poolId, uint256 amount)',
+      'event PoolNameUpdated(uint256 indexed poolId, string newName)'
+    ];
+
+    // ── wMOGA (Wrapped MOGA) Contract ABI ────────────────────────────────────
+    // Contract: contracts/wMOGA.sol  — deploy once per network, pass MOGA address to constructor.
+    // Set the deployed address in NETWORKS[id].wMogaAddress above.
+    const WMOGA_ABI = [
+      'function wrap(uint256 amount) external',
+      'function unwrap(uint256 amount) external',
+      'function reserveBalance() external view returns (uint256)',
+      'function moga() external view returns (address)',
+      'function balanceOf(address account) external view returns (uint256)',
+      'function approve(address spender, uint256 amount) external returns (bool)',
+      'function allowance(address owner, address spender) external view returns (uint256)',
+      'function totalSupply() external view returns (uint256)',
+      'event Wrapped(address indexed user, uint256 amount)',
+      'event Unwrapped(address indexed user, uint256 amount)'
     ];
     
     // ── Transaction History Store (multi-network, persisted per user) ──────
@@ -9237,6 +9431,44 @@
           renderAssets();
         }
 
+        /**
+         * Fetch 24-hour ticker statistics from Binance for a futures symbol.
+         * Returns { lastPrice, priceChangePercent, highPrice, lowPrice, quoteVolume } or null.
+         */
+        async function fetchBinance24hrTicker(binanceSymbol) {
+          try {
+            // Try Binance Futures first
+            const futUrl = `https://fapi.binance.com/fapi/v1/ticker/24hr?symbol=${binanceSymbol}`;
+            const resp = await fetch(futUrl);
+            if (resp.ok) {
+              const d = await resp.json();
+              if (d && d.lastPrice) return {
+                lastPrice: parseFloat(d.lastPrice),
+                priceChangePercent: parseFloat(d.priceChangePercent),
+                highPrice: parseFloat(d.highPrice),
+                lowPrice: parseFloat(d.lowPrice),
+                quoteVolume: parseFloat(d.quoteVolume)
+              };
+            }
+          } catch (_) {}
+          try {
+            // Fall back to Binance Spot
+            const spotUrl = `https://api.binance.com/api/v3/ticker/24hr?symbol=${binanceSymbol}`;
+            const resp2 = await fetch(spotUrl);
+            if (resp2.ok) {
+              const d = await resp2.json();
+              if (d && d.lastPrice) return {
+                lastPrice: parseFloat(d.lastPrice),
+                priceChangePercent: parseFloat(d.priceChangePercent),
+                highPrice: parseFloat(d.highPrice),
+                lowPrice: parseFloat(d.lowPrice),
+                quoteVolume: parseFloat(d.quoteVolume)
+              };
+            }
+          } catch (_) {}
+          return null;
+        }
+
         function selectAsset(asset) {
           if (!asset) return;
           selectedAsset = asset;
@@ -9250,19 +9482,12 @@
           if (currentPriceDisplayEl) currentPriceDisplayEl.style.display = 'flex';
           const bannerSymbolEl = document.getElementById('bannerSymbol');
           if (bannerSymbolEl) bannerSymbolEl.textContent = asset.symbol + (asset.binanceSymbol ? ' Perp' : '');
-          // Slight positive bias (0.48 < 0.5) so simulated 24h change leans slightly bullish
-          const BANNER_CHANGE_BIAS = 0.48;
-          const change24h = (Math.random() - BANNER_CHANGE_BIAS) * asset.volatility * 100 * 2;
-          const high24h = asset.basePrice * (1 + Math.abs(asset.volatility) * 1.5);
-          const low24h = asset.basePrice * (1 - Math.abs(asset.volatility) * 1.5);
-          const vol24h = asset.basePrice * (500 + Math.random() * 2000);
           const setBannerEl = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
-          setBannerEl('banner24hChange', (change24h >= 0 ? '+' : '') + change24h.toFixed(2) + '%');
-          const change24hEl = document.getElementById('banner24hChange');
-          if (change24hEl) change24hEl.style.color = change24h >= 0 ? '#0ecb81' : '#f6465d';
-          setBannerEl('banner24hHigh', '$' + high24h.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}));
-          setBannerEl('banner24hLow', '$' + low24h.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}));
-          setBannerEl('banner24hVol', '$' + (vol24h / 1e6).toFixed(1) + 'M');
+          // Show dashes while real data loads
+          setBannerEl('banner24hChange', '—');
+          setBannerEl('banner24hHigh', '—');
+          setBannerEl('banner24hLow', '—');
+          setBannerEl('banner24hVol', '—');
           setBannerEl('bannerMarkPrice', '$' + asset.basePrice.toLocaleString());
           setBannerEl('bannerIndexPrice', '$' + (asset.basePrice * (1 - 0.0002)).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}));
           // Seed unified mark price cache with the asset's known base price so that
@@ -9270,6 +9495,26 @@
           if (asset.basePrice > 0) markPrices[asset.symbol] = asset.basePrice;
           // Show base price immediately so banner never shows "-" while klines load
           updatePriceDisplay(asset.basePrice);
+
+          // Async: fetch real 24h ticker immediately (before chart loads)
+          if (asset.binanceSymbol) {
+            fetchBinance24hrTicker(asset.binanceSymbol).then(ticker => {
+              if (!ticker || selectedAsset !== asset) return; // stale or asset changed
+              if (ticker.lastPrice > 0) {
+                updatePriceDisplay(ticker.lastPrice);
+                if (ticker.lastPrice > 0) asset.basePrice = ticker.lastPrice;
+              }
+              const chgPct = ticker.priceChangePercent;
+              setBannerEl('banner24hChange', (chgPct >= 0 ? '+' : '') + chgPct.toFixed(2) + '%');
+              const chgEl = document.getElementById('banner24hChange');
+              if (chgEl) chgEl.style.color = chgPct >= 0 ? '#0ecb81' : '#f6465d';
+              setBannerEl('banner24hHigh', '$' + ticker.highPrice.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}));
+              setBannerEl('banner24hLow',  '$' + ticker.lowPrice.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}));
+              const volM = ticker.quoteVolume / 1e6;
+              setBannerEl('banner24hVol', volM >= 1 ? '$' + volM.toFixed(1) + 'M' : '$' + (ticker.quoteVolume / 1e3).toFixed(1) + 'K');
+            }).catch(() => {});
+          }
+
           startOrderBookUpdates();
           document.getElementById('chartFooter').style.display = 'block';
           document.getElementById('clubHistoryView').style.display = 'none';
@@ -9921,12 +10166,24 @@
                     const last = priceHistory[priceHistory.length - 1];
                     const changeThreshold = calculatePriceChangeThreshold(last.c);
                     if (Math.abs(last.c - price) > changeThreshold) {
-                      priceHistory.push({
+                      const nowSec = Math.floor(Date.now() / 1000);
+                      const newCandle = {
                         x: Date.now(), o: last.c,
                         h: Math.max(last.c, price), l: Math.min(last.c, price), c: price
-                      });
+                      };
+                      priceHistory.push(newCandle);
                       if (priceHistory.length > 80) priceHistory.shift();
                       if (chart) chart.update();
+                      // Also update LightweightCharts if present (non-crypto real-time tick)
+                      if (lwCandleSeries) {
+                        lwCandleSeries.update({
+                          time: nowSec,
+                          open:  newCandle.o,
+                          high:  newCandle.h,
+                          low:   newCandle.l,
+                          close: newCandle.c
+                        });
+                      }
                       updatePositionsDisplay();
                     }
                   } else {
@@ -11832,10 +12089,16 @@
 
     // ===== Staking Pool (DeFi-style: MOGA, ETH, USDC, SOL LP tokens on ETH Sepolia, EDU Chain, Base Sepolia) =====
     const STAKING_POOLS = [
-      { id: 'moga_usdc', name: 'MOGA / USDC', apy: 45, tvl: 1250000, token: 'MOGA', pair: 'USDC', icon: '💎', minStake: 10, type: 'LP' },
-      { id: 'moga_eth',  name: 'MOGA / ETH',  apy: 62, tvl: 870000,  token: 'MOGA', pair: 'ETH',  icon: '🔷', minStake: 10, type: 'ETH' },
-      { id: 'moga_only', name: 'MOGA Stake',  apy: 28, tvl: 3400000, token: 'MOGA', pair: null,   icon: '🌾', minStake: 5,  type: 'ERC20' },
-      { id: 'sol_usdc',  name: 'SOL / USDC',  apy: 55, tvl: 640000,  token: 'SOL',   pair: 'USDC', icon: '◎', minStake: 5, type: 'LP' },
+      // ── Single-asset pools ─────────────────────────────────────────────────
+      { id: 'moga_only',  name: 'MOGA Stake',      apy: 28, tvl: 3400000, token: 'MOGA',  pair: null,   icon: '🌾', minStake: 5,   type: 'ERC20' },
+      { id: 'wmoga_only', name: 'wMOGA Stake',     apy: 32, tvl: 1800000, token: 'wMOGA', pair: null,   icon: '🟡', minStake: 5,   type: 'ERC20', isWmoga: true },
+      { id: 'eth_only',   name: 'ETH Stake',       apy: 18, tvl: 920000,  token: 'ETH',   pair: null,   icon: '⬡',  minStake: 0.01,type: 'ETH'   },
+      { id: 'usdc_only',  name: 'USDC Stake',      apy: 12, tvl: 2100000, token: 'USDC',  pair: null,   icon: '💵', minStake: 10,  type: 'ERC20' },
+      // ── LP pools ────────────────────────────────────────────────────────────
+      { id: 'moga_usdc',  name: 'MOGA / USDC LP',  apy: 45, tvl: 1250000, token: 'MOGA',  pair: 'USDC', icon: '💎', minStake: 10,  type: 'LP'    },
+      { id: 'moga_eth',   name: 'MOGA / ETH LP',   apy: 62, tvl: 870000,  token: 'MOGA',  pair: 'ETH',  icon: '🔷', minStake: 10,  type: 'LP'    },
+      { id: 'wmoga_usdc', name: 'wMOGA / USDC LP', apy: 55, tvl: 640000,  token: 'wMOGA', pair: 'USDC', icon: '🌊', minStake: 10,  type: 'LP',   isWmoga: true },
+      { id: 'wmoga_eth',  name: 'wMOGA / ETH LP',  apy: 72, tvl: 430000,  token: 'wMOGA', pair: 'ETH',  icon: '🔥', minStake: 10,  type: 'LP',   isWmoga: true },
     ];
 
     function getStakingPoolEarned(poolId) {
@@ -11866,12 +12129,13 @@
     // ── On-chain: initialise ethers contract instance ──────────────────────────
     async function spInitContract() {
       if (!userAddress || !window.ethereum) return null;
-      const isRealAddress = STAKING_POOL_CONTRACT !== '0x0000000000000000000000000000000000000000';
+      const activeAddr = getActiveStakingContract();
+      const isRealAddress = activeAddr !== '0x0000000000000000000000000000000000000000';
       if (!isRealAddress) return null;
       try {
         const provider = new ethers.providers.Web3Provider(window.ethereum);
         const signer = provider.getSigner();
-        spContractInstance = new ethers.Contract(STAKING_POOL_CONTRACT, STAKING_POOL_ABI, signer);
+        spContractInstance = new ethers.Contract(activeAddr, STAKING_POOL_ABI, signer);
         try { spOwnerAddress = await spContractInstance.owner(); } catch (_) { spOwnerAddress = null; }
         return spContractInstance;
       } catch (e) {
@@ -11895,6 +12159,7 @@
             rewardToken:  p[1],
             totalStaked:  p[2],
             rewardRate:   p[3],
+            name:         p[6] || ('Pool #' + i),  // p[6] = name field added in updated contract
             type: p[0] === '0x0000000000000000000000000000000000000000' ? 'ETH' : 'ERC20'
           })));
         }
@@ -11925,7 +12190,7 @@
         return '<div style="background:#131722; border:1px solid #2a2d3a; border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:12px;">' +
           '<div style="display:flex; align-items:flex-start; justify-content:space-between; gap:10px;">' +
             '<div>' +
-              '<div style="font-weight:700; color:#e2e8f0; font-size:1em;">Pool #' + pool.id + '</div>' +
+              '<div style="font-weight:700; color:#e2e8f0; font-size:1em;">' + pool.name + '</div>' +
               '<div style="font-size:0.75em; color:#64748b; margin-top:3px;">Stake: ' + (pool.type === 'ETH' ? 'ETH' : shortStk) + '</div>' +
               '<div style="font-size:0.75em; color:#64748b;">Reward: ' + shortRwd + '</div>' +
             '</div>' +
@@ -11978,7 +12243,8 @@
     async function spOnChainStake(poolId, stakingToken) {
       if (!userAddress) { showNotification('⚠️ Connect wallet first!', true); connectWalletFromApp(); return; }
       const contract = spContractInstance || await spInitContract();
-      if (!contract) { showNotification('⚠️ Contract not configured. Update STAKING_POOL_CONTRACT in index.html.', true); return; }
+      if (!contract) { showNotification('⚠️ Contract not configured. Set stakingContractAddress in NETWORKS config.', true); return; }
+      const activeStakingAddr = getActiveStakingContract();
       const input = document.getElementById('spOnChainInput_' + poolId);
       const amount = parseFloat(input ? input.value : 0);
       if (!amount || amount <= 0) { showNotification('Enter an amount to stake.', true); return; }
@@ -11993,7 +12259,7 @@
             ['function approve(address spender, uint256 amount) external returns (bool)'],
             (new ethers.providers.Web3Provider(window.ethereum)).getSigner()
           );
-          const approveTx = await tokenContract.approve(STAKING_POOL_CONTRACT, ethers.utils.parseEther(amount.toString()));
+          const approveTx = await tokenContract.approve(activeStakingAddr, ethers.utils.parseEther(amount.toString()));
           showNotification('⏳ Approving token spend…');
           await approveTx.wait();
           tx = await contract.stake(poolId, ethers.utils.parseEther(amount.toString()));
@@ -12048,24 +12314,27 @@
     async function spAddPool() {
       if (!userAddress) { showNotification('⚠️ Connect wallet first!', true); return; }
       const contract = spContractInstance || await spInitContract();
-      if (!contract) { showNotification('⚠️ Deploy StakingPool.sol first and set STAKING_POOL_CONTRACT.', true); return; }
+      if (!contract) { showNotification('⚠️ Deploy StakingPool.sol first and set stakingContractAddress in NETWORKS.', true); return; }
+      const nameEl         = document.getElementById('spAddPoolName');
       const stakingTokenEl = document.getElementById('spAddStakingToken');
       const rewardTokenEl  = document.getElementById('spAddRewardToken');
       const rewardRateEl   = document.getElementById('spAddRewardRate');
       const isETHEl        = document.getElementById('spAddIsETH');
       const isETH = isETHEl && isETHEl.checked;
+      const poolName     = nameEl ? nameEl.value.trim() : '';
       const stakingToken = isETH ? '0x0000000000000000000000000000000000000000' : (stakingTokenEl ? stakingTokenEl.value.trim() : '');
       const rewardToken  = rewardTokenEl ? rewardTokenEl.value.trim() : '';
       const rewardRate   = rewardRateEl  ? rewardRateEl.value.trim()  : '';
-      if (!isETH && !/^0x[0-9a-fA-F]{40}$/.test(stakingToken)) { showNotification('Invalid staking token address.', true); return; }
-      if (!/^0x[0-9a-fA-F]{40}$/.test(rewardToken))            { showNotification('Invalid reward token address.', true); return; }
-      if (!rewardRate || isNaN(rewardRate) || parseFloat(rewardRate) <= 0) { showNotification('Enter a valid reward rate > 0.', true); return; }
+      if (!poolName)                                                             { showNotification('Enter a pool name.', true); return; }
+      if (!isETH && !/^0x[0-9a-fA-F]{40}$/.test(stakingToken))                 { showNotification('Invalid staking token address.', true); return; }
+      if (!/^0x[0-9a-fA-F]{40}$/.test(rewardToken))                            { showNotification('Invalid reward token address.', true); return; }
+      if (!rewardRate || isNaN(rewardRate) || parseFloat(rewardRate) <= 0)      { showNotification('Enter a valid reward rate > 0.', true); return; }
       try {
         const rateWei = ethers.utils.parseEther(rewardRate);
-        const tx = await contract.addPool(stakingToken, rewardToken, rateWei);
+        const tx = await contract.addPool(poolName, stakingToken, rewardToken, rateWei);
         showNotification('⏳ Adding pool… TX: ' + tx.hash.slice(0, 10) + '...');
         await tx.wait();
-        showNotification('✅ Pool added successfully!');
+        showNotification('✅ Pool "' + poolName + '" added successfully!');
         spFetchLiveData();
         renderStakingPoolSection();
       } catch (e) {
@@ -12079,31 +12348,106 @@
       panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
     }
 
-    // ── Main renderer ──────────────────────────────────────────────────────────
+    // ── wMOGA wrap / unwrap (on-chain via wMOGA contract) ─────────────────────
+    async function wMogaWrap() {
+      if (!userAddress || !window.ethereum) { showNotification('⚠️ Connect wallet first!', true); connectWalletFromApp(); return; }
+      const wMogaAddr = getActiveWMogaAddress();
+      const amountEl  = document.getElementById('wMogaWrapAmount');
+      const amount    = parseFloat(amountEl ? amountEl.value : 0);
+      if (!wMogaAddr) {
+        showNotification('⚠️ wMOGA not deployed on this network yet. Set wMogaAddress in NETWORKS config after deployment.', true);
+        return;
+      }
+      if (isNaN(amount) || amount <= 0) { showNotification('Enter a valid MOGA amount to wrap.', true); return; }
+      const gasPaid = await processGasFee('wMOGA wrap');
+      if (!gasPaid) return;
+      try {
+        const provider = new ethers.providers.Web3Provider(window.ethereum);
+        const signer   = provider.getSigner();
+        const wMogaContract = new ethers.Contract(wMogaAddr, WMOGA_ABI, signer);
+        // Need to approve MOGA → wMOGA first (read mogaAddress from contract)
+        const mogaAddr = await wMogaContract.moga();
+        const mogaContract = new ethers.Contract(mogaAddr, ERC20_ABI, signer);
+        const amountWei = ethers.utils.parseEther(amount.toString());
+        const allowance = await mogaContract.allowance(userAddress, wMogaAddr);
+        if (allowance.lt(amountWei)) {
+          showNotification('⏳ Approving MOGA spend…');
+          const approveTx = await mogaContract.approve(wMogaAddr, amountWei);
+          await approveTx.wait();
+        }
+        showNotification('⏳ Wrapping MOGA → wMOGA…');
+        const tx = await wMogaContract.wrap(amountWei);
+        await tx.wait();
+        if (amountEl) amountEl.value = '';
+        showNotification(`✅ Wrapped ${amount} MOGA → ${amount} wMOGA!`);
+        recordTransaction(tx.hash, 'Wrap', `Wrapped ${amount} MOGA → wMOGA`, { amount, token: 'wMOGA' });
+      } catch (e) {
+        showNotification('❌ Wrap failed: ' + e.message.slice(0, 80), true);
+      }
+    }
+
+    async function wMogaUnwrap() {
+      if (!userAddress || !window.ethereum) { showNotification('⚠️ Connect wallet first!', true); connectWalletFromApp(); return; }
+      const wMogaAddr = getActiveWMogaAddress();
+      const amountEl  = document.getElementById('wMogaUnwrapAmount');
+      const amount    = parseFloat(amountEl ? amountEl.value : 0);
+      if (!wMogaAddr) {
+        showNotification('⚠️ wMOGA not deployed on this network yet. Set wMogaAddress in NETWORKS config after deployment.', true);
+        return;
+      }
+      if (isNaN(amount) || amount <= 0) { showNotification('Enter a valid wMOGA amount to unwrap.', true); return; }
+      const gasPaid = await processGasFee('wMOGA unwrap');
+      if (!gasPaid) return;
+      try {
+        const provider = new ethers.providers.Web3Provider(window.ethereum);
+        const signer   = provider.getSigner();
+        const wMogaContract = new ethers.Contract(wMogaAddr, WMOGA_ABI, signer);
+        const amountWei = ethers.utils.parseEther(amount.toString());
+        showNotification('⏳ Unwrapping wMOGA → MOGA…');
+        const tx = await wMogaContract.unwrap(amountWei);
+        await tx.wait();
+        if (amountEl) amountEl.value = '';
+        showNotification(`✅ Unwrapped ${amount} wMOGA → ${amount} MOGA!`);
+        recordTransaction(tx.hash, 'Unwrap', `Unwrapped ${amount} wMOGA → MOGA`, { amount, token: 'MOGA' });
+      } catch (e) {
+        showNotification('❌ Unwrap failed: ' + e.message.slice(0, 80), true);
+      }
+    }
+
+    window.wMogaWrap   = wMogaWrap;
+    window.wMogaUnwrap = wMogaUnwrap;
     function renderStakingPoolSection() {
       loadStakingPoolData();
       const totalStaked = Object.values(stakingPoolData).reduce((s, e) => s + (e.staked || 0), 0);
       const totalEarned = STAKING_POOLS.reduce((s, p) => s + getStakingPoolEarned(p.id), 0);
       const net = getActiveNetwork();
-      const isContractSet = STAKING_POOL_CONTRACT !== '0x0000000000000000000000000000000000000000';
+      const activeStakingAddr = getActiveStakingContract();
+      const isContractSet = activeStakingAddr !== '0x0000000000000000000000000000000000000000';
       const isOwner = !!(spOwnerAddress && userAddress && spOwnerAddress.toLowerCase() === userAddress.toLowerCase());
+      const wMogaAddr = getActiveWMogaAddress();
+      const usdcAddr  = net.usdcAddress || USDC_BASE_MAINNET;
+      const wethAddr  = net.wethAddress || WETH_BASE_MAINNET;
 
-      // Demo pool cards
-      const poolCards = STAKING_POOLS.map(pool => {
+      // Pool cards: group single-asset vs LP pools
+      const singlePools = STAKING_POOLS.filter(p => !p.pair);
+      const lpPools      = STAKING_POOLS.filter(p =>  p.pair);
+
+      const buildPoolCard = pool => {
         const entry = stakingPoolData[pool.id] || { staked: 0, stakedTime: 0 };
         const earned = getStakingPoolEarned(pool.id).toFixed(4);
-        const userStaked = (entry.staked || 0).toFixed(2);
+        const userStaked = (entry.staked || 0).toFixed(pool.token === 'ETH' ? 4 : 2);
         const tvlM = pool.tvl >= 1e6 ? (pool.tvl / 1e6).toFixed(2) + 'M' : (pool.tvl / 1e3).toFixed(0) + 'K';
         const pnl = entry.staked > 0
           ? ((getStakingPoolEarned(pool.id) / Math.max(entry.staked, 0.0001)) * 100).toFixed(2) + '%'
           : '—';
         const typeBadge = pool.type === 'ETH' ? '⬡ ETH' : pool.type === 'LP' ? '🔗 LP' : '🪙 ERC-20';
+        const wmogaBadge = pool.isWmoga ? '<span style="background:rgba(251,191,36,0.15); color:#fbbf24; padding:2px 7px; border-radius:99px; font-size:0.7em; margin-left:4px;">wMOGA</span>' : '';
         return `
-          <div style="background:#131722; border:1px solid #2a2d3a; border-radius:14px; padding:20px; display:flex; flex-direction:column; gap:12px;">
+          <div style="background:#131722; border:1px solid ${pool.isWmoga ? 'rgba(251,191,36,0.35)' : '#2a2d3a'}; border-radius:14px; padding:20px; display:flex; flex-direction:column; gap:12px;">
             <div style="display:flex; align-items:center; gap:10px;">
               <span style="font-size:1.8em;">${pool.icon}</span>
               <div style="flex:1;">
-                <div style="font-weight:700; font-size:1.05em; color:#e2e8f0;">${pool.name}</div>
+                <div style="font-weight:700; font-size:1.05em; color:#e2e8f0;">${pool.name}${wmogaBadge}</div>
                 <div style="font-size:0.75em; color:#64748b; margin-top:2px;">TVL: $${tvlM} &nbsp;·&nbsp; ${typeBadge}</div>
               </div>
               <div style="text-align:right;">
@@ -12117,18 +12461,51 @@
               <div><div style="color:#64748b; margin-bottom:2px;">Return</div><div style="color:#c084fc; font-weight:600;">${pnl}</div></div>
             </div>
             <div style="display:flex; gap:6px; align-items:center;">
-              <input type="number" id="spInput_${pool.id}" placeholder="Amount (min ${pool.minStake})" min="${pool.minStake}" step="1"
+              <input type="number" id="spInput_${pool.id}" placeholder="Amount (min ${pool.minStake})" min="${pool.minStake}" step="${pool.token === 'ETH' ? '0.001' : '1'}"
                 style="flex:1; padding:8px 10px; background:#0d1421; border:1px solid #2a2d3a; border-radius:6px; color:#fff; font-size:0.85em; outline:none;" />
               <button onclick="spStake('${pool.id}')" style="padding:8px 12px; background:linear-gradient(90deg,#10b981,#059669); color:#fff; border:none; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.78em; white-space:nowrap;">+ Stake</button>
               <button onclick="spUnstake('${pool.id}')" style="padding:8px 12px; background:linear-gradient(90deg,#ef4444,#dc2626); color:#fff; border:none; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.78em; white-space:nowrap;">− Unstake</button>
               <button onclick="spClaim('${pool.id}')" style="padding:8px 12px; background:linear-gradient(90deg,#f0b90b,#d97706); color:#000; border:none; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.78em; white-space:nowrap;">Claim</button>
             </div>
           </div>`;
-      }).join('');
+      };
+
+      // wMOGA wrap / unwrap card
+      const wMogaCard = `
+        <div style="background:linear-gradient(135deg,rgba(251,191,36,0.08),rgba(16,185,129,0.06)); border:1px solid rgba(251,191,36,0.35); border-radius:14px; padding:22px; margin-bottom:28px;">
+          <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
+            <span style="font-size:2em;">🟡</span>
+            <div>
+              <div style="font-weight:800; font-size:1.1em; color:#fbbf24;">Wrapped MOGA (wMOGA)</div>
+              <div style="font-size:0.8em; color:#64748b; margin-top:2px;">1 wMOGA = 1 MOGA exactly &nbsp;·&nbsp; Required for wMOGA pools &amp; LP pairs</div>
+            </div>
+            ${wMogaAddr
+              ? `<a href="${net.explorer}/address/${wMogaAddr}" target="_blank" style="margin-left:auto; font-size:0.75em; color:#60a5fa; white-space:nowrap;">Contract ↗</a>`
+              : `<span style="margin-left:auto; font-size:0.75em; color:#475569; background:#1e293b; padding:3px 9px; border-radius:99px;">Not deployed yet</span>`}
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div style="background:#0d1421; border-radius:10px; padding:14px;">
+              <div style="font-size:0.8em; color:#94a3b8; margin-bottom:8px; font-weight:600;">🔒 Wrap MOGA → wMOGA</div>
+              <div style="display:flex; gap:8px;">
+                <input type="number" id="wMogaWrapAmount" placeholder="MOGA amount" min="1" step="1"
+                  style="flex:1; padding:8px 10px; background:#131722; border:1px solid #2a2d3a; border-radius:6px; color:#fff; font-size:0.85em; outline:none;" />
+                <button onclick="wMogaWrap()" style="padding:8px 14px; background:linear-gradient(90deg,#f0b90b,#d97706); color:#000; border:none; border-radius:6px; cursor:pointer; font-weight:700; font-size:0.82em; white-space:nowrap;">Wrap</button>
+              </div>
+            </div>
+            <div style="background:#0d1421; border-radius:10px; padding:14px;">
+              <div style="font-size:0.8em; color:#94a3b8; margin-bottom:8px; font-weight:600;">🔓 Unwrap wMOGA → MOGA</div>
+              <div style="display:flex; gap:8px;">
+                <input type="number" id="wMogaUnwrapAmount" placeholder="wMOGA amount" min="1" step="1"
+                  style="flex:1; padding:8px 10px; background:#131722; border:1px solid #2a2d3a; border-radius:6px; color:#fff; font-size:0.85em; outline:none;" />
+                <button onclick="wMogaUnwrap()" style="padding:8px 14px; background:linear-gradient(90deg,#10b981,#059669); color:#fff; border:none; border-radius:6px; cursor:pointer; font-weight:700; font-size:0.82em; white-space:nowrap;">Unwrap</button>
+              </div>
+            </div>
+          </div>
+        </div>`;
 
       // On-chain section
-      const explorerLink = net.explorer + '/address/' + STAKING_POOL_CONTRACT;
-      const shortAddr = STAKING_POOL_CONTRACT.slice(0, 10) + '…' + STAKING_POOL_CONTRACT.slice(-8);
+      const explorerLink = net.explorer + '/address/' + activeStakingAddr;
+      const shortAddr = activeStakingAddr.slice(0, 10) + '…' + activeStakingAddr.slice(-8);
       const onchainHtml = isContractSet
         ? `<div style="background:rgba(16,185,129,0.07); border:1px solid rgba(16,185,129,0.3); border-radius:14px; padding:20px; margin-bottom:24px;">
             <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:16px;">
@@ -12146,16 +12523,27 @@
             <div id="spLiveGrid"><div style="text-align:center; padding:28px; color:#475569;">Loading on-chain pools…</div></div>
           </div>`
         : `<div style="background:rgba(96,165,250,0.07); border:1px solid rgba(96,165,250,0.25); border-radius:14px; padding:20px; margin-bottom:24px;">
-            <div style="font-weight:700; color:#60a5fa; margin-bottom:10px; font-size:1.05em;">🚀 Deploy StakingPool Contract to Go Live</div>
+            <div style="font-weight:700; color:#60a5fa; margin-bottom:10px; font-size:1.05em;">🚀 Deploy Contracts to Go Live</div>
             <ol style="color:#94a3b8; font-size:0.88em; line-height:1.9; padding-left:20px; margin:0 0 14px;">
-              <li>Open <a href="https://remix.ethereum.org" target="_blank" rel="noopener noreferrer" style="color:#60a5fa;">Remix IDE</a> → paste <code style="color:#fbbf24;">contracts/StakingPool.sol</code></li>
-              <li>Compile (Solidity 0.8.20+) → Connect MetaMask to <strong style="color:#e2e8f0;">Base</strong> or Base Sepolia testnet</li>
-              <li>Deploy → copy the deployed contract address</li>
-              <li>Call <code style="color:#fbbf24;">addPool()</code> for ETH, USDC, and LP pairs</li>
-              <li>Update <code style="color:#fbbf24;">STAKING_POOL_CONTRACT</code> constant in <code>index.html</code></li>
+              <li>Open <a href="https://remix.ethereum.org" target="_blank" rel="noopener noreferrer" style="color:#60a5fa;">Remix IDE</a> → compile <code style="color:#fbbf24;">contracts/wMOGA.sol</code> + <code style="color:#fbbf24;">contracts/StakingPool.sol</code> (Solidity 0.8.20+)</li>
+              <li>Connect MetaMask to <strong style="color:#e2e8f0;">Base</strong>, <strong style="color:#e2e8f0;">Arbitrum One</strong>, or <strong style="color:#e2e8f0;">EDU Chain Testnet</strong></li>
+              <li>Deploy <code>wMOGA.sol</code> (pass MOGA token address as constructor arg) → copy address</li>
+              <li>Deploy <code>StakingPool.sol</code> → copy address</li>
+              <li>Fund the staking contract with reward tokens, then call <code style="color:#fbbf24;">addPool(name, stakingToken, rewardToken, rate)</code> for each pool</li>
+              <li>Set <code style="color:#fbbf24;">stakingContractAddress</code> &amp; <code style="color:#fbbf24;">wMogaAddress</code> for the matching network in the <code>NETWORKS</code> config inside <code>index.html</code></li>
             </ol>
-            <div style="font-size:0.8em; color:#64748b;">Base mainnet USDC: <code style="color:#10b981; user-select:all;">0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913</code> &nbsp;|&nbsp; WETH: <code style="color:#10b981; user-select:all;">0x4200000000000000000000000000000000000006</code><br>
-              <span style="color:#475569;">⚠️ On Base Sepolia testnet, use the corresponding testnet token addresses instead.</span></div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:0.8em; color:#64748b;">
+              <div style="background:#131722; border-radius:8px; padding:10px;">
+                <div style="color:#94a3b8; font-weight:600; margin-bottom:4px;">🔵 Base Mainnet</div>
+                <div>USDC: <code style="color:#10b981; user-select:all; font-size:0.85em;">0x833589…913</code></div>
+                <div>WETH: <code style="color:#10b981; user-select:all; font-size:0.85em;">0x420000…006</code></div>
+              </div>
+              <div style="background:#131722; border-radius:8px; padding:10px;">
+                <div style="color:#94a3b8; font-weight:600; margin-bottom:4px;">🔶 Arbitrum One</div>
+                <div>USDC: <code style="color:#10b981; user-select:all; font-size:0.85em;">0xaf88d0…831</code></div>
+                <div>WETH: <code style="color:#10b981; user-select:all; font-size:0.85em;">0x82aF49…ab1</code></div>
+              </div>
+            </div>
           </div>`;
 
       // Admin: Add Pool panel (visible only to contract owner)
@@ -12164,22 +12552,27 @@
             <h3 style="color:#60a5fa; margin:0 0 18px; font-size:1.05em;">➕ Add New Pool / LP Pair</h3>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px;">
               <div>
+                <label style="font-size:0.82em; color:#94a3b8; display:block; margin-bottom:4px;">Pool Name (e.g. "wMOGA/USDC LP")</label>
+                <input id="spAddPoolName" type="text" placeholder="e.g. wMOGA Stake"
+                  style="width:100%; box-sizing:border-box; padding:9px 12px; background:#0d1421; border:1px solid #2a2d3a; border-radius:8px; color:#e2e8f0; font-size:0.88em; outline:none;" />
+              </div>
+              <div>
                 <label style="font-size:0.82em; color:#94a3b8; display:block; margin-bottom:4px;">Staking Token Address</label>
-                <input id="spAddStakingToken" type="text" placeholder="0x… token / LP address"
+                <input id="spAddStakingToken" type="text" placeholder="0x… token / LP / wMOGA address"
                   style="width:100%; box-sizing:border-box; padding:9px 12px; background:#0d1421; border:1px solid #2a2d3a; border-radius:8px; color:#e2e8f0; font-size:0.88em; outline:none;" />
                 <label style="font-size:0.78em; color:#64748b; display:flex; align-items:center; gap:6px; margin-top:6px; cursor:pointer;">
                   <input type="checkbox" id="spAddIsETH" style="cursor:pointer;" /> Native ETH pool (no token address needed)
                 </label>
               </div>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; margin-bottom:16px;">
               <div>
                 <label style="font-size:0.82em; color:#94a3b8; display:block; margin-bottom:4px;">Reward Token Address</label>
                 <input id="spAddRewardToken" type="text" placeholder="0x… ERC-20 reward token"
                   style="width:100%; box-sizing:border-box; padding:9px 12px; background:#0d1421; border:1px solid #2a2d3a; border-radius:8px; color:#e2e8f0; font-size:0.88em; outline:none;" />
               </div>
-            </div>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:16px;">
               <div>
-                <label style="font-size:0.82em; color:#94a3b8; display:block; margin-bottom:4px;">Reward Rate (tokens/second, e.g. 0.001)</label>
+                <label style="font-size:0.82em; color:#94a3b8; display:block; margin-bottom:4px;">Reward Rate (tokens/sec, e.g. 0.001)</label>
                 <input id="spAddRewardRate" type="number" placeholder="e.g. 0.001" step="0.000001" min="0.000001"
                   style="width:100%; box-sizing:border-box; padding:9px 12px; background:#0d1421; border:1px solid #2a2d3a; border-radius:8px; color:#e2e8f0; font-size:0.88em; outline:none;" />
               </div>
@@ -12188,9 +12581,9 @@
               </div>
             </div>
             <div style="font-size:0.78em; color:#64748b; border-top:1px solid #1e293b; padding-top:12px;">
-              💡 <strong style="color:#94a3b8;">Quick addresses (Base):</strong>
-              USDC: <code style="color:#10b981;">0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913</code> &nbsp;|&nbsp;
-              WETH: <code style="color:#10b981;">0x4200000000000000000000000000000000000006</code>
+              💡 <strong style="color:#94a3b8;">Quick addresses:</strong>
+              wMOGA: <code style="color:#fbbf24;">${wMogaAddr || 'deploy wMOGA.sol first'}</code> &nbsp;|&nbsp;
+              USDC (Base): <code style="color:#10b981;">0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913</code>
             </div>
           </div>`
         : '';
@@ -12200,7 +12593,7 @@
         <div style="max-width:1000px; margin:0 auto; padding:24px 16px 80px;">
           <h2 style="text-align:center; color:#10b981; font-size:1.9em; margin-bottom:6px;">🌾 Staking Pool</h2>
           <p style="text-align:center; color:#94a3b8; margin-bottom:24px; font-size:0.92em;">
-            Stake MOGA, ETH, USDC &amp; LP tokens to earn rewards · Live on <strong style="color:#f0b90b;">${net.name}</strong>
+            Stake MOGA, wMOGA, ETH, USDC &amp; LP tokens to earn rewards · Live on <strong style="color:#f0b90b;">${net.name}</strong>
           </p>
 
           ${!userAddress ? `
@@ -12214,7 +12607,7 @@
             <div style="background:#131722; border:1px solid #2a2d3a; border-radius:12px; padding:16px; text-align:center;">
               <div style="font-size:0.78em; color:#94a3b8; margin-bottom:4px;">Your Total Staked</div>
               <div style="font-size:1.4em; font-weight:700; color:#f0b90b;">${totalStaked.toFixed(2)}</div>
-              <div style="font-size:0.72em; color:#64748b;">MOGA / SOL</div>
+              <div style="font-size:0.72em; color:#64748b;">MOGA / wMOGA / ETH</div>
             </div>
             <div style="background:#131722; border:1px solid #2a2d3a; border-radius:12px; padding:16px; text-align:center;">
               <div style="font-size:0.78em; color:#94a3b8; margin-bottom:4px;">Total Earned (PNL)</div>
@@ -12233,15 +12626,26 @@
             </div>
           </div>
 
+          <!-- wMOGA wrap / unwrap -->
+          ${wMogaCard}
+
           ${onchainHtml}
           ${addPoolPanel}
 
-          <!-- Demo / simulated pools -->
-          <div style="font-size:0.82em; color:#64748b; margin-bottom:12px; display:flex; align-items:center; gap:8px;">
-            <span>🌐 Demo Pools <span style="background:#1e293b; padding:2px 8px; border-radius:99px;">Simulated · always available</span></span>
+          <!-- Single-asset pools -->
+          <div style="font-size:0.82em; color:#64748b; margin-bottom:10px; display:flex; align-items:center; gap:8px;">
+            <span>🪙 Single-Asset Pools <span style="background:#1e293b; padding:2px 8px; border-radius:99px;">Simulated · always available</span></span>
           </div>
-          <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(420px,1fr)); gap:16px; margin-bottom:28px;">
-            ${poolCards}
+          <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(400px,1fr)); gap:16px; margin-bottom:28px;">
+            ${singlePools.map(buildPoolCard).join('')}
+          </div>
+
+          <!-- LP pools -->
+          <div style="font-size:0.82em; color:#64748b; margin-bottom:10px; display:flex; align-items:center; gap:8px;">
+            <span>🔗 LP Pools <span style="background:#1e293b; padding:2px 8px; border-radius:99px;">Simulated · always available</span></span>
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(400px,1fr)); gap:16px; margin-bottom:28px;">
+            ${lpPools.map(buildPoolCard).join('')}
           </div>
 
           <p style="text-align:center; color:#64748b; font-size:0.82em;">
@@ -13014,7 +13418,7 @@
             <div style="font-size:1.1em; font-weight:800; color:#e2e8f0; margin-bottom:4px;">🌊 List NFTs on OpenSea</div>
             <div style="color:#64748b; font-size:0.85em; margin-bottom:16px;">Trade your Mogaland learning NFTs • All sales proceeds go to treasury</div>
             <div style="display:flex; gap:10px; flex-wrap:wrap;">
-              <a href="https://testnets.opensea.io/assets/sepolia/${NFT_CONTRACT_ADDRESS}" target="_blank" 
+              <a href="${getOpenSeaContractURL(getActiveNFTContractAddress())}" target="_blank" 
                  style="flex:1; min-width:120px; background:linear-gradient(90deg,#2563eb,#1e40af); color:white; padding:12px 16px; border-radius:10px; text-decoration:none; font-weight:600; display:flex; align-items:center; justify-content:center; gap:6px; font-size:0.85em; transition:all 0.2s;" onmouseover="this.style.filter='brightness(1.15)'" onmouseout="this.style.filter='brightness(1)'">
                 📦 View Collection
               </a>
@@ -13025,7 +13429,7 @@
             <div style="margin-top:12px; padding-top:12px; border-top:1px solid rgba(255,255,255,0.06); display:flex; gap:16px; flex-wrap:wrap; font-size:0.8em; color:#64748b;">
               <span>Network: <b style="color:#94a3b8;">${getActiveNetwork().name}</b></span>
               <span>Royalty: <b style="color:#94a3b8;">5% to Treasury</b></span>
-              <span>Contract: <a href="${getActiveNetwork().explorer}/address/${NFT_CONTRACT_ADDRESS}" target="_blank" style="color:#60a5fa;">${NFT_CONTRACT_ADDRESS.slice(0,8)}...</a></span>
+              <span>Contract: <a href="${getActiveNetwork().explorer}/address/${getActiveNFTContractAddress()}" target="_blank" style="color:#60a5fa;">${getActiveNFTContractAddress().slice(0,8)}...</a></span>
             </div>
           </div>
         </div>
@@ -13413,20 +13817,26 @@
         showNotification("You don't have any NFTs to list", true);
         return;
       }
+
+      const net = getActiveNetwork();
+      const contractAddr = getActiveNFTContractAddress();
+      const openSeaProfileUrl  = getOpenSeaProfileURL(userAddress);
+      const openSeaContractUrl = getOpenSeaContractURL(contractAddr);
+      const isMainnet = !net.isTestnet;
       
       const modal = document.createElement('div');
       modal.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); display:flex; align-items:center; justify-content:center; z-index:10000;';
       
       modal.innerHTML = `
         <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:20px; padding:32px; max-width:500px; width:90%;">
-          <h3 style="color:#60a5fa; margin-bottom:20px; text-align:center;">🏷️ List NFT on OpenSea</h3>
+          <h3 style="color:#60a5fa; margin-bottom:20px; text-align:center;">🏷️ List NFT on OpenSea${isMainnet ? '' : ' (Testnet)'}</h3>
           
           <div style="background:rgba(59,130,246,0.1); border:1px solid rgba(59,130,246,0.3); border-radius:12px; padding:20px; margin-bottom:24px;">
             <p style="color:#94a3b8; font-size:0.95em; line-height:1.6; margin-bottom:12px;">
-              To list your NFT on OpenSea Sepolia testnet:
+              To list your NFT on OpenSea (<b style="color:#e2e8f0;">${net.name}</b>):
             </p>
             <ol style="color:#94a3b8; font-size:0.9em; line-height:1.8; padding-left:24px;">
-              <li>Visit OpenSea Testnet</li>
+              <li>Visit OpenSea ${isMainnet ? 'Mainnet' : 'Testnet'}</li>
               <li>Connect your wallet (${userAddress.slice(0,6)}...${userAddress.slice(-4)})</li>
               <li>Navigate to your profile</li>
               <li>Select the NFT you want to list</li>
@@ -13450,7 +13860,7 @@
           </div>
           
           <div style="display:flex; gap:12px;">
-            <button onclick="window.open('https://testnets.opensea.io/${userAddress}', '_blank'); this.closest('div[style*=fixed]').remove();" 
+            <button onclick="window.open('${openSeaProfileUrl}', '_blank'); this.closest('div[style*=fixed]').remove();" 
                     style="flex:1; background:linear-gradient(90deg,#2563eb,#1e40af); color:white; padding:14px; border:none; border-radius:10px; font-weight:600; cursor:pointer; font-size:1em;">
               🌊 Open OpenSea
             </button>
@@ -13461,7 +13871,7 @@
           </div>
           
           <p style="text-align:center; color:#64748b; font-size:0.85em; margin-top:16px;">
-            <a href="https://testnets.opensea.io/assets/sepolia/${NFT_CONTRACT_ADDRESS}" target="_blank" style="color:#60a5fa;">
+            <a href="${openSeaContractUrl}" target="_blank" style="color:#60a5fa;">
               View Collection on OpenSea →
             </a>
           </p>
@@ -13473,18 +13883,19 @@
       // Log to console for tracking
       console.log(`[OpenSea] Opening listing modal for user: ${userAddress}`);
       console.log(`[OpenSea] User has ${totalNFTs} NFTs available to list`);
-      console.log(`[OpenSea] Collection contract: ${NFT_CONTRACT_ADDRESS}`);
+      console.log(`[OpenSea] Collection contract: ${contractAddr}`);
+      console.log(`[OpenSea] Network: ${net.name} (${isMainnet ? 'mainnet' : 'testnet'})`);
       console.log(`[OpenSea] Treasury wallet: ${TREASURY_WALLET_ADDRESS}`);
     }
 
     window.viewOpenSeaCollection = function() {
-      const url = `https://testnets.opensea.io/assets/sepolia/${NFT_CONTRACT_ADDRESS}`;
+      const url = getOpenSeaContractURL(getActiveNFTContractAddress());
       window.open(url, '_blank');
       showNotification('Opening OpenSea collection...', false);
     }
 
     window.viewTreasuryMarketplace = function() {
-      const url = `https://testnets.opensea.io/${TREASURY_WALLET_ADDRESS}`;
+      const url = getOpenSeaProfileURL(TREASURY_WALLET_ADDRESS);
       window.open(url, '_blank');
       showNotification('Opening treasury marketplace...', false);
     }
