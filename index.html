@@ -11451,27 +11451,33 @@
 
             // Refresh live prices for the newly-selected tab
             if (currentTab === 'crypto') {
-              // Refresh Binance prices for all crypto assets
+              // Refresh Binance prices: try Futures first, then Spot
+              const tabSnapshot = currentTab; // capture for async guard
               (async () => {
                 try {
                   const syms = assetsData.crypto.map(a => a.binanceSymbol).filter(Boolean);
-                  const url = `https://api.binance.com/api/v3/ticker/price?symbols=${encodeURIComponent(JSON.stringify(syms))}`;
-                  const resp = await fetch(url).catch(() => null);
-                  if (resp && resp.ok) {
-                    const data = await resp.json().catch(() => null);
-                    if (Array.isArray(data)) {
-                      data.forEach(t => {
-                        const a = assetsData.crypto.find(x => x.binanceSymbol === t.symbol);
-                        const p = parseFloat(t.price);
-                        if (a && p > 0) { a.basePrice = p; markPrices[a.symbol] = p; }
-                      });
-                      renderAssets();
-                    }
+                  let data = null;
+                  const futUrl = `https://fapi.binance.com/fapi/v1/ticker/price?symbols=${encodeURIComponent(JSON.stringify(syms))}`;
+                  const futResp = await fetch(futUrl).catch(() => null);
+                  if (futResp && futResp.ok) data = await futResp.json().catch(() => null);
+                  if (!Array.isArray(data) || !data.length) {
+                    const spotUrl = `https://api.binance.com/api/v3/ticker/price?symbols=${encodeURIComponent(JSON.stringify(syms))}`;
+                    const spotResp = await fetch(spotUrl).catch(() => null);
+                    if (spotResp && spotResp.ok) data = await spotResp.json().catch(() => null);
+                  }
+                  if (Array.isArray(data) && currentTab === tabSnapshot) {
+                    data.forEach(t => {
+                      const a = assetsData.crypto.find(x => x.binanceSymbol === t.symbol);
+                      const p = parseFloat(t.price);
+                      if (a && p > 0) { a.basePrice = p; markPrices[a.symbol] = p; }
+                    });
+                    renderAssets();
                   }
                 } catch (_) {}
               })();
             } else if (currentTab === 'stocks' || currentTab === 'commodities' || currentTab === 'forex') {
               // Refresh Yahoo Finance prices for the tab's assets
+              const tabSnapshot = currentTab; // capture for async guard
               const tabAssets = (assetsData[currentTab] || []).filter(a => a.yahooSymbol);
               (async () => {
                 for (const asset of tabAssets) {
@@ -11484,7 +11490,8 @@
                     if (price && price > 0) { asset.basePrice = price; markPrices[asset.symbol] = price; }
                   } catch (_) {}
                 }
-                if (currentTab !== 'crypto' && currentTab !== 'sports') renderAssets();
+                // Only re-render if still on the same tab that triggered the fetch
+                if (currentTab === tabSnapshot) renderAssets();
               })();
             }
           };
