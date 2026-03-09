@@ -2459,6 +2459,31 @@
       return net.nftContractAddress || NFT_CONTRACT_ADDRESS;
     }
 
+    // ── StakingPool On-Chain Contract (contracts/StakingPool.sol) ──────────────
+    // Global fallback address (Sepolia testnet placeholder).
+    // Per-network addresses are set in NETWORKS[id].stakingContractAddress above.
+    // Use getActiveStakingContract() everywhere in the UI instead of this constant directly.
+    const STAKING_POOL_CONTRACT = '0x0000000000000000000000000000000000000000'; // TODO: replace after Sepolia deployment
+    const STAKING_POOL_ABI = [
+      'function addPool(string calldata name, address stakingToken, address rewardToken, uint256 rewardRate) external',
+      'function setRewardRate(uint256 poolId, uint256 newRewardRate) external',
+      'function setPoolName(uint256 poolId, string calldata newName) external',
+      'function stake(uint256 poolId, uint256 amount) external payable',
+      'function unstake(uint256 poolId, uint256 amount) external',
+      'function claimReward(uint256 poolId) external',
+      'function pendingReward(uint256 poolId, address userAddr) external view returns (uint256)',
+      'function getUserInfo(uint256 poolId, address userAddr) external view returns (uint256 amountStaked, uint256 rewardDebt)',
+      'function getPoolName(uint256 poolId) external view returns (string)',
+      'function pools(uint256) external view returns (address stakingToken, address rewardToken, uint256 totalStaked, uint256 rewardRate, uint256 lastUpdateTime, uint256 rewardPerTokenStored, string name)',
+      'function poolCount() external view returns (uint256)',
+      'function owner() external view returns (address)',
+      'event PoolAdded(uint256 indexed poolId, string name, address stakingToken, address rewardToken, uint256 rewardRate)',
+      'event Staked(address indexed user, uint256 indexed poolId, uint256 amount)',
+      'event Unstaked(address indexed user, uint256 indexed poolId, uint256 amount)',
+      'event RewardClaimed(address indexed user, uint256 indexed poolId, uint256 amount)',
+      'event PoolNameUpdated(uint256 indexed poolId, string newName)'
+    ];
+
     // Helper: return the active network's StakingPool contract address.
     // Falls back to the global STAKING_POOL_CONTRACT constant (Sepolia testnet).
     // To enable on-chain staking for a network, set `stakingContractAddress` in NETWORKS above.
@@ -5284,31 +5309,6 @@
       "function closePosition(uint256 positionId) external",
       "function getPosition(uint256 positionId) view returns (tuple)",
       "function getUserPositions(address user) view returns (uint256[])"
-    ];
-
-    // ── StakingPool On-Chain Contract (contracts/StakingPool.sol) ──────────────
-    // Global fallback address (Sepolia testnet placeholder).
-    // Per-network addresses are set in NETWORKS[id].stakingContractAddress above.
-    // Use getActiveStakingContract() everywhere in the UI instead of this constant directly.
-    const STAKING_POOL_CONTRACT = '0x0000000000000000000000000000000000000000'; // TODO: replace after Sepolia deployment
-    const STAKING_POOL_ABI = [
-      'function addPool(string calldata name, address stakingToken, address rewardToken, uint256 rewardRate) external',
-      'function setRewardRate(uint256 poolId, uint256 newRewardRate) external',
-      'function setPoolName(uint256 poolId, string calldata newName) external',
-      'function stake(uint256 poolId, uint256 amount) external payable',
-      'function unstake(uint256 poolId, uint256 amount) external',
-      'function claimReward(uint256 poolId) external',
-      'function pendingReward(uint256 poolId, address userAddr) external view returns (uint256)',
-      'function getUserInfo(uint256 poolId, address userAddr) external view returns (uint256 amountStaked, uint256 rewardDebt)',
-      'function getPoolName(uint256 poolId) external view returns (string)',
-      'function pools(uint256) external view returns (address stakingToken, address rewardToken, uint256 totalStaked, uint256 rewardRate, uint256 lastUpdateTime, uint256 rewardPerTokenStored, string name)',
-      'function poolCount() external view returns (uint256)',
-      'function owner() external view returns (address)',
-      'event PoolAdded(uint256 indexed poolId, string name, address stakingToken, address rewardToken, uint256 rewardRate)',
-      'event Staked(address indexed user, uint256 indexed poolId, uint256 amount)',
-      'event Unstaked(address indexed user, uint256 indexed poolId, uint256 amount)',
-      'event RewardClaimed(address indexed user, uint256 indexed poolId, uint256 amount)',
-      'event PoolNameUpdated(uint256 indexed poolId, string newName)'
     ];
 
     // ── wMOGA (Wrapped MOGA) Contract ABI ────────────────────────────────────
@@ -8944,11 +8944,17 @@
               <!-- Center: Match Listings -->
               <div style="flex:1; min-width:0; overflow-y:auto; background:#0d1421;">
                 <div style="padding:10px 12px; border-bottom:1px solid #1e2535; display:flex; align-items:center; justify-content:space-between; background:#0b0e1a;">
-                  <span style="font-size:0.85em; font-weight:700; color:#e2e8f0;">📅 Upcoming Matches</span>
-                  <button onclick="refreshSportsbookData()" style="padding:3px 10px; background:#1e2535; border:1px solid #2a2d3a; color:#94a3b8; border-radius:4px; cursor:pointer; font-size:0.75em;">↻ Refresh</button>
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="font-size:0.85em; font-weight:700; color:#e2e8f0;">📅 Upcoming Matches</span>
+                    <span id="sbDataSource" style="font-size:0.68em; color:#64748b; background:#131722; padding:2px 7px; border-radius:10px;">TheSportsDB</span>
+                  </div>
+                  <div style="display:flex; align-items:center; gap:6px;">
+                    <span id="sbLastUpdated" style="font-size:0.68em; color:#475569;"></span>
+                    <button onclick="refreshSportsbookData()" style="padding:3px 10px; background:#1e2535; border:1px solid #2a2d3a; color:#94a3b8; border-radius:4px; cursor:pointer; font-size:0.75em;">↻ Refresh</button>
+                  </div>
                 </div>
                 <div id="sbMatchListings" style="padding:8px 10px;">
-                  <div style="text-align:center; padding:30px; color:#64748b; font-size:0.9em;">⏳ Loading matches...</div>
+                  <div style="text-align:center; padding:30px; color:#64748b; font-size:0.9em;">⏳ Fetching live match schedules from TheSportsDB…</div>
                 </div>
               </div>
 
@@ -8997,10 +9003,9 @@
             </div>
           `;
 
-          // Populate match listings
-          renderSportsbookMatches(currentSbFilter);
+          // Skip pre-rendering with stale static data – wait for refreshSportsbookData() to load live schedules
           updateSbActiveBets();
-          // Fetch fresh data from TheSportsDB in background
+          // Fetch fresh data from TheSportsDB in background, then render matches
           refreshSportsbookData();
         }
 
@@ -9145,7 +9150,10 @@
           return `
             <div style="padding:10px 12px; border-bottom:1px solid #1e2535; background:transparent; transition:background 0.15s;">
               <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
-                <span style="font-size:0.72em; color:#64748b;">${isLive ? team.league + ' • ' : ''}${isLive ? '<span style="color:#ef4444; font-weight:700;">● LIVE</span>' : matchTimeStr}</span>
+                <div style="display:flex; align-items:center; gap:4px;">
+                  <span style="font-size:0.72em; color:#94a3b8;">${isLive ? team.league + ' • ' : ''}${isLive ? '<span style="color:#ef4444; font-weight:700;">● LIVE</span>' : matchTimeStr}</span>
+                  ${team.commenceTime && !isLive ? '<span style="font-size:0.62em; background:rgba(14,203,129,0.1); color:#0ecb81; padding:1px 5px; border-radius:2px; border:1px solid rgba(14,203,129,0.3);">● Live Schedule</span>' : ''}
+                </div>
                 <div style="display:flex; align-items:center; gap:4px;">
                   ${lastResultHtml}
                   ${locked && !isLive ? '<span style="font-size:0.68em; color:#ef4444; background:rgba(239,68,68,0.1); padding:1px 6px; border-radius:2px;">Closed</span>' : ''}
@@ -9343,8 +9351,18 @@
 
         async function refreshSportsbookData() {
           if (!assetsData.sports) return;
-          // Fetch all teams data in background
+          const container = document.getElementById('sbMatchListings');
+          const lastUpdatedEl = document.getElementById('sbLastUpdated');
+          if (container) {
+            container.innerHTML = '<div style="text-align:center; padding:30px; color:#64748b; font-size:0.9em;">⏳ Fetching live match schedules from TheSportsDB…</div>';
+          }
+          // Fetch all teams data in parallel
           await Promise.all(assetsData.sports.map(team => fetchSportsData(team)));
+          // Update status indicator
+          if (lastUpdatedEl) {
+            const now = new Date();
+            lastUpdatedEl.textContent = `Updated ${now.toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'})}`;
+          }
           // Re-render if still on sports tab
           if (currentTab === 'sports') {
             renderSportsbookMatches(currentSbFilter);
@@ -11492,6 +11510,17 @@
         // Refresh top ticker bar immediately so prices are not stale when entering the market
         updatePriceTicker().catch(() => {});
 
+        // CoinGecko coin ID mapping for Binance-style symbols (used as fallback price source)
+        const COINGECKO_ID_MAP = {
+          'BTCUSDT': 'bitcoin', 'ETHUSDT': 'ethereum', 'BNBUSDT': 'binancecoin',
+          'SOLUSDT': 'solana', 'ADAUSDT': 'cardano', 'XRPUSDT': 'ripple',
+          'DOTUSDT': 'polkadot', 'MATICUSDT': 'matic-network', 'LINKUSDT': 'chainlink',
+          'UNIUSDT': 'uniswap', 'DOGEUSDT': 'dogecoin', 'AVAXUSDT': 'avalanche-2',
+          'ATOMUSDT': 'cosmos', 'NEARUSDT': 'near'
+        };
+        // Reverse map (CoinGecko id → Binance symbol)
+        const COINGECKO_ID_MAP_REV = Object.fromEntries(Object.entries(COINGECKO_ID_MAP).map(([k, v]) => [v, k]));
+
         // Fetch live prices in background and update basePrice for all crypto assets
         // Tries Bybit V5 API first, falls back to Binance Futures then Binance Spot
         (async function refreshAllCryptoPrices() {
@@ -11540,6 +11569,25 @@
                   const price = parseFloat(t.price);
                   if (price > 0) priceMap[t.symbol] = price;
                 });
+              }
+            }
+
+            // CoinGecko fallback: fetch any symbols still missing
+            const cgMissing = symbols.filter(s => !priceMap[s]);
+            if (cgMissing.length) {
+              const cgIds = cgMissing.map(s => COINGECKO_ID_MAP[s]).filter(Boolean).join(',');
+              if (cgIds) {
+                try {
+                  const cgData = await fetchWithCORSFallback(
+                    `https://api.coingecko.com/api/v3/simple/price?ids=${cgIds}&vs_currencies=usd`
+                  );
+                  if (cgData) {
+                    Object.entries(cgData).forEach(([id, d]) => {
+                      const sym = COINGECKO_ID_MAP_REV[id];
+                      if (sym && d && d.usd > 0) priceMap[sym] = d.usd;
+                    });
+                  }
+                } catch (_) {}
               }
             }
 
