@@ -2087,61 +2087,7 @@
 
       <div class="tab-wrapper" style="position:relative; min-height:300px;">
         <div id="assetsContent" class="tab-content active">
-          <a href="#" id="ethExplorerLink" target="_blank" rel="noopener noreferrer" style="text-decoration:none; color:inherit;">
-            <div class="profile-slide-asset-row profile-asset-hover">
-              <img src="https://cryptologos.cc/logos/ethereum-eth-logo.png?v=035" alt="ETH" class="profile-slide-asset-icon">
-              <div class="profile-slide-asset-details">
-                <div class="profile-slide-asset-name">ETH</div>
-                <div class="profile-slide-asset-subtitle" id="ethNetworkSubtitle">Sepolia Testnet • View on Explorer →</div>
-              </div>
-              <div class="profile-slide-asset-amounts">
-                <div class="profile-slide-token-amount" id="ethBalance">0.0000</div>
-                <div class="profile-slide-usd-amount">Testnet</div>
-              </div>
-            </div>
-          </a>
-
-          <a href="#" id="wbtcExplorerLink" target="_blank" rel="noopener noreferrer" style="text-decoration:none; color:inherit;">
-            <div class="profile-slide-asset-row profile-asset-hover">
-              <img src="https://cryptologos.cc/logos/wrapped-bitcoin-wbtc-logo.png?v=035" alt="WBTC" class="profile-slide-asset-icon">
-              <div class="profile-slide-asset-details">
-                <div class="profile-slide-asset-name">WBTC</div>
-                <div class="profile-slide-asset-subtitle">Wrapped Bitcoin • View on Explorer →</div>
-              </div>
-              <div class="profile-slide-asset-amounts">
-                <div class="profile-slide-token-amount" id="wbtcBalance">0.0000</div>
-                <div class="profile-slide-usd-amount" id="wbtcBalanceUSD">$0.00</div>
-              </div>
-            </div>
-          </a>
-
-          <a href="#" id="usdcExplorerLink" target="_blank" rel="noopener noreferrer" style="text-decoration:none; color:inherit;">
-            <div class="profile-slide-asset-row profile-asset-hover">
-              <img src="https://cryptologos.cc/logos/usd-coin-usdc-logo.png?v=035" alt="USDC" class="profile-slide-asset-icon">
-              <div class="profile-slide-asset-details">
-                <div class="profile-slide-asset-name">USDC</div>
-                <div class="profile-slide-asset-subtitle">USD Coin • View on Explorer →</div>
-              </div>
-              <div class="profile-slide-asset-amounts">
-                <div class="profile-slide-token-amount" id="usdcBalance">0.0000</div>
-                <div class="profile-slide-usd-amount" id="usdcBalanceUSD">$0.00</div>
-              </div>
-            </div>
-          </a>
-
-          <a href="#" id="usdtExplorerLink" target="_blank" rel="noopener noreferrer" style="text-decoration:none; color:inherit;">
-            <div class="profile-slide-asset-row profile-asset-hover">
-              <img src="https://cryptologos.cc/logos/tether-usdt-logo.png?v=035" alt="USDT" class="profile-slide-asset-icon">
-              <div class="profile-slide-asset-details">
-                <div class="profile-slide-asset-name">USDT</div>
-                <div class="profile-slide-asset-subtitle">Tether • View on Explorer →</div>
-              </div>
-              <div class="profile-slide-asset-amounts">
-                <div class="profile-slide-token-amount" id="usdtBalance">0.0000</div>
-                <div class="profile-slide-usd-amount" id="usdtBalanceUSD">$0.00</div>
-              </div>
-            </div>
-          </a>
+          <!-- Assets are rendered dynamically by renderProfileAssets() -->
         </div>
       </div>
     </div>
@@ -2222,16 +2168,6 @@
               <button class="action-btn disconnect-btn" onclick="disconnectSocial('farcaster')" id="farcasterDisconnectBtn" style="display:none;">Disconnect</button>
             </div>
           </div>
-        </div>
-
-        <!-- OCID (Open Campus ID) -->
-        <div class="ocid-section">
-          <div class="section-title">🎓 Open Campus ID (OCID)</div>
-          <div class="ocid-input-wrap">
-            <input type="text" id="ocidInput" class="ocid-input" placeholder="Enter your OCID (e.g. 0x123...)" maxlength="42" />
-            <button class="ocid-save-btn" onclick="saveOCID()">Save</button>
-          </div>
-          <div class="ocid-badge" id="ocidBadge">No OCID connected</div>
         </div>
 
         <button class="logout-btn" onclick="logoutUser()">Log Out</button>
@@ -3213,9 +3149,6 @@
       // Initialize network switcher UI
       updateNetworkSwitcherUI();
 
-      // Load OCID
-      loadOCID();
-
       // Initialize profile tabs if startApp has loaded
       if (typeof initProfileTabs === 'function') {
         initProfileTabs();
@@ -3890,10 +3823,12 @@
         const loginBtn = document.getElementById(`loginNetBtn_${id}`);
         if (loginBtn) loginBtn.classList.toggle('active', id === currentNetworkId);
       });
-      // Update ETH asset subtitle in profile panel
+      // Re-render profile assets for the new network (only if profile panel is visible)
       const net = getActiveNetwork();
-      const ethSubtitle = document.getElementById('ethNetworkSubtitle');
-      if (ethSubtitle) ethSubtitle.textContent = `${net.name} • View on Explorer →`;
+      const profilePanel = document.getElementById('profileSlidePanel');
+      if (profilePanel && !profilePanel.classList.contains('hidden') && typeof renderProfileAssets === 'function') {
+        renderProfileAssets();
+      }
       // Update faucet link on login page (hide on mainnet networks that have no faucet)
       const faucetLink = document.getElementById('faucetLink');
       if (faucetLink) {
@@ -4031,8 +3966,19 @@
         }
         
         // Update UI with real balances
-        const ethBalanceEl = document.getElementById('ethBalance');
+        // Determine the correct element ID for the native token based on the active network
+        const nativeBalanceId = (() => {
+          if (activeNet.id === 'bnb')                       return 'bnbBalance';
+          if (activeNet.id === 'educhain' || activeNet.id === 'educhainmain') return 'eduBalance';
+          return 'ethBalance';
+        })();
+        const ethBalanceEl = document.getElementById(nativeBalanceId);
         if (ethBalanceEl) ethBalanceEl.textContent = ethBalance.toFixed(4);
+        // Also update the old ethBalance ID if a different element was targeted (for backward compatibility)
+        if (nativeBalanceId !== 'ethBalance') {
+          const oldEthEl = document.getElementById('ethBalance');
+          if (oldEthEl) oldEthEl.textContent = ethBalance.toFixed(4);
+        }
         
         const profileTotal = document.querySelector('.profile-slide-total');
         if (profileTotal) profileTotal.textContent = `${ethBalance.toFixed(4)} ${getNetworkCurrency()}`;
@@ -4337,7 +4283,8 @@
       const panel = document.getElementById('profileSlidePanel');
       if (panel.classList.contains('hidden')) {
         panel.classList.remove('hidden');
-        // Refresh data when profile is opened
+        // Render network-specific assets first, then fetch real balances
+        renderProfileAssets();
         fetchRealBalances();
       } else {
         panel.classList.add('hidden');
@@ -4351,7 +4298,6 @@
     window.openBackProfile = function() {
       document.getElementById('backProfilePanel').classList.remove('hidden');
       closeProfileSlide();
-      loadOCID();
     }
 
     window.closeBackProfile = function() {
@@ -4991,50 +4937,89 @@
           // Update content panels
           document.getElementById('assetsContent').classList.toggle('active', tabName === 'assets');
           
-          // Update asset links when assets tab is opened
+          // Render assets when assets tab is opened
           if (tabName === 'assets') {
-            updateAssetLinks();
+            renderProfileAssets();
           }
         });
       });
     }
-    
-    // Function to update asset links dynamically
-    function updateAssetLinks() {
-      if (!userAddress) return;
-      
+
+    // Per-network asset definitions
+    const NETWORK_ASSETS = {
+      sepolia: [
+        { symbol: 'ETH',  name: 'Ethereum',      subtitle: 'Sepolia Testnet',   icon: 'https://cryptologos.cc/logos/ethereum-eth-logo.png?v=035',          balId: 'ethBalance',  usdId: null,           native: true  },
+        { symbol: 'USDC', name: 'USD Coin',       subtitle: 'USD Coin',          icon: 'https://cryptologos.cc/logos/usd-coin-usdc-logo.png?v=035',         balId: 'usdcBalance', usdId: 'usdcBalanceUSD' },
+        { symbol: 'USDT', name: 'Tether',         subtitle: 'Tether',            icon: 'https://cryptologos.cc/logos/tether-usdt-logo.png?v=035',           balId: 'usdtBalance', usdId: 'usdtBalanceUSD' },
+        { symbol: 'WBTC', name: 'Wrapped Bitcoin',subtitle: 'Wrapped Bitcoin',   icon: 'https://cryptologos.cc/logos/wrapped-bitcoin-wbtc-logo.png?v=035',  balId: 'wbtcBalance', usdId: 'wbtcBalanceUSD' },
+        { symbol: 'GHO',  name: 'GHO Stablecoin',subtitle: 'Aave GHO',          icon: 'https://cryptologos.cc/logos/aave-aave-logo.png?v=035',             balId: 'ghoBalance',  usdId: 'ghoBalanceUSD'  },
+      ],
+      basesepolia: [
+        { symbol: 'ETH',  name: 'Ethereum',       subtitle: 'Base Sepolia',      icon: 'https://cryptologos.cc/logos/ethereum-eth-logo.png?v=035',          balId: 'ethBalance',  usdId: null,           native: true },
+        { symbol: 'USDC', name: 'USD Coin',       subtitle: 'USD Coin (Base)',   icon: 'https://cryptologos.cc/logos/usd-coin-usdc-logo.png?v=035',         balId: 'usdcBalance', usdId: 'usdcBalanceUSD' },
+      ],
+      base: [
+        { symbol: 'ETH',   name: 'Ethereum',       subtitle: 'Base Network',     icon: 'https://cryptologos.cc/logos/ethereum-eth-logo.png?v=035',          balId: 'ethBalance',  usdId: 'ethBalanceUSD', native: true },
+        { symbol: 'USDC',  name: 'USD Coin',       subtitle: 'USD Coin (Base)',  icon: 'https://cryptologos.cc/logos/usd-coin-usdc-logo.png?v=035',         balId: 'usdcBalance', usdId: 'usdcBalanceUSD' },
+        { symbol: 'USDT',  name: 'Tether',         subtitle: 'Tether (Base)',    icon: 'https://cryptologos.cc/logos/tether-usdt-logo.png?v=035',           balId: 'usdtBalance', usdId: 'usdtBalanceUSD' },
+        { symbol: 'WETH',  name: 'Wrapped Ether',  subtitle: 'Wrapped Ether',   icon: 'https://cryptologos.cc/logos/ethereum-eth-logo.png?v=035',          balId: 'wethBalance', usdId: 'wethBalanceUSD' },
+        { symbol: 'cbETH', name: 'Coinbase ETH',   subtitle: 'Coinbase Staked ETH', icon: 'https://cryptologos.cc/logos/coinbase-wrapped-staked-eth-cbeth-logo.png?v=035', balId: 'cbethBalance', usdId: 'cbethBalanceUSD' },
+      ],
+      arbitrum: [
+        { symbol: 'ETH',  name: 'Ethereum',        subtitle: 'Arbitrum One',     icon: 'https://cryptologos.cc/logos/ethereum-eth-logo.png?v=035',          balId: 'ethBalance',  usdId: 'ethBalanceUSD', native: true },
+        { symbol: 'USDC', name: 'USD Coin',        subtitle: 'USD Coin (Arb)',   icon: 'https://cryptologos.cc/logos/usd-coin-usdc-logo.png?v=035',         balId: 'usdcBalance', usdId: 'usdcBalanceUSD' },
+        { symbol: 'USDT', name: 'Tether',          subtitle: 'Tether (Arb)',     icon: 'https://cryptologos.cc/logos/tether-usdt-logo.png?v=035',           balId: 'usdtBalance', usdId: 'usdtBalanceUSD' },
+        { symbol: 'WETH', name: 'Wrapped Ether',   subtitle: 'Wrapped Ether',   icon: 'https://cryptologos.cc/logos/ethereum-eth-logo.png?v=035',          balId: 'wethBalance', usdId: 'wethBalanceUSD' },
+        { symbol: 'ARB',  name: 'Arbitrum',        subtitle: 'Arbitrum Token',   icon: 'https://cryptologos.cc/logos/arbitrum-arb-logo.png?v=035',          balId: 'arbBalance',  usdId: 'arbBalanceUSD'  },
+      ],
+      bnb: [
+        { symbol: 'BNB',  name: 'BNB',             subtitle: 'BNB Smart Chain',  icon: 'https://cryptologos.cc/logos/bnb-bnb-logo.png?v=035',               balId: 'bnbBalance',  usdId: 'bnbBalanceUSD', native: true },
+        { symbol: 'WBNB', name: 'Wrapped BNB',     subtitle: 'Wrapped BNB',      icon: 'https://cryptologos.cc/logos/bnb-bnb-logo.png?v=035',               balId: 'wbnbBalance', usdId: 'wbnbBalanceUSD' },
+        { symbol: 'USDC', name: 'USD Coin',        subtitle: 'USD Coin (BNB)',   icon: 'https://cryptologos.cc/logos/usd-coin-usdc-logo.png?v=035',         balId: 'usdcBalance', usdId: 'usdcBalanceUSD' },
+        { symbol: 'USDT', name: 'Tether',          subtitle: 'Tether (BNB)',     icon: 'https://cryptologos.cc/logos/tether-usdt-logo.png?v=035',           balId: 'usdtBalance', usdId: 'usdtBalanceUSD' },
+        { symbol: 'CAKE', name: 'PancakeSwap',     subtitle: 'CAKE Token',       icon: 'https://cryptologos.cc/logos/pancakeswap-cake-logo.png?v=035',      balId: 'cakeBalance', usdId: 'cakeBalanceUSD' },
+      ],
+      educhain: [
+        { symbol: 'EDU',  name: 'EDU Token',       subtitle: 'EDU Chain Testnet',icon: 'https://cryptologos.cc/logos/open-campus-edu-logo.png?v=035',       balId: 'eduBalance',  usdId: null,           native: true },
+        { symbol: 'USDC', name: 'USD Coin',        subtitle: 'USD Coin (EDU)',   icon: 'https://cryptologos.cc/logos/usd-coin-usdc-logo.png?v=035',         balId: 'usdcBalance', usdId: 'usdcBalanceUSD' },
+      ],
+      educhainmain: [
+        { symbol: 'EDU',  name: 'EDU Token',       subtitle: 'EDU Chain',        icon: 'https://cryptologos.cc/logos/open-campus-edu-logo.png?v=035',       balId: 'eduBalance',  usdId: 'eduBalanceUSD', native: true },
+        { symbol: 'USDC', name: 'USD Coin',        subtitle: 'USD Coin (EDU)',   icon: 'https://cryptologos.cc/logos/usd-coin-usdc-logo.png?v=035',         balId: 'usdcBalance', usdId: 'usdcBalanceUSD' },
+      ],
+    };
+
+    // Render profile asset rows based on the active network
+    function renderProfileAssets() {
+      const assetsEl = document.getElementById('assetsContent');
+      if (!assetsEl) return;
       const net = getActiveNetwork();
       const explorer = net.explorer;
+      const assets = NETWORK_ASSETS[currentNetworkId] || NETWORK_ASSETS.sepolia;
 
-      // Update ETH link
-      const ethLink = document.getElementById('ethExplorerLink');
-      if (ethLink) {
-        ethLink.href = `${explorer}/address/${userAddress}`;
-      }
-      
-      // Update WBTC link (token address only meaningful on Sepolia)
-      const wbtcLink = document.getElementById('wbtcExplorerLink');
-      if (wbtcLink) {
-        wbtcLink.href = currentNetworkId === 'sepolia'
-          ? `${explorer}/token/${WBTC_SEPOLIA}?a=${userAddress}`
-          : `${explorer}/address/${userAddress}`;
-      }
-      
-      // Update USDC link
-      const usdcLink = document.getElementById('usdcExplorerLink');
-      if (usdcLink) {
-        usdcLink.href = currentNetworkId === 'sepolia'
-          ? `${explorer}/token/${USDC_SEPOLIA_ADDRESS}?a=${userAddress}`
-          : `${explorer}/address/${userAddress}`;
-      }
-      
-      // Update USDT link
-      const usdtLink = document.getElementById('usdtExplorerLink');
-      if (usdtLink) {
-        usdtLink.href = currentNetworkId === 'sepolia'
-          ? `${explorer}/token/${USDT_SEPOLIA_ADDRESS}?a=${userAddress}`
-          : `${explorer}/address/${userAddress}`;
-      }
+      assetsEl.innerHTML = assets.map(a => {
+        const explorerHref = userAddress ? `${explorer}/address/${userAddress}` : '#';
+        return `
+          <a href="${explorerHref}" id="${a.symbol.toLowerCase()}ExplorerLink" target="_blank" rel="noopener noreferrer" style="text-decoration:none; color:inherit;">
+            <div class="profile-slide-asset-row profile-asset-hover">
+              <img src="${a.icon}" alt="${a.symbol}" class="profile-slide-asset-icon" onerror="this.style.display='none'">
+              <div class="profile-slide-asset-details">
+                <div class="profile-slide-asset-name">${a.symbol}</div>
+                <div class="profile-slide-asset-subtitle" id="${a.balId}_subtitle">${a.subtitle} • View on Explorer →</div>
+              </div>
+              <div class="profile-slide-asset-amounts">
+                <div class="profile-slide-token-amount" id="${a.balId}">0.0000</div>
+                <div class="profile-slide-usd-amount" id="${a.usdId || (a.balId + 'USD')}">${net.isTestnet && a.native ? 'Testnet' : '$0.00'}</div>
+              </div>
+            </div>
+          </a>`;
+      }).join('');
+    }
+
+    // Function to update asset explorer links dynamically (kept for compatibility)
+    function updateAssetLinks() {
+      if (!userAddress) return;
+      renderProfileAssets();
     }
 
     // Social Media Connection Management
@@ -12231,15 +12216,23 @@
     // ===== Staking Pool (DeFi-style: MOGA, ETH, USDC, SOL LP tokens on ETH Sepolia, EDU Chain, Base Sepolia) =====
     const STAKING_POOLS = [
       // ── Single-asset pools ─────────────────────────────────────────────────
-      { id: 'moga_only',  name: 'MOGA Stake',      apy: 28, tvl: 3400000, token: 'MOGA',  pair: null,   icon: '🌾', minStake: 5,   type: 'ERC20' },
-      { id: 'wmoga_only', name: 'wMOGA Stake',     apy: 32, tvl: 1800000, token: 'wMOGA', pair: null,   icon: '🟡', minStake: 5,   type: 'ERC20', isWmoga: true },
-      { id: 'eth_only',   name: 'ETH Stake',       apy: 18, tvl: 920000,  token: 'ETH',   pair: null,   icon: '⬡',  minStake: 0.01,type: 'ETH'   },
-      { id: 'usdc_only',  name: 'USDC Stake',      apy: 12, tvl: 2100000, token: 'USDC',  pair: null,   icon: '💵', minStake: 10,  type: 'ERC20' },
+      { id: 'moga_only',  name: 'MOGA Stake',           apy: 28, tvl: 3400000, token: 'MOGA', pair: null,   icon: '🌾', minStake: 5,    type: 'ERC20' },
+      { id: 'wmoga_only', name: 'wMOGA Stake',          apy: 32, tvl: 1800000, token: 'wMOGA',pair: null,   icon: '🟡', minStake: 5,    type: 'ERC20', isWmoga: true },
+      { id: 'eth_only',   name: 'ETH Stake',            apy: 18, tvl: 920000,  token: 'ETH',  pair: null,   icon: '⬡',  minStake: 0.01, type: 'ETH'   },
+      { id: 'usdc_only',  name: 'USDC Stake',           apy: 12, tvl: 2100000, token: 'USDC', pair: null,   icon: '💵', minStake: 10,   type: 'ERC20' },
+      { id: 'bnb_only',   name: 'BNB Stake',            apy: 15, tvl: 1500000, token: 'BNB',  pair: null,   icon: '🟡', minStake: 0.01, type: 'BNB'   },
+      { id: 'eth_base',   name: 'ETH (Base) Stake',     apy: 20, tvl: 800000,  token: 'ETH',  pair: null,   icon: '🔵', minStake: 0.01, type: 'ETH',  network: 'base'     },
+      { id: 'eth_arb',    name: 'ETH (Arbitrum) Stake', apy: 22, tvl: 650000,  token: 'ETH',  pair: null,   icon: '🔶', minStake: 0.01, type: 'ETH',  network: 'arbitrum' },
+      { id: 'edu_only',   name: 'EDU Stake',            apy: 25, tvl: 420000,  token: 'EDU',  pair: null,   icon: '🎓', minStake: 1,    type: 'ERC20' },
       // ── LP pools ────────────────────────────────────────────────────────────
-      { id: 'moga_usdc',  name: 'MOGA / USDC LP',  apy: 45, tvl: 1250000, token: 'MOGA',  pair: 'USDC', icon: '💎', minStake: 10,  type: 'LP'    },
-      { id: 'moga_eth',   name: 'MOGA / ETH LP',   apy: 62, tvl: 870000,  token: 'MOGA',  pair: 'ETH',  icon: '🔷', minStake: 10,  type: 'LP'    },
-      { id: 'wmoga_usdc', name: 'wMOGA / USDC LP', apy: 55, tvl: 640000,  token: 'wMOGA', pair: 'USDC', icon: '🌊', minStake: 10,  type: 'LP',   isWmoga: true },
-      { id: 'wmoga_eth',  name: 'wMOGA / ETH LP',  apy: 72, tvl: 430000,  token: 'wMOGA', pair: 'ETH',  icon: '🔥', minStake: 10,  type: 'LP',   isWmoga: true },
+      { id: 'moga_usdc',  name: 'MOGA / USDC LP',          apy: 45, tvl: 1250000, token: 'MOGA', pair: 'USDC',         icon: '💎', minStake: 10, type: 'LP'    },
+      { id: 'moga_eth',   name: 'MOGA / ETH LP',           apy: 62, tvl: 870000,  token: 'MOGA', pair: 'ETH',          icon: '🔷', minStake: 10, type: 'LP'    },
+      { id: 'wmoga_usdc', name: 'wMOGA / USDC LP',         apy: 55, tvl: 640000,  token: 'wMOGA',pair: 'USDC',         icon: '🌊', minStake: 10, type: 'LP',   isWmoga: true },
+      { id: 'wmoga_eth',  name: 'wMOGA / ETH LP',          apy: 72, tvl: 430000,  token: 'wMOGA',pair: 'ETH',          icon: '🔥', minStake: 10, type: 'LP',   isWmoga: true },
+      { id: 'moga_bnb',   name: 'MOGA / BNB LP',           apy: 58, tvl: 380000,  token: 'MOGA', pair: 'BNB',          icon: '🟡', minStake: 10, type: 'LP'    },
+      { id: 'moga_base',  name: 'MOGA / ETH Base LP',      apy: 68, tvl: 290000,  token: 'MOGA', pair: 'ETH (Base)',   icon: '🔵', minStake: 10, type: 'LP'    },
+      { id: 'moga_arb',   name: 'MOGA / ETH Arbitrum LP',  apy: 75, tvl: 245000,  token: 'MOGA', pair: 'ETH (Arb)',    icon: '🔶', minStake: 10, type: 'LP'    },
+      { id: 'moga_edu',   name: 'MOGA / EDU LP',           apy: 35, tvl: 180000,  token: 'MOGA', pair: 'EDU',          icon: '🎓', minStake: 10, type: 'LP'    },
     ];
 
     function getStakingPoolEarned(poolId) {
@@ -12734,7 +12727,7 @@
         <div style="max-width:1000px; margin:0 auto; padding:24px 16px 80px;">
           <h2 style="text-align:center; color:#10b981; font-size:1.9em; margin-bottom:6px;">🌾 Staking Pool</h2>
           <p style="text-align:center; color:#94a3b8; margin-bottom:24px; font-size:0.92em;">
-            Stake MOGA, wMOGA, ETH, USDC &amp; LP tokens to earn rewards · Live on <strong style="color:#f0b90b;">${net.name}</strong>
+            Stake MOGA, wMOGA, ETH, BNB, EDU, USDC &amp; LP tokens to earn rewards · Live on <strong style="color:#f0b90b;">${net.name}</strong>
           </p>
 
           ${!userAddress ? `
@@ -12748,7 +12741,7 @@
             <div style="background:#131722; border:1px solid #2a2d3a; border-radius:12px; padding:16px; text-align:center;">
               <div style="font-size:0.78em; color:#94a3b8; margin-bottom:4px;">Your Total Staked</div>
               <div style="font-size:1.4em; font-weight:700; color:#f0b90b;">${totalStaked.toFixed(2)}</div>
-              <div style="font-size:0.72em; color:#64748b;">MOGA / wMOGA / ETH</div>
+              <div style="font-size:0.72em; color:#64748b;">MOGA / wMOGA / ETH / BNB / EDU</div>
             </div>
             <div style="background:#131722; border:1px solid #2a2d3a; border-radius:12px; padding:16px; text-align:center;">
               <div style="font-size:0.78em; color:#94a3b8; margin-bottom:4px;">Total Earned (PNL)</div>
