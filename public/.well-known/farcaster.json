@@ -1,0 +1,12 @@
+{
+  "accountAssociation": {},
+  "miniApp": {
+    "version": "1",
+    "name": "Moga Pixel Adventure",
+    "iconUrl": "https://mini.mogaworld.xyz/icon.png",
+    "homeUrl": "https://mini.mogaworld.xyz",
+    "splashImageUrl": "https://mini.mogaworld.xyz/splash.png",
+    "splashBackgroundColor": "#000022",
+    "description": "Pure pixel game from Mogaworld – play & mint directly!"
+  }
+}
