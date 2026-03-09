@@ -2588,6 +2588,7 @@
     
     // Gas and price constants
     let ETH_TO_USDC_RATE = 2500; // 1 ETH = 2500 USDC (will be updated with real Uniswap price)
+    let BNB_USD_RATE = 600;      // 1 BNB ≈ $600 USD (approximate; updated periodically)
     const GAS_FEE_ETH = 0.00001; // Gas fee in ETH Sepolia (approximately 0.00001 ETH per action)
     const GAS_FEE_USDC = 0.025; // Gas fee in USDC equivalent (approximately 0.025 USDC per action)
     const CHART_HEIGHT = 420; // Standard height for trading charts in pixels
@@ -11636,7 +11637,7 @@
           
           // Token USD prices
           const tokenPrices = {
-            'ETH': ETH_TO_USDC_RATE, 'BNB': 600, 'EDU': 0.5,
+            'ETH': ETH_TO_USDC_RATE, 'BNB': BNB_USD_RATE, 'EDU': 0.5,
             'USDT': 1, 'USDC': 1, 'WETH': ETH_TO_USDC_RATE
           };
           const usdPrice = tokenPrices[token] || 1;
@@ -14143,7 +14144,7 @@
       const exchangeRates = {
         'ETH': ETH_TO_USDC_RATE,  // Live rate from Uniswap
         'EDU': 0.5,               // Approximate EDU/USD rate
-        'BNB': 600,               // Approximate BNB/USD rate
+        'BNB': BNB_USD_RATE,      // Approximate BNB/USD rate
         'USDC': 1,
         'USDT': 1,
         'LINK': 15,
@@ -14151,7 +14152,7 @@
         'AAVE': 100,
         'EURO': 1.08,
         'WETH': ETH_TO_USDC_RATE, // WETH pegged 1:1 to ETH
-        'WBNB': 600,              // WBNB pegged 1:1 to BNB
+        'WBNB': BNB_USD_RATE,     // WBNB pegged 1:1 to BNB
         'wMOGA': 0.01             // Approximate wMOGA/USD rate (placeholder)
       };
 
@@ -14227,7 +14228,7 @@
           if (!gasPaid) return;
 
           // Simulate exchange rates for demo
-          const exchangeRates = { 'EDU': 0.5, 'BNB': 600, 'ETH': ETH_TO_USDC_RATE, 'USDC': 1, 'USDT': 1, 'WETH': ETH_TO_USDC_RATE, 'WBNB': 600, 'wMOGA': 0.01 };
+          const exchangeRates = { 'EDU': 0.5, 'BNB': BNB_USD_RATE, 'ETH': ETH_TO_USDC_RATE, 'USDC': 1, 'USDT': 1, 'WETH': ETH_TO_USDC_RATE, 'WBNB': BNB_USD_RATE, 'wMOGA': 0.01 };
           const fromValue = amt * (exchangeRates[fromToken] || 1);
           const simAmountOut = (fromValue / (exchangeRates[toToken] || 1)) * (1 - currentSlippageTolerance / 100);
           const fakeTxHash = '0x' + Array.from({length: 64}, () => Math.floor(Math.random() * 16).toString(16)).join('');
