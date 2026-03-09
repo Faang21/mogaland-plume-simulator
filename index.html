@@ -2228,7 +2228,7 @@
     //
     //  After switching to mainnet, fill in the TODO contract addresses in NETWORKS below.
     // ─────────────────────────────────────────────────────────────────────────
-    const IS_MAINNET = true; // ← change this ONE value (or run the script above)
+    const IS_MAINNET = false; // ← change this ONE value (or run the script above)
 
     // Derived defaults – do NOT edit these; edit IS_MAINNET above instead
     const DEFAULT_NETWORK_ID = IS_MAINNET ? 'base' : 'sepolia';
@@ -9405,9 +9405,10 @@
             const displayName = asset.name || asset.symbol;
             const subtitle = asset.type ? ` (${asset.type})` : asset.league ? ` - ${asset.league}` : '';
             let priceHtml = '';
-            if (currentTab !== 'sports' && asset.basePrice) {
-              const decimals = asset.basePrice < 10 ? 4 : 2;
-              const priceStr = '$' + asset.basePrice.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: decimals});
+            if (currentTab !== 'sports' && (markPrices[asset.symbol] || asset.basePrice)) {
+              const livePrice = markPrices[asset.symbol] || asset.basePrice;
+              const decimals = livePrice < 10 ? 4 : 2;
+              const priceStr = '$' + livePrice.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: decimals});
               priceHtml = `<div style="font-size:0.82em; color:#0ecb81; font-weight:600; margin-top:2px;">${priceStr}</div>`;
             }
             div.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:flex-start;"><div><strong>${displayName}</strong><div style="opacity:0.7; font-size:0.82em;">${subtitle}</div>${priceHtml}</div>${isSelected ? '<span style="color:#60a5fa;font-size:0.85em; flex-shrink:0; padding-top:2px;">✓</span>' : ''}</div>`;
@@ -9655,13 +9656,14 @@
           setBannerEl('banner24hHigh', '—');
           setBannerEl('banner24hLow', '—');
           setBannerEl('banner24hVol', '—');
-          setBannerEl('bannerMarkPrice', '$' + asset.basePrice.toLocaleString());
-          setBannerEl('bannerIndexPrice', '$' + (asset.basePrice * (1 - 0.0002)).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}));
-          // Seed unified mark price cache with the asset's known base price so that
-          // any open positions for this symbol immediately reflect a reasonable price.
-          if (asset.basePrice > 0) markPrices[asset.symbol] = asset.basePrice;
-          // Show base price immediately so banner never shows "-" while klines load
-          updatePriceDisplay(asset.basePrice);
+          setBannerEl('bannerMarkPrice', '$' + (markPrices[asset.symbol] || asset.basePrice).toLocaleString());
+          setBannerEl('bannerIndexPrice', '$' + ((markPrices[asset.symbol] || asset.basePrice) * (1 - 0.0002)).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}));
+          // Seed unified mark price cache with the best available price (live if cached, otherwise base)
+          // so that any open positions for this symbol immediately reflect a reasonable price.
+          const _seedPrice = markPrices[asset.symbol] || asset.basePrice;
+          if (_seedPrice > 0) markPrices[asset.symbol] = _seedPrice;
+          // Show live price immediately so banner never shows "-" while klines load
+          updatePriceDisplay(_seedPrice);
 
           // Async: fetch real 24h ticker immediately (before chart loads)
           if (asset.binanceSymbol) {
