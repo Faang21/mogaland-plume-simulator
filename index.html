@@ -7123,6 +7123,11 @@
         clearInterval(window.positionRefreshInterval);
         window.positionRefreshInterval = null;
       }
+      // Stop periodic asset price refresh when leaving market section
+      if (window.assetPriceRefreshInterval) {
+        clearInterval(window.assetPriceRefreshInterval);
+        window.assetPriceRefreshInterval = null;
+      }
 
       // Stop staking pool live polling when navigating away
       if (typeof spStopPolling === 'function') spStopPolling();
@@ -7365,7 +7370,7 @@
             <div class="fng-widget" id="fngWidget" role="region" aria-label="Market Fear and Greed Index">
               <div class="fng-gauge-wrap" aria-live="polite">
                 <div class="fng-score" id="fngScore" style="color:#94a3b8;" aria-label="Score">—</div>
-                <div class="fng-label" id="fngLabel" style="color:#94a3b8;">Loading…</div>
+                <div class="fng-label" id="fngLabel" style="color:#94a3b8;">Loading...</div>
               </div>
               <div class="fng-bar-track" aria-hidden="true">
                 <div class="fng-bar-bg">
@@ -7516,8 +7521,9 @@
 
               <!-- C1) ASSET LIST PANEL -->
               <div style="width:200px; min-width:160px; background:#131722; border-right:1px solid #2a2d3a; overflow-y:auto; flex-shrink:0;">
-                <div style="padding:8px 10px; border-bottom:1px solid #2a2d3a;">
+                <div style="padding:8px 10px; border-bottom:1px solid #2a2d3a; display:flex; align-items:center; justify-content:space-between;">
                   <span id="assetListTitle" style="font-size:0.8em; color:#94a3b8; font-weight:600; text-transform:uppercase; letter-spacing:0.05em;">Assets</span>
+                  <span id="priceUpdateStatus" style="font-size:0.68em; color:#64748b;">Loading...</span>
                 </div>
                 <div id="assetList" style="padding:4px;"></div>
               </div>
@@ -11523,9 +11529,16 @@
         // Reverse map (CoinGecko id → Binance symbol)
         const COINGECKO_ID_MAP_REV = Object.fromEntries(Object.entries(COINGECKO_ID_MAP).map(([k, v]) => [v, k]));
 
+        // Helper: returns current HH:MM for price status labels
+        function livePriceTimestamp() {
+          return new Date().toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'});
+        }
+
         // Fetch live prices in background and update basePrice for all crypto assets
         // Tries Bybit V5 API first, falls back to Binance Futures then Binance Spot
-        (async function refreshAllCryptoPrices() {
+        async function doRefreshCryptoPrices() {
+          const statusEl = document.getElementById('priceUpdateStatus');
+          if (statusEl) { statusEl.textContent = 'Updating...'; statusEl.style.color = '#f0b90b'; }
           try {
             const symbols = assetsData.crypto.map(a => a.binanceSymbol).filter(Boolean);
             if (!symbols.length) return;
@@ -11609,14 +11622,21 @@
               }
               // Re-render asset list so all items show updated real prices
               if (currentTab === 'crypto') renderAssets();
+              if (statusEl) { statusEl.textContent = `\u25cf Live ${livePriceTimestamp()}`; statusEl.style.color = '#0ecb81'; }
+            } else {
+              if (statusEl) { statusEl.textContent = 'No data'; statusEl.style.color = '#64748b'; }
             }
           } catch (e) {
             console.warn('[refreshAllCryptoPrices]', e.message);
+            if (statusEl) { statusEl.textContent = 'Offline'; statusEl.style.color = '#f6465d'; }
           }
-        })();
+        }
+        doRefreshCryptoPrices();
+        // Refresh crypto prices every 30 seconds to keep the asset list up-to-date
+        window.assetPriceRefreshInterval = setInterval(doRefreshCryptoPrices, 30000);
 
         // Fetch live Yahoo Finance prices for non-crypto assets (stocks, commodities, forex)
-        (async function refreshAllYahooPrices() {
+        async function doRefreshYahooPrices() {
           const nonCryptoAssets = [
             ...assetsData.stocks,
             ...assetsData.commodities,
@@ -11635,9 +11655,14 @@
               }
             } catch (_) {}
           }
-          // Re-render if currently on a non-crypto tab
-          if (currentTab !== 'crypto' && currentTab !== 'sports') renderAssets();
-        })();
+          // Re-render if currently on a non-crypto tab and update status
+          if (currentTab !== 'crypto' && currentTab !== 'sports') {
+            renderAssets();
+            const statusEl = document.getElementById('priceUpdateStatus');
+            if (statusEl) { statusEl.textContent = `\u25cf Live ${livePriceTimestamp()}`; statusEl.style.color = '#0ecb81'; }
+          }
+        }
+        doRefreshYahooPrices();
         // Add event listeners for leverage calculation
         const positionInput = document.getElementById('positionAmount');
         const leverageSelect = document.getElementById('leverageSelect');
@@ -11687,80 +11712,9 @@
 
             // Refresh live prices for the newly-selected tab
             if (currentTab === 'crypto') {
-              // Refresh prices: try Bybit first, then Binance Futures, then Spot
-              const tabSnapshot = currentTab; // capture for async guard
-              (async () => {
-                try {
-                  const syms = assetsData.crypto.map(a => a.binanceSymbol).filter(Boolean);
-                  let priceMap = {};
-
-                  // Try Bybit V5 tickers
-                  const bybitResp = await fetch('https://api.bybit.com/v5/market/tickers?category=linear').catch(() => null);
-                  if (bybitResp && bybitResp.ok) {
-                    const bybitData = await bybitResp.json().catch(() => null);
-                    if (bybitData && bybitData.retCode === 0 && bybitData.result && Array.isArray(bybitData.result.list)) {
-                      bybitData.result.list.forEach(t => {
-                        const price = parseFloat(t.lastPrice);
-                        if (price > 0) priceMap[t.symbol] = price;
-                      });
-                    }
-                  }
-
-                  // Fill missing from Binance Futures
-                  const missing = syms.filter(s => !priceMap[s]);
-                  if (missing.length) {
-                    const futUrl = `https://fapi.binance.com/fapi/v1/ticker/price?symbols=${encodeURIComponent(JSON.stringify(missing))}`;
-                    const futResp = await fetch(futUrl).catch(() => null);
-                    if (futResp && futResp.ok) {
-                      const data = await futResp.json().catch(() => null);
-                      if (Array.isArray(data)) data.forEach(t => {
-                        const p = parseFloat(t.price);
-                        if (p > 0) priceMap[t.symbol] = p;
-                      });
-                    }
-                  }
-
-                  // Last resort: Binance Spot
-                  const stillMissing = syms.filter(s => !priceMap[s]);
-                  if (stillMissing.length) {
-                    const spotUrl = `https://api.binance.com/api/v3/ticker/price?symbols=${encodeURIComponent(JSON.stringify(stillMissing))}`;
-                    const spotResp = await fetch(spotUrl).catch(() => null);
-                    if (spotResp && spotResp.ok) {
-                      const data = await spotResp.json().catch(() => null);
-                      if (Array.isArray(data)) data.forEach(t => {
-                        const p = parseFloat(t.price);
-                        if (p > 0) priceMap[t.symbol] = p;
-                      });
-                    }
-                  }
-
-                  if (Object.keys(priceMap).length && currentTab === tabSnapshot) {
-                    assetsData.crypto.forEach(a => {
-                      const p = a.binanceSymbol && priceMap[a.binanceSymbol];
-                      if (p && p > 0) { a.basePrice = p; markPrices[a.symbol] = p; }
-                    });
-                    renderAssets();
-                  }
-                } catch (_) {}
-              })();
+              doRefreshCryptoPrices();
             } else if (currentTab === 'stocks' || currentTab === 'commodities' || currentTab === 'forex') {
-              // Refresh Yahoo Finance prices for the tab's assets
-              const tabSnapshot = currentTab; // capture for async guard
-              const tabAssets = (assetsData[currentTab] || []).filter(a => a.yahooSymbol);
-              (async () => {
-                for (const asset of tabAssets) {
-                  try {
-                    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(asset.yahooSymbol)}?interval=1d&range=2d`;
-                    const data = await fetchWithCORSFallback(url).catch(() => null);
-                    if (!data || !data.chart || !data.chart.result || !data.chart.result.length) continue;
-                    const meta = data.chart.result[0].meta || {};
-                    const price = meta.regularMarketPrice || meta.price;
-                    if (price && price > 0) { asset.basePrice = price; markPrices[asset.symbol] = price; }
-                  } catch (_) {}
-                }
-                // Only re-render if still on the same tab that triggered the fetch
-                if (currentTab === tabSnapshot) renderAssets();
-              })();
+              doRefreshYahooPrices();
             }
           };
         });
@@ -13063,12 +13017,14 @@
               <div><div style="color:#64748b; margin-bottom:2px;">Earned (PNL)</div><div style="color:#10b981; font-weight:600;">${earned} USDC</div></div>
               <div><div style="color:#64748b; margin-bottom:2px;">Return</div><div style="color:#c084fc; font-weight:600;">${pnl}</div></div>
             </div>
-            <div style="display:flex; gap:6px; align-items:center;">
+            <div style="display:flex; flex-direction:column; gap:8px;">
               <input type="number" id="spInput_${pool.id}" placeholder="Amount (min ${pool.minStake})" min="${pool.minStake}" step="${pool.token === 'ETH' ? '0.001' : '1'}"
-                style="flex:1; padding:8px 10px; background:#0d1421; border:1px solid #2a2d3a; border-radius:6px; color:#fff; font-size:0.85em; outline:none;" />
-              <button onclick="spStake('${pool.id}')" style="padding:8px 12px; background:linear-gradient(90deg,#10b981,#059669); color:#fff; border:none; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.78em; white-space:nowrap;">+ Stake</button>
-              <button onclick="spUnstake('${pool.id}')" style="padding:8px 12px; background:linear-gradient(90deg,#ef4444,#dc2626); color:#fff; border:none; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.78em; white-space:nowrap;">− Unstake</button>
-              <button onclick="spClaim('${pool.id}')" style="padding:8px 12px; background:linear-gradient(90deg,#f0b90b,#d97706); color:#000; border:none; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.78em; white-space:nowrap;">Claim</button>
+                style="width:100%; padding:8px 10px; background:#0d1421; border:1px solid #2a2d3a; border-radius:6px; color:#fff; font-size:0.85em; outline:none; box-sizing:border-box;" />
+              <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px;">
+                <button onclick="spStake('${pool.id}')" style="padding:9px 4px; background:linear-gradient(90deg,#10b981,#059669); color:#fff; border:none; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.8em; text-align:center;">+ Stake</button>
+                <button onclick="spUnstake('${pool.id}')" style="padding:9px 4px; background:linear-gradient(90deg,#ef4444,#dc2626); color:#fff; border:none; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.8em; text-align:center;">− Unstake</button>
+                <button onclick="spClaim('${pool.id}')" style="padding:9px 4px; background:linear-gradient(90deg,#f0b90b,#d97706); color:#000; border:none; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.8em; text-align:center;">Claim</button>
+              </div>
             </div>
           </div>`;
       };
