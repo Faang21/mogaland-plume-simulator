@@ -11262,16 +11262,19 @@
             updateLeverageInfo();
           }
 
+          // Guard helper: returns true if this WebSocket message belongs to the current asset
+          function isCurrentAsset() {
+            return selectedAsset && selectedAsset.binanceSymbol === binanceSymbol;
+          }
+
           // Bybit WebSocket message handler
           function handleBybitKlineMessage(event) {
             try {
               const msg = JSON.parse(event.data);
               if (msg.op === 'subscribe') return; // subscription confirmation
               if (!msg.data || !Array.isArray(msg.data) || msg.data.length === 0) return;
+              if (!isCurrentAsset()) return;
               const k = msg.data[0];
-
-              // Guard: ignore stale messages from a previous asset's WebSocket
-              if (!selectedAsset || selectedAsset.binanceSymbol !== binanceSymbol) return;
 
               const candle = {
                 time: Math.floor(parseInt(k.start) / 1000),
@@ -11292,8 +11295,7 @@
               const msg = JSON.parse(event.data);
               const k = msg.k;
               if (!k) return;
-
-              if (!selectedAsset || selectedAsset.binanceSymbol !== binanceSymbol) return;
+              if (!isCurrentAsset()) return;
 
               const candle = {
                 time: Math.floor(k.t / 1000),
@@ -12956,8 +12958,9 @@
     function renderStakingPoolSection() {
       const content = document.getElementById('content');
       if (!content) return;
-      try {
+      // loadStakingPoolData has its own internal error handling (try-catch)
       loadStakingPoolData();
+      try {
       const totalStaked = Object.values(stakingPoolData).reduce((s, e) => s + (e.staked || 0), 0);
       const totalEarned = STAKING_POOLS.reduce((s, p) => s + getStakingPoolEarned(p.id), 0);
       const net = getActiveNetwork();
