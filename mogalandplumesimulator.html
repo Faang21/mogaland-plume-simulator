@@ -649,6 +649,7 @@
       <button class="nav-btn active" onclick="showSection('swap', event)">Swap</button>
       <button class="nav-btn" onclick="showSection('bridge', event)">Bridge</button>
       <button class="nav-btn" onclick="showSection('nft', event)">NFT Staking</button>
+      <button class="nav-btn" onclick="showSection('stakingpool', event)">🌾 Staking Pool</button>
     </div>
 
     <!-- Profile Slide-in Panel -->
@@ -1156,20 +1157,21 @@
       else if (id === 'market') {
         content.innerHTML = `
           <div style="max-width:1600px; margin:0 auto; padding:20px; color:white;">
-            <h2 style="text-align:center; margin-bottom:10px; color:#60a5fa;">Mogaland-Plume Market Prediction</h2>
-            <p style="text-align:center; opacity:0.8; margin-bottom:20px;">Simulator — Predict mock movements or match results, bet with MOGA! (Demo only)</p>
+            <h2 style="text-align:center; margin-bottom:10px; color:#60a5fa;">📈 Market Prediction – Real Prices</h2>
+            <p style="text-align:center; opacity:0.8; margin-bottom:20px;">Live prices from Binance &amp; Yahoo Finance · Bet UP or DOWN with MOGA</p>
 
             <div style="display:flex; justify-content:center; gap:8px; margin-bottom:25px; flex-wrap:wrap;">
-              <button class="nav-btn active" data-tab="crypto">Crypto</button>
-              <button class="nav-btn" data-tab="stocks">Stocks</button>
-              <button class="nav-btn" data-tab="commodities">Commodities</button>
-              <button class="nav-btn" data-tab="forex">Forex</button>
-              <button class="nav-btn" data-tab="sports">Sports</button>
+              <button class="nav-btn active" data-tab="crypto">🪙 Crypto</button>
+              <button class="nav-btn" data-tab="stocks">📈 Stocks</button>
+              <button class="nav-btn" data-tab="commodities">🏅 Commodities</button>
+              <button class="nav-btn" data-tab="forex">💱 Forex</button>
+              <button class="nav-btn" data-tab="sports">⚽ Sports</button>
             </div>
 
             <div class="flex-container" style="gap:25px; align-items:stretch;">
               <div class="card" style="flex:1; max-width:380px; overflow-y:auto; max-height:680px; padding:15px;">
                 <h3 style="color:#60a5fa; text-align:center;" id="assetListTitle">Assets</h3>
+                <div style="font-size:0.78em; color:#64748b; text-align:center; margin-bottom:8px;" id="priceLoadStatus">Loading real prices...</div>
                 <div id="assetList" style="display:flex; flex-direction:column; gap:8px;"></div>
               </div>
 
@@ -1214,31 +1216,54 @@
           </div>
         `;
 
+        // CORS proxy for APIs that don't allow browser cross-origin requests
+        const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
+        async function fetchWithProxy(url) {
+          try {
+            const r = await fetch(url);
+            if (r.ok) return await r.json();
+          } catch (_) {}
+          try {
+            const r = await fetch(CORS_PROXY + encodeURIComponent(url));
+            if (r.ok) return await r.json();
+          } catch (_) {}
+          return null;
+        }
+
         const assetsData = {
           crypto: [
-            {symbol: "CRYPTC", basePrice: 2299, volatility: 0.025},
-            {symbol: "RH-TWIKOh", basePrice: 2044, volatility: 0.018},
-            {symbol: "CRYPTSXCOND", basePrice: 2278, volatility: 0.032},
-            {symbol: "FBO-PO7EYME", basePrice: 2748, volatility: 0.022},
-            {symbol: "MIB-IIFE", basePrice: 2271, volatility: 0.015},
-            {symbol: "ERC-TOFTH", basePrice: 2341, volatility: 0.028},
-            {symbol: "PEATPH", basePrice: 2239, volatility: 0.035},
-            {symbol: "BRC-BENT", basePrice: 4923, volatility: 0.040},
-            {symbol: "CRYPTXCONG", basePrice: 3459, volatility: 0.020},
-            {symbol: "MASAMM", basePrice: 8499, volatility: 0.012}
+            {symbol: "BTC/USD",  name: "Bitcoin",        binanceSymbol: "BTCUSDT",  basePrice: 85000, volatility: 0.025},
+            {symbol: "ETH/USD",  name: "Ethereum",       binanceSymbol: "ETHUSDT",  basePrice: 2000,  volatility: 0.030},
+            {symbol: "BNB/USD",  name: "BNB",            binanceSymbol: "BNBUSDT",  basePrice: 580,   volatility: 0.028},
+            {symbol: "SOL/USD",  name: "Solana",         binanceSymbol: "SOLUSDT",  basePrice: 130,   volatility: 0.040},
+            {symbol: "XRP/USD",  name: "Ripple",         binanceSymbol: "XRPUSDT",  basePrice: 2.20,  volatility: 0.032},
+            {symbol: "ADA/USD",  name: "Cardano",        binanceSymbol: "ADAUSDT",  basePrice: 0.65,  volatility: 0.035},
+            {symbol: "DOGE/USD", name: "Dogecoin",       binanceSymbol: "DOGEUSDT", basePrice: 0.17,  volatility: 0.055},
+            {symbol: "AVAX/USD", name: "Avalanche",      binanceSymbol: "AVAXUSDT", basePrice: 22,    volatility: 0.045},
+            {symbol: "LINK/USD", name: "Chainlink",      binanceSymbol: "LINKUSDT", basePrice: 13.00, volatility: 0.036},
+            {symbol: "UNI/USD",  name: "Uniswap",        binanceSymbol: "UNIUSDT",  basePrice: 7.50,  volatility: 0.040}
           ],
           stocks: [
-            {symbol: "AAPL-MOCK", basePrice: 220, volatility: 0.008},
-            {symbol: "TSLA-X", basePrice: 350, volatility: 0.045},
-            {symbol: "NVDA-IO", basePrice: 140, volatility: 0.030}
+            {symbol: "AAPL",  name: "Apple Inc.",       yahooSymbol: "AAPL",  basePrice: 225, volatility: 0.015},
+            {symbol: "TSLA",  name: "Tesla Inc.",       yahooSymbol: "TSLA",  basePrice: 290, volatility: 0.045},
+            {symbol: "GOOGL", name: "Alphabet",         yahooSymbol: "GOOGL", basePrice: 175, volatility: 0.020},
+            {symbol: "MSFT",  name: "Microsoft",        yahooSymbol: "MSFT",  basePrice: 420, volatility: 0.018},
+            {symbol: "NVDA",  name: "NVIDIA",           yahooSymbol: "NVDA",  basePrice: 880, volatility: 0.040},
+            {symbol: "META",  name: "Meta Platforms",   yahooSymbol: "META",  basePrice: 600, volatility: 0.030},
+            {symbol: "AMZN",  name: "Amazon",           yahooSymbol: "AMZN",  basePrice: 210, volatility: 0.025}
           ],
           commodities: [
-            {symbol: "GOLD-RWA", basePrice: 2650, volatility: 0.010},
-            {symbol: "OIL-BARREL", basePrice: 78, volatility: 0.025}
+            {symbol: "GOLD",   name: "Gold",            yahooSymbol: "GC=F",  basePrice: 2900, volatility: 0.010},
+            {symbol: "SILVER", name: "Silver",          yahooSymbol: "SI=F",  basePrice: 32,   volatility: 0.020},
+            {symbol: "OIL",    name: "Crude Oil (WTI)", yahooSymbol: "CL=F",  basePrice: 72,   volatility: 0.025},
+            {symbol: "COPPER", name: "Copper",          yahooSymbol: "HG=F",  basePrice: 4.30, volatility: 0.022}
           ],
           forex: [
-            {symbol: "EURUSD", basePrice: 1.085, volatility: 0.005},
-            {symbol: "USDJPY", basePrice: 152.3, volatility: 0.007}
+            {symbol: "EUR/USD", name: "Euro / USD",     yahooSymbol: "EURUSD=X", basePrice: 1.045, volatility: 0.005},
+            {symbol: "GBP/USD", name: "Pound / USD",    yahooSymbol: "GBPUSD=X", basePrice: 1.265, volatility: 0.006},
+            {symbol: "USD/JPY", name: "USD / Yen",      yahooSymbol: "USDJPY=X", basePrice: 149.5, volatility: 0.007},
+            {symbol: "AUD/USD", name: "AUD / USD",      yahooSymbol: "AUDUSD=X", basePrice: 0.625, volatility: 0.008},
+            {symbol: "USD/CHF", name: "USD / CHF",      yahooSymbol: "USDCHF=X", basePrice: 0.905, volatility: 0.006}
           ],
           sports: [
             {symbol: "Real Madrid", type: "football", strength: 0.85, recentForm: [
@@ -1246,12 +1271,79 @@
               "Jan 29, 2026: W 2-0 vs Atletico Madrid (Copa)",
               "Jan 22, 2026: L 1-2 vs Bayern Munich (UCL)",
               "Jan 15, 2026: W 4-0 vs PSG (Friendly)",
-              "Jan 8, 2026: D 1-1 vs Man City (Club World Cup)",
-              "Jan 1, 2026: W 3-2 vs Liverpool (Supercup)"
+              "Jan 8, 2026: D 1-1 vs Man City (Club World Cup)"
             ]},
-            // ... other sports teams (shortened for brevity - add your full list if needed) ...
+            {symbol: "Barcelona", type: "football", strength: 0.82, recentForm: [
+              "Feb 4, 2026: W 2-1 vs Atletico Madrid",
+              "Jan 28, 2026: L 0-2 vs Bayern Munich",
+              "Jan 21, 2026: W 3-0 vs Sevilla"
+            ]},
+            {symbol: "Man City", type: "football", strength: 0.88, recentForm: [
+              "Feb 5, 2026: W 4-1 vs Chelsea",
+              "Jan 29, 2026: W 3-0 vs Arsenal",
+              "Jan 22, 2026: D 2-2 vs Liverpool"
+            ]},
+            {symbol: "Liverpool", type: "football", strength: 0.83, recentForm: [
+              "Feb 4, 2026: W 3-2 vs Chelsea",
+              "Jan 28, 2026: L 1-3 vs Arsenal",
+              "Jan 21, 2026: D 2-2 vs Man City"
+            ]},
+            {symbol: "Bayern Munich", type: "football", strength: 0.87, recentForm: [
+              "Feb 4, 2026: W 3-0 vs Dortmund (DFB Cup)",
+              "Jan 28, 2026: W 4-1 vs Bayer Leverkusen",
+              "Jan 21, 2026: W 2-0 vs RB Leipzig"
+            ]},
+            {symbol: "PSG", type: "football", strength: 0.86, recentForm: [
+              "Feb 5, 2026: W 4-0 vs Lens",
+              "Jan 29, 2026: W 2-0 vs Lyon",
+              "Jan 22, 2026: W 3-1 vs Monaco"
+            ]},
+            {symbol: "Lakers", type: "basketball", strength: 0.78, recentForm: [
+              "Feb 5, 2026: W 112-108 vs Warriors",
+              "Feb 1, 2026: L 98-105 vs Celtics",
+              "Jan 28, 2026: W 120-115 vs Nets"
+            ]},
+            {symbol: "Celtics", type: "basketball", strength: 0.85, recentForm: [
+              "Feb 4, 2026: W 118-105 vs Nets",
+              "Feb 1, 2026: W 105-98 vs Lakers",
+              "Jan 27, 2026: W 112-108 vs Heat"
+            ]}
           ]
         };
+
+        // Fetch and update real prices for all non-sports assets
+        async function refreshMarketPrices() {
+          // Crypto: Binance REST API (supports CORS)
+          try {
+            const cryptoSymbols = assetsData.crypto.map(a => a.binanceSymbol).filter(Boolean);
+            const url = `https://api.binance.com/api/v3/ticker/price?symbols=${encodeURIComponent(JSON.stringify(cryptoSymbols))}`;
+            const tickers = await fetchWithProxy(url);
+            if (Array.isArray(tickers)) {
+              tickers.forEach(t => {
+                const asset = assetsData.crypto.find(a => a.binanceSymbol === t.symbol);
+                const price = parseFloat(t.price);
+                if (asset && price > 0) asset.basePrice = price;
+              });
+            }
+          } catch (_) {}
+
+          // Non-crypto: Yahoo Finance via proxy
+          const nonCryptoAssets = [...assetsData.stocks, ...assetsData.commodities, ...assetsData.forex].filter(a => a.yahooSymbol);
+          for (const asset of nonCryptoAssets) {
+            try {
+              const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(asset.yahooSymbol)}?interval=1d&range=2d`;
+              const data = await fetchWithProxy(url);
+              if (data && data.chart && data.chart.result && data.chart.result.length) {
+                const meta = data.chart.result[0].meta || {};
+                const price = meta.regularMarketPrice || meta.price;
+                if (price && price > 0) asset.basePrice = price;
+              }
+            } catch (_) {}
+          }
+
+          // Re-render asset list with updated prices
+          renderAssets();
+        }
 
         let currentTab = 'crypto';
         let selectedAsset = null;
@@ -1265,16 +1357,30 @@
           if (!container || !titleEl) return;
 
           container.innerHTML = '';
-          titleEl.textContent = currentTab === 'sports' ? 'Football & Basketball Clubs' : 'Assets';
+          titleEl.textContent = currentTab === 'sports' ? 'Football & Basketball Teams' : 'Assets';
 
           const tabAssets = assetsData[currentTab] || [];
           tabAssets.forEach(asset => {
             const div = document.createElement('div');
-            div.style.padding = '12px 10px';
-            div.style.background = 'rgba(13,110,253,0.1)';
+            const isSelected = selectedAsset && selectedAsset.symbol === asset.symbol;
+            div.style.padding = '10px 12px';
+            div.style.background = isSelected ? 'rgba(96,165,250,0.25)' : 'rgba(13,110,253,0.1)';
             div.style.borderRadius = '8px';
             div.style.cursor = 'pointer';
-            div.innerHTML = `<strong>${asset.symbol}${asset.type ? ` (${asset.type})` : ''}</strong>`;
+            div.style.marginBottom = '4px';
+            div.style.border = isSelected ? '1px solid rgba(96,165,250,0.6)' : '1px solid transparent';
+            div.style.transition = 'all 0.2s';
+            const displayName = asset.name || asset.symbol;
+            let priceHtml = '';
+            if (currentTab !== 'sports' && asset.basePrice) {
+              const decimals = asset.basePrice < 10 ? 4 : 2;
+              const priceStr = '$' + asset.basePrice.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: decimals});
+              priceHtml = `<div style="font-size:0.82em; color:#0ecb81; font-weight:600; margin-top:2px;">${priceStr}</div>`;
+            }
+            const subtitle = asset.type ? `<div style="font-size:0.8em; opacity:0.65;">${asset.type}</div>` : '';
+            div.innerHTML = `<div style="font-weight:600;">${displayName}</div>${subtitle}${priceHtml}`;
+            div.onmouseover = () => { div.style.background = isSelected ? 'rgba(96,165,250,0.3)' : 'rgba(13,110,253,0.2)'; };
+            div.onmouseout = () => { div.style.background = isSelected ? 'rgba(96,165,250,0.25)' : 'rgba(13,110,253,0.1)'; };
             div.onclick = currentTab === 'sports' ? () => showClubHistory(asset) : () => selectAsset(asset);
             container.appendChild(div);
           });
@@ -1300,29 +1406,56 @@
         function selectAsset(asset) {
           if (!asset) return;
           selectedAsset = asset;
-          document.getElementById('selectedAsset').textContent = asset.symbol;
-          document.getElementById('viewTitle').textContent = `${asset.symbol} Grafik`;
+          const displayName = asset.name || asset.symbol;
+          document.getElementById('selectedAsset').textContent = displayName;
+          document.getElementById('viewTitle').textContent = `${displayName} – Live Price Chart`;
 
           document.getElementById('priceChart').style.display = 'block';
           document.getElementById('chartFooter').style.display = 'block';
           document.getElementById('clubHistoryView').style.display = 'none';
 
-          initChart(asset);
+          // Fetch real price, then init chart
+          fetchRealPriceForAsset(asset).then(realPrice => {
+            if (realPrice && realPrice > 0) asset.basePrice = realPrice;
+            renderAssets();
+            initChart(asset);
+          });
         }
 
-        function generateOHLC(basePrice, count = 40) {
+        async function fetchRealPriceForAsset(asset) {
+          try {
+            if (asset.binanceSymbol) {
+              const url = `https://api.binance.com/api/v3/ticker/price?symbol=${encodeURIComponent(asset.binanceSymbol)}`;
+              const data = await fetchWithProxy(url);
+              if (data && data.price) return parseFloat(data.price);
+            }
+            if (asset.yahooSymbol) {
+              const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(asset.yahooSymbol)}?interval=1d&range=2d`;
+              const data = await fetchWithProxy(url);
+              if (data && data.chart && data.chart.result && data.chart.result.length) {
+                const meta = data.chart.result[0].meta || {};
+                const price = meta.regularMarketPrice || meta.price;
+                if (price && price > 0) return price;
+              }
+            }
+          } catch (_) {}
+          return null;
+        }
+
+        function generateOHLC(basePrice, count = 40, volatility = 0.02) {
           const data = [];
           let current = basePrice || 1000;
           const now = Date.now();
           for (let i = 0; i < count; i++) {
             const open = current;
-            const change = (Math.random() - 0.5) * 0.02 * open * 2;
-            const close = open + change;
+            const change = (Math.random() - 0.5) * volatility * open;
+            const close = Math.max(0.0001, open + change);
+            const wick = Math.random() * volatility * 0.4 * open;
             data.push({
               x: now - (count - i - 1) * 600000,
               o: open,
-              h: Math.max(open, close) + Math.random() * 100,
-              l: Math.min(open, close) - Math.random() * 100,
+              h: Math.max(open, close) + wick,
+              l: Math.min(open, close) - wick,
               c: close
             });
             current = close;
@@ -1339,18 +1472,27 @@
 
           if (chart) chart.destroy();
 
-          priceHistory = generateOHLC(asset.basePrice);
+          priceHistory = generateOHLC(asset.basePrice, 40, asset.volatility || 0.02);
+
+          // Update footer to show it's based on real price
+          const footer = document.getElementById('chartFooter');
+          if (footer) {
+            const decimals = asset.basePrice < 10 ? 4 : 2;
+            const priceStr = '$' + asset.basePrice.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: decimals});
+            footer.textContent = `Live price: ${priceStr} · Chart simulates intraday moves from real price · Updates every 8s`;
+            footer.style.display = 'block';
+          }
 
           chart = new Chart(ctx, {
             type: 'candlestick',
             data: {
               datasets: [{
-                label: asset.symbol,
+                label: asset.name || asset.symbol,
                 data: priceHistory
               }, {
                 label: 'Volume',
                 type: 'bar',
-                data: priceHistory.map(d => ({x: d.x, y: d.v || Math.floor(Math.random()*10000)})),
+                data: priceHistory.map(d => ({x: d.x, y: d.v || Math.floor(Math.random() * (asset.basePrice > 100 ? 50000 : 5000000))})),
                 yAxisID: 'volume',
                 backgroundColor: 'rgba(59,130,246,0.4)'
               }]
@@ -1358,7 +1500,7 @@
             options: {
               scales: {
                 x: { type: 'time', time: { unit: 'minute' }, title: { display: true, text: 'Time' } },
-                y: { title: { display: true, text: 'Price ($)' } },
+                y: { title: { display: true, text: `Price (${asset.symbol.includes('/') ? asset.symbol.split('/')[1] : 'USD'})` } },
                 volume: { position: 'right', title: { display: true, text: 'Vol' }, grid: { drawOnChartArea: false } }
               },
               plugins: { legend: { display: false } }
@@ -1366,21 +1508,50 @@
           });
         }
 
+        // Every 8 seconds: add a new simulated candle based on last close, PLUS
+        // every 30 seconds fetch the real current price and anchor the chart to it
+        let realPriceRefreshCounter = 0;
         setInterval(() => {
           if (selectedAsset && chart && priceHistory.length > 0 && currentTab !== 'sports') {
+            realPriceRefreshCounter++;
             const last = priceHistory[priceHistory.length - 1];
-            const change = (Math.random() - 0.5) * 0.02 * last.c * 2;
+            const vol = selectedAsset.volatility || 0.02;
+            const change = (Math.random() - 0.5) * vol * last.c;
             const open = last.c;
-            const close = open + change;
+            const close = Math.max(0.0001, open + change);
+            const wick = Math.random() * vol * 0.5 * last.c;
             priceHistory.push({
               x: Date.now(),
               o: open,
-              h: Math.max(open, close) + Math.random() * 100,
-              l: Math.min(open, close) - Math.random() * 100,
+              h: Math.max(open, close) + wick,
+              l: Math.min(open, close) - wick,
               c: close
             });
             if (priceHistory.length > 80) priceHistory.shift();
             chart.update();
+
+            // Refresh real price every ~30s (every ~4 ticks at 8s each)
+            if (realPriceRefreshCounter % 4 === 0) {
+              fetchRealPriceForAsset(selectedAsset).then(realPrice => {
+                if (realPrice && realPrice > 0 && selectedAsset) {
+                  selectedAsset.basePrice = realPrice;
+                  // Nudge the last candle's close to the real price
+                  if (priceHistory.length > 0) {
+                    priceHistory[priceHistory.length - 1].c = realPrice;
+                    chart && chart.update();
+                  }
+                  // Update the selected-asset display price
+                  document.getElementById('selectedAsset').textContent = (selectedAsset.name || selectedAsset.symbol) +
+                    ' — $' + realPrice.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: realPrice < 10 ? 4 : 2});
+                  const footer = document.getElementById('chartFooter');
+                  if (footer) {
+                    const decimals = realPrice < 10 ? 4 : 2;
+                    footer.textContent = `Live price: $${realPrice.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: decimals})} · Updated just now`;
+                  }
+                  renderAssets(); // refresh sidebar prices
+                }
+              });
+            }
           }
         }, 8000);
 
@@ -1420,6 +1591,8 @@
         renderAssets();
         if (assetsData.crypto.length > 0) selectAsset(assetsData.crypto[0]);
         updateTreasuryDisplay();
+        // Fetch real prices in background and update asset list
+        refreshMarketPrices();
 
         document.querySelectorAll('[data-tab]').forEach(btn => {
           btn.onclick = () => {
@@ -1429,12 +1602,14 @@
             renderAssets();
             selectedAsset = null;
             document.getElementById('selectedAsset').textContent = 'None';
-            document.getElementById('viewTitle').textContent = 'Select to Predict';
+            document.getElementById('viewTitle').textContent = currentTab === 'sports' ? 'Select Team to View' : 'Select Asset to Trade';
             document.getElementById('priceChart').style.display = 'none';
             document.getElementById('clubHistoryView').style.display = 'none';
-            document.getElementById('chartFooter').style.display = currentTab !== 'sports' ? 'block' : 'none';
+            document.getElementById('chartFooter').style.display = 'none';
             if (chart) chart.destroy();
             chart = null;
+            // Refresh real prices for newly-selected tab
+            refreshMarketPrices();
           };
         });
       } 
@@ -1656,6 +1831,8 @@
             <button class="btn-primary" style="background:linear-gradient(90deg,#10b981,#34d399); padding:14px 28px;" onclick="claimNFTRewards()">Claim Rewards</button>
           </div>
         `;
+      } else if (id === 'stakingpool') {
+        renderStakingPoolSection();
       } else {
         content.innerHTML = `
           <h2 style="text-align:center; margin:40px 0;">${id.charAt(0).toUpperCase() + id.slice(1)}</h2>
@@ -1718,7 +1895,258 @@
       const claimed = nftRewards;
       nftRewards = 0;
       showSection('nft');
-      showNotification(`Claimed ${claimed.toFixed(2)} PLUME!`);
+      showNotification(`Claimed ${claimed.toFixed(2)} MOGA rewards!`);
+    }
+
+    // ===== STAKING POOL SECTION =====
+    // Single-asset pools: MOGA, wMOGA, ETH (Base), ETH (Arbitrum), BNB, EDU, USDC
+    // LP pools: wMOGA/USDC, wMOGA/ETH, MOGA/ETH, MOGA/BNB, MOGA/EDU, MOGA/USDC
+    // wMOGA pegged 1:1 to MOGA — wrap/unwrap included
+    const STAKING_POOLS_SIM = [
+      // ── Single-asset pools ──────────────────────────────────────────────────
+      { id: 'moga_only',   name: 'MOGA Stake',             apy: 28, tvl: 3400000, token: 'MOGA',  pair: null,   icon: '🌾', minStake: 5,    type: 'ERC20' },
+      { id: 'wmoga_only',  name: 'wMOGA Stake',            apy: 32, tvl: 1800000, token: 'wMOGA', pair: null,   icon: '🟡', minStake: 5,    type: 'ERC20', isWmoga: true },
+      { id: 'eth_base',    name: 'ETH (Base) Stake',       apy: 20, tvl: 800000,  token: 'ETH',   pair: null,   icon: '🔵', minStake: 0.01, type: 'ETH',  network: 'Base'      },
+      { id: 'eth_arb',     name: 'ETH (Arbitrum) Stake',   apy: 22, tvl: 650000,  token: 'ETH',   pair: null,   icon: '🔶', minStake: 0.01, type: 'ETH',  network: 'Arbitrum'  },
+      { id: 'bnb_only',    name: 'BNB Stake',              apy: 15, tvl: 1500000, token: 'BNB',   pair: null,   icon: '🟡', minStake: 0.01, type: 'BNB'  },
+      { id: 'edu_only',    name: 'EDU Stake',              apy: 25, tvl: 420000,  token: 'EDU',   pair: null,   icon: '🎓', minStake: 1,    type: 'ERC20' },
+      { id: 'usdc_only',   name: 'USDC Stake',             apy: 12, tvl: 2100000, token: 'USDC',  pair: null,   icon: '💵', minStake: 10,   type: 'ERC20' },
+      // ── LP pools ────────────────────────────────────────────────────────────
+      { id: 'wmoga_usdc',  name: 'wMOGA / USDC LP',        apy: 55, tvl: 640000,  token: 'wMOGA', pair: 'USDC', icon: '🌊', minStake: 10,   type: 'LP',   isWmoga: true },
+      { id: 'wmoga_eth',   name: 'wMOGA / ETH LP',         apy: 72, tvl: 430000,  token: 'wMOGA', pair: 'ETH',  icon: '🔥', minStake: 10,   type: 'LP',   isWmoga: true },
+      { id: 'moga_eth',    name: 'MOGA / ETH LP',          apy: 62, tvl: 870000,  token: 'MOGA',  pair: 'ETH',  icon: '🔷', minStake: 10,   type: 'LP'   },
+      { id: 'moga_usdc',   name: 'MOGA / USDC LP',         apy: 45, tvl: 1250000, token: 'MOGA',  pair: 'USDC', icon: '💎', minStake: 10,   type: 'LP'   },
+      { id: 'moga_bnb',    name: 'MOGA / BNB LP',          apy: 58, tvl: 380000,  token: 'MOGA',  pair: 'BNB',  icon: '🟡', minStake: 10,   type: 'LP'   },
+      { id: 'moga_edu',    name: 'MOGA / EDU LP',          apy: 35, tvl: 180000,  token: 'MOGA',  pair: 'EDU',  icon: '🎓', minStake: 10,   type: 'LP'   }
+    ];
+
+    let stakingPoolData = {};
+
+    function getStakingEarned(poolId) {
+      const entry = stakingPoolData[poolId];
+      if (!entry || !entry.staked || entry.staked <= 0) return entry ? (entry.rewardDebt || 0) : 0;
+      const pool = STAKING_POOLS_SIM.find(p => p.id === poolId);
+      if (!pool) return entry.rewardDebt || 0;
+      const days = (Date.now() - entry.stakedTime) / 86400000;
+      return (entry.rewardDebt || 0) + entry.staked * (pool.apy / 100) * (days / 365);
+    }
+
+    function saveStakingData() {
+      try { localStorage.setItem('simStakingPool', JSON.stringify(stakingPoolData)); } catch(_) {}
+    }
+
+    function loadStakingData() {
+      try {
+        const saved = localStorage.getItem('simStakingPool');
+        if (saved) stakingPoolData = JSON.parse(saved);
+      } catch(_) { stakingPoolData = {}; }
+    }
+
+    function renderStakingPoolSection() {
+      loadStakingData();
+      const content = document.getElementById('content');
+
+      const totalStaked = Object.values(stakingPoolData).reduce((s, e) => s + (e.staked || 0), 0);
+      const totalEarned = STAKING_POOLS_SIM.reduce((s, p) => s + getStakingEarned(p.id), 0);
+
+      // wMOGA balance from localStorage (1:1 with MOGA)
+      let wMogaBalance = 0;
+      try { wMogaBalance = parseFloat(localStorage.getItem('simWMogaBalance') || '0') || 0; } catch(_) {}
+      const mogaBalance = mogalandPoints || 0;
+
+      const buildCard = pool => {
+        const entry = stakingPoolData[pool.id] || { staked: 0, stakedTime: 0, rewardDebt: 0 };
+        const earned = getStakingEarned(pool.id).toFixed(4);
+        const ethTokens = ['ETH'];
+        const decimals = ethTokens.includes(pool.token) ? 4 : 2;
+        const userStaked = (entry.staked || 0).toFixed(decimals);
+        const tvlM = pool.tvl >= 1e6 ? (pool.tvl / 1e6).toFixed(2) + 'M' : (pool.tvl / 1e3).toFixed(0) + 'K';
+        const typeBadge = pool.pair ? `🔗 ${pool.token}/${pool.pair} LP` : `🪙 ${pool.token}`;
+        const netBadge = pool.network ? `<span style="font-size:0.68em; background:rgba(96,165,250,0.15); color:#60a5fa; border-radius:4px; padding:1px 5px; margin-left:4px;">${pool.network}</span>` : '';
+        const wmogaBadge = pool.isWmoga ? `<span style="font-size:0.68em; background:rgba(251,191,36,0.15); color:#fbbf24; border-radius:4px; padding:1px 5px; margin-left:4px;">1:1 MOGA</span>` : '';
+        const stepVal = ethTokens.includes(pool.token) ? '0.001' : pool.token === 'BNB' ? '0.01' : '1';
+        return `
+          <div style="background:#1e293b; border:1px solid #334155; border-radius:14px; padding:20px; display:flex; flex-direction:column; gap:12px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span style="font-size:1.8em;">${pool.icon}</span>
+              <div style="flex:1;">
+                <div style="font-weight:700; font-size:1.02em; color:#e2e8f0;">${pool.name}${netBadge}${wmogaBadge}</div>
+                <div style="font-size:0.74em; color:#64748b; margin-top:2px;">TVL: $${tvlM} &nbsp;·&nbsp; ${typeBadge}</div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-size:1.3em; font-weight:700; color:#10b981;">${pool.apy}%</div>
+                <div style="font-size:0.72em; color:#94a3b8;">APY</div>
+              </div>
+            </div>
+            <div style="background:#0f172a; border-radius:8px; padding:10px 12px; font-size:0.82em; display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+              <div><div style="color:#64748b; margin-bottom:2px;">Your Stake</div><div style="color:#f0b90b; font-weight:600;">${userStaked} ${pool.token}</div></div>
+              <div><div style="color:#64748b; margin-bottom:2px;">Earned (MOGA)</div><div style="color:#10b981; font-weight:600;">${earned}</div></div>
+            </div>
+            <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+              <input type="number" id="spInput_${pool.id}" placeholder="Amount (min ${pool.minStake})" min="${pool.minStake}" step="${stepVal}"
+                style="flex:1; min-width:80px; padding:8px 10px; background:#0f172a; border:1px solid #334155; border-radius:6px; color:#fff; font-size:0.85em; outline:none;" />
+              <button onclick="spSimStake('${pool.id}')" style="padding:8px 12px; background:linear-gradient(90deg,#10b981,#059669); color:#fff; border:none; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.78em; white-space:nowrap;">+ Stake</button>
+              <button onclick="spSimUnstake('${pool.id}')" style="padding:8px 12px; background:linear-gradient(90deg,#ef4444,#dc2626); color:#fff; border:none; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.78em; white-space:nowrap;">− Unstake</button>
+              <button onclick="spSimClaim('${pool.id}')" style="padding:8px 12px; background:linear-gradient(90deg,#f0b90b,#d97706); color:#000; border:none; border-radius:6px; cursor:pointer; font-weight:600; font-size:0.78em; white-space:nowrap;">Claim</button>
+            </div>
+          </div>`;
+      };
+
+      // wMOGA wrap / unwrap card (1:1 with MOGA)
+      const wMogaCard = `
+        <div style="background:linear-gradient(135deg,rgba(251,191,36,0.08),rgba(245,158,11,0.04)); border:1px solid rgba(251,191,36,0.3); border-radius:14px; padding:20px; margin-bottom:28px;">
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
+            <span style="font-size:1.8em;">🟡</span>
+            <div>
+              <div style="font-weight:700; color:#fbbf24;">wMOGA — Wrapped MOGA (1 : 1)</div>
+              <div style="font-size:0.78em; color:#94a3b8;">Wrap MOGA → wMOGA to use in LP pools &amp; DeFi. Always redeemable 1:1.</div>
+            </div>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; font-size:0.85em;">
+            <div style="background:#0f172a; border-radius:8px; padding:10px; text-align:center;">
+              <div style="color:#64748b; margin-bottom:2px;">MOGA Balance</div>
+              <div style="color:#f0b90b; font-weight:700; font-size:1.1em;">${mogaBalance.toFixed(2)}</div>
+            </div>
+            <div style="background:#0f172a; border-radius:8px; padding:10px; text-align:center;">
+              <div style="color:#64748b; margin-bottom:2px;">wMOGA Balance</div>
+              <div style="color:#fbbf24; font-weight:700; font-size:1.1em;">${wMogaBalance.toFixed(2)}</div>
+            </div>
+          </div>
+          <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <input type="number" id="wMogaAmount" placeholder="Amount to wrap/unwrap" min="1" step="1"
+              style="flex:1; min-width:100px; padding:8px 10px; background:#0f172a; border:1px solid #334155; border-radius:6px; color:#fff; font-size:0.85em; outline:none;" />
+            <button onclick="simWrapMoga()" style="padding:8px 16px; background:linear-gradient(90deg,#fbbf24,#d97706); color:#000; border:none; border-radius:6px; cursor:pointer; font-weight:700; font-size:0.82em;">Wrap →</button>
+            <button onclick="simUnwrapMoga()" style="padding:8px 16px; background:linear-gradient(90deg,#94a3b8,#64748b); color:#fff; border:none; border-radius:6px; cursor:pointer; font-weight:700; font-size:0.82em;">← Unwrap</button>
+          </div>
+        </div>`;
+
+      content.innerHTML = `
+        <div style="max-width:960px; margin:0 auto; padding:24px 16px 100px; color:#e2e8f0;">
+          <h2 style="text-align:center; color:#10b981; font-size:1.9em; margin-bottom:6px;">🌾 Staking Pool</h2>
+          <p style="text-align:center; color:#94a3b8; margin-bottom:24px; font-size:0.92em;">
+            Stake MOGA, wMOGA, ETH (Base/Arbitrum), BNB, EDU &amp; LP tokens · Earn MOGA rewards
+          </p>
+
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px,1fr)); gap:12px; margin-bottom:28px;">
+            <div style="background:#1e293b; border:1px solid #334155; border-radius:12px; padding:14px; text-align:center;">
+              <div style="font-size:0.75em; color:#94a3b8; margin-bottom:4px;">Total Staked</div>
+              <div style="font-size:1.35em; font-weight:700; color:#f0b90b;">${totalStaked.toFixed(2)}</div>
+              <div style="font-size:0.70em; color:#64748b;">tokens</div>
+            </div>
+            <div style="background:#1e293b; border:1px solid #334155; border-radius:12px; padding:14px; text-align:center;">
+              <div style="font-size:0.75em; color:#94a3b8; margin-bottom:4px;">Total Earned</div>
+              <div style="font-size:1.35em; font-weight:700; color:#10b981;">${totalEarned.toFixed(4)}</div>
+              <div style="font-size:0.70em; color:#64748b;">MOGA rewards</div>
+            </div>
+            <div style="background:#1e293b; border:1px solid #334155; border-radius:12px; padding:14px; text-align:center;">
+              <div style="font-size:0.75em; color:#94a3b8; margin-bottom:4px;">Active Pools</div>
+              <div style="font-size:1.35em; font-weight:700; color:#60a5fa;">${STAKING_POOLS_SIM.length}</div>
+              <div style="font-size:0.70em; color:#64748b;">pools</div>
+            </div>
+            <div style="background:#1e293b; border:1px solid #334155; border-radius:12px; padding:14px; text-align:center;">
+              <div style="font-size:0.75em; color:#94a3b8; margin-bottom:4px;">Avg APY</div>
+              <div style="font-size:1.35em; font-weight:700; color:#c084fc;">${Math.round(STAKING_POOLS_SIM.reduce((s,p)=>s+p.apy,0)/STAKING_POOLS_SIM.length)}%</div>
+              <div style="font-size:0.70em; color:#64748b;">across pools</div>
+            </div>
+          </div>
+
+          ${wMogaCard}
+
+          <div style="font-size:0.82em; color:#64748b; margin-bottom:10px; font-weight:600;">🪙 Single-Asset Pools</div>
+          <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px,1fr)); gap:16px; margin-bottom:28px;">
+            ${STAKING_POOLS_SIM.filter(p => !p.pair).map(buildCard).join('')}
+          </div>
+
+          <div style="font-size:0.82em; color:#64748b; margin-bottom:10px; font-weight:600;">🔗 LP Pools (Higher APY)</div>
+          <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px,1fr)); gap:16px; margin-bottom:28px;">
+            ${STAKING_POOLS_SIM.filter(p => p.pair).map(buildCard).join('')}
+          </div>
+
+          <p style="text-align:center; color:#64748b; font-size:0.80em; margin-top:24px;">
+            ⚡ Rewards accrue in real-time · wMOGA pegged 1:1 to MOGA · Simulator
+          </p>
+        </div>`;
+    }
+
+    function simWrapMoga() {
+      const input = document.getElementById('wMogaAmount');
+      const amount = parseFloat(input ? input.value : 0);
+      if (isNaN(amount) || amount <= 0) { showNotification('Enter a valid amount', true); return; }
+      if (amount > (mogalandPoints || 0)) { showNotification('Not enough MOGA!', true); return; }
+      mogalandPoints = (mogalandPoints || 0) - amount;
+      let wBal = 0;
+      try { wBal = parseFloat(localStorage.getItem('simWMogaBalance') || '0') || 0; } catch(_) {}
+      wBal += amount;
+      try { localStorage.setItem('simWMogaBalance', wBal.toString()); } catch(_) {}
+      showNotification(`✅ Wrapped ${amount} MOGA → ${amount} wMOGA (1:1)`);
+      if (input) input.value = '';
+      renderStakingPoolSection();
+    }
+
+    function simUnwrapMoga() {
+      const input = document.getElementById('wMogaAmount');
+      const amount = parseFloat(input ? input.value : 0);
+      if (isNaN(amount) || amount <= 0) { showNotification('Enter a valid amount', true); return; }
+      let wBal = 0;
+      try { wBal = parseFloat(localStorage.getItem('simWMogaBalance') || '0') || 0; } catch(_) {}
+      if (amount > wBal) { showNotification('Not enough wMOGA!', true); return; }
+      wBal -= amount;
+      try { localStorage.setItem('simWMogaBalance', wBal.toString()); } catch(_) {}
+      mogalandPoints = (mogalandPoints || 0) + amount;
+      showNotification(`✅ Unwrapped ${amount} wMOGA → ${amount} MOGA (1:1)`);
+      if (input) input.value = '';
+      renderStakingPoolSection();
+    }
+
+    function spSimStake(poolId) {
+      const pool = STAKING_POOLS_SIM.find(p => p.id === poolId);
+      if (!pool) return;
+      const input = document.getElementById(`spInput_${poolId}`);
+      const amount = parseFloat(input ? input.value : 0);
+      if (isNaN(amount) || amount < pool.minStake) {
+        showNotification(`Minimum stake: ${pool.minStake} ${pool.token}`, true); return;
+      }
+      if (!stakingPoolData[poolId]) stakingPoolData[poolId] = { staked: 0, stakedTime: Date.now(), rewardDebt: 0 };
+      const earned = getStakingEarned(poolId);
+      stakingPoolData[poolId].rewardDebt = earned;
+      stakingPoolData[poolId].staked = (stakingPoolData[poolId].staked || 0) + amount;
+      stakingPoolData[poolId].stakedTime = Date.now();
+      saveStakingData();
+      showNotification(`✅ Staked ${amount} ${pool.token} in ${pool.name}`);
+      if (input) input.value = '';
+      renderStakingPoolSection();
+    }
+
+    function spSimUnstake(poolId) {
+      const entry = stakingPoolData[poolId];
+      if (!entry || !entry.staked || entry.staked <= 0) {
+        showNotification('Nothing staked in this pool.', true); return;
+      }
+      const input = document.getElementById(`spInput_${poolId}`);
+      const amount = parseFloat(input ? input.value : entry.staked);
+      if (isNaN(amount) || amount <= 0 || amount > entry.staked) {
+        showNotification(`Invalid amount. You have ${entry.staked} staked.`, true); return;
+      }
+      const earned = getStakingEarned(poolId);
+      stakingPoolData[poolId].rewardDebt = earned;
+      stakingPoolData[poolId].staked = Math.max(0, entry.staked - amount);
+      stakingPoolData[poolId].stakedTime = Date.now();
+      saveStakingData();
+      showNotification(`✅ Unstaked ${amount} tokens`);
+      if (input) input.value = '';
+      renderStakingPoolSection();
+    }
+
+    function spSimClaim(poolId) {
+      const earned = getStakingEarned(poolId);
+      if (earned < 0.0001) { showNotification('Rewards too small to claim yet.', true); return; }
+      mogalandPoints = (mogalandPoints || 0) + earned;
+      if (!stakingPoolData[poolId]) stakingPoolData[poolId] = { staked: 0, stakedTime: Date.now(), rewardDebt: 0 };
+      stakingPoolData[poolId].rewardDebt = 0;
+      stakingPoolData[poolId].stakedTime = Date.now();
+      saveStakingData();
+      showNotification(`✅ Claimed ${earned.toFixed(4)} MOGA rewards!`);
+      renderStakingPoolSection();
     }
 
     // Swap functions
