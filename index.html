@@ -2000,6 +2000,7 @@
         <button class="network-switcher-btn"        id="netBtn_basesepolia" onclick="switchNetwork('basesepolia')">🔷 Base Sepolia</button>
         <button class="network-switcher-btn"        id="netBtn_base"        onclick="switchNetwork('base')">🔵 Base</button>
         <button class="network-switcher-btn"        id="netBtn_arbitrum"    onclick="switchNetwork('arbitrum')">🔶 Arbitrum</button>
+        <button class="network-switcher-btn"        id="netBtn_educhainmain" onclick="switchNetwork('educhainmain')">🎓 EDU Chain</button>
       </div>
       <!-- Mode badge: injected by JS from IS_MAINNET flag -->
       <span id="networkModeBadge" style="display:none; font-size:0.7em; font-weight:700; padding:3px 9px; border-radius:99px; letter-spacing:0.03em; white-space:nowrap; margin-left:6px;"></span>
@@ -2289,6 +2290,12 @@
     const EDU_EXPLORER = "https://edu-chain-testnet.blockscout.com";
     const EDU_FAUCET = "https://educhain-community-faucet.vercel.app/";
 
+    // EDU Chain Mainnet constants
+    const EDU_MAINNET_CHAIN_ID = 41923;
+    const EDU_MAINNET_CHAIN_HEX = "0xa3c3";
+    const EDU_MAINNET_RPC_URL = "https://rpc.edu-chain.raas.gelato.cloud";
+    const EDU_MAINNET_EXPLORER = "https://educhain.blockscout.com";
+
     // Base Sepolia testnet constants
     const BASE_SEPOLIA_CHAIN_ID = 84532;
     const BASE_SEPOLIA_CHAIN_HEX = "0x14a34";
@@ -2404,6 +2411,22 @@
         nftContractAddress: null,
         stakingContractAddress: null,
         wMogaAddress: null
+      },
+      educhainmain: {
+        id: 'educhainmain',
+        name: 'EDU Chain',
+        chainId: EDU_MAINNET_CHAIN_ID,
+        chainHex: EDU_MAINNET_CHAIN_HEX,
+        rpcUrls: [EDU_MAINNET_RPC_URL],
+        explorer: EDU_MAINNET_EXPLORER,
+        faucet: null,
+        currency: 'EDU',
+        label: '🎓 EDU Chain',
+        isTestnet: false,
+        // TODO: replace with your deployed mainnet contract addresses
+        nftContractAddress: null,
+        stakingContractAddress: null,
+        wMogaAddress: null
       }
     };
 
@@ -2414,11 +2437,12 @@
     // Helper: returns the block explorer API base URL for the active network
     function getExplorerApiUrl() {
       const net = getActiveNetwork();
-      if (net.id === 'sepolia')     return 'https://api-sepolia.etherscan.io/api';
-      if (net.id === 'basesepolia') return 'https://api-sepolia.basescan.org/api';
-      if (net.id === 'base')        return 'https://api.basescan.org/api';
-      if (net.id === 'arbitrum')    return 'https://api.arbiscan.io/api';
-      if (net.id === 'educhain')    return 'https://edu-chain-testnet.blockscout.com/api';
+      if (net.id === 'sepolia')      return 'https://api-sepolia.etherscan.io/api';
+      if (net.id === 'basesepolia')  return 'https://api-sepolia.basescan.org/api';
+      if (net.id === 'base')         return 'https://api.basescan.org/api';
+      if (net.id === 'arbitrum')     return 'https://api.arbiscan.io/api';
+      if (net.id === 'educhain')     return 'https://edu-chain-testnet.blockscout.com/api';
+      if (net.id === 'educhainmain') return 'https://educhain.blockscout.com/api';
       return null;
     }
 
@@ -2450,10 +2474,11 @@
     // Helper: return the OpenSea chain slug for the active network
     function getOpenSeaChainSlug() {
       const net = getActiveNetwork();
-      if (net.id === 'base')        return 'base';
-      if (net.id === 'arbitrum')    return 'arbitrum';
-      if (net.id === 'basesepolia') return 'base_sepolia';
-      if (net.id === 'sepolia')     return 'sepolia';
+      if (net.id === 'base')         return 'base';
+      if (net.id === 'arbitrum')     return 'arbitrum';
+      if (net.id === 'basesepolia')  return 'base_sepolia';
+      if (net.id === 'sepolia')      return 'sepolia';
+      if (net.id === 'educhainmain') return 'edu_chain';
       // Unknown network: fall back based on IS_MAINNET flag
       return IS_MAINNET ? 'base' : 'sepolia';
     }
@@ -4080,8 +4105,8 @@
       }
 
       // Network filter tabs
-      const networks = ['all', 'sepolia', 'educhain', 'basesepolia'];
-      const netLabels = { all: 'All', sepolia: '🔵 Sepolia', educhain: '🎓 EDU', basesepolia: '🔷 Base' };
+      const networks = ['all', 'sepolia', 'educhain', 'basesepolia', 'base', 'arbitrum', 'educhainmain'];
+      const netLabels = { all: 'All', sepolia: '🔵 Sepolia', educhain: '🎓 EDU', basesepolia: '🔷 Base Sep', base: '🔵 Base', arbitrum: '🔶 Arb', educhainmain: '🎓 EDU Main' };
       let activeFilter = activityContainer.dataset.filter || 'all';
 
       function renderList(filter) {
@@ -11279,6 +11304,26 @@
               { value: 'USDC', label: 'USDC Base Sepolia' },
               { value: 'USDT', label: 'USDT' }
             ];
+          } else if (_swapNet.id === 'base') {
+            return [
+              { value: 'ETH', label: 'ETH (Native)' },
+              { value: 'USDC', label: 'USDC' },
+              { value: 'WETH', label: 'WETH' },
+              { value: 'wMOGA', label: 'wMOGA' }
+            ];
+          } else if (_swapNet.id === 'arbitrum') {
+            return [
+              { value: 'ETH', label: 'ETH (Native)' },
+              { value: 'USDC', label: 'USDC' },
+              { value: 'WETH', label: 'WETH' },
+              { value: 'wMOGA', label: 'wMOGA' }
+            ];
+          } else if (_swapNet.id === 'educhainmain') {
+            return [
+              { value: 'EDU', label: 'EDU (Native)' },
+              { value: 'USDC', label: 'USDC' },
+              { value: 'wMOGA', label: 'wMOGA' }
+            ];
           } else {
             // Sepolia default
             return [
@@ -13938,10 +13983,24 @@
           // Native token (ETH on Ethereum/Base, EDU on EDU Chain)
           const balanceWei = await provider.getBalance(userAddress);
           balance = parseFloat(ethers.utils.formatEther(balanceWei));
+        } else if (fromToken === 'wMOGA') {
+          // wMOGA — use the deployed address from the active network config
+          const wMogaAddr = getActiveWMogaAddress();
+          if (wMogaAddr) {
+            const wMogaContract = new ethers.Contract(wMogaAddr, WMOGA_ABI, provider);
+            const balanceRaw = await wMogaContract.balanceOf(userAddress);
+            balance = parseFloat(ethers.utils.formatEther(balanceRaw));
+          } else {
+            balanceEl.textContent = 'N/A';
+            return;
+          }
         } else {
           // Get token contract address
+          const activeNet = getActiveNetwork();
           const tokenAddresses = {
-            'USDC': USDC_SEPOLIA,
+            'USDC': activeNet.usdcAddress || (activeNet.isTestnet ? USDC_SEPOLIA : null),
+            'WETH': activeNet.wethAddress || null,
+            // Sepolia-only tokens
             'USDT': USDT_SEPOLIA,
             'LINK': LINK_SEPOLIA,
             'WBTC': WBTC_SEPOLIA,
@@ -13953,6 +14012,7 @@
           const tokenDecimals = {
             'USDC': 6,
             'USDT': 6,
+            'WETH': 18,
             'LINK': 18,
             'WBTC': 8,
             'AAVE': 18,
@@ -13991,7 +14051,9 @@
         'LINK': 15,
         'WBTC': 45000,
         'AAVE': 100,
-        'EURO': 1.08
+        'EURO': 1.08,
+        'WETH': ETH_TO_USDC_RATE, // WETH pegged 1:1 to ETH
+        'wMOGA': 0.01             // Approximate wMOGA/USD rate (placeholder)
       };
 
       const fromValue = fromAmt * (exchangeRates[fromToken] || 1);
@@ -14066,7 +14128,7 @@
           if (!gasPaid) return;
 
           // Simulate exchange rates for demo
-          const exchangeRates = { 'EDU': 0.5, 'ETH': ETH_TO_USDC_RATE, 'USDC': 1, 'USDT': 1 };
+          const exchangeRates = { 'EDU': 0.5, 'ETH': ETH_TO_USDC_RATE, 'USDC': 1, 'USDT': 1, 'WETH': ETH_TO_USDC_RATE, 'wMOGA': 0.01 };
           const fromValue = amt * (exchangeRates[fromToken] || 1);
           const simAmountOut = (fromValue / (exchangeRates[toToken] || 1)) * (1 - currentSlippageTolerance / 100);
           const fakeTxHash = '0x' + Array.from({length: 64}, () => Math.floor(Math.random() * 16).toString(16)).join('');
