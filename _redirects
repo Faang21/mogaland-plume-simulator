@@ -1,0 +1,11 @@
+# ── Canonical redirect: www → non-www ─────────────────────────────────────────
+# Replace "yourdomain.com" with your actual domain and uncomment the line below.
+# Cloudflare Pages evaluates the full URL so this handles the www subdomain.
+#
+# https://www.yourdomain.com/* https://yourdomain.com/:splat 301
+#
+# ── SPA / clean-URL fallbacks ──────────────────────────────────────────────────
+# Uncomment if you want /game and /app as clean shortcut URLs:
+#
+# /game   /game.html   200
+# /app    /index.html  200

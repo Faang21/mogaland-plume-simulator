@@ -38,12 +38,21 @@ const MAX_OHLCV_LIMIT = 100;
 const USER_DATA_TTL = 60 * 60 * 24 * 180;
 // Maximum allowed size for a user-data payload (256 KB)
 const USER_DATA_MAX_BYTES = 256 * 1024;
+// Maximum login-history method string length
+const METHOD_MAX_LEN = 50;
+// Cache-Control TTLs for proxied market data (seconds)
+const CACHE_TTL_MARKETS = 60;   // trending / new pools: refresh every 60 s
+const CACHE_TTL_TOKEN   = 120;  // token detail: refresh every 2 min
+const CACHE_TTL_OHLCV   = 30;   // OHLCV candles: refresh every 30 s
 
 /**
  * Fetch a GeckoTerminal endpoint and return a Response with CORS headers.
  * Adds the Accept header required by their API.
+ * @param {string} path  GeckoTerminal API path
+ * @param {object} env   Worker env bindings
+ * @param {number} [cacheTtl=60]  Cache-Control max-age in seconds
  */
-async function proxyGecko(path, env) {
+async function proxyGecko(path, env, cacheTtl = CACHE_TTL_MARKETS) {
   const headers = { Accept: 'application/json;version=20230302' };
   if (env && env.GECKOTERMINAL_API_KEY) {
     headers['Authorization'] = `Bearer ${env.GECKOTERMINAL_API_KEY}`;
@@ -57,7 +66,12 @@ async function proxyGecko(path, env) {
     );
   }
   const data = await upstreamRes.json();
-  return new Response(JSON.stringify(data), { headers: CORS_HEADERS });
+  return new Response(JSON.stringify(data), {
+    headers: {
+      ...CORS_HEADERS,
+      'Cache-Control': `public, max-age=${cacheTtl}, s-maxage=${cacheTtl}`,
+    },
+  });
 }
 
 export default {
@@ -73,13 +87,13 @@ export default {
     // ── GET /api/live-markets ──────────────────────────────────────────────
     // Trending pools on Base mainnet (price, volume, liquidity, price change)
     if (path === '/api/live-markets') {
-      return proxyGecko('/networks/base/trending_pools?page=1&include=base_token,quote_token', env);
+      return proxyGecko('/networks/base/trending_pools?page=1&include=base_token,quote_token', env, CACHE_TTL_MARKETS);
     }
 
     // ── GET /api/new-tokens ───────────────────────────────────────────────
     // Newest pools on Base mainnet – great for "just launched" feed
     if (path === '/api/new-tokens') {
-      return proxyGecko('/networks/base/new_pools?page=1&include=base_token,quote_token', env);
+      return proxyGecko('/networks/base/new_pools?page=1&include=base_token,quote_token', env, CACHE_TTL_MARKETS);
     }
 
     // ── GET /api/token/:address ───────────────────────────────────────────
@@ -87,7 +101,7 @@ export default {
     const tokenMatch = path.match(/^\/api\/token\/([^/]+)$/);
     if (tokenMatch && ETH_ADDRESS_RE.test(tokenMatch[1])) {
       const address = tokenMatch[1].toLowerCase();
-      return proxyGecko(`/networks/base/tokens/${address}?include=top_pools`, env);
+      return proxyGecko(`/networks/base/tokens/${address}?include=top_pools`, env, CACHE_TTL_TOKEN);
     }
 
     // ── GET /api/ohlcv/:poolAddress ───────────────────────────────────────
@@ -100,7 +114,8 @@ export default {
       const limit = Math.min(isNaN(limitParam) ? DEFAULT_OHLCV_LIMIT : limitParam, MAX_OHLCV_LIMIT);
       return proxyGecko(
         `/networks/base/pools/${poolAddr}/ohlcv/${timeframe}?limit=${limit}&currency=usd`,
-        env
+        env,
+        CACHE_TTL_OHLCV,
       );
     }
 
@@ -117,7 +132,7 @@ export default {
         }
         // Sanitise address: must be a 0x hex string if provided
         const safeAddress = ETH_ADDRESS_RE.test(address) ? address.toLowerCase() : null;
-        const entry = { method: String(method).slice(0, 50), address: safeAddress, ts: Date.now() };
+        const entry = { method: String(method).slice(0, METHOD_MAX_LEN), address: safeAddress, ts: Date.now() };
 
         if (env.LOGIN_HISTORY_KV) {
           // KV key per wallet address (or 'email'/'x' for non-wallet logins)
