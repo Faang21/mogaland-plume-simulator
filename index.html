@@ -2001,6 +2001,7 @@
         <button class="network-switcher-btn"        id="netBtn_base"        onclick="switchNetwork('base')">🔵 Base</button>
         <button class="network-switcher-btn"        id="netBtn_arbitrum"    onclick="switchNetwork('arbitrum')">🔶 Arbitrum</button>
         <button class="network-switcher-btn"        id="netBtn_educhainmain" onclick="switchNetwork('educhainmain')">🎓 EDU Chain</button>
+        <button class="network-switcher-btn"        id="netBtn_bnb"         onclick="switchNetwork('bnb')">🟡 BNB Chain</button>
       </div>
       <!-- Mode badge: injected by JS from IS_MAINNET flag -->
       <span id="networkModeBadge" style="display:none; font-size:0.7em; font-weight:700; padding:3px 9px; border-radius:99px; letter-spacing:0.03em; white-space:nowrap; margin-left:6px;"></span>
@@ -2263,7 +2264,7 @@
     //
     //  After switching to mainnet, fill in the TODO contract addresses in NETWORKS below.
     // ─────────────────────────────────────────────────────────────────────────
-    const IS_MAINNET = false; // ← change this ONE value (or run the script above)
+    const IS_MAINNET = true; // ← change this ONE value (or run the script above)
 
     // Derived defaults – do NOT edit these; edit IS_MAINNET above instead
     const DEFAULT_NETWORK_ID = IS_MAINNET ? 'base' : 'sepolia';
@@ -2322,6 +2323,23 @@
     const USDC_ARBITRUM = "0xaf88d065e77c8cC2239327C5EDb3A432268e5831";
     // Arbitrum One WETH
     const WETH_ARBITRUM = "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1";
+
+    // BNB Smart Chain mainnet constants
+    const BNB_CHAIN_ID = 56;
+    const BNB_CHAIN_HEX = "0x38";
+    const BNB_RPC_URLS = [
+      "https://bsc-dataseed.binance.org/",
+      "https://bsc-dataseed1.defibit.io/",
+      "https://bsc-dataseed1.ninicoin.io/"
+    ];
+    const BNB_RPC_URL = BNB_RPC_URLS[0];
+    const BNB_EXPLORER = "https://bscscan.com";
+    // BNB Chain USDT (BEP-20)
+    const USDT_BNB = "0x55d398326f99059fF775485246999027B3197955";
+    // BNB Chain USDC (BEP-20)
+    const USDC_BNB = "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d";
+    // Wrapped BNB
+    const WBNB = "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c";
 
     // Network configurations map
     const NETWORKS = {
@@ -2427,6 +2445,25 @@
         nftContractAddress: null,
         stakingContractAddress: null,
         wMogaAddress: null
+      },
+      bnb: {
+        id: 'bnb',
+        name: 'BNB Smart Chain',
+        chainId: BNB_CHAIN_ID,
+        chainHex: BNB_CHAIN_HEX,
+        rpcUrls: BNB_RPC_URLS,
+        explorer: BNB_EXPLORER,
+        faucet: null,
+        currency: 'BNB',
+        label: '🟡 BNB Chain',
+        isTestnet: false,
+        usdtAddress: USDT_BNB,
+        usdcAddress: USDC_BNB,
+        wbnbAddress: WBNB,
+        // TODO: replace with your deployed mainnet contract addresses
+        nftContractAddress: null,
+        stakingContractAddress: null,
+        wMogaAddress: null
       }
     };
 
@@ -2443,6 +2480,7 @@
       if (net.id === 'arbitrum')     return 'https://api.arbiscan.io/api';
       if (net.id === 'educhain')     return 'https://edu-chain-testnet.blockscout.com/api';
       if (net.id === 'educhainmain') return 'https://educhain.blockscout.com/api';
+      if (net.id === 'bnb')          return 'https://api.bscscan.com/api';
       return null;
     }
 
@@ -2479,6 +2517,7 @@
       if (net.id === 'basesepolia')  return 'base_sepolia';
       if (net.id === 'sepolia')      return 'sepolia';
       if (net.id === 'educhainmain') return 'edu_chain';
+      if (net.id === 'bnb')          return 'bsc';
       // Unknown network: fall back based on IS_MAINNET flag
       return IS_MAINNET ? 'base' : 'sepolia';
     }
@@ -2549,6 +2588,7 @@
     
     // Gas and price constants
     let ETH_TO_USDC_RATE = 2500; // 1 ETH = 2500 USDC (will be updated with real Uniswap price)
+    let BNB_USD_RATE = 600;      // 1 BNB ≈ $600 USD (approximate; updated periodically)
     const GAS_FEE_ETH = 0.00001; // Gas fee in ETH Sepolia (approximately 0.00001 ETH per action)
     const GAS_FEE_USDC = 0.025; // Gas fee in USDC equivalent (approximately 0.025 USDC per action)
     const CHART_HEIGHT = 420; // Standard height for trading charts in pixels
@@ -3279,6 +3319,8 @@
         }
         
         // Get user address and balance
+        // Re-initialize provider to ensure it is on the correct chain after any switch
+        provider = new ethers.providers.Web3Provider(rawProvider);
         userAddress = (await provider.getSigner().getAddress()).toLowerCase();
         const balanceWei = await provider.getBalance(userAddress);
         const balanceEth = ethers.utils.formatEther(balanceWei);
@@ -3317,11 +3359,12 @@
         
         showNotification(`✅ Connected via ${walletType} on ${getActiveNetwork().name} – Balance: ${parseFloat(balanceEth).toFixed(4)} ${getNetworkCurrency()}`, false);
         
-        // Show faucet notification if balance is low
+        // Show faucet notification if balance is low (testnets only)
         const balanceNum = parseFloat(balanceEth);
-        if (balanceNum < 0.01) {
+        const activeNetForFaucet = getActiveNetwork();
+        if (balanceNum < 0.01 && activeNetForFaucet.isTestnet && activeNetForFaucet.faucet) {
           setTimeout(() => {
-            showNotification(`💰 Low balance detected. Get free test ${getNetworkCurrency()} from: ${getActiveNetwork().faucet}`, false);
+            showNotification(`💰 Low balance detected. Get free test ${getNetworkCurrency()} from: ${activeNetForFaucet.faucet}`, false);
           }, 3000);
         }
         
@@ -3446,10 +3489,24 @@
         // Initialize WalletConnect v2 provider with proper configuration
         const wcProvider = await window.EthereumProvider.init({
           projectId: WALLETCONNECT_PROJECT_ID,
-          chains: [SEPOLIA_CHAIN_ID], // eip155 format handled internally
-          optionalChains: [SEPOLIA_CHAIN_ID],
+          chains: [BASE_MAINNET_CHAIN_ID], // Default to Base mainnet
+          optionalChains: [
+            BASE_MAINNET_CHAIN_ID,
+            ARBITRUM_CHAIN_ID,
+            BNB_CHAIN_ID,
+            EDU_MAINNET_CHAIN_ID,
+            SEPOLIA_CHAIN_ID,
+            EDU_CHAIN_ID,
+            BASE_SEPOLIA_CHAIN_ID
+          ],
           rpcMap: {
-            [SEPOLIA_CHAIN_ID]: SEPOLIA_RPC
+            [BASE_MAINNET_CHAIN_ID]: BASE_MAINNET_RPC_URL,
+            [ARBITRUM_CHAIN_ID]: ARBITRUM_RPC_URL,
+            [BNB_CHAIN_ID]: BNB_RPC_URL,
+            [EDU_MAINNET_CHAIN_ID]: EDU_MAINNET_RPC_URL,
+            [SEPOLIA_CHAIN_ID]: SEPOLIA_RPC,
+            [EDU_CHAIN_ID]: EDU_RPC_URL,
+            [BASE_SEPOLIA_CHAIN_ID]: BASE_SEPOLIA_RPC_URL
           },
           showQrModal: true,
           qrModalOptions: {
@@ -3955,6 +4012,22 @@
           
           // Fetch all token balances from Etherscan API
           await fetchAllTokenBalancesFromEtherscan();
+        } else if (activeNet.usdcAddress || activeNet.usdtAddress) {
+          // Fetch USDC/USDT on mainnet networks (Base, Arbitrum, BNB, etc.)
+          try {
+            if (activeNet.usdcAddress) {
+              const usdcContract = new ethers.Contract(activeNet.usdcAddress, ERC20_ABI, provider);
+              const usdcBalanceRaw = await usdcContract.balanceOf(userAddress);
+              usdcBalance = parseFloat(ethers.utils.formatUnits(usdcBalanceRaw, 6));
+            }
+          } catch(e) { console.log('[Balance] USDC fetch error:', e.message); }
+          try {
+            if (activeNet.usdtAddress) {
+              const usdtContract = new ethers.Contract(activeNet.usdtAddress, ERC20_ABI, provider);
+              const usdtBalanceRaw = await usdtContract.balanceOf(userAddress);
+              usdtBalance = parseFloat(ethers.utils.formatUnits(usdtBalanceRaw, 6));
+            }
+          } catch(e) { console.log('[Balance] USDT fetch error:', e.message); }
         }
         
         // Update UI with real balances
@@ -6474,8 +6547,8 @@
         console.log(`[Bridge] Bridging ${amount} ${token} from ${fromChain} to ${toChain}`);
         console.log(`[Bridge] Fee: ${bridgeFee.toFixed(6)} ${token}, Final amount: ${finalAmount.toFixed(6)} ${token}`);
         
-        if (token === 'ETH' || token === 'EDU') {
-          // For native tokens (ETH on Ethereum/Base, EDU on EDU Chain), send to treasury (simulating bridge locking)
+        if (token === 'ETH' || token === 'EDU' || token === 'BNB') {
+          // For native tokens (ETH on Ethereum/Base/Arbitrum, EDU on EDU Chain, BNB on BNB Chain)
           const amountWei = ethers.utils.parseEther(finalAmount.toString());
           
           showNotification(`🌉 Initiating bridge transaction...`, false);
@@ -11324,6 +11397,14 @@
               { value: 'USDC', label: 'USDC' },
               { value: 'wMOGA', label: 'wMOGA' }
             ];
+          } else if (_swapNet.id === 'bnb') {
+            return [
+              { value: 'BNB', label: 'BNB (Native)' },
+              { value: 'USDT', label: 'USDT (BEP-20)' },
+              { value: 'USDC', label: 'USDC (BEP-20)' },
+              { value: 'WBNB', label: 'WBNB' },
+              { value: 'wMOGA', label: 'wMOGA' }
+            ];
           } else {
             // Sepolia default
             return [
@@ -11408,7 +11489,7 @@
             </p>
 
             <p style="text-align: center; margin-top: 12px; color: #94a3b8; font-size: 0.9em;">
-              ${_swapNet.name} • ${_swapNet.currency} ↔ Tokens • Demo Mode
+              ${_swapNet.name} • ${_swapNet.currency} ↔ Tokens • On-Chain
             </p>
           </div>
         `;
@@ -11429,7 +11510,7 @@
               Bridge Assets
             </h2>
             <p style="text-align: center; color: #94a3b8; margin-bottom: 32px; font-size: 1.1em;">
-              Transfer tokens between EDU Chain, ETH Sepolia and Base Sepolia
+              Transfer tokens between Base, Arbitrum, BNB Chain and EDU Chain (Mainnet)
             </p>
 
             ${!userAddress ? `
@@ -11444,16 +11525,16 @@
                 <div style="background: #1e2130; border-radius: 16px; padding: 20px;">
                   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
                     <select id="fromChain" onchange="updateBridgeEstimate()" style="background: #2a2f45; color: white; font-size: 1.2em; border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; min-width: 180px; cursor: pointer;">
-                      <optgroup label="Supported Networks">
+                      <optgroup label="Mainnet Networks">
+                        <option value="base">Base (ETH)</option>
+                        <option value="arbitrum">Arbitrum (ETH)</option>
+                        <option value="bnb">BNB Smart Chain</option>
+                        <option value="educhainmain">EDU Chain</option>
+                      </optgroup>
+                      <optgroup label="Testnets">
                         <option value="educhain">EDU Chain Testnet</option>
                         <option value="sepolia">ETH Sepolia</option>
                         <option value="basesepolia">Base Sepolia</option>
-                      </optgroup>
-                      <optgroup label="Legacy Testnets">
-                        <option value="goerli">Goerli Testnet</option>
-                        <option value="holesky">Holesky Testnet</option>
-                        <option value="mumbai">Mumbai (Polygon)</option>
-                        <option value="bsc-testnet">BSC Testnet</option>
                       </optgroup>
                     </select>
                     <span style="color: #94a3b8; font-size: 0.95em;">Balance: <span id="fromBalance">0.00</span></span>
@@ -11461,10 +11542,11 @@
                   <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
                     <input type="number" id="bridgeAmount" placeholder="0.00" oninput="updateBridgeEstimate()" style="background: transparent; border: none; color: white; font-size: 3em; font-weight: 600; flex: 1; min-width: 120px; outline: none;" />
                     <select id="bridgeToken" onchange="updateBridgeEstimate()" style="background: #2a2f45; color: white; border: none; padding: 12px 16px; border-radius: 14px; font-size: 1.15em; cursor: pointer; min-width: 140px;">
+                      <option value="ETH">ETH</option>
+                      <option value="BNB">BNB</option>
+                      <option value="EDU">EDU</option>
                       <option value="USDT">USDT</option>
                       <option value="USDC">USDC</option>
-                      <option value="ETH">ETH</option>
-                      <option value="EDU">EDU</option>
                     </select>
                   </div>
                   <div style="text-align: right; color: #94a3b8; font-size: 0.95em; margin-top: 8px;">~$<span id="fromUSDValue">0.00</span></div>
@@ -11484,8 +11566,12 @@
                 <div style="background: #1e2130; border-radius: 16px; padding: 20px;">
                   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
                     <select id="toChain" onchange="updateBridgeEstimate()" style="background: #2a2f45; color: white; font-size: 1.2em; border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; min-width: 180px; cursor: pointer;">
-                      <option value="sepolia" selected>ETH Sepolia</option>
+                      <option value="arbitrum" selected>Arbitrum (ETH)</option>
+                      <option value="base">Base (ETH)</option>
+                      <option value="bnb">BNB Smart Chain</option>
+                      <option value="educhainmain">EDU Chain</option>
                       <option value="educhain">EDU Chain Testnet</option>
+                      <option value="sepolia">ETH Sepolia</option>
                       <option value="basesepolia">Base Sepolia</option>
                     </select>
                     <span style="color: #94a3b8; font-size: 0.95em;">Balance: <span id="toBalance">0.00</span></span>
@@ -11493,7 +11579,7 @@
                   <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
                     <input type="number" id="bridgeReceiveAmount" placeholder="0.00" disabled style="background: transparent; border: none; color: #6b7280; font-size: 3em; font-weight: 600; flex: 1; min-width: 120px; outline: none;" />
                     <select disabled style="background: #2a2f45; color: white; border: none; padding: 12px 16px; border-radius: 14px; font-size: 1.15em; cursor: not-allowed; min-width: 140px;">
-                      <option id="receiveToken">USDT</option>
+                      <option id="receiveToken">ETH</option>
                     </select>
                   </div>
                   <div style="text-align: right; color: #94a3b8; font-size: 0.95em; margin-top: 8px;">~$<span id="toUSDValue">0.00</span></div>
@@ -11537,7 +11623,7 @@
               </p>
 
               <p style="text-align: center; margin-top: 12px; color: #94a3b8; font-size: 0.95em;">
-                Testnet Bridge Simulator • Real bridges support CCTP, LayerZero, etc.
+                Mainnet Bridge • Base ETH, Arbitrum ETH, BNB Chain, EDU Chain
               </p>
             </div>
           </div>
@@ -11546,14 +11632,21 @@
         // Initialize bridge functions
         window.updateBridgeEstimate = function() {
           const amount = parseFloat(document.getElementById('bridgeAmount')?.value || 0);
-          const token = document.getElementById('bridgeToken')?.value || 'USDT';
+          const token = document.getElementById('bridgeToken')?.value || 'ETH';
           const slippage = parseFloat(document.getElementById('bridgeSlippage')?.textContent || '0.5');
+          
+          // Token USD prices
+          const tokenPrices = {
+            'ETH': ETH_TO_USDC_RATE, 'BNB': BNB_USD_RATE, 'EDU': 0.5,
+            'USDT': 1, 'USDC': 1, 'WETH': ETH_TO_USDC_RATE
+          };
+          const usdPrice = tokenPrices[token] || 1;
           
           const receiveAmount = amount * (1 - slippage / 100);
           document.getElementById('bridgeReceiveAmount').value = receiveAmount.toFixed(6);
           document.getElementById('receiveAfterSlippage').textContent = `${receiveAmount.toFixed(6)} ${token}`;
-          document.getElementById('fromUSDValue').textContent = amount.toFixed(2);
-          document.getElementById('toUSDValue').textContent = receiveAmount.toFixed(2);
+          document.getElementById('fromUSDValue').textContent = (amount * usdPrice).toFixed(2);
+          document.getElementById('toUSDValue').textContent = (receiveAmount * usdPrice).toFixed(2);
           document.getElementById('receiveToken').textContent = token;
         };
 
@@ -11561,16 +11654,13 @@
           const fromChainEl = document.getElementById('fromChain');
           const toChainEl = document.getElementById('toChain');
           if (!fromChainEl || !toChainEl) return;
-          // Only allow swapping between the networks supported by toChain
-          const toOptions = Array.from(toChainEl.options).map(o => o.value);
-          if (!toOptions.includes(fromChainEl.value)) {
-            const toNames = Array.from(toChainEl.options).map(o => o.text).join(', ');
-            showNotification(`⚠️ Can only swap between: ${toNames}`, true);
-            return;
-          }
           const fromVal = fromChainEl.value;
-          fromChainEl.value = toChainEl.value;
-          toChainEl.value = fromVal;
+          const toVal = toChainEl.value;
+          // Sync the selection across both selects (they share same options)
+          const allFromOpts = Array.from(fromChainEl.options).map(o => o.value);
+          const allToOpts = Array.from(toChainEl.options).map(o => o.value);
+          if (allFromOpts.includes(toVal)) fromChainEl.value = toVal;
+          if (allToOpts.includes(fromVal)) toChainEl.value = fromVal;
           updateBridgeEstimate();
         };
 
@@ -11591,15 +11681,21 @@
           
           const amount = parseFloat(document.getElementById('bridgeAmount')?.value || 0);
           const fromChainSelect = document.getElementById('fromChain');
-          const fromChain = fromChainSelect?.options[fromChainSelect?.selectedIndex]?.text || 'EDU Chain Testnet';
+          const fromChainId = fromChainSelect?.value || 'base';
+          const fromChain = fromChainSelect?.options[fromChainSelect?.selectedIndex]?.text || 'Base (ETH)';
           const toChainSelect = document.getElementById('toChain');
-          const toChainText = toChainSelect?.options[toChainSelect?.selectedIndex]?.text || 'ETH Sepolia';
-          const toChainId = toChainSelect?.value || 'sepolia';
-          const token = document.getElementById('bridgeToken')?.value || 'USDT';
+          const toChainText = toChainSelect?.options[toChainSelect?.selectedIndex]?.text || 'Arbitrum (ETH)';
+          const toChainId = toChainSelect?.value || 'arbitrum';
+          const token = document.getElementById('bridgeToken')?.value || 'ETH';
           const slippage = parseFloat(document.getElementById('bridgeSlippage')?.textContent || '0.5');
           
           if (amount <= 0) {
             showNotification('Please enter an amount to bridge', true);
+            return;
+          }
+          
+          if (fromChainId === toChainId) {
+            showNotification('❌ Source and destination networks must be different', true);
             return;
           }
           
@@ -11608,7 +11704,7 @@
             showNotification(`🌉 Preparing bridge: ${amount} ${token} from ${fromChain} to ${toChainText}...`, false);
             
             const result = await executeRealBridge(fromChain, toChainText, token, amount, slippage);
-            const explorerNet = NETWORKS[toChainId] || NETWORKS.sepolia;
+            const explorerNet = NETWORKS[toChainId] || NETWORKS.base;
             
             if (result.success) {
               recordTransaction(result.txHash, 'Bridge', `Bridged ${amount.toFixed(6)} ${token} from ${fromChain} to ${toChainText}`, {amount: amount, token: token});
@@ -13979,8 +14075,8 @@
       try {
         let balance = 0;
         
-        if (fromToken === 'ETH' || fromToken === 'EDU') {
-          // Native token (ETH on Ethereum/Base, EDU on EDU Chain)
+        if (fromToken === 'ETH' || fromToken === 'EDU' || fromToken === 'BNB') {
+          // Native token (ETH on Ethereum/Base, EDU on EDU Chain, BNB on BNB Chain)
           const balanceWei = await provider.getBalance(userAddress);
           balance = parseFloat(ethers.utils.formatEther(balanceWei));
         } else if (fromToken === 'wMOGA') {
@@ -14000,12 +14096,13 @@
           const tokenAddresses = {
             'USDC': activeNet.usdcAddress || (activeNet.isTestnet ? USDC_SEPOLIA : null),
             'WETH': activeNet.wethAddress || null,
+            'WBNB': activeNet.wbnbAddress || null,
+            'USDT': activeNet.usdtAddress || (activeNet.isTestnet ? USDT_SEPOLIA : null),
             // Sepolia-only tokens
-            'USDT': USDT_SEPOLIA,
-            'LINK': LINK_SEPOLIA,
-            'WBTC': WBTC_SEPOLIA,
-            'AAVE': AAVE_SEPOLIA,
-            'EURO': EURO_SEPOLIA
+            'LINK': activeNet.chainId === SEPOLIA_CHAIN_ID ? LINK_SEPOLIA : null,
+            'WBTC': activeNet.chainId === SEPOLIA_CHAIN_ID ? WBTC_SEPOLIA : null,
+            'AAVE': activeNet.chainId === SEPOLIA_CHAIN_ID ? AAVE_SEPOLIA : null,
+            'EURO': activeNet.chainId === SEPOLIA_CHAIN_ID ? EURO_SEPOLIA : null
           };
           
           // Get token decimals
@@ -14013,6 +14110,7 @@
             'USDC': 6,
             'USDT': 6,
             'WETH': 18,
+            'WBNB': 18,
             'LINK': 18,
             'WBTC': 8,
             'AAVE': 18,
@@ -14046,6 +14144,7 @@
       const exchangeRates = {
         'ETH': ETH_TO_USDC_RATE,  // Live rate from Uniswap
         'EDU': 0.5,               // Approximate EDU/USD rate
+        'BNB': BNB_USD_RATE,      // Approximate BNB/USD rate
         'USDC': 1,
         'USDT': 1,
         'LINK': 15,
@@ -14053,6 +14152,7 @@
         'AAVE': 100,
         'EURO': 1.08,
         'WETH': ETH_TO_USDC_RATE, // WETH pegged 1:1 to ETH
+        'WBNB': BNB_USD_RATE,     // WBNB pegged 1:1 to BNB
         'wMOGA': 0.01             // Approximate wMOGA/USD rate (placeholder)
       };
 
@@ -14128,7 +14228,7 @@
           if (!gasPaid) return;
 
           // Simulate exchange rates for demo
-          const exchangeRates = { 'EDU': 0.5, 'ETH': ETH_TO_USDC_RATE, 'USDC': 1, 'USDT': 1, 'WETH': ETH_TO_USDC_RATE, 'wMOGA': 0.01 };
+          const exchangeRates = { 'EDU': 0.5, 'BNB': BNB_USD_RATE, 'ETH': ETH_TO_USDC_RATE, 'USDC': 1, 'USDT': 1, 'WETH': ETH_TO_USDC_RATE, 'WBNB': BNB_USD_RATE, 'wMOGA': 0.01 };
           const fromValue = amt * (exchangeRates[fromToken] || 1);
           const simAmountOut = (fromValue / (exchangeRates[toToken] || 1)) * (1 - currentSlippageTolerance / 100);
           const fakeTxHash = '0x' + Array.from({length: 64}, () => Math.floor(Math.random() * 16).toString(16)).join('');
