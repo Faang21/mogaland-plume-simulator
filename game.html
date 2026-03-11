@@ -6526,6 +6526,8 @@ const CR={
   totalRuns:0,
   // Price fetch
   priceCache:{},
+  // Internal flags
+  _keysBound:false,
 };
 
 // Pattern library for learn system
@@ -6574,6 +6576,11 @@ function crStartRun(){
   CR._laneChangeCd=0;
   CR.totalRuns=(CR.totalRuns||0)+1;
   localStorage.setItem('cr_total_runs',CR.totalRuns);
+  // Reset power-up timers
+  _crSpawnTimer=0;_crSpawnInterval=1.8;
+  _crPowerupTimer=0;_crPowerupInterval=8;
+  _crSpeedRampTimer=0;_crSlowMo=0;_crShield=0;_crFibJumps=0;
+  if(_crMaSpeedTid){clearTimeout(_crMaSpeedTid);_crMaSpeedTid=null;}
   // Generate initial price data
   _crGenPrices(80);
   // Update score display
@@ -6618,6 +6625,7 @@ let _crSpeedRampTimer=0;
 let _crSlowMo=0;   // seconds remaining of RSI slow-motion
 let _crShield=0;   // seconds remaining of Bollinger shield
 let _crFibJumps=0; // auto-jumps remaining from Fibonacci
+let _crMaSpeedTid=null; // timeout ID for MA crossover speed restore
 
 function _crLoop(ts){
   if(!CR.running)return;
@@ -6625,7 +6633,7 @@ function _crLoop(ts){
   if(!CR._lastTs){CR._lastTs=ts;return;}
   let dt=Math.min((ts-CR._lastTs)/1000,0.05);
   CR._lastTs=ts;
-  if(_crSlowMo>0){_crSlowMo-=dt;dt*=0.4;}  // slow-motion effect
+  if(_crSlowMo>0){_crSlowMo=Math.max(0,_crSlowMo-dt);dt*=0.4;}  // slow-motion effect
 
   _crUpdate(dt);
   _crDraw();
@@ -6643,9 +6651,9 @@ function _crUpdate(dt){
   _crSpeedRampTimer+=dt;
   if(_crSpeedRampTimer>10){CR.chartSpeed=Math.min(400,CR.chartSpeed+8);_crSpeedRampTimer=0;}
 
-  // Decrement shield/fib/slowmo
+  // Decrement shield/fib; slow-mo is decremented in the loop before dt scaling
   if(_crShield>0)_crShield-=dt;
-  if(_crSlowMo>0&&_crSlowMo<0)_crSlowMo=0; // clamp already done above
+  if(_crShield<0)_crShield=0;
 
   // Auto-jump (Fibonacci)
   if(_crFibJumps>0&&CR.onGround){_crFibJumps--;_crJump();}
@@ -6773,7 +6781,8 @@ function _crCollectPowerup(p){
     _crLearnPopMini('volume_orb');
   }else if(p.type==='ma'){
     CR.chartSpeed=Math.min(500,CR.chartSpeed*1.25);
-    setTimeout(()=>{CR.chartSpeed=Math.max(180,CR.chartSpeed/1.25);},4000);
+    if(_crMaSpeedTid)clearTimeout(_crMaSpeedTid);
+    _crMaSpeedTid=setTimeout(()=>{CR.chartSpeed=Math.max(180,CR.chartSpeed/1.25);_crMaSpeedTid=null;},4000);
     _crLearnPopMini('ma_crossover');
     logChat('[⚡ Chart Rider] MA Crossover! Speed boost for 4s!',false,'#fbbf24');
   }else if(p.type==='rsi'){
@@ -7139,6 +7148,7 @@ window.enterChartRider=function(){
 window.exitChartRider=function(){
   CR.running=false;CR.phase='idle';
   if(CR.raf){cancelAnimationFrame(CR.raf);CR.raf=null;}
+  if(_crMaSpeedTid){clearTimeout(_crMaSpeedTid);_crMaSpeedTid=null;}
   document.getElementById('chartRiderOv').style.display='none';
   document.getElementById('crResultPop').style.display='none';
   document.getElementById('crLearnPop').style.display='none';
