@@ -146,7 +146,7 @@ kbd{padding:1px 4px;border-radius:4px;border:1px solid rgba(255,255,255,.22);bac
 #npcDialog .ndBtns button{flex:1;padding:8px;border-radius:8px;border:none;font-size:11px;font-weight:bold;cursor:pointer;}
 #npcDialog .ndTalk{background:linear-gradient(90deg,#4338ca,#6366f1);color:#fff;}
 #npcDialog .ndClose{background:rgba(100,116,139,.3);border:1px solid rgba(255,255,255,.12);color:#94a3b8;}
-/* ── Chart Rider 2.0 ── */
+/* ── Chart Multiplier Game ── */
 #chartRiderOv{position:fixed;top:0;left:0;right:0;bottom:0;z-index:3000;background:#0a0e1a;display:none;flex-direction:column;align-items:stretch;}
 #crHeader{display:flex;align-items:center;justify-content:space-between;padding:7px 14px;background:linear-gradient(90deg,#0d1b2a,#112240);border-bottom:1px solid rgba(251,191,36,.25);flex-shrink:0;}
 #crHeader .crTitle{font-size:15px;font-weight:bold;color:#fbbf24;letter-spacing:1px;}
@@ -1565,20 +1565,20 @@ function renderChartRider(){
   const myCar=getMyCarId();
   const ct=myCar?CAR_TYPES.find(c=>c.id===myCar):null;
   const skinName=ct?ct.name:'Basic Board';
-  return`<strong>📊 Chart Rider Tower</strong>
+  return`<strong>📊 Chart Multiplier Tower</strong>
 <div style="font-size:11px;color:#94a3b8;margin:5px 0;">Industrial District Arena · Ride the charts!</div>
 <div style="background:linear-gradient(135deg,rgba(14,165,233,.15),rgba(99,102,241,.15));border:1px solid rgba(14,165,233,.35);border-radius:10px;padding:10px;margin:6px 0;">
-  <div style="font-size:12px;font-weight:bold;color:#38bdf8;margin-bottom:6px;">🏄 Chart Rider 2.0</div>
+  <div style="font-size:12px;font-weight:bold;color:#38bdf8;margin-bottom:6px;">📊 Chart Multiplier</div>
   <div style="font-size:11px;color:#e2e8f0;margin-bottom:4px;">Ride real price charts · Dodge candle patterns</div>
-  <div style="font-size:11px;color:#e2e8f0;margin-bottom:8px;">Collect volume orbs · Learn TA while playing!</div>
+  <div style="font-size:11px;color:#e2e8f0;margin-bottom:8px;">Collect volume orbs · Boost your multiplier!</div>
   <div style="display:flex;justify-content:space-between;font-size:10px;color:#64748b;margin-bottom:8px;">
     <span>🏆 Best: <b style="color:#fbbf24;">${best.toLocaleString()}</b></span>
     <span>🎮 Runs: <b style="color:#94a3b8;">${runs}</b></span>
     <span>🏄 Skin: <b style="color:#10b981;">${skinName}</b></span>
   </div>
-  <button onclick="enterChartRider()" style="width:100%;padding:9px;border-radius:8px;border:none;background:linear-gradient(90deg,#0ea5e9,#6366f1);color:#fff;font-size:13px;font-weight:bold;cursor:pointer;">🚀 Enter Chart Rider Arena</button>
+  <button onclick="enterChartRider()" style="width:100%;padding:9px;border-radius:8px;border:none;background:linear-gradient(90deg,#0ea5e9,#6366f1);color:#fff;font-size:13px;font-weight:bold;cursor:pointer;">🚀 Enter Chart Multiplier Arena</button>
 </div>
-<div style="font-size:10px;color:#475569;border-top:1px solid rgba(255,255,255,.06);padding-top:6px;margin-top:4px;">Space/Tap=Jump · ↓/Swipe=Duck · ←/→=Lane · Collect orbs for multiplier bonus</div>
+<div style="font-size:10px;color:#475569;border-top:1px solid rgba(255,255,255,.06);padding-top:6px;margin-top:4px;">↑/Space/Tap=Jump · ↓=Duck · ←/→=Lane · Collect orbs for multiplier bonus</div>
 <button onclick="exitCity(_phaserScene)" style="width:100%;margin-top:8px;padding:6px;border-radius:7px;border:none;background:rgba(100,116,139,.28);color:#94a3b8;cursor:pointer;font-size:11px;">Exit Tower</button>`;
 }
 window.renderChartRider=renderChartRider;
@@ -4306,7 +4306,7 @@ function drawCity3(scene){
     crGr.strokePath();
     // Pulsing surfboard emoji + label
     worldCont.add(crGr);
-    worldCont.add(scene.add.text(cx,cr.y-12,'🏄 Chart Rider 2.0',{fontSize:'11px',color:'#38bdf8',fontStyle:'bold',backgroundColor:'rgba(2,6,23,.75)',padding:{x:5,y:3}}).setOrigin(.5,1).setDepth(6));
+    worldCont.add(scene.add.text(cx,cr.y-12,'📊 Chart Multiplier',{fontSize:'11px',color:'#38bdf8',fontStyle:'bold',backgroundColor:'rgba(2,6,23,.75)',padding:{x:5,y:3}}).setOrigin(.5,1).setDepth(6));
     worldCont.add(scene.add.text(cx,cr.y+cr.h+6,'📊',{fontSize:'24px'}).setOrigin(.5,0).setDepth(5));
   }}
   // ── Japanese-style bus stop shelters ──
@@ -4552,7 +4552,7 @@ function drawInterior(scene,bk){
     'Steel Mill':['🔩 Smelting Floor'],'Power Plant':['⚡ Generator Hall'],'Chemical Factory':['🧪 Lab Floor'],
     'Train Station':['🚂 Platforms'],'Aviation Academy':['✈️ Flight Classroom'],
     'Airport':['✈️ Departure Lounge'],'Airport C1':['✈️ Departure Lounge'],'Airport C3':['✈️ Departure Lounge'],
-    'Chart Rider Tower':['🏄 Chart Arena','📊 Chart Rider 2.0'],
+    'Chart Rider Tower':['📊 Chart Multiplier','📊 Chart Multiplier'],
   };
   const labels=zoneLabels[bk];
   if(labels){
@@ -6473,7 +6473,7 @@ window.addEventListener('resize',()=>{
 updateHUD();
 renderTxHistory();
 
-/* ── Chart Rider 2.0 Game Engine ── */
+/* ── Chart Multiplier Game Engine ── */
 (function(){
 'use strict';
 // Polyfill roundRect for older browsers
@@ -6526,6 +6526,8 @@ const CR={
   totalRuns:0,
   // Price fetch
   priceCache:{},
+  // Difficulty: 'normal' | 'hard'
+  difficulty:'normal',
   // Internal flags
   _keysBound:false,
 };
@@ -6570,27 +6572,38 @@ function crStartRun(){
   document.getElementById('crLearnPop').style.display='none';
   CR.lane=1;CR.playerY=CR.laneY[1];CR.vy=0;CR.onGround=true;CR.ducking=false;CR.duckTimer=0;
   CR.score=0;CR.distance=0;CR.orbs=0;CR.multiplier=1.0;CR.maxMultiplier=1.0;
-  CR.chartOffset=0;CR.chartSpeed=180;
+  // Hard mode: start faster with tighter spawn intervals
+  const isHard=CR.difficulty==='hard';
+  CR.chartOffset=0;CR.chartSpeed=isHard?260:180;
   CR.obstacles=[];CR.powerups=[];CR.particles=[];
   CR.running=true;CR.phase='running';
   CR._laneChangeCd=0;
   CR.totalRuns=(CR.totalRuns||0)+1;
   localStorage.setItem('cr_total_runs',CR.totalRuns);
-  // Reset power-up timers
-  _crSpawnTimer=0;_crSpawnInterval=1.8;
-  _crPowerupTimer=0;_crPowerupInterval=8;
+  // Reset power-up timers (hard mode spawns obstacles more frequently)
+  _crSpawnTimer=0;_crSpawnInterval=isHard?1.1:1.8;
+  _crPowerupTimer=0;_crPowerupInterval=isHard?12:8;
   _crSpeedRampTimer=0;_crSlowMo=0;_crShield=0;_crFibJumps=0;
   if(_crMaSpeedTid){clearTimeout(_crMaSpeedTid);_crMaSpeedTid=null;}
-  // Generate initial price data
+  // Generate initial price data (hard mode has more volatile candles)
   _crGenPrices(80);
   // Update score display
   document.getElementById('crScoreVal').textContent='0';
-  document.getElementById('crAssetLabel').textContent=CR.asset;
+  document.getElementById('crAssetLabel').textContent=(isHard?'🔥 ':'')+CR.asset;
   if(CR.raf)cancelAnimationFrame(CR.raf);
   CR._lastTs=null;
   CR.raf=requestAnimationFrame(_crLoop);
 }
 window.crStartRun=crStartRun;
+
+function crSetDifficulty(d){
+  CR.difficulty=d;
+  document.querySelectorAll('.crDiffBtn').forEach(b=>{
+    b.style.opacity=b.dataset.diff===d?'1':'0.45';
+    b.style.borderColor=b.dataset.diff===d?(d==='hard'?'rgba(239,68,68,.8)':'rgba(14,165,233,.8)'):'rgba(255,255,255,.15)';
+  });
+}
+window.crSetDifficulty=crSetDifficulty;
 
 function crSetAsset(a){
   CR.asset=a;
@@ -6607,13 +6620,29 @@ function _crGenPrices(count){
   // Generate realistic-looking OHLC price data
   const base=ASSET_PRICES[CR.asset]||100;
   let price=base*(0.97+Math.random()*0.06);
+  const volatility=CR.difficulty==='hard'?0.05:0.03;
   CR.prices=[];
   for(let i=0;i<count+20;i++){
-    const chg=(Math.random()-0.5)*0.03;
+    const chg=(Math.random()-0.5)*volatility;
     const o=price;
     const c=price*(1+chg);
     const h=Math.max(o,c)*(1+Math.random()*0.012);
     const l=Math.min(o,c)*(1-Math.random()*0.012);
+    CR.prices.push({o,h,l,c,vol:0.3+Math.random()*1.2});
+    price=c;
+  }
+}
+
+function _crExtendPrices(count){
+  // Append new candles continuing from last close price (avoids chart blank-out bug)
+  const volatility=CR.difficulty==='hard'?0.05:0.03;
+  let price=CR.prices.length>0?CR.prices[CR.prices.length-1].c:(ASSET_PRICES[CR.asset]||100);
+  for(let i=0;i<count;i++){
+    const chg=(Math.random()-0.5)*volatility;
+    const o=price;
+    const c=price*(1+chg);
+    const h=Math.max(o,c)*(1+Math.random()*0.015);
+    const l=Math.min(o,c)*(1-Math.random()*0.015);
     CR.prices.push({o,h,l,c,vol:0.3+Math.random()*1.2});
     price=c;
   }
@@ -6763,6 +6792,15 @@ function _crSpawnObstacle(){
   const h=type==='resistance'?44:type==='support'?10:36;
   const y=CR.laneY[lane]+(type==='support'?8:0);
   CR.obstacles.push({type,x:CR.W+40,lane,w,h,y,hit:false,patternKey:type});
+  // Hard mode: occasionally spawn a second obstacle in a different lane at same x
+  if(CR.difficulty==='hard'&&Math.random()<0.4){
+    const lane2=(lane+1+Math.floor(Math.random()*2))%3;
+    const type2=types[Math.floor(Math.random()*types.length)];
+    const w2=type2==='resistance'?8:type2==='support'?60:18;
+    const h2=type2==='resistance'?44:type2==='support'?10:36;
+    const y2=CR.laneY[lane2]+(type2==='support'?8:0);
+    CR.obstacles.push({type:type2,x:CR.W+80,lane:lane2,w:w2,h:h2,y:y2,hit:false,patternKey:type2});
+  }
 }
 
 function _crSpawnPowerup(){
@@ -6863,7 +6901,7 @@ function _crShowResult(){
   document.getElementById('crResultPop').style.display='block';
   // Award coins proportional to score
   const bonus=Math.floor(CR.score/500);
-  if(bonus>0&&typeof S!=='undefined'){S.coins+=bonus;updateHUD();logChat('[🏄 Chart Rider] Run complete! +'+bonus+' coins earned.',false,'#fbbf24');saveProgress();}
+  if(bonus>0&&typeof S!=='undefined'){S.coins+=bonus;updateHUD();logChat('[📊 Chart Multiplier] Run complete! +'+bonus+' coins earned.',false,'#fbbf24');saveProgress();}
 }
 
 function _crBurst(x,y,color,n){
@@ -6927,8 +6965,8 @@ function _crDrawChart(ctx,W,H){
     const volH=Math.floor(c.vol*22);
     ctx.fillStyle=color+'44';ctx.fillRect(x+2,H-volH-4,candleW-4,volH);
   }
-  // Extend prices array if running low
-  if(startIdx+Math.ceil(W/step)+10>CR.prices.length)_crGenPrices(40);
+  // Extend prices array if running low (append, don't replace)
+  if(startIdx+Math.ceil(W/step)+10>CR.prices.length)_crExtendPrices(40);
 }
 
 function _crDrawLaneGuides(ctx,W,H){
@@ -7093,13 +7131,13 @@ function _crDrawHUD(ctx,W,H){
 function _crBindKeys(){
   window.addEventListener('keydown',e=>{
     if(!CR.running&&CR.phase!=='running')return;
-    if(e.code==='Space'){e.preventDefault();CR.keys.space=true;_crJump();}
+    if(e.code==='Space'||e.code==='ArrowUp'||e.code==='KeyW'){e.preventDefault();CR.keys.space=true;_crJump();}
     if(e.code==='ArrowDown'||e.code==='KeyS'){e.preventDefault();CR.keys.down=true;}
     if(e.code==='ArrowLeft'||e.code==='KeyA'){e.preventDefault();CR.keys.left=true;}
     if(e.code==='ArrowRight'||e.code==='KeyD'){e.preventDefault();CR.keys.right=true;}
   });
   window.addEventListener('keyup',e=>{
-    if(e.code==='Space')CR.keys.space=false;
+    if(e.code==='Space'||e.code==='ArrowUp'||e.code==='KeyW')CR.keys.space=false;
     if(e.code==='ArrowDown'||e.code==='KeyS')CR.keys.down=false;
     if(e.code==='ArrowLeft'||e.code==='KeyA')CR.keys.left=false;
     if(e.code==='ArrowRight'||e.code==='KeyD')CR.keys.right=false;
@@ -7142,7 +7180,7 @@ window.enterChartRider=function(){
   document.getElementById('crGhostMsg').textContent=CR.ghostBest>0?'👻 Beat your ghost: '+CR.ghostBest.toLocaleString():'';
   document.getElementById('crResultSub').textContent='Choose an asset and ride the chart!';
   document.getElementById('crResultPop').style.display='block';
-  logChat('[🏄 Chart Rider] Welcome to Chart Rider 2.0! Ride the chart, dodge patterns, collect orbs!',false,'#38bdf8');
+  logChat('[📊 Chart Multiplier] Welcome! Ride the chart, dodge patterns, collect orbs for multiplier bonus!',false,'#38bdf8');
 };
 
 window.exitChartRider=function(){
@@ -7154,7 +7192,7 @@ window.exitChartRider=function(){
   document.getElementById('crLearnPop').style.display='none';
   // Reset keys
   CR.keys={space:false,down:false,left:false,right:false};
-  logChat('[🏄 Chart Rider] Thanks for riding! Back to Industrial City.',false,'#fbbf24');
+  logChat('[📊 Chart Multiplier] Thanks for playing! Back to Industrial City.',false,'#fbbf24');
 };
 
 // Handle resize
@@ -7166,10 +7204,10 @@ window.addEventListener('resize',()=>{
 
 })();
 </script>
-<!-- ── Chart Rider 2.0 Overlay ── -->
+<!-- ── Chart Multiplier Game Overlay ── -->
 <div id="chartRiderOv">
   <div id="crHeader">
-    <span class="crTitle">🏄 Chart Rider 2.0</span>
+    <span class="crTitle">📊 Chart Multiplier</span>
     <span class="crScore">
       <span id="crAssetLabel" style="color:#38bdf8;margin-right:10px;">BTC</span>
       <span style="color:#64748b;margin-right:4px;">Score</span><span id="crScoreVal">0</span>
@@ -7211,8 +7249,16 @@ window.addEventListener('resize',()=>{
         <button style="background:linear-gradient(90deg,#0ea5e9,#2563eb);color:#fff;" onclick="crStartRun()">🔄 Play Again</button>
         <button style="background:rgba(100,116,139,.3);color:#94a3b8;" onclick="exitChartRider()">🏙️ Return to City</button>
       </div>
+      <!-- Difficulty selector -->
+      <div style="margin-top:12px;">
+        <div style="font-size:10px;color:#64748b;margin-bottom:5px;letter-spacing:0.5px;">DIFFICULTY</div>
+        <div style="display:flex;gap:6px;justify-content:center;">
+          <button class="crDiffBtn" data-diff="normal" onclick="crSetDifficulty('normal')" style="font-size:11px;padding:5px 14px;border-radius:99px;background:rgba(14,165,233,.2);border:1px solid rgba(14,165,233,.8);color:#38bdf8;cursor:pointer;opacity:1;">🟢 Normal</button>
+          <button class="crDiffBtn" data-diff="hard" onclick="crSetDifficulty('hard')" style="font-size:11px;padding:5px 14px;border-radius:99px;background:rgba(239,68,68,.2);border:1px solid rgba(255,255,255,.15);color:#f87171;cursor:pointer;opacity:0.45;">🔥 Hard</button>
+        </div>
+      </div>
       <!-- Asset selector -->
-      <div style="margin-top:12px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+      <div style="margin-top:10px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
         <button class="crAssetBtn" data-asset="BTC"  onclick="crSetAsset('BTC')" style="font-size:11px;padding:4px 10px;border-radius:99px;background:rgba(251,191,36,.2);border:1px solid rgba(251,191,36,.4);color:#fbbf24;cursor:pointer;">₿ BTC</button>
         <button class="crAssetBtn" data-asset="ETH"  onclick="crSetAsset('ETH')" style="font-size:11px;padding:4px 10px;border-radius:99px;background:rgba(99,102,241,.2);border:1px solid rgba(99,102,241,.4);color:#a78bfa;cursor:pointer;">Ξ ETH</button>
         <button class="crAssetBtn" data-asset="SOL"  onclick="crSetAsset('SOL')" style="font-size:11px;padding:4px 10px;border-radius:99px;background:rgba(20,184,166,.2);border:1px solid rgba(20,184,166,.4);color:#2dd4bf;cursor:pointer;">◎ SOL</button>
