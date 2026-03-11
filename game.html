@@ -146,6 +146,33 @@ kbd{padding:1px 4px;border-radius:4px;border:1px solid rgba(255,255,255,.22);bac
 #npcDialog .ndBtns button{flex:1;padding:8px;border-radius:8px;border:none;font-size:11px;font-weight:bold;cursor:pointer;}
 #npcDialog .ndTalk{background:linear-gradient(90deg,#4338ca,#6366f1);color:#fff;}
 #npcDialog .ndClose{background:rgba(100,116,139,.3);border:1px solid rgba(255,255,255,.12);color:#94a3b8;}
+/* ── Chart Rider 2.0 ── */
+#chartRiderOv{position:fixed;top:0;left:0;right:0;bottom:0;z-index:3000;background:#0a0e1a;display:none;flex-direction:column;align-items:stretch;}
+#crHeader{display:flex;align-items:center;justify-content:space-between;padding:7px 14px;background:linear-gradient(90deg,#0d1b2a,#112240);border-bottom:1px solid rgba(251,191,36,.25);flex-shrink:0;}
+#crHeader .crTitle{font-size:15px;font-weight:bold;color:#fbbf24;letter-spacing:1px;}
+#crHeader .crScore{font-size:13px;color:#e2e8f0;}
+#crHeader .crExit{background:rgba(239,68,68,.25);border:1px solid rgba(239,68,68,.45);color:#f87171;border-radius:8px;padding:5px 13px;font-size:12px;cursor:pointer;}
+#crCanvas{flex:1;width:100%;display:block;cursor:pointer;}
+#crHud{position:absolute;top:50px;left:0;right:0;pointer-events:none;display:flex;gap:10px;padding:0 14px;}
+#crLearnPop{display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(15,23,42,.96);border:2px solid rgba(251,191,36,.5);border-radius:14px;padding:18px 22px;max-width:340px;width:90%;z-index:10;text-align:center;}
+#crLearnPop h3{color:#fbbf24;margin:0 0 8px;font-size:14px;}
+#crLearnPop p{color:#e2e8f0;font-size:12px;line-height:1.55;margin:0 0 12px;}
+#crLearnPop .crLCont{display:flex;gap:8px;justify-content:center;}
+#crLearnPop button{flex:1;padding:8px 12px;border-radius:8px;border:none;font-size:12px;cursor:pointer;}
+#crLearnPop .btnCont{background:linear-gradient(90deg,#059669,#10b981);color:#fff;}
+#crLearnPop .btnSkip{background:rgba(100,116,139,.3);color:#94a3b8;}
+#crResultPop{display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(15,23,42,.97);border:2px solid rgba(99,102,241,.55);border-radius:16px;padding:22px 26px;max-width:360px;width:92%;z-index:10;text-align:center;}
+#crResultPop h2{color:#fbbf24;margin:0 0 6px;font-size:17px;}
+#crResultPop .crRStats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0;}
+#crResultPop .crRStat{background:rgba(255,255,255,.05);border-radius:8px;padding:8px;}
+#crResultPop .crRStat .label{font-size:10px;color:#64748b;}
+#crResultPop .crRStat .val{font-size:15px;font-weight:bold;color:#e2e8f0;}
+#crResultPop .crRBtns{display:flex;gap:8px;margin-top:12px;}
+#crResultPop .crRBtns button{flex:1;padding:9px;border-radius:8px;border:none;font-size:12px;font-weight:bold;cursor:pointer;}
+#crMobileCtrl{position:absolute;bottom:14px;left:12px;display:none;gap:6px;flex-wrap:wrap;width:160px;}
+@media(pointer:coarse),(max-width:768px){#crMobileCtrl{display:flex;}}
+.crMBtn{width:50px;height:50px;border-radius:10px;background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.28);color:#e2e8f0;font-size:22px;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:none;display:flex;align-items:center;justify-content:center;}
+.crMBtn:active{background:rgba(99,102,241,.5);}
 </style>
 </head>
 <body>
@@ -1092,6 +1119,7 @@ function renderBuildingPanel(){
     'Market C2':renderMarket,
     // City 3 new buildings
     'School C3':renderSchool,'Hotel C3':renderHotel,'Clothing Store C3':renderClothingStore,
+    'Chart Rider Tower':renderChartRider,
     Casino:()=>{initMulGame();return '<strong>🎰 Casino</strong><div style="font-size:11px;color:#94a3b8;margin:5px 0;">Multiplier game panel on the left.</div>';},
     'Casino C2':()=>{initMulGame();return '<strong>🎰 Casino C2</strong><div style="font-size:11px;color:#94a3b8;margin:5px 0;">Coastal City Casino · Multiplier game panel on the left.</div>';},
     'Hollywood Studio':renderHollywoodStudio};  if(WS.key.startsWith('House'))panel.innerHTML=renderHome();
@@ -1530,6 +1558,30 @@ function buyBarDrink(){
   saveProgress();
 }
 window.buyBarDrink=buyBarDrink;
+
+function renderChartRider(){
+  const best=parseInt(localStorage.getItem('cr_best_score')||'0');
+  const runs=parseInt(localStorage.getItem('cr_total_runs')||'0');
+  const myCar=getMyCarId();
+  const ct=myCar?CAR_TYPES.find(c=>c.id===myCar):null;
+  const skinName=ct?ct.name:'Basic Board';
+  return`<strong>📊 Chart Rider Tower</strong>
+<div style="font-size:11px;color:#94a3b8;margin:5px 0;">Industrial District Arena · Ride the charts!</div>
+<div style="background:linear-gradient(135deg,rgba(14,165,233,.15),rgba(99,102,241,.15));border:1px solid rgba(14,165,233,.35);border-radius:10px;padding:10px;margin:6px 0;">
+  <div style="font-size:12px;font-weight:bold;color:#38bdf8;margin-bottom:6px;">🏄 Chart Rider 2.0</div>
+  <div style="font-size:11px;color:#e2e8f0;margin-bottom:4px;">Ride real price charts · Dodge candle patterns</div>
+  <div style="font-size:11px;color:#e2e8f0;margin-bottom:8px;">Collect volume orbs · Learn TA while playing!</div>
+  <div style="display:flex;justify-content:space-between;font-size:10px;color:#64748b;margin-bottom:8px;">
+    <span>🏆 Best: <b style="color:#fbbf24;">${best.toLocaleString()}</b></span>
+    <span>🎮 Runs: <b style="color:#94a3b8;">${runs}</b></span>
+    <span>🏄 Skin: <b style="color:#10b981;">${skinName}</b></span>
+  </div>
+  <button onclick="enterChartRider()" style="width:100%;padding:9px;border-radius:8px;border:none;background:linear-gradient(90deg,#0ea5e9,#6366f1);color:#fff;font-size:13px;font-weight:bold;cursor:pointer;">🚀 Enter Chart Rider Arena</button>
+</div>
+<div style="font-size:10px;color:#475569;border-top:1px solid rgba(255,255,255,.06);padding-top:6px;margin-top:4px;">Space/Tap=Jump · ↓/Swipe=Duck · ←/→=Lane · Collect orbs for multiplier bonus</div>
+<button onclick="exitCity(_phaserScene)" style="width:100%;margin-top:8px;padding:6px;border-radius:7px;border:none;background:rgba(100,116,139,.28);color:#94a3b8;cursor:pointer;font-size:11px;">Exit Tower</button>`;
+}
+window.renderChartRider=renderChartRider;
 
 function renderGasStation(){
   const canFill=S.fuel<S.fuelMax;
@@ -2708,6 +2760,7 @@ const BLDGS3=[
   {key:'Cafe C3',          tex:'bCafe',   ts:2.2, x:8*TILE, y:26*TILE,w:6*TILE, h:6*TILE},
   {key:'Bar',              tex:'bCasino', ts:2.2, x:18*TILE,y:26*TILE,w:6*TILE, h:6*TILE},
   {key:'Concert Hall C3',  tex:'bGym',    ts:2.3, x:28*TILE,y:26*TILE,w:8*TILE, h:7*TILE},
+  {key:'Chart Rider Tower',tex:'bCasino', ts:2.4, x:60*TILE,y:26*TILE,w:8*TILE, h:8*TILE},
   /* Residential Zone — South */
   {key:'House C3-1',  tex:'bHouse',ts:2.0,x:8*TILE, y:38*TILE,w:6*TILE,h:5*TILE,isHouse:true},
   {key:'House C3-2',  tex:'bHouse',ts:2.0,x:16*TILE,y:38*TILE,w:6*TILE,h:5*TILE,isHouse:true},
@@ -4242,6 +4295,20 @@ function drawCity3(scene){
   {const ap=BLDGS3.find(b=>b.key==='Airport C3');if(ap){
     worldCont.add(scene.add.text(ap.x+ap.w/2,ap.y-20,'✈️ Welcome to Industrial City!',{fontSize:'12px',color:'#fbbf24',fontStyle:'bold',backgroundColor:'rgba(0,0,0,.55)',padding:{x:7,y:4}}).setOrigin(.5,1).setDepth(6));
   }}
+  // ── Chart Rider Tower – distinctive visual ──
+  {const cr=BLDGS3.find(b=>b.key==='Chart Rider Tower');if(cr){
+    const cx=cr.x+cr.w/2,cy=cr.y+cr.h/2;
+    // Glowing chart line on tower face
+    const crGr=scene.add.graphics().setDepth(5);
+    const pts=[0,8,14,4,20,12,26,2,32,10,38,6,44,14,50,4,56,10];
+    crGr.lineStyle(3,0x38bdf8,0.9);crGr.beginPath();
+    for(let i=0;i<pts.length;i+=2)i===0?crGr.moveTo(cr.x+4+pts[i],cy-pts[i+1]):crGr.lineTo(cr.x+4+pts[i],cy-pts[i+1]);
+    crGr.strokePath();
+    // Pulsing surfboard emoji + label
+    worldCont.add(crGr);
+    worldCont.add(scene.add.text(cx,cr.y-12,'🏄 Chart Rider 2.0',{fontSize:'11px',color:'#38bdf8',fontStyle:'bold',backgroundColor:'rgba(2,6,23,.75)',padding:{x:5,y:3}}).setOrigin(.5,1).setDepth(6));
+    worldCont.add(scene.add.text(cx,cr.y+cr.h+6,'📊',{fontSize:'24px'}).setOrigin(.5,0).setDepth(5));
+  }}
   // ── Japanese-style bus stop shelters ──
   {const busStopGr=scene.add.graphics().setDepth(5);
   for(const wp of BUS_WAYPOINTS3){
@@ -4485,6 +4552,7 @@ function drawInterior(scene,bk){
     'Steel Mill':['🔩 Smelting Floor'],'Power Plant':['⚡ Generator Hall'],'Chemical Factory':['🧪 Lab Floor'],
     'Train Station':['🚂 Platforms'],'Aviation Academy':['✈️ Flight Classroom'],
     'Airport':['✈️ Departure Lounge'],'Airport C1':['✈️ Departure Lounge'],'Airport C3':['✈️ Departure Lounge'],
+    'Chart Rider Tower':['🏄 Chart Arena','📊 Chart Rider 2.0'],
   };
   const labels=zoneLabels[bk];
   if(labels){
@@ -6404,8 +6472,756 @@ window.addEventListener('resize',()=>{
 });
 updateHUD();
 renderTxHistory();
+
+/* ── Chart Rider 2.0 Game Engine ── */
+(function(){
+'use strict';
+// Polyfill roundRect for older browsers
+if(!CanvasRenderingContext2D.prototype.roundRect){
+  CanvasRenderingContext2D.prototype.roundRect=function(x,y,w,h,r){
+    r=Math.min(r||0,w/2,h/2);
+    this.beginPath();
+    this.moveTo(x+r,y);this.lineTo(x+w-r,y);this.quadraticCurveTo(x+w,y,x+w,y+r);
+    this.lineTo(x+w,y+h-r);this.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+    this.lineTo(x+r,y+h);this.quadraticCurveTo(x,y+h,x,y+h-r);
+    this.lineTo(x,y+r);this.quadraticCurveTo(x,y,x+r,y);
+    this.closePath();
+  };
+}
+const CR={
+  canvas:null,ctx:null,raf:null,running:false,
+  W:0,H:0,
+  asset:'BTC',
+  // Player state
+  lane:1,          // 0=top, 1=mid, 2=bottom
+  laneY:[],        // computed per frame
+  playerX:0,
+  playerY:0,
+  vy:0,            // vertical velocity (jump/gravity)
+  onGround:true,
+  ducking:false,
+  duckTimer:0,
+  // Chart data
+  prices:[],       // array of {o,h,l,c} OHLC
+  chartOffset:0,   // scroll offset in px
+  chartSpeed:180,  // px/s base speed
+  // Objects
+  obstacles:[],    // {type,x,lane,w,h,hit,patternKey}
+  powerups:[],     // {type,x,y,collected}
+  particles:[],    // visual particles
+  // Score
+  score:0,
+  distance:0,      // candles passed
+  orbs:0,
+  multiplier:1.0,
+  maxMultiplier:1.0,
+  // State machine
+  phase:'idle',    // idle | running | learn | result
+  learnPattern:null,
+  // Input
+  keys:{space:false,down:false,left:false,right:false},
+  _laneChangeCd:0,
+  // Ghost
+  ghostBest:0,
+  totalRuns:0,
+  // Price fetch
+  priceCache:{},
+  // Internal flags
+  _keysBound:false,
+};
+
+// Pattern library for learn system
+const PATTERNS={
+  fakeout_bull:{title:'📈 Bull Trap (Fakeout)',body:'A green candle that quickly reverses. Bulls get trapped when price breaks resistance but immediately rejects. Wait for confirmation before buying breakouts!'},
+  fakeout_bear:{title:'📉 Bear Trap (Fakeout)',body:'A red candle that quickly reverses upward. Bears get trapped shorting a breakdown that immediately bounces back.'},
+  resistance:{title:'🧱 Resistance Wall',body:'Price struggled to break above this level multiple times. Strong sellers exist here. Jump over to profit — wait for a real breakout with volume!'},
+  support:{title:'🛡️ Support Floor',body:'Price repeatedly bounced from this zone. Strong buyers defend it. Duck under to avoid a trap — support can break if volume is weak!'},
+  volume_orb:{title:'🔵 Volume Orb',body:'High trading volume! Volume confirms trend direction. Collect orbs to boost your score multiplier.'},
+  ma_crossover:{title:'📊 MA Crossover Power-Up!',body:'Moving Average crossover detected! When fast MA crosses above slow MA → bullish signal. Temporary speed boost activated!'},
+  rsi_div:{title:'📉 RSI Divergence Power-Up!',body:'Price making new high but RSI making lower high — bearish divergence! Slow-motion mode: see the market clearly.'},
+  fib:{title:'🌀 Fibonacci Retracement!',body:'Key Fibonacci level (61.8% golden ratio). Price often bounces at 38.2%, 50%, 61.8% retracement zones. Auto-jump activated!'},
+  bollinger:{title:'📊 Bollinger Bands Shield!',body:'Price touching the lower Bollinger Band — statistically oversold! Mean-reversion likely. Shield activated for protection.'},
+};
+
+const LANE_COLORS=[0x38bdf8,0x6366f1,0x10b981];
+const ASSET_COLORS={BTC:'#fbbf24',ETH:'#a78bfa',SOL:'#2dd4bf',MOGA:'#10b981'};
+const ASSET_PRICES={BTC:95000,ETH:2500,SOL:180,MOGA:0.08};
+
+function crInit(){
+  CR.canvas=document.getElementById('crCanvas');
+  CR.ctx=CR.canvas.getContext('2d');
+  if(!CR._keysBound){_crBindKeys();_crBindMobile();CR._keysBound=true;}
+}
+
+function crResize(){
+  const ov=document.getElementById('chartRiderOv');
+  CR.W=ov.clientWidth||window.innerWidth;
+  CR.H=ov.clientHeight-50;
+  CR.canvas.width=CR.W;
+  CR.canvas.height=CR.H;
+  const laneSpacing=CR.H*0.25;
+  CR.laneY=[CR.H*0.2,CR.H*0.5,CR.H*0.78];
+  CR.playerX=CR.W*0.18;
+}
+
+function crStartRun(){
+  crResize();
+  document.getElementById('crResultPop').style.display='none';
+  document.getElementById('crLearnPop').style.display='none';
+  CR.lane=1;CR.playerY=CR.laneY[1];CR.vy=0;CR.onGround=true;CR.ducking=false;CR.duckTimer=0;
+  CR.score=0;CR.distance=0;CR.orbs=0;CR.multiplier=1.0;CR.maxMultiplier=1.0;
+  CR.chartOffset=0;CR.chartSpeed=180;
+  CR.obstacles=[];CR.powerups=[];CR.particles=[];
+  CR.running=true;CR.phase='running';
+  CR._laneChangeCd=0;
+  CR.totalRuns=(CR.totalRuns||0)+1;
+  localStorage.setItem('cr_total_runs',CR.totalRuns);
+  // Reset power-up timers
+  _crSpawnTimer=0;_crSpawnInterval=1.8;
+  _crPowerupTimer=0;_crPowerupInterval=8;
+  _crSpeedRampTimer=0;_crSlowMo=0;_crShield=0;_crFibJumps=0;
+  if(_crMaSpeedTid){clearTimeout(_crMaSpeedTid);_crMaSpeedTid=null;}
+  // Generate initial price data
+  _crGenPrices(80);
+  // Update score display
+  document.getElementById('crScoreVal').textContent='0';
+  document.getElementById('crAssetLabel').textContent=CR.asset;
+  if(CR.raf)cancelAnimationFrame(CR.raf);
+  CR._lastTs=null;
+  CR.raf=requestAnimationFrame(_crLoop);
+}
+window.crStartRun=crStartRun;
+
+function crSetAsset(a){
+  CR.asset=a;
+  document.getElementById('crAssetLabel').textContent=a;
+  _crGenPrices(80);
+  // Highlight selected button
+  document.querySelectorAll('.crAssetBtn').forEach(b=>{
+    b.style.opacity=b.dataset.asset===a?'1':'0.5';
+  });
+}
+window.crSetAsset=crSetAsset;
+
+function _crGenPrices(count){
+  // Generate realistic-looking OHLC price data
+  const base=ASSET_PRICES[CR.asset]||100;
+  let price=base*(0.97+Math.random()*0.06);
+  CR.prices=[];
+  for(let i=0;i<count+20;i++){
+    const chg=(Math.random()-0.5)*0.03;
+    const o=price;
+    const c=price*(1+chg);
+    const h=Math.max(o,c)*(1+Math.random()*0.012);
+    const l=Math.min(o,c)*(1-Math.random()*0.012);
+    CR.prices.push({o,h,l,c,vol:0.3+Math.random()*1.2});
+    price=c;
+  }
+}
+
+let _crSpawnTimer=0,_crSpawnInterval=1.8;
+let _crPowerupTimer=0,_crPowerupInterval=8;
+let _crSpeedRampTimer=0;
+let _crSlowMo=0;   // seconds remaining of RSI slow-motion
+let _crShield=0;   // seconds remaining of Bollinger shield
+let _crFibJumps=0; // auto-jumps remaining from Fibonacci
+let _crMaSpeedTid=null; // timeout ID for MA crossover speed restore
+
+function _crLoop(ts){
+  if(!CR.running)return;
+  CR.raf=requestAnimationFrame(_crLoop);
+  if(!CR._lastTs){CR._lastTs=ts;return;}
+  let dt=Math.min((ts-CR._lastTs)/1000,0.05);
+  CR._lastTs=ts;
+  if(_crSlowMo>0){_crSlowMo=Math.max(0,_crSlowMo-dt);dt*=0.4;}  // slow-motion effect
+
+  _crUpdate(dt);
+  _crDraw();
+}
+
+function _crUpdate(dt){
+  if(CR.phase!=='running')return;
+  const spd=CR.chartSpeed;
+
+  // Scroll chart
+  CR.chartOffset+=spd*dt;
+  CR.distance+=spd*dt/32; // 32px ≈ 1 candle width
+
+  // Speed ramp over time
+  _crSpeedRampTimer+=dt;
+  if(_crSpeedRampTimer>10){CR.chartSpeed=Math.min(400,CR.chartSpeed+8);_crSpeedRampTimer=0;}
+
+  // Decrement shield/fib; slow-mo is decremented in the loop before dt scaling
+  if(_crShield>0)_crShield-=dt;
+  if(_crShield<0)_crShield=0;
+
+  // Auto-jump (Fibonacci)
+  if(_crFibJumps>0&&CR.onGround){_crFibJumps--;_crJump();}
+
+  // Lane change cooldown
+  CR._laneChangeCd=Math.max(0,CR._laneChangeCd-dt);
+
+  // Apply input
+  if(!CR.ducking&&CR._laneChangeCd<=0){
+    if(CR.keys.left&&CR.lane>0){CR.lane--;CR._laneChangeCd=0.22;CR.vy=0;}
+    if(CR.keys.right&&CR.lane<2){CR.lane++;CR._laneChangeCd=0.22;CR.vy=0;}
+  }
+  const targetY=CR.laneY[CR.lane];
+  // Jump physics
+  const gravity=CR.ducking?3200:2200;
+  if(!CR.onGround){
+    CR.vy+=gravity*dt;
+    CR.playerY+=CR.vy*dt;
+    if(CR.playerY>=targetY){CR.playerY=targetY;CR.vy=0;CR.onGround=true;}
+  }else{
+    CR.playerY=targetY;
+    if(CR.keys.space&&CR.onGround)_crJump();
+  }
+
+  // Duck timer
+  if(CR.ducking){
+    CR.duckTimer-=dt;
+    if(CR.duckTimer<=0){CR.ducking=false;}
+  }
+  if(CR.keys.down&&!CR.ducking&&CR.onGround){CR.ducking=true;CR.duckTimer=0.55;}
+
+  // Spawn obstacles
+  _crSpawnTimer+=dt;
+  if(_crSpawnTimer>_crSpawnInterval*(0.7+Math.random()*0.6)){
+    _crSpawnObstacle();
+    _crSpawnTimer=0;
+    _crSpawnInterval=Math.max(0.9,_crSpawnInterval-0.01);
+  }
+
+  // Spawn power-ups
+  _crPowerupTimer+=dt;
+  if(_crPowerupTimer>_crPowerupInterval){
+    _crSpawnPowerup();
+    _crPowerupTimer=0;
+    _crPowerupInterval=6+Math.random()*6;
+  }
+
+  // Move obstacles
+  for(const o of CR.obstacles)o.x-=spd*dt;
+  CR.obstacles=CR.obstacles.filter(o=>o.x>-100&&!o.hit);
+
+  // Move power-ups
+  for(const p of CR.powerups)p.x-=spd*dt;
+  CR.powerups=CR.powerups.filter(p=>p.x>-60&&!p.collected);
+
+  // Move particles
+  for(const p of CR.particles){p.x+=p.vx*dt;p.y+=p.vy*dt;p.life-=dt;p.alpha=p.life/p.maxLife;}
+  CR.particles=CR.particles.filter(p=>p.life>0);
+
+  // Collision detection
+  const px=CR.playerX,py=CR.playerY;
+  const ph=CR.ducking?14:28,pw=22;
+  for(const o of CR.obstacles){
+    if(o.hit)continue;
+    const hit=px+pw/2>o.x&&px-pw/2<o.x+o.w&&py-ph/2<o.y+o.h/2&&py+ph/2>o.y-o.h/2;
+    if(hit){
+      if(_crShield>0){
+        o.hit=true;_crShield=0;
+        _crBurst(o.x+o.w/2,o.y,'#3b82f6',10);
+        logChat('[🛡️ Chart Rider] Shield absorbed the hit!',false,'#3b82f6');
+      }else{
+        o.hit=true;
+        _crTriggerLearn(o.patternKey||'fakeout_bull');
+        _crBurst(px,py,'#ef4444',12);
+      }
+    }
+  }
+
+  // Orb collection
+  for(const p of CR.powerups){
+    if(p.collected)continue;
+    const dist=Math.hypot(px-p.x,py-p.y);
+    if(dist<28){
+      p.collected=true;
+      _crCollectPowerup(p);
+    }
+  }
+
+  // Score update
+  CR.score=Math.floor(CR.distance*10*CR.multiplier);
+  document.getElementById('crScoreVal').textContent=CR.score.toLocaleString();
+}
+
+function _crJump(){
+  if(!CR.onGround)return;
+  CR.onGround=false;
+  CR.vy=-820;
+  _crBurst(CR.playerX,CR.playerY,'#38bdf8',5);
+}
+
+function _crSpawnObstacle(){
+  const lane=Math.floor(Math.random()*3);
+  const types=['fakeout_bull','fakeout_bear','resistance','support'];
+  const tIdx=Math.floor(Math.random()*types.length);
+  const type=types[tIdx];
+  const w=type==='resistance'?8:type==='support'?60:18;
+  const h=type==='resistance'?44:type==='support'?10:36;
+  const y=CR.laneY[lane]+(type==='support'?8:0);
+  CR.obstacles.push({type,x:CR.W+40,lane,w,h,y,hit:false,patternKey:type});
+}
+
+function _crSpawnPowerup(){
+  const types=['orb','orb','orb','ma','rsi','fib','bollinger'];
+  const type=types[Math.floor(Math.random()*types.length)];
+  const lane=Math.floor(Math.random()*3);
+  CR.powerups.push({type,x:CR.W+30,y:CR.laneY[lane]-20,lane,collected:false});
+}
+
+function _crCollectPowerup(p){
+  _crBurst(p.x,p.y,'#22c55e',8);
+  if(p.type==='orb'){
+    CR.orbs++;
+    CR.multiplier=Math.min(5.0,CR.multiplier+0.1);
+    CR.maxMultiplier=Math.max(CR.maxMultiplier,CR.multiplier);
+    _crLearnPopMini('volume_orb');
+  }else if(p.type==='ma'){
+    CR.chartSpeed=Math.min(500,CR.chartSpeed*1.25);
+    if(_crMaSpeedTid)clearTimeout(_crMaSpeedTid);
+    _crMaSpeedTid=setTimeout(()=>{CR.chartSpeed=Math.max(180,CR.chartSpeed/1.25);_crMaSpeedTid=null;},4000);
+    _crLearnPopMini('ma_crossover');
+    logChat('[⚡ Chart Rider] MA Crossover! Speed boost for 4s!',false,'#fbbf24');
+  }else if(p.type==='rsi'){
+    _crSlowMo=3;
+    _crLearnPopMini('rsi_div');
+    logChat('[🐢 Chart Rider] RSI Divergence! Slow-motion for 3s!',false,'#a78bfa');
+  }else if(p.type==='fib'){
+    _crFibJumps=3;
+    _crLearnPopMini('fib');
+    logChat('[🌀 Chart Rider] Fibonacci! Auto-jump x3!',false,'#2dd4bf');
+  }else if(p.type==='bollinger'){
+    _crShield=5;
+    _crLearnPopMini('bollinger');
+    logChat('[🛡️ Chart Rider] Bollinger Bands! Shield for 5s!',false,'#3b82f6');
+  }
+}
+
+function _crLearnPopMini(key){
+  // Brief auto-dismissing notification (non-blocking) — full learn only on crash
+}
+
+function _crTriggerLearn(patternKey){
+  CR.running=false;CR.phase='learn';
+  CR.learnPattern=patternKey;
+  const pat=PATTERNS[patternKey]||PATTERNS['fakeout_bull'];
+  document.getElementById('crLearnTitle').textContent=pat.title;
+  document.getElementById('crLearnBody').textContent=pat.body;
+  document.getElementById('crLearnPop').style.display='block';
+  _crDrawLearnMini(patternKey);
+}
+
+function _crDrawLearnMini(key){
+  const c=document.getElementById('crLearnCanvas');
+  if(!c)return;
+  c.width=c.parentElement.clientWidth||300;
+  const cx2=c.getContext('2d');
+  cx2.fillStyle='#0f172a';cx2.fillRect(0,0,c.width,c.height);
+  // Draw a simple mini chart
+  const w=c.width,h=c.height,pts=10;
+  cx2.strokeStyle='#38bdf8';cx2.lineWidth=2;cx2.beginPath();
+  for(let i=0;i<pts;i++){
+    const x=i*(w/pts)+w/pts/2;
+    const y=h*0.3+Math.sin(i*0.9)*h*0.25+(key==='fakeout_bull'&&i===pts-2?-h*0.2:0)+(key==='resistance'&&i>=6?h*0.15:0);
+    i===0?cx2.moveTo(x,y):cx2.lineTo(x,y);
+  }
+  cx2.stroke();
+  // Highlight specific pattern
+  if(key==='resistance'){cx2.strokeStyle='#ef4444';cx2.lineWidth=1.5;cx2.setLineDash([4,3]);cx2.beginPath();cx2.moveTo(0,h*0.38);cx2.lineTo(w,h*0.38);cx2.stroke();cx2.setLineDash([]);}
+  if(key==='support'){cx2.strokeStyle='#22c55e';cx2.lineWidth=1.5;cx2.setLineDash([4,3]);cx2.beginPath();cx2.moveTo(0,h*0.72);cx2.lineTo(w,h*0.72);cx2.stroke();cx2.setLineDash([]);}
+}
+
+function crContinueAfterLearn(){
+  document.getElementById('crLearnPop').style.display='none';
+  // Show result popup (crash = end of run)
+  _crShowResult();
+}
+window.crContinueAfterLearn=crContinueAfterLearn;
+
+function _crShowResult(){
+  CR.phase='result';
+  const prev=parseInt(localStorage.getItem('cr_best_score')||'0');
+  const isNew=CR.score>prev;
+  if(isNew){
+    localStorage.setItem('cr_best_score',CR.score);
+    document.getElementById('crBestVal').textContent=CR.score.toLocaleString();
+    document.getElementById('crGhostMsg').textContent='🏆 New personal best! Ghost saved!';
+    // Save ghost
+    const ghost={score:CR.score,distance:Math.floor(CR.distance),orbs:CR.orbs,asset:CR.asset,ts:Date.now()};
+    localStorage.setItem('cr_ghost',JSON.stringify(ghost));
+  }else{
+    document.getElementById('crGhostMsg').textContent=prev>0?'👻 Beat '+prev.toLocaleString()+' to set a new record!':'';
+  }
+  document.getElementById('crRDist').textContent=Math.floor(CR.distance)+' candles';
+  document.getElementById('crRScore').textContent=CR.score.toLocaleString();
+  document.getElementById('crROrbs').textContent=CR.orbs;
+  document.getElementById('crRMult').textContent=CR.maxMultiplier.toFixed(1)+'x';
+  document.getElementById('crResultSub').textContent='Asset: '+CR.asset+' · '+new Date().toLocaleTimeString();
+  document.getElementById('crResultPop').style.display='block';
+  // Award coins proportional to score
+  const bonus=Math.floor(CR.score/500);
+  if(bonus>0&&typeof S!=='undefined'){S.coins+=bonus;updateHUD();logChat('[🏄 Chart Rider] Run complete! +'+bonus+' coins earned.',false,'#fbbf24');saveProgress();}
+}
+
+function _crBurst(x,y,color,n){
+  for(let i=0;i<n;i++){
+    const a=Math.random()*Math.PI*2,spd=60+Math.random()*120;
+    CR.particles.push({x,y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd-80,life:0.4+Math.random()*0.3,maxLife:0.7,alpha:1,color,r:2+Math.random()*3});
+  }
+}
+
+/* ── Drawing ── */
+function _crDraw(){
+  const ctx=CR.ctx,W=CR.W,H=CR.H;
+  ctx.fillStyle='#080d18';ctx.fillRect(0,0,W,H);
+  _crDrawChart(ctx,W,H);
+  _crDrawLaneGuides(ctx,W,H);
+  _crDrawObstacles(ctx);
+  _crDrawPowerups(ctx);
+  _crDrawPlayer(ctx);
+  _crDrawParticles(ctx);
+  _crDrawHUD(ctx,W,H);
+}
+
+function _crDrawChart(ctx,W,H){
+  // Draw scrolling candlestick chart background
+  const candleW=28,candleGap=6;
+  const step=candleW+candleGap;
+  const startIdx=Math.floor(CR.chartOffset/step);
+  const offsetX=-(CR.chartOffset%step);
+  const priceRange=H*0.7;
+  const prices=CR.prices;
+  if(!prices.length)return;
+  // Find price range in visible candles
+  let pMin=Infinity,pMax=-Infinity;
+  for(let i=Math.max(0,startIdx-2);i<Math.min(prices.length,startIdx+Math.ceil(W/step)+3);i++){
+    pMin=Math.min(pMin,prices[i].l);pMax=Math.max(pMax,prices[i].h);
+  }
+  const pSpan=pMax-pMin||1;
+  const toY=(p)=>H*0.12+(H*0.76)*(1-(p-pMin)/pSpan);
+
+  // Background grid
+  ctx.strokeStyle='rgba(255,255,255,0.04)';ctx.lineWidth=1;
+  for(let ly=0.2;ly<0.9;ly+=0.2){ctx.beginPath();ctx.moveTo(0,H*ly);ctx.lineTo(W,H*ly);ctx.stroke();}
+
+  // Draw candles
+  for(let i=0;i<Math.ceil(W/step)+4;i++){
+    const idx=startIdx+i;
+    if(idx<0||idx>=prices.length)continue;
+    const x=i*step+offsetX;
+    const c=prices[idx];
+    const isBull=c.c>=c.o;
+    const color=isBull?'#0ecb81':'#f6465d';
+    const bodyTop=toY(Math.max(c.o,c.c));
+    const bodyH=Math.abs(toY(c.o)-toY(c.c))||2;
+    // Wick
+    ctx.strokeStyle=color;ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(x+candleW/2,toY(c.h));ctx.lineTo(x+candleW/2,toY(c.l));ctx.stroke();
+    // Body
+    ctx.fillStyle=color+(isBull?'cc':'aa');
+    ctx.fillRect(x+2,bodyTop,candleW-4,Math.max(2,bodyH));
+    // Volume bar at bottom
+    const volH=Math.floor(c.vol*22);
+    ctx.fillStyle=color+'44';ctx.fillRect(x+2,H-volH-4,candleW-4,volH);
+  }
+  // Extend prices array if running low
+  if(startIdx+Math.ceil(W/step)+10>CR.prices.length)_crGenPrices(40);
+}
+
+function _crDrawLaneGuides(ctx,W,H){
+  for(let l=0;l<3;l++){
+    const ly=CR.laneY[l];
+    ctx.strokeStyle='rgba(255,255,255,0.06)';ctx.lineWidth=1;ctx.setLineDash([6,8]);
+    ctx.beginPath();ctx.moveTo(0,ly+16);ctx.lineTo(W,ly+16);ctx.stroke();
+    ctx.setLineDash([]);
+  }
+}
+
+function _crDrawObstacles(ctx){
+  for(const o of CR.obstacles){
+    if(o.hit)continue;
+    const cx=o.x+o.w/2,cy=o.y;
+    if(o.type==='fakeout_bull'||o.type==='fakeout_bear'){
+      const isBull=o.type==='fakeout_bull';
+      ctx.fillStyle=isBull?'#0ecb8188':'#f6465d88';
+      ctx.fillRect(o.x,cy-o.h/2,o.w,o.h);
+      // Wick
+      ctx.strokeStyle=isBull?'#0ecb81':'#f6465d';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(cx,cy-o.h/2-16);ctx.lineTo(cx,cy+o.h/2+8);ctx.stroke();
+      // Warning label
+      ctx.fillStyle=isBull?'#0ecb81':'#f6465d';ctx.font='bold 10px monospace';
+      ctx.fillText(isBull?'FAKEOUT':'FAKEOUT',o.x-2,cy-o.h/2-20);
+    }else if(o.type==='resistance'){
+      // Vertical wall
+      const grad=ctx.createLinearGradient(o.x,0,o.x+o.w,0);
+      grad.addColorStop(0,'rgba(239,68,68,0)');
+      grad.addColorStop(0.3,'rgba(239,68,68,0.75)');
+      grad.addColorStop(1,'rgba(239,68,68,0.1)');
+      ctx.fillStyle=grad;ctx.fillRect(o.x,cy-o.h/2,o.w,o.h);
+      ctx.strokeStyle='#ef4444';ctx.lineWidth=1.5;ctx.setLineDash([3,3]);
+      ctx.beginPath();ctx.moveTo(o.x,cy-o.h/2);ctx.lineTo(o.x,cy+o.h/2);ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle='#fca5a5';ctx.font='9px monospace';ctx.fillText('RESIST',o.x+1,cy-o.h/2-6);
+    }else if(o.type==='support'){
+      // Horizontal floor
+      const grad=ctx.createLinearGradient(0,cy-5,0,cy+o.h+5);
+      grad.addColorStop(0,'rgba(34,197,94,0.6)');
+      grad.addColorStop(1,'rgba(34,197,94,0)');
+      ctx.fillStyle=grad;ctx.fillRect(o.x,cy-5,o.w,o.h+10);
+      ctx.strokeStyle='#22c55e';ctx.lineWidth=2;ctx.setLineDash([4,4]);
+      ctx.beginPath();ctx.moveTo(o.x,cy+5);ctx.lineTo(o.x+o.w,cy+5);ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle='#86efac';ctx.font='9px monospace';ctx.fillText('SUPPORT',o.x+4,cy-8);
+    }
+  }
+}
+
+function _crDrawPowerups(ctx){
+  for(const p of CR.powerups){
+    if(p.collected)continue;
+    const t=Date.now()/1000;
+    const hover=Math.sin(t*3+p.x)*5;
+    const y=p.y+hover;
+    if(p.type==='orb'){
+      // Volume orb — glowing blue sphere
+      const g=ctx.createRadialGradient(p.x,y,2,p.x,y,14);
+      g.addColorStop(0,'rgba(56,189,248,0.95)');g.addColorStop(0.6,'rgba(56,189,248,0.5)');g.addColorStop(1,'rgba(56,189,248,0)');
+      ctx.fillStyle=g;ctx.beginPath();ctx.arc(p.x,y,14,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#7dd3fc';ctx.font='bold 12px monospace';ctx.textAlign='center';
+      ctx.fillText('ORB',p.x,y+4);ctx.textAlign='left';
+    }else{
+      // Indicator power-up pill
+      const colors={ma:'#fbbf24',rsi:'#c084fc',fib:'#2dd4bf',bollinger:'#60a5fa'};
+      const labels={ma:'MA✕',rsi:'RSI',fib:'FIB',bollinger:'BB'};
+      const col=colors[p.type]||'#fbbf24';
+      ctx.fillStyle=col+'33';ctx.strokeStyle=col;ctx.lineWidth=2;
+      ctx.beginPath();ctx.roundRect(p.x-18,y-12,36,24,6);ctx.fill();ctx.stroke();
+      ctx.fillStyle=col;ctx.font='bold 11px monospace';ctx.textAlign='center';
+      ctx.fillText(labels[p.type]||p.type,p.x,y+4);ctx.textAlign='left';
+    }
+  }
+}
+
+function _crDrawPlayer(ctx){
+  const x=CR.playerX,y=CR.playerY;
+  const duck=CR.ducking;
+  // Shield glow
+  if(_crShield>0){
+    const g=ctx.createRadialGradient(x,y,8,x,y,34);
+    g.addColorStop(0,'rgba(59,130,246,0.3)');g.addColorStop(1,'rgba(59,130,246,0)');
+    ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,34,0,Math.PI*2);ctx.fill();
+  }
+  // Board (surfboard / vehicle)
+  const bW=duck?36:30,bH=duck?7:5;
+  ctx.fillStyle='#0ea5e9';ctx.beginPath();
+  ctx.ellipse(x,y+16,bW,bH,0,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='#38bdf8';ctx.lineWidth=1.5;ctx.beginPath();ctx.ellipse(x,y+16,bW,bH,0,0,Math.PI*2);ctx.stroke();
+  // Body
+  if(duck){
+    // Ducking: crouch
+    ctx.fillStyle='#fbbf24';ctx.fillRect(x-10,y-2,20,14);
+    ctx.fillStyle='#1e40af';ctx.fillRect(x-8,y+8,16,8);
+  }else{
+    // Standing: pixel character
+    ctx.fillStyle='#fbbf24';ctx.fillRect(x-6,y-28,12,10);// head
+    ctx.fillStyle='#1e40af';ctx.fillRect(x-8,y-18,16,16);// body
+    ctx.fillStyle='#fbbf24';ctx.fillRect(x-10,y-16,6,10);ctx.fillRect(x+4,y-16,6,10);// arms
+    ctx.fillStyle='#374151';ctx.fillRect(x-7,y-2,6,12);ctx.fillRect(x+1,y-2,6,12);// legs
+    // Eyes
+    ctx.fillStyle='#1e293b';ctx.fillRect(x-4,y-25,3,3);ctx.fillRect(x+1,y-25,3,3);
+    // Speed lines when fast
+    if(CR.chartSpeed>250){
+      ctx.strokeStyle='rgba(56,189,248,0.5)';ctx.lineWidth=1.5;
+      for(let i=0;i<3;i++){ctx.beginPath();ctx.moveTo(x-24-i*10,y-14+i*6);ctx.lineTo(x-36-i*10,y-14+i*6);ctx.stroke();}
+    }
+  }
+  // Jump trail
+  if(!CR.onGround){
+    ctx.strokeStyle='rgba(56,189,248,0.4)';ctx.lineWidth=2;ctx.setLineDash([3,5]);
+    ctx.beginPath();ctx.moveTo(x,CR.laneY[CR.lane]+16);ctx.lineTo(x,y+16);ctx.stroke();ctx.setLineDash([]);
+  }
+}
+
+function _crDrawParticles(ctx){
+  for(const p of CR.particles){
+    ctx.globalAlpha=p.alpha;
+    ctx.fillStyle=p.color;
+    ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();
+  }
+  ctx.globalAlpha=1;
+}
+
+function _crDrawHUD(ctx,W,H){
+  // Multiplier badge
+  if(CR.multiplier>1.0){
+    ctx.fillStyle='rgba(0,0,0,0.55)';
+    ctx.beginPath();ctx.roundRect(W-90,8,82,28,6);ctx.fill();
+    ctx.fillStyle='#fbbf24';ctx.font='bold 13px monospace';ctx.textAlign='right';
+    ctx.fillText(CR.multiplier.toFixed(1)+'x MULTI',W-10,27);ctx.textAlign='left';
+  }
+  // Shield indicator
+  if(_crShield>0){
+    ctx.fillStyle='rgba(59,130,246,0.8)';ctx.font='11px monospace';ctx.textAlign='center';
+    ctx.fillText('🛡️ SHIELD '+_crShield.toFixed(1)+'s',W/2,22);ctx.textAlign='left';
+  }
+  // Slow-mo indicator
+  if(_crSlowMo>0){
+    ctx.fillStyle='rgba(192,132,252,0.8)';ctx.font='11px monospace';ctx.textAlign='center';
+    ctx.fillText('🐢 SLOW-MO '+_crSlowMo.toFixed(1)+'s',W/2,38);ctx.textAlign='left';
+  }
+  // Fib jumps
+  if(_crFibJumps>0){
+    ctx.fillStyle='rgba(45,212,191,0.9)';ctx.font='11px monospace';ctx.textAlign='center';
+    ctx.fillText('🌀 AUTO-JUMP x'+_crFibJumps,W/2,((_crShield>0||_crSlowMo>0)?52:22));ctx.textAlign='left';
+  }
+  // Distance badge
+  ctx.fillStyle='rgba(0,0,0,0.5)';
+  ctx.beginPath();ctx.roundRect(8,8,140,28,6);ctx.fill();
+  ctx.fillStyle='#94a3b8';ctx.font='11px monospace';
+  ctx.fillText('📏 '+Math.floor(CR.distance)+' candles',14,26);
+  // Orb count
+  if(CR.orbs>0){
+    ctx.fillStyle='rgba(0,0,0,0.5)';ctx.beginPath();ctx.roundRect(8,42,90,24,6);ctx.fill();
+    ctx.fillStyle='#38bdf8';ctx.font='11px monospace';ctx.fillText('🔵 x'+CR.orbs,14,57);
+  }
+}
+
+/* ── Input bindings ── */
+function _crBindKeys(){
+  window.addEventListener('keydown',e=>{
+    if(!CR.running&&CR.phase!=='running')return;
+    if(e.code==='Space'){e.preventDefault();CR.keys.space=true;_crJump();}
+    if(e.code==='ArrowDown'||e.code==='KeyS'){e.preventDefault();CR.keys.down=true;}
+    if(e.code==='ArrowLeft'||e.code==='KeyA'){e.preventDefault();CR.keys.left=true;}
+    if(e.code==='ArrowRight'||e.code==='KeyD'){e.preventDefault();CR.keys.right=true;}
+  });
+  window.addEventListener('keyup',e=>{
+    if(e.code==='Space')CR.keys.space=false;
+    if(e.code==='ArrowDown'||e.code==='KeyS')CR.keys.down=false;
+    if(e.code==='ArrowLeft'||e.code==='KeyA')CR.keys.left=false;
+    if(e.code==='ArrowRight'||e.code==='KeyD')CR.keys.right=false;
+  });
+  // Canvas tap = jump
+  document.getElementById('crCanvas').addEventListener('pointerdown',e=>{
+    e.preventDefault();
+    if(CR.phase==='running'){_crJump();}
+  });
+}
+
+function _crBindMobile(){
+  function mkBtn(id,onDown,onUp){
+    const btn=document.getElementById(id);if(!btn)return;
+    btn.addEventListener('pointerdown',e=>{e.preventDefault();onDown&&onDown();},{passive:false});
+    btn.addEventListener('pointerup',e=>{e.preventDefault();onUp&&onUp();},{passive:false});
+    btn.addEventListener('pointercancel',e=>{e.preventDefault();onUp&&onUp();},{passive:false});
+  }
+  mkBtn('crBtnJump',()=>{CR.keys.space=true;_crJump();},()=>{CR.keys.space=false;});
+  mkBtn('crBtnDuck',()=>{CR.keys.down=true;},()=>{CR.keys.down=false;});
+  mkBtn('crBtnLeft',()=>{CR.keys.left=true;},()=>{CR.keys.left=false;});
+  mkBtn('crBtnRight',()=>{CR.keys.right=true;},()=>{CR.keys.right=false;});
+}
+
+/* ── Public entry/exit ── */
+window.enterChartRider=function(){
+  const ov=document.getElementById('chartRiderOv');
+  ov.style.display='flex';
+  CR.ghostBest=parseInt(localStorage.getItem('cr_best_score')||'0');
+  CR.totalRuns=parseInt(localStorage.getItem('cr_total_runs')||'0');
+  document.getElementById('crBestVal').textContent=CR.ghostBest.toLocaleString();
+  crInit();
+  crResize();
+  // Show result/start screen first
+  CR.score=0;CR.distance=0;CR.orbs=0;CR.multiplier=1.0;CR.maxMultiplier=1.0;
+  document.getElementById('crRDist').textContent='—';
+  document.getElementById('crRScore').textContent='Start your first run!';
+  document.getElementById('crROrbs').textContent='—';
+  document.getElementById('crRMult').textContent='—';
+  document.getElementById('crGhostMsg').textContent=CR.ghostBest>0?'👻 Beat your ghost: '+CR.ghostBest.toLocaleString():'';
+  document.getElementById('crResultSub').textContent='Choose an asset and ride the chart!';
+  document.getElementById('crResultPop').style.display='block';
+  logChat('[🏄 Chart Rider] Welcome to Chart Rider 2.0! Ride the chart, dodge patterns, collect orbs!',false,'#38bdf8');
+};
+
+window.exitChartRider=function(){
+  CR.running=false;CR.phase='idle';
+  if(CR.raf){cancelAnimationFrame(CR.raf);CR.raf=null;}
+  if(_crMaSpeedTid){clearTimeout(_crMaSpeedTid);_crMaSpeedTid=null;}
+  document.getElementById('chartRiderOv').style.display='none';
+  document.getElementById('crResultPop').style.display='none';
+  document.getElementById('crLearnPop').style.display='none';
+  // Reset keys
+  CR.keys={space:false,down:false,left:false,right:false};
+  logChat('[🏄 Chart Rider] Thanks for riding! Back to Industrial City.',false,'#fbbf24');
+};
+
+// Handle resize
+window.addEventListener('resize',()=>{
+  if(document.getElementById('chartRiderOv').style.display!=='none')crResize();
+});
+
+})(); // end Chart Rider IIFE
+
 })();
 </script>
+<!-- ── Chart Rider 2.0 Overlay ── -->
+<div id="chartRiderOv">
+  <div id="crHeader">
+    <span class="crTitle">🏄 Chart Rider 2.0</span>
+    <span class="crScore">
+      <span id="crAssetLabel" style="color:#38bdf8;margin-right:10px;">BTC</span>
+      <span style="color:#64748b;margin-right:4px;">Score</span><span id="crScoreVal">0</span>
+      <span style="color:#64748b;margin-left:10px;margin-right:4px;">Best</span><span id="crBestVal">0</span>
+    </span>
+    <button class="crExit" onclick="exitChartRider()">✕ Exit</button>
+  </div>
+  <div style="position:relative;flex:1;display:flex;flex-direction:column;">
+    <canvas id="crCanvas"></canvas>
+    <!-- Mobile controls -->
+    <div id="crMobileCtrl">
+      <button class="crMBtn" id="crBtnLeft"  style="transform:translateY(0);">◄</button>
+      <button class="crMBtn" id="crBtnJump"  style="background:rgba(14,165,233,.3);">▲</button>
+      <button class="crMBtn" id="crBtnRight">►</button>
+      <button class="crMBtn" id="crBtnDuck"  style="width:108px;font-size:16px;background:rgba(251,191,36,.18);">▼ Duck</button>
+    </div>
+    <!-- Learn popup -->
+    <div id="crLearnPop">
+      <h3 id="crLearnTitle">📊 Pattern Detected</h3>
+      <p id="crLearnBody">You hit a fakeout candle!</p>
+      <div id="crLearnMini" style="width:100%;height:70px;background:rgba(255,255,255,.04);border-radius:8px;margin-bottom:10px;overflow:hidden;"><canvas id="crLearnCanvas" width="300" height="70"></canvas></div>
+      <div class="crLCont">
+        <button class="btnCont" onclick="crContinueAfterLearn()">▶ Continue</button>
+        <button class="btnSkip" onclick="crContinueAfterLearn()">Skip</button>
+      </div>
+    </div>
+    <!-- Result popup -->
+    <div id="crResultPop">
+      <h2>🏁 Run Complete!</h2>
+      <p id="crResultSub" style="color:#64748b;font-size:12px;margin:0;"></p>
+      <div class="crRStats">
+        <div class="crRStat"><div class="label">Distance</div><div class="val" id="crRDist">0</div></div>
+        <div class="crRStat"><div class="label">Score</div><div class="val" id="crRScore">0</div></div>
+        <div class="crRStat"><div class="label">Orbs</div><div class="val" id="crROrbs">0</div></div>
+        <div class="crRStat"><div class="label">Max Multiplier</div><div class="val" id="crRMult">1.0x</div></div>
+      </div>
+      <div id="crGhostMsg" style="font-size:11px;color:#22c55e;margin-bottom:8px;"></div>
+      <div class="crRBtns">
+        <button style="background:linear-gradient(90deg,#0ea5e9,#2563eb);color:#fff;" onclick="crStartRun()">🔄 Play Again</button>
+        <button style="background:rgba(100,116,139,.3);color:#94a3b8;" onclick="exitChartRider()">🏙️ Return to City</button>
+      </div>
+      <!-- Asset selector -->
+      <div style="margin-top:12px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+        <button class="crAssetBtn" data-asset="BTC"  onclick="crSetAsset('BTC')" style="font-size:11px;padding:4px 10px;border-radius:99px;background:rgba(251,191,36,.2);border:1px solid rgba(251,191,36,.4);color:#fbbf24;cursor:pointer;">₿ BTC</button>
+        <button class="crAssetBtn" data-asset="ETH"  onclick="crSetAsset('ETH')" style="font-size:11px;padding:4px 10px;border-radius:99px;background:rgba(99,102,241,.2);border:1px solid rgba(99,102,241,.4);color:#a78bfa;cursor:pointer;">Ξ ETH</button>
+        <button class="crAssetBtn" data-asset="SOL"  onclick="crSetAsset('SOL')" style="font-size:11px;padding:4px 10px;border-radius:99px;background:rgba(20,184,166,.2);border:1px solid rgba(20,184,166,.4);color:#2dd4bf;cursor:pointer;">◎ SOL</button>
+        <button class="crAssetBtn" data-asset="MOGA" onclick="crSetAsset('MOGA')" style="font-size:11px;padding:4px 10px;border-radius:99px;background:rgba(14,203,129,.2);border:1px solid rgba(14,203,129,.4);color:#10b981;cursor:pointer;">◈ MOGA</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Farcaster Mini App SDK: signal ready() so the client dismisses its loading splash -->
 <script type="module">
   (async () => {
