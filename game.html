@@ -92,10 +92,11 @@ kbd{padding:1px 4px;border-radius:4px;border:1px solid rgba(255,255,255,.22);bac
 #loadingFill{height:100%;width:0%;background:linear-gradient(90deg,#fbbf24,#f59e0b);border-radius:3px;transition:width .4s ease;}
 @keyframes loadingSpin{to{transform:rotate(360deg)}}
 #errOv{position:absolute;left:6px;bottom:170px;/* above D-pad: 14px+150px+6px */z-index:150;background:rgba(0,0,0,.75);border:1px solid rgba(255,100,100,.3);border-radius:8px;padding:8px 10px;max-width:calc(100% - 12px);display:none;white-space:pre-wrap;font-size:11px;color:#fecaca;pointer-events:none;}
-#minimap{position:absolute;right:6px;top:6px;width:170px;height:188px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.16);border-radius:10px;z-index:50;padding:7px;box-sizing:border-box;user-select:none;pointer-events:none;}
+#minimap{position:absolute;right:6px;top:6px;width:170px;min-height:188px;height:auto;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.16);border-radius:10px;z-index:50;padding:7px;box-sizing:border-box;user-select:none;pointer-events:none;}
 #minimap .mmtitle{font-size:10px;opacity:.9;display:flex;justify-content:space-between;margin-bottom:5px;}
-#minimap canvas{width:100%;height:calc(100% - 34px);border-radius:7px;background:rgba(15,23,42,.35);border:1px solid rgba(255,255,255,.08);image-rendering:pixelated;}
+#minimap canvas{width:100%;height:128px;border-radius:7px;background:rgba(15,23,42,.35);border:1px solid rgba(255,255,255,.08);image-rendering:pixelated;}
 #mmclock{margin-top:5px;font-size:10px;opacity:.82;display:flex;justify-content:space-between;}
+#mmLegend{margin-top:5px;display:grid;grid-template-columns:1fr 1fr;gap:2px 6px;font-size:8.5px;color:rgba(255,255,255,.75);line-height:1.5;}
 #onlineBar{position:absolute;left:6px;top:6px;z-index:51;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.16);border-radius:8px;padding:5px 10px;font-size:11px;pointer-events:none;}
 #sleepOv{position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(2,6,23,.9);z-index:500;display:none;align-items:center;justify-content:center;flex-direction:column;}
 #sleepOv .zz{font-size:56px;}
@@ -189,6 +190,7 @@ kbd{padding:1px 4px;border-radius:4px;border:1px solid rgba(255,255,255,.22);bac
       <div class="mmtitle"><span id="mmLoc">CITY</span><span id="mmTgt" style="opacity:.8;">—</span></div>
       <canvas id="mmC" width="128" height="128"></canvas>
       <div id="mmclock"><span id="tod">Day</span><span id="timeTxt">06:00</span></div>
+      <div id="mmLegend"></div>
     </div>
     <div id="sleepOv">
       <div class="zz">😴</div>
@@ -2284,7 +2286,7 @@ function spawnNPCBots(scene){
     const img=scene.add.image(0,0,npcTex).setScale(1.1).setOrigin(.5,.78);
     const lbl=scene.add.text(-18,-34,NPC_NAMES[i%NPC_NAMES.length],{fontSize:'9px',color:isCeleb?'#fbbf24':'#94a3b8',fontStyle:isCeleb?'bold':''});
     cont.add([img,lbl]);
-    npcBots.push({obj:cont,tx:sx,ty:sy,speed:50+Math.random()*60,wait:Math.random()*4,standby:isStandby,standbyCity:1,standbyIdx});
+    npcBots.push({obj:cont,img,tx:sx,ty:sy,speed:50+Math.random()*60,wait:Math.random()*4,standby:isStandby,standbyCity:1,standbyIdx,_walkTick:Math.random()*10});
   }
 }
 
@@ -2311,6 +2313,8 @@ function updateNPCBots(dtS){
     }
     bot.obj.setVisible(true);
     if(bot.wait>0){bot.wait-=dtS;
+      // Idle breathing for waiting NPCs
+      if(bot.img){bot._breathTick=(bot._breathTick||0)+dtS*0.9;const breathe=Math.sin(bot._breathTick*Math.PI*2)*0.7;bot.img.y=breathe;bot.img.setScale(1.1,1.1);}
       if(bot.wait<=0){
         // Pick new target: prefer road tiles for realism
         const r=Math.random();
@@ -2338,6 +2342,15 @@ function updateNPCBots(dtS){
       for(const other of npcBots){if(other===bot||other.standby)continue;if(Math.hypot(nx-other.obj.x,ny-other.obj.y)<TILE){botCollide=true;break;}}
       if(botCollide){bot.tx=bot.obj.x;bot.ty=bot.obj.y;bot.wait=0.5+Math.random();continue;}
       bot.obj.x=nx;bot.obj.y=ny;
+      // Walking bob animation
+      bot._walkTick=(bot._walkTick||0)+0.18;
+      if(bot.img){
+        const bob=Math.sin(bot._walkTick*Math.PI*2)*2.2;
+        bot.img.y=bob-1;
+        if(dx<-1)bot.img.setFlipX(true);else if(dx>1)bot.img.setFlipX(false);
+        const sq=1+Math.sin(bot._walkTick*Math.PI*2)*0.035;
+        bot.img.setScale(1.1/sq,1.1*sq);
+      }
     }
   }
 }
@@ -4084,6 +4097,23 @@ function drawCity2(scene){
   _waveGfx=scene.add.graphics().setDepth(1);worldCont.add(_waveGfx);
   // Labels
   worldCont.add(scene.add.text(9.5*TILE,7*TILE,'⛰️\nMount\nMoga',{fontSize:'13px',color:'#f1f5f9',align:'center',fontStyle:'bold',backgroundColor:'rgba(0,0,0,.5)',padding:{x:5,y:4}}).setOrigin(.5).setDepth(5));
+  // ── Hollywood-style sign on the mountain face ──
+  {const hwGr=scene.add.graphics().setDepth(6);
+  const hwLetters='HOLLYWOOD';const hwLx=2.2*TILE,hwLy=9.5*TILE,hwLW=1.3*TILE,hwLH=2.1*TILE,hwLSp=0.28*TILE;
+  for(let i=0;i<hwLetters.length;i++){
+    const lx=hwLx+i*(hwLW+hwLSp);
+    // White letter board with shadow
+    hwGr.fillStyle(0x111827,0.7);hwGr.fillRect(lx+3,hwLy+3,hwLW,hwLH);
+    hwGr.fillStyle(0xf8fafc,1);hwGr.fillRect(lx,hwLy,hwLW,hwLH);
+    hwGr.fillStyle(0xe2e8f0,0.4);hwGr.fillRect(lx,hwLy,hwLW,4);
+    // Support pole
+    hwGr.fillStyle(0x78716c,1);hwGr.fillRect(lx+hwLW/2-2,hwLy+hwLH,4,TILE*0.9);
+  }
+  worldCont.add(hwGr);
+  for(let i=0;i<hwLetters.length;i++){
+    const lx=hwLx+i*(hwLW+hwLSp);
+    worldCont.add(scene.add.text(lx+hwLW/2,hwLy+hwLH*0.52,hwLetters[i],{fontSize:'20px',color:'#1e293b',fontStyle:'bold'}).setOrigin(.5,.5).setDepth(7));
+  }}
   worldCont.add(scene.add.text(15*TILE,19*TILE,'💦\nWaterfall',{fontSize:'10px',color:'#bae6fd',align:'center',backgroundColor:'rgba(0,0,0,.4)',padding:{x:3,y:2}}).setOrigin(.5).setDepth(5));
   // Train stop markers near key venues
   for(const wp of TRAIN_WAYPOINTS){
@@ -4656,17 +4686,42 @@ function drawMM(pos){
         // Occupied house — tiny grey dot
         mmCtx2.fillStyle='rgba(148,163,184,.5)';mmCtx2.fillRect((mx-1)|0,(my-1)|0,2,2);
       }else{
-        // Other key buildings — tiny colored dots
-        const col=b.key==='Hospital'?'#f87171':b.key==='School'?'#60a5fa':b.key==='Bank'?'#a3e635':b.key==='Hotel'?'#a78bfa':'rgba(203,213,225,.4)';
-        mmCtx2.fillStyle=col;mmCtx2.fillRect((mx-1.5)|0,(my-1.5)|0,3,3);
+        // Other key buildings — distinct colored dots per type
+        const bk=b.key.replace(/ C[123]$|C[123]-\d+$/,'');
+        const col=bk.startsWith('Hospital')?'#f87171':bk.startsWith('School')?'#60a5fa':bk.startsWith('Bank')?'#a3e635':bk.startsWith('Hotel')?'#a78bfa':bk.startsWith('Casino')?'#e879f9':bk.startsWith('Market')?'#fb923c':bk.startsWith('Job Center')?'#38bdf8':bk.startsWith('Cafe')?'#fde68a':bk.startsWith('Airport')?'#67e8f9':bk.startsWith('Hollywood')?'#fbbf24':bk.startsWith('Zoo')?'#86efac':bk.startsWith('Factory')||bk.startsWith('Steel')||bk.startsWith('Power')||bk.startsWith('Chemical')?'#94a3b8':'rgba(203,213,225,.5)';
+        mmCtx2.fillStyle=col;mmCtx2.fillRect((mx-2)|0,(my-2)|0,4,4);
+        // Tiny outline for clarity
+        mmCtx2.strokeStyle='rgba(0,0,0,.5)';mmCtx2.lineWidth=0.5;mmCtx2.strokeRect((mx-2)|0,(my-2)|0,4,4);
       }
     }
-    // Draw minimap legend hint
+    // Draw minimap legend hint on canvas (compact)
+    mmCtx2.font='6px sans-serif';mmCtx2.textAlign='left';
     if(myHouseKey||myWorkBldg){
-      mmCtx2.font='6px sans-serif';mmCtx2.fillStyle='rgba(255,255,255,.5)';
       let ly=mmCanvas.height-2;
       if(myWorkBldg){mmCtx2.fillStyle='#4ade80';mmCtx2.fillRect(2,ly-5,5,5);mmCtx2.fillStyle='rgba(255,255,255,.5)';mmCtx2.fillText('Work',9,ly);ly-=8;}
       if(myHouseKey){mmCtx2.fillStyle='#fbbf24';mmCtx2.beginPath();mmCtx2.arc(4.5,ly-2,3,0,Math.PI*2);mmCtx2.fill();mmCtx2.fillStyle='rgba(255,255,255,.5)';mmCtx2.fillText('Home',9,ly);}
+    }
+    // Populate building legend div
+    const _lg=document.getElementById('mmLegend');
+    if(_lg&&drawMM._lastLegendCity!==currentCity){
+      drawMM._lastLegendCity=currentCity;
+      const _items=[
+        {col:'#f87171',  icon:'🏥', label:'Hospital'},
+        {col:'#60a5fa',  icon:'🏫', label:'School'},
+        {col:'#a3e635',  icon:'🏦', label:'Bank'},
+        {col:'#a78bfa',  icon:'🏨', label:'Hotel'},
+        {col:'#e879f9',  icon:'🎰', label:'Casino'},
+        {col:'#fb923c',  icon:'🛒', label:'Market'},
+        {col:'#38bdf8',  icon:'💼', label:'Job Center'},
+        {col:'#fde68a',  icon:'☕', label:'Cafe'},
+        {col:'#67e8f9',  icon:'✈️', label:'Airport'},
+        {col:'#fbbf24',  icon:'🎬', label:'Hollywood'},
+        {col:'#86efac',  icon:'🦁', label:'Zoo'},
+        {col:'#94a3b8',  icon:'🏭', label:'Factory'},
+        {col:'#fbbf24',  icon:'🏠', label:'My Home'},
+        {col:'#4ade80',  icon:'💼', label:'My Work'},
+      ];
+      _lg.innerHTML=_items.map(it=>`<span style="display:flex;align-items:center;gap:3px;"><span style="display:inline-block;width:7px;height:7px;background:${it.col};border-radius:1px;flex-shrink:0;"></span>${it.icon}${it.label}</span>`).join('');
     }
     // Draw announcement board markers on minimap
     const activeIacts=currentCity===3?IACTS3:currentCity===2?IACTS2:IACTS;
@@ -6424,6 +6479,24 @@ const phaserCfg={
         }else if(!blocked(cx,cy,activeTiles)){this.me.x=cx;this.me.y=cy;}
         else{if(!blocked(cx,this.me.y,activeTiles))this.me.x=cx;if(!blocked(this.me.x,cy,activeTiles))this.me.y=cy;}
       }else{this.me.x=clamp(nx,20,IW*TILE-20);this.me.y=clamp(ny,20,IH*TILE-20);}
+      // ── Stylized player walking/breathing animation ──
+      if(_playerImg&&!playerDrivingCar){
+        const isWalking=(vx||vy)&&!trainState.passengerBoarded&&!boatState.passengerBoarded;
+        if(isWalking){
+          this._walkTick=(this._walkTick||0)+dt*0.006;
+          const bob=Math.sin(this._walkTick*Math.PI*2)*2.5;
+          _playerImg.y=bob-2;
+          _playerImg.setAngle(vx*3);
+          if(vx<0)_playerImg.setFlipX(true);else if(vx>0)_playerImg.setFlipX(false);
+          const sq=1+Math.sin(this._walkTick*Math.PI*2)*0.04;
+          _playerImg.setScale(1.3/sq,1.3*sq);
+        }else{
+          this._breathTick=(this._breathTick||0)+dt*0.001;
+          _playerImg.y=Math.sin(this._breathTick*Math.PI*2)*0.8;
+          _playerImg.setAngle(0);
+          _playerImg.setScale(1.3,1.3);
+        }
+      }
       /* Energy/fuel drain logic:
          - Riding train: no energy drain (transit is free)
          - Driving car: fuel drains instead of energy
