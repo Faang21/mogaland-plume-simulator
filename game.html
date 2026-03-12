@@ -906,6 +906,54 @@ function sellCarNFT(){
 }
 window.sellCarNFT=sellCarNFT;
 
+/* ── Motor (Motorcycle) NFT System ── */
+const MOTOR_NFT_PRICE=30;    // $30 USD to buy a motor NFT
+const MOTOR_NFT_KEY='mogaMotorOwnership_v1';
+const MOTOR_TYPES=[
+  {id:'motor1',name:'City Scooter',icon:'🛵',color:0x22c55e,speed:220,tex:'motor_green'},
+  {id:'motor2',name:'Sport Bike',  icon:'🏍️',color:0xef4444,speed:260,tex:'motor_red'},
+  {id:'motor3',name:'Cruiser',     icon:'🏍️',color:0x3b82f6,speed:230,tex:'motor_blue'},
+];
+let motorOwnership={};
+function loadMotorOwnership(){
+  try{const r=localStorage.getItem(MOTOR_NFT_KEY);if(r){motorOwnership=JSON.parse(r);return;}}catch{}
+  motorOwnership={};saveMotorOwnership();
+}
+function saveMotorOwnership(){try{localStorage.setItem(MOTOR_NFT_KEY,JSON.stringify(motorOwnership));}catch{}}
+function getMyMotorId(){
+  if(!walletAddress)return null;
+  return Object.keys(motorOwnership).find(k=>motorOwnership[k]&&motorOwnership[k].owner===walletAddress.toLowerCase())||null;
+}
+function buyMotorNFT(motorId){
+  if(!walletAddress)return logChat('[Motor] Connect wallet first.',false,'#f87171');
+  if(getMyMotorId())return logChat('[Motor] You already own a motor. Sell it first.',false,'#f87171');
+  if(motorOwnership[motorId]&&motorOwnership[motorId].owner)return logChat('[Motor] This motor is already owned.',false,'#f87171');
+  if(S.coins<MOTOR_NFT_PRICE)return logChat('[Motor] Need $'+MOTOR_NFT_PRICE+' USD. You have $'+S.coins+'.',false,'#f87171');
+  S.coins-=MOTOR_NFT_PRICE;
+  motorOwnership[motorId]={owner:walletAddress.toLowerCase(),forSale:false,price:0};
+  saveMotorOwnership();updateHUD();renderBuildingPanel();
+  const mt=MOTOR_TYPES.find(m=>m.id===motorId);
+  logChat('[🛵 Motor NFT] 🎉 Bought: '+(mt?mt.name:motorId)+'! Ride your motor in all 3 cities.',false,'#22c55e');
+  awardNFT('Motor NFT: '+(mt?mt.name:motorId)+' — registered to your wallet');
+  treasuryPay('MOTOR_BUY:'+motorId+':$'+MOTOR_NFT_PRICE+'USD',MOTOR_NFT_PRICE);
+  saveProgress();
+  if(_phaserScene)drawCity(_phaserScene);
+}
+window.buyMotorNFT=buyMotorNFT;
+function sellMotorNFT(){
+  const myId=getMyMotorId();
+  if(!myId)return logChat('[Motor] You don\'t own a motor.',false,'#f87171');
+  const sellPrice=Math.floor(MOTOR_NFT_PRICE*0.6);
+  motorOwnership[myId]={owner:null,forSale:true,price:MOTOR_NFT_PRICE};
+  saveMotorOwnership();S.coins+=sellPrice;
+  updateHUD();renderBuildingPanel();
+  logChat('[Motor] Sold your motor for $'+sellPrice+' USD.',false,'#fbbf24');
+  rewardFromTreasury('MOTOR_SELL:'+myId,sellPrice);
+  if(_phaserScene)drawCity(_phaserScene);
+  saveProgress();
+}
+window.sellMotorNFT=sellMotorNFT;
+
 /* ── Per-user house color ── */
 function getHouseColorByOwner(addr){
   const colors=[
@@ -1102,6 +1150,7 @@ function renderBuildingPanel(){
   if(WS.outdoor==='Farm'){panel.style.display='block';panel.innerHTML=renderFarm();return;}
   if(WS.outdoor&&WS.outdoor.startsWith('HousePlot:')){panel.style.display='block';panel.innerHTML=renderHousePlot(WS.outdoor.slice(10));return;}
   if(WS.outdoor==='CarShop'){panel.style.display='block';renderCarShop();return;}
+  if(WS.outdoor==='MotorShop'){panel.style.display='block';renderMotorShop();return;}
   if(WS.outdoor==='Waterfall'){panel.style.display='block';panel.innerHTML=`<strong>💦 Waterfall</strong><div style="font-size:11px;color:#7dd3fc;margin:5px 0;">Natural wonder near Mount Moga. +15 energy when visited.</div><button onclick="closeOutdoor()" class="ibtn btn-blue" style="width:100%;margin-top:5px;">Close</button>`;return;}
   if(WS.outdoor==='Boat'){panel.style.display='block';panel.innerHTML=renderBoat();return;}
   if(WS.outdoor==='GasStation'){panel.style.display='block';panel.innerHTML=renderGasStation();return;}
@@ -1593,23 +1642,25 @@ function renderGasStation(){
   const cost=Math.max(1,Math.ceil(needed*0.5));
   const fuelPct=Math.round((S.fuel/S.fuelMax)*100);
   return`<strong>⛽ Gas Station — Moga Fuel</strong>
-<div style="font-size:11px;color:#94a3b8;margin:5px 0;">Fill up your car's fuel tank · $0.50 per unit</div>
+<div style="font-size:11px;color:#94a3b8;margin:5px 0;">Fill up your car or motor fuel tank · $0.50 per unit</div>
 <div style="font-size:12px;margin:5px 0;">⛽ Fuel: <b>${Math.round(S.fuel)}/${S.fuelMax}</b> (${fuelPct}%)</div>
 <div class="ebar" style="margin:4px 0;"><div style="width:${fuelPct}%;height:100%;background:rgba(251,191,36,.8);border-radius:999px;transition:width .2s;"></div></div>
 <button onclick="fillFuel()" ${!canFill||S.coins<1?'disabled':''} class="ibtn btn-yellow" style="width:100%;margin-top:8px;padding:8px;">⛽ Fill Tank (-$${canFill?cost:0} USD)</button>
+${getMyMotorId()?`<button onclick="driveMyMotor()" class="ibtn btn-green" style="width:100%;margin-top:4px;">${playerRidingMotor?'🅿️ Park Motor':'🛵 Ride My Motor'}</button>`:''}
 <button onclick="closeOutdoor()" style="width:100%;margin-top:5px;padding:6px;border-radius:6px;background:rgba(100,116,139,.3);color:#94a3b8;border:1px solid rgba(255,255,255,.1);font-size:11px;cursor:pointer;">Close ✕</button>`;
 }
 window.renderGasStation=renderGasStation;
 
 function fillFuel(){
-  if(!getMyCarId())return logChat('[⛽] You need a car first! Buy a Car NFT.',false,'#f87171');
+  if(!getMyCarId()&&!getMyMotorId())return logChat('[⛽] You need a car or motor first!',false,'#f87171');
   const needed=S.fuelMax-S.fuel;
   if(needed<=0)return logChat('[⛽] Tank is already full!',false,'#fbbf24');
   const cost=Math.max(1,Math.ceil(needed*0.5));
   if(S.coins<cost)return logChat('[⛽] Need $'+cost+' USD. You have $'+S.coins+'.',false,'#f87171');
   S.coins-=cost;S.fuel=S.fuelMax;
   updateHUD();renderBuildingPanel();
-  treasuryPay('FUEL_FILL:'+Math.round(needed)+'L',cost);
+  const vType=getMyCarId()?'CAR':'MOTOR';
+  treasuryPay('FUEL_FILL:'+vType+':'+Math.round(needed)+'L',cost);
   logChat('[⛽ Gas Station] Tank filled! ⛽ '+Math.round(S.fuel)+'/'+S.fuelMax+' · -$'+cost+' USD',false,'#fbbf24');
   saveProgress();
 }
@@ -2725,6 +2776,7 @@ const IACTS=[
   {key:'Vendor', tex:'vendor',ts:1.7,x:22*TILE,y:32*TILE,w:2*TILE,h:2*TILE},
   {key:'River',  tex:'vend', ts:1.4,x:68*TILE,y:14*TILE,w:2*TILE,h:2*TILE},
   {key:'Announcement Board',tex:'bBulletin',ts:1.8,x:24*TILE,y:14*TILE,w:2*TILE,h:2*TILE,isAnnouncement:true},
+  {key:'Motor Shop',tex:'vend',ts:1.5,x:50*TILE,y:28*TILE,w:2*TILE,h:2*TILE},
 ];
 
 /* ── City 2 — Coastal City buildings ── */
@@ -2777,6 +2829,7 @@ const IACTS2=[
   {key:'Announcement Board C2',tex:'bBulletin',ts:1.8,x:50*TILE,y:7*TILE,w:2*TILE,h:2*TILE,isAnnouncement:true},
   /* Ferris Wheel / Bianglala — interactive beach attraction */
   {key:'Bianglala',  tex:'vend', ts:1.0, x:FERRIS_X-2*TILE,y:FERRIS_Y-2*TILE,w:4*TILE,h:4*TILE,isFerris:true},
+  {key:'Motor Shop C2',tex:'vend',ts:1.5,x:70*TILE,y:12*TILE,w:2*TILE,h:2*TILE},
 ];
 
 /* ── City 3 — Industrial City buildings ── */
@@ -2821,6 +2874,7 @@ const IACTS3=[
   {key:'Bus Stop West',     tex:'vend',  ts:1.0, x:6*TILE, y:28*TILE,w:2*TILE,h:2*TILE},
   {key:'Bus Stop East',     tex:'vend',  ts:1.0, x:88*TILE,y:28*TILE,w:2*TILE,h:2*TILE},
   {key:'Announcement Board C3',tex:'bBulletin',ts:1.8,x:44*TILE,y:16*TILE,w:2*TILE,h:2*TILE,isAnnouncement:true},
+  {key:'Motor Shop C3',     tex:'vend',  ts:1.5, x:76*TILE,y:14*TILE,w:2*TILE,h:2*TILE},
 ];
 
 /* ── City tiles ── */
@@ -3073,6 +3127,18 @@ function drawInteriorTiles(scene,intr,cont){
 function add(scene,cont,tx,ty,key,sc=1.1,dp=20){
   const spr=scene.add.image((tx+.5)*TILE,(ty+.5)*TILE,key).setScale(sc).setDepth(dp);
   cont.add(spr);
+  // ── Clickable bed: click to sleep ──
+  if(key==='fBed'){
+    spr.setInteractive({useHandCursor:true});
+    spr.on('pointerdown',()=>{
+      const bk=WS.key||'';
+      if(bk.startsWith('Hotel')){
+        sleepAtHotel();
+      }else{
+        sleepAtHome();
+      }
+    });
+  }
   // ── Ronin-style auto-animations for interior items ──
   if(key==='fPlant'){
     scene.tweens.add({targets:spr,scaleX:sc*1.05,angle:3,duration:1800+Math.floor(Math.random()*600),yoyo:true,repeat:-1,ease:'Sine.easeInOut',delay:Math.floor(Math.random()*800)});
@@ -3742,6 +3808,16 @@ function drawCity1(scene){
     worldCont.add(scene.add.text(ap.x+ap.w/2,ap.y-20,'✈️ Welcome to Moga City!',{fontSize:'12px',color:'#fbbf24',fontStyle:'bold',backgroundColor:'rgba(0,0,0,.55)',padding:{x:7,y:4}}).setOrigin(.5,1).setDepth(6));
   }}
   redrawFarmPlots();
+  // Player's motor (parked if not riding) — City 1 parking
+  {const myMotorId=getMyMotorId();
+  if(myMotorId){
+    const mt=MOTOR_TYPES.find(m=>m.id===myMotorId);
+    const mx=50*TILE+TILE/2,my=28*TILE+TILE/2;
+    if(!playerMotorSprite||!playerMotorSprite.active){
+      playerMotorSprite=scene.add.image(mx,my,mt&&mt.tex?mt.tex:'motor_green').setOrigin(.5).setDepth(6).setScale(1.4);
+    }else playerMotorSprite.setPosition(mx,my);
+    worldCont.add(playerMotorSprite);
+  }}
 }
 
 /* ── Current city state ── */
@@ -4013,8 +4089,10 @@ const PARKING_SPOTS_C2=[
 ];
 let _carSprites={};
 let playerDrivingCar=false;
+let playerRidingMotor=false;
 let _treeTileSet=new Set(); // tracks tile positions (ty*CW+tx) where trees are placed
 let playerCarSprite=null;
+let playerMotorSprite=null;
 const CAR_ROAD_TILES=new Set([TT.R,TT.CR,TT.PK]);
 
 const NPC_CARS=[
@@ -4085,6 +4163,60 @@ function driveMyCar(){
   onChainTx('CAR_DRIVE:'+myId,0.00001);
 }
 window.driveMyCar=driveMyCar;
+
+/* ── Motor (Motorcycle) riding ── */
+function driveMyMotor(){
+  const myId=getMyMotorId();
+  if(!myId)return logChat('[Motor] 🛵 You don\'t own a motor. Visit the Motor Shop to buy one ($'+MOTOR_NFT_PRICE+' USD)!',false,'#f87171');
+  if(playerRidingMotor){
+    playerRidingMotor=false;
+    if(_phaserScene&&_phaserScene.me)_phaserScene.me.setVisible(true);
+    logChat('[🛵 Motor] Parked your motor. You\'re on foot.',false,'#94a3b8');
+    return;
+  }
+  if(!_phaserScene||!_phaserScene.me)return;
+  const activeTiles=currentCity===3?city3Tiles:currentCity===2?city2Tiles:cityTiles;
+  if(!activeTiles)return;
+  const tx=Math.floor(_phaserScene.me.x/TILE),ty=Math.floor(_phaserScene.me.y/TILE);
+  const tileType=(activeTiles[ty]&&activeTiles[ty][tx])?activeTiles[ty][tx]:TT.G;
+  if(!CAR_ROAD_TILES.has(tileType))
+    return logChat('[Motor] Must be on a road to ride.',false,'#f87171');
+  playerRidingMotor=true;
+  if(playerMotorSprite&&playerMotorSprite.active)playerMotorSprite.setPosition(_phaserScene.me.x,_phaserScene.me.y);
+  if(_phaserScene.me)_phaserScene.me.setVisible(false);
+  const mt=MOTOR_TYPES.find(m=>m.id===myId);
+  logChat('[🛵 Motor] Riding your '+(mt?mt.name:'motor')+'! City 1, 2 & 3 supported 🛣️ Arrow keys to steer.',false,'#22c55e');
+  onChainTx('MOTOR_RIDE:'+myId,0.00001);
+}
+window.driveMyMotor=driveMyMotor;
+
+function renderMotorShop(){
+  loadMotorOwnership();
+  const myId=getMyMotorId();
+  let h=`<strong>🛵 Motor Shop — Ride Anywhere</strong>
+<div style="font-size:11px;color:#94a3b8;margin:5px 0;">Buy a Motor NFT · 1 motor per wallet · Ride in City 1, 2 &amp; 3</div>`;
+  if(myId){
+    const mt=MOTOR_TYPES.find(m=>m.id===myId);
+    h+=`<div style="border:1px solid rgba(34,197,94,.3);border-radius:8px;padding:8px;margin:5px 0;background:rgba(34,197,94,.05);">
+<div style="font-size:12px;font-weight:bold;">✅ You own: ${mt?mt.icon+' '+mt.name:'Motor'}</div>
+<div style="font-size:11px;color:#94a3b8;margin:4px 0;">1 motor per wallet enforced on-chain</div>
+<button onclick="driveMyMotor()" class="ibtn btn-green" style="width:100%;margin-top:5px;">${playerRidingMotor?'🅿️ Park Motor':'🛵 Ride My Motor'}</button>
+<button onclick="sellMotorNFT()" class="ibtn btn-red" style="width:100%;margin-top:4px;">💸 Sell Motor (60% value)</button>
+</div>`;
+  }else{
+    h+=`<div style="font-size:11px;color:#fbbf24;margin:5px 0;">🛵 Buy a Motor NFT ($${MOTOR_NFT_PRICE} USD) — 1 per wallet · All cities</div>`;
+    for(const mt of MOTOR_TYPES){
+      const owned=motorOwnership[mt.id]&&motorOwnership[mt.id].owner;
+      h+=`<div class="irow"><div class="ileft"><div class="iname">${mt.icon} ${mt.name}</div><div class="idesc">Speed: ${mt.speed}px/s · City 1, 2 &amp; 3</div></div>
+${owned?`<span style="font-size:10px;color:#64748b;">Owned</span>`:`<button onclick="buyMotorNFT('${mt.id}')" ${S.coins<MOTOR_NFT_PRICE?'disabled':''} class="ibtn btn-green">Buy $${MOTOR_NFT_PRICE}</button>`}</div>`;
+    }
+  }
+  h+=`<button onclick="closeOutdoor()" style="width:100%;margin-top:8px;padding:6px;border-radius:6px;background:rgba(100,116,139,.3);color:#94a3b8;border:1px solid rgba(255,255,255,.1);font-size:11px;cursor:pointer;">Close ✕</button>`;
+  const panel=document.getElementById('buildPanel');
+  if(panel){panel.style.display='block';panel.innerHTML=h;}
+  WS.outdoor='MotorShop';
+}
+window.renderMotorShop=renderMotorShop;
 
 /* ── City 3 — Bus system (circles industrial city) ── */
 const BUS_WAYPOINTS3=[
@@ -4382,6 +4514,16 @@ function drawCity2(scene){
     }else playerCarSprite.setPosition(spot.x+TILE/2,spot.y+TILE/2);
     worldCont.add(playerCarSprite);
   }
+  // Player's motor (parked if not riding) — City 2 parking
+  {const myMotorId=getMyMotorId();
+  if(myMotorId){
+    const mt=MOTOR_TYPES.find(m=>m.id===myMotorId);
+    const mx=70*TILE+TILE/2,my=12*TILE+TILE/2;
+    if(!playerMotorSprite||!playerMotorSprite.active){
+      playerMotorSprite=scene.add.image(mx,my,mt&&mt.tex?mt.tex:'motor_green').setOrigin(.5).setDepth(6).setScale(1.4);
+    }else playerMotorSprite.setPosition(mx,my);
+    worldCont.add(playerMotorSprite);
+  }}
   // Airplane — uses planeState for boarding/city travel
   if(!planeState.spr||!planeState.spr.active){
     planeState.spr=scene.add.text(planeState.x,planeState.y,'✈️',{fontSize:'54px'}).setOrigin(.5).setDepth(9);
@@ -4598,6 +4740,16 @@ function drawCity3(scene){
   // Vehicle headlight graphics layer (night-only)
   if(!_vehicleLightGfx||!_vehicleLightGfx.active){_vehicleLightGfx=scene.add.graphics().setDepth(7.5);}
   worldCont.add(_vehicleLightGfx);
+  // Player's motor (parked if not riding) — City 3 parking
+  {const myMotorId=getMyMotorId();
+  if(myMotorId){
+    const mt=MOTOR_TYPES.find(m=>m.id===myMotorId);
+    const mx=76*TILE+TILE/2,my=14*TILE+TILE/2;
+    if(!playerMotorSprite||!playerMotorSprite.active){
+      playerMotorSprite=scene.add.image(mx,my,mt&&mt.tex?mt.tex:'motor_green').setOrigin(.5).setDepth(6).setScale(1.4);
+    }else playerMotorSprite.setPosition(mx,my);
+    worldCont.add(playerMotorSprite);
+  }}
 }
 
 /* ── City 3 flight functions ── */
@@ -4662,7 +4814,7 @@ function switchCity(n,fromFlight){
   }else{
     WS.savedPos={x:32*TILE,y:28*TILE};
   }
-  trainState.passengerBoarded=false;busState3.passengerBoarded=false;playerDrivingCar=false;
+  trainState.passengerBoarded=false;busState3.passengerBoarded=false;playerDrivingCar=false;playerRidingMotor=false;
   planeState.passengerBoarded=false;boatState.passengerBoarded=false;
   if(WS.outdoor==='Boat')WS.outdoor=null;
   if(_tlightGfx&&_tlightGfx.active){_tlightGfx.clear();_tlightGfx=null;}
@@ -4675,11 +4827,11 @@ function switchCity(n,fromFlight){
         spawnBirds2(_phaserScene);
         logChat('[🏝️ Coastal City] Welcome to City 2! Beach🏖️ · Airport✈️ · Train🚂 · Zoo🦁 · Concert🎵 · Waterfall💦 · Gas Station⛽ · 🌟 Hollywood Studio',false,'#fbbf24');
         logChat('[🌟 Hollywood Studio] Look for the gold star NPC near Hollywood Studio to meet celebrities! ($20 USD)',false,'#fbbf24');
-        loadCarOwnership();
+        loadCarOwnership();loadMotorOwnership();
       }else if(n===3){
-        logChat('[🏭 Industrial City] Welcome to City 3! Factories🏭 · Airport✈️ · Bus🚌 · Market🛒 · Bar🍺 · Cafe☕ · Concert🎵 · Lake💧 · Gas Station⛽',false,'#fbbf24');
+        logChat('[🏭 Industrial City] Welcome to City 3! Factories🏭 · Airport✈️ · Bus🚌 · Market🛒 · Bar🍺 · Cafe☕ · Concert🎵 · Lake💧 · Gas Station⛽ · 🛵 Motor Shop',false,'#fbbf24');
       }else{
-        logChat('[🏙️ Moga City] Welcome to City 1! ✈️ Airport C1 in NE · Use Airport to fly to City 2',false,'#fbbf24');
+        logChat('[🏙️ Moga City] Welcome to City 1! ✈️ Airport C1 in NE · 🛵 Motor Shop available · Use Airport to fly to City 2',false,'#fbbf24');
       }
     });
   }
@@ -5043,6 +5195,12 @@ function doIAct(action){
       WS.outdoor='GasStation';
       renderBuildingPanel();
       logChat('[⛽ Gas Station C3] Fill up your car fuel here!',false,'#fbbf24');
+      break;
+    case 'motor shop':
+    case 'motor shop c2':
+    case 'motor shop c3':
+      renderMotorShop();
+      logChat('[🛵 Motor Shop] Buy a Motor NFT ($'+MOTOR_NFT_PRICE+' USD) — ride in City 1, 2 &amp; 3!',false,'#22c55e');
       break;
   }
   const items=[
@@ -6045,6 +6203,14 @@ function makeBirdTexture(scene){
   addTex(scene,'car_green_front',28,32,c=>{makeCarFront(c,'#22c55e','#dcfce7');});
   addTex(scene,'car_yellow_front',28,32,c=>{makeCarFront(c,'#fbbf24','#fef9c3');});
   addTex(scene,'car_purple_front',28,32,c=>{makeCarFront(c,'#a78bfa','#ede9fe');});
+  /* ── Pixel-art motorcycle textures — side view (36×22) ── */
+  addTex(scene,'motor_green',36,22,c=>{makeMotor(c,'#22c55e');});
+  addTex(scene,'motor_red',  36,22,c=>{makeMotor(c,'#ef4444');});
+  addTex(scene,'motor_blue', 36,22,c=>{makeMotor(c,'#3b82f6');});
+  /* ── Motorcycle front-view textures (20×26) — shown when riding up/down ── */
+  addTex(scene,'motor_green_front',20,26,c=>{makeMotorFront(c,'#22c55e');});
+  addTex(scene,'motor_red_front',  20,26,c=>{makeMotorFront(c,'#ef4444');});
+  addTex(scene,'motor_blue_front', 20,26,c=>{makeMotorFront(c,'#3b82f6');});
   /* ── Bulletin / Announcement Board texture (48×56) ── */
   addTex(scene,'bBulletin',48,56,c=>{
     const p=(x,y,w,h,col)=>px(c,x,y,w,h,col);
@@ -6178,6 +6344,65 @@ function makeCarFront(c,bodyC,glassC){
   p(5,18,1,3,'#94a3b8');p(22,18,1,3,'#94a3b8');
   // License plate
   p(9,24,10,2,'#f8fafc');p(9,24,10,1,'rgba(0,0,0,.25)');
+}
+
+/* ── Motorcycle side-view texture (36×22) ── */
+function makeMotor(c,bodyC){
+  const p=(x,y,w,h,col)=>px(c,x,y,w,h,col);
+  // Shadow
+  p(3,19,30,3,'rgba(0,0,0,.22)');
+  // Rear wheel
+  p(2,11,10,9,'#1f2937');p(3,12,8,7,'#374151');p(5,13,4,5,'#94a3b8');
+  p(6,12,2,1,'rgba(0,0,0,.3)');p(6,16,2,1,'rgba(0,0,0,.3)');
+  // Front wheel
+  p(24,11,10,9,'#1f2937');p(25,12,8,7,'#374151');p(27,13,4,5,'#94a3b8');
+  p(28,12,2,1,'rgba(0,0,0,.3)');p(28,16,2,1,'rgba(0,0,0,.3)');
+  // Swing arm + chain
+  p(11,15,14,2,bodyC);p(11,15,14,1,'rgba(0,0,0,.2)');
+  // Frame / body
+  p(10,7,16,8,bodyC);p(10,7,16,1,'rgba(255,255,255,.2)');
+  p(10,14,16,1,'rgba(0,0,0,.18)');
+  p(26,9,5,6,bodyC); // front fairing
+  // Fuel tank
+  p(14,4,10,5,bodyC);p(14,4,10,1,'rgba(255,255,255,.3)');
+  p(15,5,4,2,'rgba(255,255,255,.18)'); // tank shine
+  // Seat
+  p(9,7,9,3,'#374151');p(9,7,9,1,'rgba(255,255,255,.12)');
+  // Handlebar
+  p(25,6,5,2,'#94a3b8');p(25,6,1,2,'#64748b');
+  // Headlight
+  p(31,8,4,4,'#fbbf24');p(31,8,4,1,'rgba(255,255,255,.6)');p(32,9,2,2,'rgba(255,255,255,.4)');
+  // Exhaust pipe
+  p(11,16,12,2,'#475569');p(11,17,12,1,'rgba(0,0,0,.25)');
+  // Footpeg
+  p(15,17,4,2,'#475569');
+  // Body paint shine
+  p(11,8,14,1,'rgba(255,255,255,.15)');
+}
+
+/* ── Motorcycle front-view texture (20×26) ── */
+function makeMotorFront(c,bodyC){
+  const p=(x,y,w,h,col)=>px(c,x,y,w,h,col);
+  // Shadow
+  p(3,23,14,3,'rgba(0,0,0,.2)');
+  // Front wheel (thin single wheel)
+  p(7,16,6,8,'#1f2937');p(8,17,4,6,'#374151');p(9,18,2,4,'#94a3b8');
+  // Forks
+  p(6,8,2,12,'#94a3b8');p(12,8,2,12,'#94a3b8');
+  // Body / fairing
+  p(5,5,10,10,bodyC);p(5,5,10,1,'rgba(255,255,255,.2)');
+  p(15,5,4,10,'rgba(0,0,0,.22)'); // 3D right side
+  // Headlight
+  p(6,7,8,6,'#fbbf24');p(6,7,8,1,'rgba(255,255,255,.55)');p(7,8,3,3,'rgba(255,255,255,.4)');
+  // Handlebar
+  p(2,5,16,2,'#94a3b8');p(2,5,2,2,'#64748b');p(16,5,2,2,'#64748b');
+  // Windshield hint
+  p(7,3,6,3,'rgba(186,230,253,.55)');p(7,3,6,1,'rgba(255,255,255,.4)');
+  // Turn signals
+  p(3,7,2,2,'#fbbf24');p(15,7,2,2,'#fbbf24');
+  // Chassis top
+  p(6,2,8,3,bodyC);p(6,2,8,1,'rgba(255,255,255,.28)');
+  p(14,2,4,3,'rgba(0,0,0,.2)');
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -6678,6 +6903,7 @@ const phaserCfg={
       });
       loadHouseOwnership();
       loadCarOwnership();
+      loadMotorOwnership();
       drawCity(this);populateNav();updateHUD();
       nightOv=this.add.rectangle(0,0,this.scale.width,this.scale.height,0x020617,1).setOrigin(0,0).setScrollFactor(0).setDepth(999);nightOv.setAlpha(.08);
       this.scale.on('resize',sz=>{if(nightOv){nightOv.width=sz.width;nightOv.height=sz.height;}});
@@ -6774,6 +7000,7 @@ const phaserCfg={
             if(trainState.spr){_vehicleLightGfx.fillStyle(0xfef9c3,0.5);_vehicleLightGfx.fillCircle(trainState.x,trainState.y,24);}
             for(const c of NPC_CARS){if(!c.spr)continue;_vehicleLightGfx.fillStyle(0xfef9c3,0.4);_vehicleLightGfx.fillCircle(c.x,c.y,16);}
             if(playerDrivingCar&&playerCarSprite&&playerCarSprite.active){_vehicleLightGfx.fillStyle(0xfef9c3,0.55);_vehicleLightGfx.fillCircle(playerCarSprite.x,playerCarSprite.y,18);}
+            if(playerRidingMotor&&playerMotorSprite&&playerMotorSprite.active){_vehicleLightGfx.fillStyle(0xfef9c3,0.45);_vehicleLightGfx.fillCircle(playerMotorSprite.x,playerMotorSprite.y,12);}
           }
           if(currentCity===3&&busState3.spr){_vehicleLightGfx.fillStyle(0xfef9c3,0.5);_vehicleLightGfx.fillCircle(busState3.x,busState3.y,24);}
           for(const c of NPC_TRUCKS3||[]){if(currentCity===3&&c.spr){_vehicleLightGfx.fillStyle(0xfef9c3,0.38);_vehicleLightGfx.fillCircle(c.x,c.y,14);}}
@@ -6824,11 +7051,33 @@ const phaserCfg={
               }
             }catch(e){}
           }
+        // If riding a motor: must stay on road tiles — works in all 3 cities
+        }else if(playerRidingMotor&&activeTiles){
+          const tx=Math.floor(cx/TILE),ty=Math.floor(cy/TILE);
+          const onRoad=tx>=0&&ty>=0&&tx<CW&&ty<CH&&CAR_ROAD_TILES.has(activeTiles[ty][tx]);
+          if(onRoad){this.me.x=cx;this.me.y=cy;if(playerMotorSprite&&playerMotorSprite.active)playerMotorSprite.setPosition(cx,cy);}
+          /* 3D perspective: update motor sprite based on movement direction */
+          if(playerMotorSprite&&playerMotorSprite.active&&(vx||vy)){
+            const myMotorId=getMyMotorId();
+            const mt=myMotorId?MOTOR_TYPES.find(m=>m.id===myMotorId):null;
+            const baseTex=mt&&mt.tex?mt.tex:'motor_green';
+            const isFront=(vy!==0&&vx===0);
+            const frontTex=baseTex+'_front';
+            try{
+              if(isFront&&this.textures&&this.textures.exists(frontTex)){
+                if(playerMotorSprite.texture.key!==frontTex)playerMotorSprite.setTexture(frontTex).setScale(1.3);
+                playerMotorSprite.setFlipX(false);
+              }else{
+                if(playerMotorSprite.texture.key!==baseTex)playerMotorSprite.setTexture(baseTex).setScale(1.4);
+                playerMotorSprite.setFlipX(vx<0);
+              }
+            }catch(e){}
+          }
         }else if(!blocked(cx,cy,activeTiles)){this.me.x=cx;this.me.y=cy;}
         else{if(!blocked(cx,this.me.y,activeTiles))this.me.x=cx;if(!blocked(this.me.x,cy,activeTiles))this.me.y=cy;}
       }else{this.me.x=clamp(nx,20,IW*TILE-20);this.me.y=clamp(ny,20,IH*TILE-20);}
       // ── Stylized player walking/breathing animation ──
-      if(_playerImg&&!playerDrivingCar){
+      if(_playerImg&&!playerDrivingCar&&!playerRidingMotor){
         const isWalking=(vx||vy)&&!trainState.passengerBoarded&&!boatState.passengerBoarded;
         if(isWalking){
           this._walkTick=(this._walkTick||0)+dt*0.006;
@@ -6858,6 +7107,15 @@ const phaserCfg={
           playerDrivingCar=false;
           if(_phaserScene&&_phaserScene.me)_phaserScene.me.setVisible(true);
           logChat('[⛽] Out of fuel! Visit the Gas Station in City 2 to refuel.',false,'#f87171');
+        }
+      }else if(playerRidingMotor){
+        // Motor uses less fuel than a car (7× passive when moving, 1× when idle vs car's 12×/2×)
+        const fuelDrain=mv?ENERGY_DRAIN_PASSIVE*7:ENERGY_DRAIN_PASSIVE*1;
+        S.fuel=clamp(S.fuel-fuelDrain*dtS,0,S.fuelMax);
+        if(S.fuel<=0){
+          playerRidingMotor=false;
+          if(_phaserScene&&_phaserScene.me)_phaserScene.me.setVisible(true);
+          logChat('[⛽] Out of fuel! Visit a Gas Station to refuel your motor.',false,'#f87171');
         }
       }else{
         const drainRate=spr&&mv?ENERGY_DRAIN_SPRINT:ENERGY_DRAIN_PASSIVE;
