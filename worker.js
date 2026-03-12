@@ -24,11 +24,14 @@
  *   USER_DATA_KV     – per-user portfolio / staking data
  */
 
-const GECKO_BASE = 'https://api.geckoterminal.com/api/v2';
+const GECKO_BASE          = 'https://api.geckoterminal.com/api/v2';
+const TWITTER_OAUTH_BASE  = 'https://api.twitter.com/2/oauth2'; // token exchange endpoint
+const TWITTER_API_BASE    = 'https://api.twitter.com/2';        // v2 REST endpoints
+const TWITTER_CLIENT_ID   = 'OE85S0o0eDlLQ2lRWlIycEkyOGM6MTpjaQ';
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, PUT, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
   'Content-Type': 'application/json',
 };
 const ETH_ADDRESS_RE = /^0x[0-9a-fA-F]{40}$/;
@@ -197,6 +200,64 @@ export default {
       } catch (err) {
         console.error('[user-data PUT] Error:', err);
         return new Response(JSON.stringify({ error: 'Save failed' }), { status: 500, headers: CORS_HEADERS });
+      }
+    }
+
+    // ── POST /api/twitter/token ───────────────────────────────────────────
+    // Proxy Twitter OAuth 2.0 PKCE token exchange.
+    // Body: { code, code_verifier, redirect_uri }
+    if (path === '/api/twitter/token' && request.method === 'POST') {
+      try {
+        const body = await request.json();
+        const { code, code_verifier, redirect_uri } = body || {};
+        if (!code || !code_verifier || !redirect_uri) {
+          return new Response(JSON.stringify({ error: 'Missing required fields' }), { status: 400, headers: CORS_HEADERS });
+        }
+        const params = new URLSearchParams({
+          grant_type: 'authorization_code',
+          code: String(code),
+          redirect_uri: String(redirect_uri),
+          code_verifier: String(code_verifier),
+          client_id: TWITTER_CLIENT_ID,
+        });
+        const twitterRes = await fetch(`${TWITTER_OAUTH_BASE}/token`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: params.toString(),
+        });
+        const raw = await twitterRes.json();
+        // Only forward the fields the client needs; never relay raw error details
+        const data = twitterRes.ok
+          ? { access_token: raw.access_token, token_type: raw.token_type, scope: raw.scope }
+          : { error: raw.error || 'token_exchange_error', error_description: raw.error_description || 'Token exchange failed' };
+        return new Response(JSON.stringify(data), { status: twitterRes.status, headers: CORS_HEADERS });
+      } catch (err) {
+        console.error('[twitter/token] Error:', err);
+        return new Response(JSON.stringify({ error: 'Token exchange failed' }), { status: 500, headers: CORS_HEADERS });
+      }
+    }
+
+    // ── GET /api/twitter/me ───────────────────────────────────────────────
+    // Proxy Twitter v2 /users/me with a Bearer token from the client.
+    if (path === '/api/twitter/me' && request.method === 'GET') {
+      const auth = request.headers.get('Authorization');
+      if (!auth || !auth.startsWith('Bearer ')) {
+        return new Response(JSON.stringify({ error: 'Missing Bearer token' }), { status: 401, headers: CORS_HEADERS });
+      }
+      try {
+        const twitterRes = await fetch(
+          `${TWITTER_API_BASE}/users/me?user.fields=name,username,profile_image_url`,
+          { headers: { Authorization: auth } },
+        );
+        const raw = await twitterRes.json();
+        // Only forward the public user fields the client needs
+        const data = twitterRes.ok && raw.data
+          ? { data: { id: raw.data.id, name: raw.data.name, username: raw.data.username, profile_image_url: raw.data.profile_image_url } }
+          : { error: raw.error || 'user_lookup_error' };
+        return new Response(JSON.stringify(data), { status: twitterRes.status, headers: CORS_HEADERS });
+      } catch (err) {
+        console.error('[twitter/me] Error:', err);
+        return new Response(JSON.stringify({ error: 'User lookup failed' }), { status: 500, headers: CORS_HEADERS });
       }
     }
 

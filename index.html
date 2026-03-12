@@ -3211,6 +3211,11 @@
       if (typeof loadSocialConnections === 'function') {
         loadSocialConnections();
       }
+
+      // Handle Twitter/X OAuth callback (page was redirected back from Twitter)
+      if (typeof handleXOAuthCallback === 'function') {
+        handleXOAuthCallback();
+      }
       
       // Restore last visited section
       const lastSection = localStorage.getItem('lastSection');
@@ -5076,6 +5081,109 @@
       renderProfileAssets();
     }
 
+    // ── Twitter / X OAuth 2.0 (PKCE) ─────────────────────────────────────
+    const X_CLIENT_ID  = 'OE85S0o0eDlLQ2lRWlIycEkyOGM6MTpjaQ';
+    const X_SCOPES     = 'tweet.read users.read offline.access';
+
+    function xRedirectUri() {
+      // Strip any query/hash so the callback URI matches exactly what was registered
+      return window.location.origin + window.location.pathname;
+    }
+
+    async function xGeneratePKCE() {
+      const verifierBytes = crypto.getRandomValues(new Uint8Array(32));
+      const codeVerifier  = Array.from(verifierBytes)
+        .map(b => b.toString(16).padStart(2, '0')).join('');
+      const digest        = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(codeVerifier));
+      const codeChallenge = btoa(String.fromCharCode(...new Uint8Array(digest)))
+        .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+      return { codeVerifier, codeChallenge };
+    }
+
+    async function initiateXOAuth() {
+      showNotification('Opening X (Twitter) authentication…', false);
+      const { codeVerifier, codeChallenge } = await xGeneratePKCE();
+      const state = Array.from(crypto.getRandomValues(new Uint8Array(8)))
+        .map(b => b.toString(16).padStart(2, '0')).join('');
+      localStorage.setItem('x_pkce_verifier', codeVerifier);
+      localStorage.setItem('x_oauth_state', state);
+      // Save last visited section so we can restore it after redirect
+      const lastSection = document.querySelector('.nav-btn.active')?.dataset?.section;
+      if (lastSection) localStorage.setItem('lastSection', lastSection);
+
+      const params = new URLSearchParams({
+        response_type:         'code',
+        client_id:             X_CLIENT_ID,
+        redirect_uri:          xRedirectUri(),
+        scope:                 X_SCOPES,
+        state,
+        code_challenge:        codeChallenge,
+        code_challenge_method: 'S256',
+      });
+      window.location.href = `https://twitter.com/i/oauth2/authorize?${params}`;
+    }
+
+    async function handleXOAuthCallback() {
+      const urlParams   = new URLSearchParams(window.location.search);
+      const code        = urlParams.get('code');
+      const returnedState = urlParams.get('state');
+      if (!code || !returnedState) return;
+
+      const savedState   = localStorage.getItem('x_oauth_state');
+      const codeVerifier = localStorage.getItem('x_pkce_verifier');
+      // Clear stored PKCE / state regardless of outcome
+      localStorage.removeItem('x_oauth_state');
+      localStorage.removeItem('x_pkce_verifier');
+
+      // Clean the OAuth params from the URL without a page reload
+      window.history.replaceState({}, '', window.location.pathname);
+
+      if (returnedState !== savedState || !codeVerifier) {
+        showNotification('X OAuth state mismatch — please try again.', true);
+        return;
+      }
+
+      showNotification('Connecting X account…', false);
+      try {
+        const tokenRes = await fetch('/api/twitter/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code, code_verifier: codeVerifier, redirect_uri: xRedirectUri() }),
+        });
+        const tokenData = await tokenRes.json();
+
+        if (!tokenData.access_token) {
+          showNotification('X authentication failed. Please try again.', true);
+          return;
+        }
+
+        // Fetch the user profile through the worker proxy
+        const meRes = await fetch('/api/twitter/me', {
+          headers: { Authorization: `Bearer ${tokenData.access_token}` },
+        });
+        const meData = await meRes.json();
+
+        const username = meData?.data?.username || 'user';
+
+        const connections = JSON.parse(localStorage.getItem('socialConnections') || '{}');
+        connections.x = {
+          username,
+          displayText: `Twitter/X: @${username}`,
+          connectedAt: new Date().toISOString(),
+        };
+        localStorage.setItem('socialConnections', JSON.stringify(connections));
+
+        showNotification(`✅ X account @${username} connected!`, false);
+        if (userAddress) recordTransaction(null, 'Social Connect', `Connected Twitter/X as @${username}`, {});
+        loadSocialConnections();
+        // Open the back-profile panel so the user sees the updated status
+        openBackProfile();
+      } catch (err) {
+        console.error('[x-oauth-callback]', err);
+        showNotification('X connection failed. Please try again.', true);
+      }
+    }
+
     // Social Media Connection Management
     const SOCIAL_OAUTH_URLS = {
       x: 'https://twitter.com/i/oauth2/authorize', // Twitter OAuth 2.0
@@ -5111,8 +5219,12 @@
     }
 
     window.connectSocial = function(platform) {
+      if (platform === 'x') {
+        initiateXOAuth();
+        return;
+      }
+
       const platformNames = {
-        x: 'Twitter/X',
         telegram: 'Telegram',
         discord: 'Discord',
         farcaster: 'Farcaster'
@@ -5120,10 +5232,9 @@
       
       const platformName = platformNames[platform];
       
-      // In a real implementation, this would initiate OAuth flow
+      // Simulate OAuth flow with a prompt for non-X platforms
       showNotification(`Opening ${platformName} authentication...`, false);
       
-      // Simulate OAuth flow with a prompt
       setTimeout(() => {
         const username = prompt(`Enter your ${platformName} username to connect (demo):`);
         if (username) {
