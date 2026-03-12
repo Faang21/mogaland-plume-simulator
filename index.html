@@ -15707,7 +15707,7 @@
     }
   </style>
 
-  <button id="chatbotToggle" onclick="toggleChatbot()" title="Ask Moga AI"><img src="favicon.svg" alt="Moga AI" class="chatbot-brand-icon-lg" /></button>
+  <button id="chatbotToggle" onclick="toggleChatbot()" title="Ask Moga AI" aria-label="Ask Moga AI"><img src="favicon.svg" alt="" class="chatbot-brand-icon-lg" /></button>
 
   <div id="chatbotWindow" class="chatbot-hidden">
     <div class="chatbot-header">
@@ -15727,6 +15727,8 @@
 
   <script>
     (function(){
+      const LOCAL_KB_RESPONSE_DELAY_MS = 200;
+      const TOGGLE_ICON_HTML = '<img src="favicon.svg" alt="" class="chatbot-brand-icon-lg" />';
       const CHATBOT_KB = [
         { keys: ['fly','flight','airport','plane','terbang','city 2','city2','coastal'], answer: '✈️ <b>Flying between cities</b>: In <b>City 1</b> — visit the Airport (NE corner) → click "Fly to Coastal City (City 2)". In <b>City 2</b> — go to Airport → board the plane → it will circle and land at City 1. A small gas fee is charged for each flight.' },
         { keys: ['city 1','moga city','city1'], answer: '🏙️ <b>Moga City (City 1)</b>: The main city with School, Hospital, Bank, Casino, Library, Market, and more. Fly to City 2 via the Airport in the NE corner of the map.' },
@@ -15759,7 +15761,7 @@
 
       const SUGGESTIONS = ['How do I swap?','What is Moga World?','How to fly to City 2?','How to earn rewards?','What is NFT Staking?','Contact support'];
 
-      // Fallback reply for questions not matched by the local KB
+      // Fallback reply when AI is unavailable
       const KB_FALLBACK_MSG = '👋 <b>Moga AI</b> can help you with Mogaland! Try asking about:<br>• 🎮 Moga World (open-world RPG)<br>• 💱 Swap &amp; Bridge tokens<br>• 📈 Market Prediction<br>• 🏦 NFT Staking<br>• 🎓 Learning &amp; rewards<br>• 🚗 Car / Motor NFTs<br><small style="opacity:0.7">Need live help? Contact our operator via <b>Discord</b> or <b>Telegram</b>.</small>';
 
       // System prompt with Mogaland knowledge for the AI
@@ -15843,16 +15845,16 @@ Mogaland context:
           setTimeout(() => { const input = document.getElementById('chatbotInput'); if(input) input.focus(); }, 150);
         } else {
           win.classList.add('chatbot-hidden');
-          btn.innerHTML = '<img src="favicon.svg" alt="Moga AI" class="chatbot-brand-icon-lg" />';
+          btn.innerHTML = TOGGLE_ICON_HTML;
         }
       }
       window.toggleChatbot = toggleChatbot;
 
       function initChat() {
-        appendBotMessage('👋 Hi! I\'m <b>Moga AI</b>, your Mogaland assistant. Ask me anything about Mogaland, the game, rewards, trading, or staking!<br><small style="opacity:0.7">💬 Need live help? Contact our operator via <b>Discord</b> or <b>Telegram</b>.</small>');
+        appendBotMessage('👋 Hi! I\'m <b>Moga AI</b>. I answer Mogaland questions instantly, and use GPT for everything else. Ask me anything!<br><small style="opacity:0.7">💬 Need live help? Contact our operator via <b>Discord</b> or <b>Telegram</b>.</small>');
         renderSuggestions(SUGGESTIONS);
         const statusBar = document.getElementById('chatStatusBar');
-        if (statusBar) statusBar.textContent = '🌐 Moga AI · ⚡ Instant responses · 💬 Remembers context';
+        if (statusBar) statusBar.textContent = '⚡ Instant for Moga · 🤖 GPT for other topics · 💬 Remembers context';
       }
 
       function appendBotMessage(html) {
@@ -15998,38 +16000,19 @@ Mogaland context:
         return bestScore >= 1 ? bestAnswer : null;
       }
 
-      // Web search snippet limits
-      const SNIPPET_MIN_LENGTH = 20;
-      const SNIPPET_MAX_LENGTH = 600;
-      async function fetchWebSearch(query) {
-        try {
-          const url = 'https://api.duckduckgo.com/?q=' + encodeURIComponent(query) + '&format=json&no_html=1&skip_disambig=1';
-          const res = await fetch(url, { signal: AbortSignal.timeout(6000) });
-          const data = await res.json();
-          const snippet = data.AbstractText || data.Answer ||
-            (data.RelatedTopics && data.RelatedTopics[0] && data.RelatedTopics[0].Text) || '';
-          return snippet.length > SNIPPET_MIN_LENGTH ? snippet.slice(0, SNIPPET_MAX_LENGTH) : null;
-        } catch {
-          return null;
-        }
-      }
-
-      // Fetch AI answer from Pollinations AI (free, GPT-4o, no API key required)
-      async function fetchAIAnswer(userText, webContext) {
+      // Fetch AI answer from Pollinations AI (free, no API key required)
+      async function fetchAIAnswer(userText) {
         const messages = [{ role: 'system', content: AI_SYSTEM_PROMPT }];
-        if (webContext) {
-          messages.push({ role: 'system', content: 'Web search result for additional context:\n' + webContext });
-        }
-        // Include conversation history for multi-turn context (ChatGPT-like memory)
+        // Include conversation history for multi-turn context
         chatHistory.forEach(m => messages.push(m));
         messages.push({ role: 'user', content: userText });
 
-        const bodyObj = { messages, model: 'openai-large', private: true };
+        // Use 'openai' (faster) instead of 'openai-large'
+        const bodyObj = { messages, model: 'openai', private: true };
 
-        // Try primary endpoint first, then fallback endpoints on failure
+        // Try primary endpoint, then fallback — no artificial delays
         const endpoints = [
           { url: 'https://text.pollinations.ai/', parse: r => r.text() },
-          { url: 'https://text.pollinations.ai/', parse: r => r.text() }, // retry same endpoint once
           { url: 'https://text.pollinations.ai/openai', parse: async r => {
             const j = await r.json();
             return j.choices?.[0]?.message?.content || '';
@@ -16037,15 +16020,13 @@ Mogaland context:
         ];
 
         let lastError;
-        for (let i = 0; i < endpoints.length; i++) {
+        for (const { url, parse } of endpoints) {
           try {
-            if (i === 1) await new Promise(r => setTimeout(r, 2000)); // brief delay before same-endpoint retry
-            const { url, parse } = endpoints[i];
             const res = await fetch(url, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(bodyObj),
-              signal: AbortSignal.timeout(30000)
+              signal: AbortSignal.timeout(15000)
             });
             if (!res.ok) throw new Error('AI request failed: ' + res.status);
             const text = await parse(res);
@@ -16085,18 +16066,34 @@ Mogaland context:
             chatHistory.push({ role: 'user', content: text });
             chatHistory.push({ role: 'assistant', content: plainText });
             if (chatHistory.length > CHAT_HISTORY_LIMIT) chatHistory.splice(0, chatHistory.length - CHAT_HISTORY_LIMIT);
-          }, 200);
+          }, LOCAL_KB_RESPONSE_DELAY_MS);
           return;
         }
 
-        // Quick fallback for questions not in the KB
-        setTimeout(() => {
-          appendBotMessage('👋 <b>Moga AI</b> can help you with Mogaland! Try asking about:<br>• 🎮 Moga World (open-world RPG)<br>• 💱 Swap &amp; Bridge tokens<br>• 📈 Market Prediction<br>• 🏦 NFT Staking<br>• 🎓 Learning &amp; rewards<br>• 🚗 Car / Motor NFTs<br><small style="opacity:0.7">Need live help? Contact our operator via <b>Discord</b> or <b>Telegram</b>.</small>');
+        // General question — ask GPT (no web search, faster model)
+        setChatBusy(true);
+        showTypingIndicator('🤖 Thinking…');
+
+        try {
+          const aiAnswer = await fetchAIAnswer(text);
+          removeTypingIndicator();
+
+          if (aiAnswer && aiAnswer.length > 0) {
+            appendBotMessageText(aiAnswer, '🤖 GPT');
+            chatHistory.push({ role: 'user', content: text });
+            chatHistory.push({ role: 'assistant', content: aiAnswer });
+            if (chatHistory.length > CHAT_HISTORY_LIMIT) chatHistory.splice(0, chatHistory.length - CHAT_HISTORY_LIMIT);
+          } else {
+            appendBotMessage(KB_FALLBACK_MSG);
+            renderSuggestions(SUGGESTIONS);
+          }
+        } catch {
+          removeTypingIndicator();
+          appendBotMessage(KB_FALLBACK_MSG + '<br><small style="opacity:0.5">⚡ AI temporarily unavailable</small>');
           renderSuggestions(SUGGESTIONS);
-          chatHistory.push({ role: 'user', content: text });
-          chatHistory.push({ role: 'assistant', content: 'I can help you with Mogaland features. Try asking about the game, staking, trading, or rewards.' });
-          if (chatHistory.length > CHAT_HISTORY_LIMIT) chatHistory.splice(0, chatHistory.length - CHAT_HISTORY_LIMIT);
-        }, 200);
+        } finally {
+          setChatBusy(false);
+        }
       }
       window.sendChatText = sendChatText;
 
