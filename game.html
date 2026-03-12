@@ -190,6 +190,7 @@ kbd{padding:1px 4px;border-radius:4px;border:1px solid rgba(255,255,255,.22);bac
       <div class="mmtitle"><span id="mmLoc">CITY</span><span id="mmTgt" style="opacity:.8;">—</span></div>
       <canvas id="mmC" width="128" height="128"></canvas>
       <div id="mmclock"><span id="tod">Day</span><span id="timeTxt">06:00</span></div>
+      <div id="seasonTxt" style="font-size:9px;text-align:center;margin-top:3px;color:#a5f3fc;">🌸 Spring ☀️</div>
       <div id="mmLegend"></div>
     </div>
     <div id="sleepOv">
@@ -1107,6 +1108,7 @@ function renderBuildingPanel(){
   if(WS.outdoor==='BusStop'){panel.style.display='block';panel.innerHTML=renderBusStop3();return;}
   if(WS.outdoor==='TrainHalte'){panel.style.display='block';panel.innerHTML=renderTrainHalte();return;}
   if(WS.outdoor==='Beach'){panel.style.display='block';panel.innerHTML=`<strong>🏖️ Beach</strong><div style="font-size:11px;color:#38bdf8;margin:5px 0;">Moga Beach — crystal clear waters! Walk to Beach Club or board the ⛵ Boat at the dock.</div><button onclick="boardBoat()" class="ibtn btn-teal" style="width:100%;margin-top:5px;">⛵ Board Boat at Dock</button><button onclick="closeOutdoor()" class="ibtn btn-blue" style="width:100%;margin-top:5px;">Close</button>`;return;}
+  if(WS.outdoor==='Bianglala'){panel.style.display='block';panel.innerHTML=renderFerrisWheel();return;}
   if(WS.outdoor){panel.style.display='block';panel.innerHTML=renderVending();return;}
   if(WS.zone!=='INTERIOR'){panel.style.display='none';return;}
   panel.style.display='block';
@@ -2471,15 +2473,25 @@ function makeTextures(scene){
     p(13,10,2,2,'#111827');p(18,10,2,2,'#111827');p(16,12,1,1,'#ef4444');
     p(11,24,3,2,'#f59e0b');p(18,24,3,2,'#f59e0b');
   });
-  /* buildings — detailed with window reflections, arched door, roof trim */
-  const bldg=(key,base,roof,win,door,sign)=>addTex(scene,key,48,48,c=>{
+  /* buildings — detailed with window reflections, arched door, roof trim + 3D isometric side */
+  const bldg=(key,base,roof,win,door,sign)=>addTex(scene,key,56,52,c=>{
     const p=(x,y,w,h,col)=>px(c,x,y,w,h,col);
-    p(4,43,40,4,'rgba(0,0,0,.22)'); // shadow
+    p(4,43,40,8,'rgba(0,0,0,.22)'); // shadow
     p(7,14,34,28,base); // facade
     p(7,14,2,28,'rgba(255,255,255,.09)'); // left highlight
     p(39,14,2,28,'rgba(0,0,0,.1)'); // right shadow
-    p(5,10,38,5,roof); // roof main
-    p(8,7,32,4,roof); // roof upper
+    // ── 3D right-side wall panel ──
+    p(41,16,10,26,'rgba(0,0,0,.35)'); // side wall (darker shade of base)
+    p(41,16,10,1,'rgba(0,0,0,.2)');   // side wall top edge
+    p(41,16,1,26,'rgba(255,255,255,.06)'); // side wall left edge highlight
+    // Side wall window (narrow, darker)
+    p(44,20,5,5,'rgba(0,0,0,.5)');p(45,21,3,3,'rgba(255,255,255,.12)');
+    p(44,30,5,5,'rgba(0,0,0,.5)');p(45,31,3,3,'rgba(255,255,255,.12)');
+    // ── 3D roof top face ──
+    p(5,10,38,5,roof); // roof front face
+    p(8,7,32,4,roof); // roof upper front
+    p(41,8,10,3,'rgba(0,0,0,.3)'); // roof right side
+    p(8,7,34,1,'rgba(255,255,255,.3)'); // roof top highlight
     p(5,10,38,1,'rgba(255,255,255,.22)'); // roof highlight
     p(8,7,32,1,'rgba(255,255,255,.15)');
     p(11,4,26,4,sign); // sign
@@ -2514,15 +2526,21 @@ function makeTextures(scene){
   bldg('bHosp','#ef4444','#991b1b','#fee2e2','#111827','#fff5f5');
   bldg('bCasino','#fbbf24','#92400e','#fef9c3','#0f172a','#fffde7');
   /* House — residential style with pitched roof, chimney, porch */
-  addTex(scene,'bHouse',48,48,c=>{
+  addTex(scene,'bHouse',56,52,c=>{
     const p=(x,y,w,h,col)=>px(c,x,y,w,h,col);
-    p(4,43,40,4,'rgba(0,0,0,.22)'); // shadow
-    // Walls (warm cream)
+    p(4,43,40,8,'rgba(0,0,0,.22)'); // shadow
+    // Walls (warm cream) — facade
     p(7,18,34,24,'#fef9c3');
     p(7,18,2,24,'rgba(255,255,255,.15)'); // left highlight
     p(39,18,2,24,'rgba(0,0,0,.08)'); // right shadow
-    // Pitched roof (simulate triangle with rows)
+    // ── 3D right-side wall ──
+    p(41,18,10,24,'#e6e0a0'); // side wall (slightly darker cream)
+    p(41,18,10,1,'rgba(0,0,0,.18)'); // top edge
+    p(41,18,1,24,'rgba(255,255,255,.1)'); // left edge highlight
+    p(44,22,4,5,'#bae6fd');p(44,23,4,1,'rgba(255,255,255,.4)'); // side window
+    // ── 3D roof top face (visible slant) ──
     for(let i=0;i<10;i++){const xl=6+i,xw=36-i*2;p(xl,8+i,xw,1,i<3?'#a16207':'#b45309');}
+    p(41,10,10,8,'rgba(0,0,0,.25)'); // roof right side
     p(5,18,38,2,'#92400e'); // eave/gutter
     p(5,18,38,1,'rgba(0,0,0,.25)'); // gutter shadow
     // Chimney
@@ -2710,6 +2728,10 @@ const IACTS=[
 ];
 
 /* ── City 2 — Coastal City buildings ── */
+/* Ferris Wheel position constants — must be defined before IACTS2 uses them */
+const FERRIS_X=22*32,FERRIS_Y=50*32; // positioned on beach at City 2
+const FERRIS_R=3.5*32; // radius 3.5 tiles
+const FERRIS_GONDOLAS=8;
 const BLDGS2=[
   /* North zone – above train ring */
   {key:'Airport',        tex:'bCasino', ts:2.5, x:72*TILE,y:2*TILE, w:10*TILE,h:8*TILE},
@@ -2753,6 +2775,8 @@ const IACTS2=[
   {key:'Halte Zoo',  tex:'vend', ts:1.0, x:62*TILE,y:44*TILE,w:2*TILE,h:2*TILE},
   {key:'Halte Barat',tex:'vend', ts:1.0, x:18*TILE,y:28*TILE,w:2*TILE,h:2*TILE},
   {key:'Announcement Board C2',tex:'bBulletin',ts:1.8,x:50*TILE,y:7*TILE,w:2*TILE,h:2*TILE,isAnnouncement:true},
+  /* Ferris Wheel / Bianglala — interactive beach attraction */
+  {key:'Bianglala',  tex:'vend', ts:1.0, x:FERRIS_X-2*TILE,y:FERRIS_Y-2*TILE,w:4*TILE,h:4*TILE,isFerris:true},
 ];
 
 /* ── City 3 — Industrial City buildings ── */
@@ -3265,7 +3289,23 @@ let _nearPlotIdx=null,_farmGfx=null; // farm plot state
 let _waveGfx=null,_waveGfx2=null,_waveTime=0,_waveFrameSkip=0,_city1WaterTiles=[]; // Ronin-quality wave animation
 let _isNight=false; // global night flag for vehicle lights
 let _vehicleLightGfx=null; // vehicle headlight graphics layer
-function clearWorld(scene){for(const g of lampGlows){if(g._glowTween){g._glowTween.stop();g._glowTween=null;}scene.tweens.killTweensOf(g);/* killTweensOf catches any other tweens on g beyond _glowTween */}if(worldCont)worldCont.destroy(true);worldCont=scene.add.container(0,0);lampGlows=[];buildingGlows=[];_vehicleLightGfx=null;_waveFrameSkip=0;}
+/* ── Season / Weather ── */
+const SEASONS=['Spring','Summer','Autumn','Winter'];
+let _seasonIdx=0; // 0=Spring,1=Summer,2=Autumn,3=Winter
+let _seasonRealMs=0; // real-time accumulator (ms) for season progression
+const SEASON_DURATION_MS=5*60*1000; // 5 real minutes per season
+let _isRaining=false;
+let _rainGfx=null;
+let _rainIntensity=0; // 0–1
+const RAIN_PROB={Spring:0.45,Summer:0.15,Autumn:0.5,Winter:0.3};
+let _snowGfx=null;
+/* ── Ferris Wheel (Bianglala) in City 2 ── */
+let _ferrisAngle=0;
+let _ferrisGfx=null;
+let _ferrisRiding=false;
+/* ── Car direction tracking ── */
+let _playerCarDir='right'; // last movement direction for car sprite
+function clearWorld(scene){for(const g of lampGlows){if(g._glowTween){g._glowTween.stop();g._glowTween=null;}scene.tweens.killTweensOf(g);/* killTweensOf catches any other tweens on g beyond _glowTween */}if(worldCont)worldCont.destroy(true);worldCont=scene.add.container(0,0);lampGlows=[];buildingGlows=[];_vehicleLightGfx=null;_waveFrameSkip=0;_ferrisGfx=null;_rainGfx=null;_snowGfx=null;_weatherDirty=true;_weatherParticles=[];}
 
 /* ── Interior NPC Bot System ── */
 let interiorNPCs=[]; // [{x,y,name,role,avatar,greeting,bldgKey}]
@@ -3407,7 +3447,161 @@ function updateDN(dtS){
   _isNight=(tod==='Night');
   const bga=(tod==='Night')?.28:(tod==='Sunset'||tod==='Dawn')?.12:0;
   for(const g of buildingGlows)g.setAlpha(bga);
+  /* ── Season progression ── */
+  _seasonRealMs+=dtS*1000;
+  if(_seasonRealMs>=SEASON_DURATION_MS){
+    _seasonRealMs=0;
+    _seasonIdx=(_seasonIdx+1)%4;
+    // Decide rain for new season
+    const sName=SEASONS[_seasonIdx];
+    _isRaining=Math.random()<(RAIN_PROB[sName]||0.2);
+    _weatherDirty=true; // force rebuild of weather particles
+    logChat('[🌍 Season] '+sName+' has arrived! '+(_isRaining?'🌧️ Rain expected.':'☀️ Clear skies.'),false,'#a78bfa');
+  }
+  /* Update season/weather HUD display */
+  const seasonEl=document.getElementById('seasonTxt');
+  if(seasonEl){
+    const sIcons=['🌸','☀️','🍂','❄️'];
+    const wIcon=_isRaining?(_seasonIdx===3?'🌨️':'🌧️'):'☀️';
+    seasonEl.textContent=sIcons[_seasonIdx]+' '+SEASONS[_seasonIdx]+' '+wIcon;
+  }
 }
+
+/* ── Ferris Wheel drawing ── */
+function drawFerrisWheel(g){
+  if(!g||!g.active)return;
+  g.clear();
+  const cx=FERRIS_X,cy=FERRIS_Y,r=FERRIS_R;
+  // Base/support structure
+  g.fillStyle(0x475569,1);g.fillRect(cx-6,cy+r-4,12,24); // main pole
+  g.fillStyle(0x64748b,1);
+  g.fillTriangle(cx,cy+r,cx-3*TILE,cy+r+20,cx,cy+r+20); // left support leg
+  g.fillTriangle(cx,cy+r,cx+3*TILE,cy+r+20,cx,cy+r+20); // right support leg
+  g.fillStyle(0x475569,1);g.fillRect(cx-3*TILE,cy+r+16,6*TILE,6); // base beam
+  // Outer wheel ring
+  g.lineStyle(6,0x94a3b8,1);g.strokeCircle(cx,cy,r);
+  g.lineStyle(3,0xe2e8f0,0.6);g.strokeCircle(cx,cy,r-4);
+  // Spokes (8 lines from center to rim)
+  g.lineStyle(3,0x64748b,0.9);
+  for(let i=0;i<FERRIS_GONDOLAS;i++){
+    const a=_ferrisAngle+(i/FERRIS_GONDOLAS)*Math.PI*2;
+    g.lineBetween(cx,cy,cx+Math.cos(a)*r,cy+Math.sin(a)*r);
+  }
+  // Inner hub
+  g.fillStyle(0xfbbf24,1);g.fillCircle(cx,cy,10);
+  g.lineStyle(2,0xf59e0b,1);g.strokeCircle(cx,cy,10);
+  g.fillStyle(0x1e293b,1);g.fillCircle(cx,cy,5);
+  // Gondolas (colored cabins at each spoke end)
+  const gondolaColors=[0xef4444,0x3b82f6,0x22c55e,0xfbbf24,0xa78bfa,0xf472b6,0x38bdf8,0x4ade80];
+  for(let i=0;i<FERRIS_GONDOLAS;i++){
+    const a=_ferrisAngle+(i/FERRIS_GONDOLAS)*Math.PI*2;
+    const gx=cx+Math.cos(a)*r,gy=cy+Math.sin(a)*r;
+    // Gondola swing (always hangs down)
+    const swingA=a+Math.PI/2;
+    const gcx=gx+Math.cos(swingA)*8,gcy=gy+Math.sin(swingA)*8;
+    // Cable from rim to gondola
+    g.lineStyle(2,0x94a3b8,0.8);g.lineBetween(gx,gy,gcx,gcy-2);
+    // Gondola body
+    const col=gondolaColors[i%gondolaColors.length];
+    g.fillStyle(col,0.9);g.fillRect(gcx-8,gcy-6,16,12);
+    g.fillStyle(col,0.6);g.fillRect(gcx-7,gcy-8,14,3); // roof
+    g.fillStyle(0xbae6fd,0.8);g.fillRect(gcx-5,gcy-4,10,6); // window
+    g.lineStyle(1,0xffffff,0.5);g.strokeRect(gcx-8,gcy-6,16,12);
+  }
+}
+
+/* ── Rain / Snow weather drawing ── */
+/* Pre-computed weather particle positions (refreshed only on weather change) */
+let _weatherParticles=[];
+let _weatherDirty=true; // rebuild particle positions on next frame
+function _buildWeatherParticles(W,H){
+  const isSnow=_seasonIdx===3;
+  const count=isSnow?60:120;
+  _weatherParticles=[];
+  for(let i=0;i<count;i++){
+    _weatherParticles.push({
+      x:Math.random()*W,
+      y:Math.random()*H,
+      vy:isSnow?40+Math.random()*30:90+Math.random()*60,
+      vx:isSnow?Math.random()*10-5:-8,
+    });
+  }
+  _weatherDirty=false;
+}
+let _lastWeatherW=0,_lastWeatherH=0;
+function updateWeatherGfx(scene){
+  if(!scene)return;
+  if(_isRaining){
+    if(!_rainGfx||!_rainGfx.active){
+      _rainGfx=scene.add.graphics().setScrollFactor(0).setDepth(998);
+      _weatherDirty=true;
+    }
+    const W=scene.scale.width,H=scene.scale.height;
+    if(_weatherDirty||W!==_lastWeatherW||H!==_lastWeatherH){
+      _buildWeatherParticles(W,H);_lastWeatherW=W;_lastWeatherH=H;
+    }
+    // Move particles
+    for(const p of _weatherParticles){
+      p.x+=p.vx*(1/60);p.y+=p.vy*(1/60);
+      if(p.y>H){p.y=-6;p.x=Math.random()*W;}
+      if(p.x<0)p.x=W;if(p.x>W)p.x=0;
+    }
+    _rainGfx.clear();
+    const isSnow=_seasonIdx===3;
+    const col=isSnow?0xffffff:0xbae6fd;
+    const alpha=isSnow?0.5:0.35;
+    if(isSnow){
+      for(const p of _weatherParticles){_rainGfx.fillStyle(col,alpha);_rainGfx.fillRect(p.x,p.y,2,2);}
+    }else{
+      _rainGfx.lineStyle(1,col,alpha);
+      for(const p of _weatherParticles){_rainGfx.lineBetween(p.x,p.y,p.x+2,p.y+6);}
+    }
+    _rainGfx.setVisible(true);
+  }else{
+    _weatherParticles=[];_weatherDirty=true;
+    if(_rainGfx&&_rainGfx.active){_rainGfx.clear();_rainGfx.setVisible(false);}
+  }
+}
+
+/* ── Update Ferris Wheel rotation each frame ── */
+function updateFerris(dtS){
+  if(currentCity!==2||!_ferrisGfx||!_ferrisGfx.active)return;
+  _ferrisAngle+=dtS*0.35; // slow rotation
+  drawFerrisWheel(_ferrisGfx);
+}
+
+/* ── Ferris Wheel building panel ── */
+function renderFerrisWheel(){
+  const cost=3;
+  return`<strong>🎡 Bianglala — Ferris Wheel</strong>
+<div style="font-size:11px;color:#38bdf8;margin:5px 0;">Nikmati pemandangan kota &amp; pantai dari ketinggian! Enjoy the view of Coastal City &amp; the ocean!</div>
+${_ferrisRiding?`<div style="color:#22c55e;font-size:11px;margin:6px 0;padding:6px;background:rgba(34,197,94,.1);border-radius:6px;">🎡 You're riding the Ferris Wheel!<br/><span style="font-size:10px;color:#94a3b8;">Panoramic view: 🏖️ Beach, 🌊 Ocean, 🏙️ Coastal City, ⛰️ Mount Moga</span></div>`
+:`<div style="font-size:11px;color:#94a3b8;margin:4px 0;">Ticket: $${cost} USD · Enjoy the panoramic city &amp; beach view</div>`}
+<div style="display:flex;gap:5px;margin-top:6px;">
+  <button onclick="boardFerris()" ${_ferrisRiding||S.coins<cost?'disabled':''} class="ibtn btn-blue" style="flex:1;">🎡 ${_ferrisRiding?'Riding...':'Naik'}</button>
+  <button onclick="exitFerris()" ${_ferrisRiding?'':'disabled'} class="ibtn btn-red" style="flex:1;">🚪 Turun</button>
+</div>`;
+}
+window.renderFerrisWheel=renderFerrisWheel;
+
+function boardFerris(){
+  if(_ferrisRiding)return;
+  if(S.coins<3)return logChat('[Bianglala] Need $3 USD to ride.',false,'#f87171');
+  S.coins-=3;_ferrisRiding=true;
+  onChainTx('FERRIS_RIDE:bianglala:$3USD',0.00001);
+  updateHUD();renderBuildingPanel();
+  logChat('[🎡 Bianglala] Woooo! 🎡 Riding the Ferris Wheel! Enjoy the panoramic view of Coastal City, beach &amp; Mount Moga!',false,'#fbbf24');
+  saveProgress();
+}
+window.boardFerris=boardFerris;
+
+function exitFerris(){
+  if(!_ferrisRiding)return;
+  _ferrisRiding=false;
+  renderBuildingPanel();
+  logChat('[🎡 Bianglala] Thanks for riding! Back on the ground.',false,'#94a3b8');
+}
+window.exitFerris=exitFerris;
 
 function decorateCity(scene,tiles,cont){
   _treeTileSet.clear();
@@ -3852,6 +4046,19 @@ function updateNPCCars(dtS){
     else if(c.dir==='down'){c.y+=c.speed*dtS;if(c.y>44*TILE)c.y=0;}
     else if(c.dir==='up'){c.y-=c.speed*dtS;if(c.y<0)c.y=44*TILE;}
     c.spr.setPosition(c.x,c.y);c.spr.setVisible(true);
+    /* 3D perspective: front view for vertical, side view for horizontal */
+    const isFront=(c.dir==='up'||c.dir==='down');
+    const frontTex=c.tex+'_front';
+    const sideTex=c.tex;
+    try{
+      if(isFront&&_phaserScene&&_phaserScene.textures.exists(frontTex)){
+        if(c.spr.texture.key!==frontTex)c.spr.setTexture(frontTex).setScale(1.2);
+        c.spr.setFlipX(false);
+      }else{
+        if(c.spr.texture.key!==sideTex)c.spr.setTexture(sideTex).setScale(1.4);
+        c.spr.setFlipX(c.dir==='left');
+      }
+    }catch(e){}
   }
 }
 function driveMyCar(){
@@ -4239,6 +4446,12 @@ function drawCity2(scene){
     scene.tweens.add({targets:sSpr,x:sp.x+3*TILE,y:sp.y-8,duration:2500+Math.random()*1000,yoyo:true,repeat:-1,ease:'Sine.easeInOut',delay:Math.random()*1500});
   }
   redrawFarmPlots();
+  // ── Ferris Wheel (Bianglala) — draw as animated graphics ──
+  _ferrisGfx=scene.add.graphics().setDepth(8);
+  worldCont.add(_ferrisGfx);
+  drawFerrisWheel(_ferrisGfx);
+  // Ferris wheel label
+  worldCont.add(scene.add.text(FERRIS_X,FERRIS_Y-FERRIS_R-20,'🎡 Bianglala',{fontSize:'11px',color:'#fbbf24',fontStyle:'bold',backgroundColor:'rgba(0,0,0,.6)',padding:{x:5,y:3}}).setOrigin(.5,1).setDepth(9));
 }
 
 /* ── City 3 draw function ── */
@@ -4786,6 +4999,11 @@ function doIAct(action){
       WS.outdoor='Boat';
       renderBuildingPanel();
       logChat('[⚓ Dock] Boat dock — board the ⛵ boat to sail the ocean and fish!',false,'#38bdf8');
+      break;
+    case 'bianglala':
+      WS.outdoor='Bianglala';
+      renderBuildingPanel();
+      logChat('[🎡 Bianglala] Ferris Wheel at the beach! Naik untuk menikmati pemandangan kota & pantai ($3 USD)',false,'#fbbf24');
       break;
     case 'gas station':
       WS.outdoor='GasStation';
@@ -5815,12 +6033,18 @@ function makeBirdTexture(scene){
     // Tail
     p(4,6,3,2,'#475569');
   });
-  /* ── Pixel-art car texture (48×28) ── */
+  /* ── Pixel-art car texture (48×28) — side view ── */
   addTex(scene,'car_red',48,28,c=>{makeCar(c,'#ef4444','#fee2e2');});
   addTex(scene,'car_blue',48,28,c=>{makeCar(c,'#3b82f6','#dbeafe');});
   addTex(scene,'car_green',48,28,c=>{makeCar(c,'#22c55e','#dcfce7');});
   addTex(scene,'car_yellow',48,28,c=>{makeCar(c,'#fbbf24','#fef9c3');});
   addTex(scene,'car_purple',48,28,c=>{makeCar(c,'#a78bfa','#ede9fe');});
+  /* ── Front-view car textures (28×32) — shown when driving up/down ── */
+  addTex(scene,'car_red_front',28,32,c=>{makeCarFront(c,'#ef4444','#fee2e2');});
+  addTex(scene,'car_blue_front',28,32,c=>{makeCarFront(c,'#3b82f6','#dbeafe');});
+  addTex(scene,'car_green_front',28,32,c=>{makeCarFront(c,'#22c55e','#dcfce7');});
+  addTex(scene,'car_yellow_front',28,32,c=>{makeCarFront(c,'#fbbf24','#fef9c3');});
+  addTex(scene,'car_purple_front',28,32,c=>{makeCarFront(c,'#a78bfa','#ede9fe');});
   /* ── Bulletin / Announcement Board texture (48×56) ── */
   addTex(scene,'bBulletin',48,56,c=>{
     const p=(x,y,w,h,col)=>px(c,x,y,w,h,col);
@@ -5875,11 +6099,13 @@ function makeCar(c,bodyC,glassC){
   p(8,20,1,1,'rgba(255,255,255,.3)');p(37,20,1,1,'rgba(255,255,255,.3)'); // hub glint
   // Wheel arches
   p(4,15,11,4,'rgba(0,0,0,.2)');p(33,15,11,4,'rgba(0,0,0,.2)');
-  // Car body main + panel crease
+  // Car body main + panel crease (3D right-side depth strip)
   p(3,12,42,11,bodyC);
   p(3,11,42,2,'rgba(0,0,0,.14)'); // body top shadow
   p(3,22,42,1,'rgba(0,0,0,.2)');  // body bottom edge
   p(4,16,40,1,'rgba(0,0,0,.08)'); // horizontal body crease
+  p(43,12,5,11,'rgba(0,0,0,.3)'); // 3D right side panel
+  p(43,12,5,1,'rgba(0,0,0,.2)');  // top edge of side panel
   // Door seam + door handle
   p(24,12,1,11,'rgba(0,0,0,.18)');
   p(26,16,4,1,'rgba(0,0,0,.28)');p(27,15,2,1,'#94a3b8'); // handle
@@ -5893,8 +6119,10 @@ function makeCar(c,bodyC,glassC){
   p(42,13,5,5,'#fbbf24');p(42,13,5,1,'rgba(255,255,255,.6)');p(43,14,2,2,'rgba(255,255,255,.4)');
   // Tail lights
   p(43,18,4,3,'#ef4444');p(43,18,4,1,'rgba(255,255,255,.3)');
-  // Cabin/roof with side mirrors
+  // Cabin/roof with side mirrors + 3D roof top
   p(10,4,28,9,bodyC);
+  p(10,3,28,2,'rgba(255,255,255,.18)'); // 3D roof top face
+  p(38,3,7,7,'rgba(0,0,0,.22)');        // 3D roof right side
   p(10,4,28,1,'rgba(255,255,255,.22)'); // roof highlight
   p(9,4,2,9,'rgba(0,0,0,.14)');p(38,4,2,9,'rgba(0,0,0,.14)');
   p(7,7,3,3,bodyC);p(38,7,3,3,bodyC); // mirrors
@@ -5911,6 +6139,45 @@ function makeCar(c,bodyC,glassC){
   // Body paint shine
   p(4,13,38,2,'rgba(255,255,255,.15)');
   p(12,4,12,1,'rgba(255,255,255,.12)'); // roof shine
+}
+
+/* ── Front-view car texture (28×32) — shown when driving up/down ── */
+function makeCarFront(c,bodyC,glassC){
+  const p=(x,y,w,h,col)=>px(c,x,y,w,h,col);
+  // Shadow
+  p(3,28,22,3,'rgba(0,0,0,.25)');
+  // Front wheels (visible from front — two narrow rectangles)
+  p(0,19,6,9,'#1f2937');p(22,19,6,9,'#1f2937');
+  p(1,20,4,7,'#374151');p(23,20,4,7,'#374151');
+  p(2,21,2,5,'#94a3b8');p(24,21,2,5,'#94a3b8');
+  // Body front face
+  p(5,13,18,14,bodyC);
+  p(5,13,18,1,'rgba(255,255,255,.2)');  // top trim
+  p(5,26,18,1,'rgba(0,0,0,.2)');        // bottom edge
+  // 3D right-side panel
+  p(23,13,5,14,'rgba(0,0,0,.28)');
+  p(23,13,5,1,'rgba(0,0,0,.15)');
+  // Hood top (3D top face — lighter parallelogram effect)
+  p(5,9,18,5,bodyC);
+  p(5,9,18,1,'rgba(255,255,255,.25)');
+  p(23,9,4,5,'rgba(0,0,0,.2)');
+  // Grille + bumper
+  p(6,22,16,4,'#1e293b');
+  p(7,23,14,2,'rgba(255,255,255,.12)');
+  p(8,23,4,1,'rgba(255,255,255,.2)');p(16,23,4,1,'rgba(255,255,255,.2)');
+  // Headlights (front view)
+  p(5,14,5,5,'#fbbf24');p(5,14,5,1,'rgba(255,255,255,.7)');p(6,15,2,2,'rgba(255,255,255,.5)');
+  p(18,14,5,5,'#fbbf24');p(18,14,5,1,'rgba(255,255,255,.7)');p(19,15,2,2,'rgba(255,255,255,.5)');
+  // Windshield (front)
+  p(7,6,14,8,glassC);p(7,6,14,1,'rgba(255,255,255,.55)');p(7,6,3,7,'rgba(255,255,255,.3)');
+  p(9,7,3,3,'rgba(255,255,255,.5)');
+  // Cabin roof
+  p(6,3,16,4,bodyC);p(6,3,16,1,'rgba(255,255,255,.3)');
+  p(22,3,4,4,'rgba(0,0,0,.2)');
+  // Door handles (front view sides)
+  p(5,18,1,3,'#94a3b8');p(22,18,1,3,'#94a3b8');
+  // License plate
+  p(9,24,10,2,'#f8fafc');p(9,24,10,1,'rgba(0,0,0,.25)');
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -5934,25 +6201,86 @@ function fmtCountdown(ms){
 }
 
 /* ── Farm plot graphics ── */
+function drawFarmPlot(g,bx,by,state,alpha){
+  const T=TILE;
+  /* Hoed ground: dark brown soil + furrow lines */
+  if(state==='hoed'){
+    g.fillStyle(0x78350f,alpha);g.fillRect(bx,by,T,T);
+    g.fillStyle(0x92400e,alpha*0.55);
+    for(let row=4;row<T;row+=7){g.fillRect(bx+2,by+row,T-4,1);}
+    g.fillStyle(0x451a03,alpha*0.35);
+    for(let row=7;row<T;row+=7){g.fillRect(bx+3,by+row,T-6,1);}
+  }
+  /* Seeded: soil + small seedling (stem + two tiny leaves) */
+  else if(state==='seeded'){
+    g.fillStyle(0x78350f,alpha);g.fillRect(bx,by,T,T);
+    // Subtle furrow hints
+    g.fillStyle(0x92400e,alpha*0.4);
+    g.fillRect(bx+2,by+T-8,T-4,1);g.fillRect(bx+2,by+T-14,T-4,1);
+    const cx=bx+T/2|0,cy=(by+T*0.62)|0;
+    // Stem
+    g.fillStyle(0x16a34a,alpha);g.fillRect(cx-1,cy-8,2,10);
+    // Leaves (as rectangles at angles simulated with offset)
+    g.fillStyle(0x4ade80,alpha);
+    g.fillRect(cx-7,cy-8,6,3); // left leaf
+    g.fillRect(cx+1,cy-8,6,3); // right leaf
+    g.fillRect(cx-3,cy-12,6,3); // top leaf
+    g.fillStyle(0x86efac,alpha*0.6);g.fillRect(cx-1,cy-7,1,4); // stem highlight
+  }
+  /* Watered: dark moist soil + growing plant + water shimmer */
+  else if(state==='watered'){
+    g.fillStyle(0x4d2806,alpha);g.fillRect(bx,by,T,T);
+    g.fillStyle(0x1d4ed8,alpha*0.2);g.fillRect(bx,by,T,T); // blue shimmer tint
+    const cx=bx+T/2|0,cy=(by+T*0.55)|0;
+    // Taller stem
+    g.fillStyle(0x15803d,alpha);g.fillRect(cx-1,cy-13,2,14);
+    // Bigger leaves
+    g.fillStyle(0x22c55e,alpha);
+    g.fillRect(cx-9,cy-12,8,3);   // left leaf
+    g.fillRect(cx+1,cy-12,8,3);   // right leaf
+    g.fillRect(cx-6,cy-17,5,3);   // upper left
+    g.fillRect(cx+1,cy-17,5,3);   // upper right
+    // Water droplets (small blue squares)
+    g.fillStyle(0x38bdf8,alpha*0.85);
+    g.fillRect(cx-6,by+5,3,3);g.fillRect(cx+4,by+8,2,2);g.fillRect(cx,by+3,2,2);
+  }
+  /* Ready: mature fruit plant — green bush + red fruits + glow border */
+  else if(state==='ready'){
+    g.fillStyle(0x4d2806,alpha);g.fillRect(bx,by,T,T);
+    const cx=bx+T/2|0,cy=(by+T*0.5)|0;
+    // Trunk
+    g.fillStyle(0x78350f,alpha);g.fillRect(cx-2,cy,4,T/2-2);
+    // Green canopy layers
+    g.fillStyle(0x15803d,alpha);g.fillRect(cx-10,cy-8,20,14);
+    g.fillStyle(0x22c55e,alpha);g.fillRect(cx-8,cy-14,16,10);
+    g.fillStyle(0x4ade80,alpha*0.8);g.fillRect(cx-5,cy-18,10,7);
+    // Red fruits
+    g.fillStyle(0xef4444,alpha);
+    g.fillRect(cx-7,cy-6,4,4);g.fillRect(cx+3,cy-8,4,4);g.fillRect(cx-1,cy-4,4,4);
+    // Fruit highlights
+    g.fillStyle(0xfca5a5,alpha*0.6);
+    g.fillRect(cx-6,cy-5,2,2);g.fillRect(cx+4,cy-7,2,2);
+    // Gold glow border to indicate ready
+    g.lineStyle(2,0xfbbf24,alpha*0.6);
+    g.strokeRect(bx+1,by+1,T-2,T-2);
+  }
+}
 function redrawFarmPlots(){
   if(!_phaserScene)return;
   if(!_farmGfx||!_farmGfx.active){_farmGfx=_phaserScene.add.graphics().setDepth(2);}
   _farmGfx.clear();
   if(WS.zone!=='CITY'){_farmGfx.setVisible(false);return;}
   _farmGfx.setVisible(true);
-  const cols={hoed:0x78350f,seeded:0xfbbf24,watered:0x38bdf8,ready:0x4ade80};
-  /* Player's own plots */
+  /* Player's own plots — drawn with full detail */
   for(const p of S.plots){
-    _farmGfx.fillStyle(cols[p.state]||0x78350f,0.8);
-    _farmGfx.fillRect(p.tx*TILE,p.ty*TILE,TILE,TILE);
-    _farmGfx.lineStyle(1,0xffffff,0.35);
+    drawFarmPlot(_farmGfx,p.tx*TILE,p.ty*TILE,p.state,0.9);
+    _farmGfx.lineStyle(1.5,0xfbbf24,0.5);
     _farmGfx.strokeRect(p.tx*TILE,p.ty*TILE,TILE,TILE);
   }
-  /* NPC plots – dimmer, different tint to show other players' areas */
+  /* NPC plots – dimmer, simpler to distinguish other players' areas */
   for(const np of _npcPlots){
-    _farmGfx.fillStyle(cols[np.state]||0x78350f,0.35);
-    _farmGfx.fillRect(np.tx*TILE,np.ty*TILE,TILE,TILE);
-    _farmGfx.lineStyle(1,0x94a3b8,0.5);
+    drawFarmPlot(_farmGfx,np.tx*TILE,np.ty*TILE,np.state,0.4);
+    _farmGfx.lineStyle(1,0x94a3b8,0.4);
     _farmGfx.strokeRect(np.tx*TILE,np.ty*TILE,TILE,TILE);
   }
 }
@@ -6435,8 +6763,9 @@ const phaserCfg={
     update(_,dt){
       const dtS=dt/1000;updateDN(dtS);
       updateNPCBots(dtS);updateBirds(dtS);updateWaves(dtS);
-      if(currentCity===2){updateTrain(dtS);updateNPCCars(dtS);updateTrafficLights(dtS);updatePlane(dtS);updateBoat(dtS);}
+      if(currentCity===2){updateTrain(dtS);updateNPCCars(dtS);updateTrafficLights(dtS);updatePlane(dtS);updateBoat(dtS);updateFerris(dtS);}
       if(currentCity===3){updateBus3(dtS);updateNPCTrucks3(dtS);updatePlane(dtS);}
+      updateWeatherGfx(this);
       // ── Vehicle headlights at night ──
       if(_vehicleLightGfx&&_vehicleLightGfx.active&&WS.zone==='CITY'){
         if(_isNight){
@@ -6476,6 +6805,25 @@ const phaserCfg={
           const onRoad=tx>=0&&ty>=0&&tx<CW&&ty<CH&&CAR_ROAD_TILES.has(activeTiles[ty][tx]);
           const nRed=isTrafficRed()&&TRAFFIC_LIGHT_INTERSECTIONS.some(tl=>Math.hypot(cx-tl.x,cy-tl.y)<2*TILE);
           if(onRoad&&!nRed){this.me.x=cx;this.me.y=cy;if(playerCarSprite&&playerCarSprite.active)playerCarSprite.setPosition(cx,cy);}
+          /* 3D perspective: update player car texture based on movement direction */
+          if(playerCarSprite&&playerCarSprite.active&&(vx||vy)){
+            const myCarId=getMyCarId();
+            const ct=myCarId?CAR_TYPES.find(c=>c.id===myCarId):null;
+            const baseTex=ct&&ct.tex?ct.tex:'car_green';
+            const isFront=(vy!==0&&vx===0);
+            const frontTex=baseTex+'_front';
+            try{
+              if(isFront&&this.textures&&this.textures.exists(frontTex)){
+                if(playerCarSprite.texture.key!==frontTex)playerCarSprite.setTexture(frontTex).setScale(1.2);
+                playerCarSprite.setFlipX(false);
+                _playerCarDir='front';
+              }else{
+                if(playerCarSprite.texture.key!==baseTex)playerCarSprite.setTexture(baseTex).setScale(1.4);
+                playerCarSprite.setFlipX(vx<0);
+                _playerCarDir=vx<0?'left':'right';
+              }
+            }catch(e){}
+          }
         }else if(!blocked(cx,cy,activeTiles)){this.me.x=cx;this.me.y=cy;}
         else{if(!blocked(cx,this.me.y,activeTiles))this.me.x=cx;if(!blocked(this.me.x,cy,activeTiles))this.me.y=cy;}
       }else{this.me.x=clamp(nx,20,IW*TILE-20);this.me.y=clamp(ny,20,IH*TILE-20);}
@@ -6622,12 +6970,15 @@ const ASSET_PRICES={BTC:95000,ETH:2500,SOL:180,MOGA:0.08};
 
 function crInit(){
   CR.canvas=document.getElementById('crCanvas');
+  if(!CR.canvas)return; // element not yet in DOM
   CR.ctx=CR.canvas.getContext('2d');
   if(!CR._keysBound){_crBindKeys();_crBindMobile();CR._keysBound=true;}
 }
 
 function crResize(){
+  if(!CR.canvas)return; // guard: not initialized yet (called before crInit)
   const ov=document.getElementById('chartRiderOv');
+  if(!ov)return;
   CR.W=ov.clientWidth||window.innerWidth;
   CR.H=ov.clientHeight-50;
   CR.canvas.width=CR.W;
@@ -7232,7 +7583,8 @@ window.exitChartRider=function(){
 
 // Handle resize
 window.addEventListener('resize',()=>{
-  if(document.getElementById('chartRiderOv').style.display!=='none')crResize();
+  const ov=document.getElementById('chartRiderOv');
+  if(ov&&ov.style.display!=='none')crResize();
 });
 
 })(); // end Chart Rider IIFE
