@@ -15445,9 +15445,9 @@
       position: fixed;
       bottom: 90px;
       right: 24px;
-      width: 360px;
+      width: 380px;
       max-width: calc(100vw - 48px);
-      height: 480px;
+      height: 540px;
       background: #1a1d2e;
       border: 1px solid rgba(99,102,241,0.4);
       border-radius: 16px;
@@ -15474,6 +15474,10 @@
     .chatbot-header-title { font-weight: bold; color: white; font-size: 1em; flex: 1; }
     .chatbot-header-close { background: none; border: none; color: rgba(255,255,255,0.8); font-size: 1.3em; cursor: pointer; padding: 0; line-height: 1; }
     .chatbot-header-close:hover { color: white; }
+    .chatbot-header-clear { background: none; border: none; color: rgba(255,255,255,0.6); font-size: 1em; cursor: pointer; padding: 0 6px 0 0; line-height: 1; }
+    .chatbot-header-clear:hover { color: white; }
+    .chat-bubble.bot pre { background: rgba(0,0,0,0.35); padding: 8px 10px; border-radius: 6px; font-size: 0.85em; overflow-x: auto; margin: 4px 0; white-space: pre-wrap; font-family: monospace; }
+    .chat-bubble.bot code { background: rgba(255,255,255,0.1); padding: 1px 5px; border-radius: 3px; font-size: 0.9em; font-family: monospace; }
     #chatbotMessages {
       flex: 1;
       overflow-y: auto;
@@ -15592,7 +15596,8 @@
   <div id="chatbotWindow" class="chatbot-hidden">
     <div class="chatbot-header">
       <span class="chatbot-header-icon">🤖</span>
-      <span class="chatbot-header-title">Moga AI — Web Search &amp; AI</span>
+      <span class="chatbot-header-title">Moga AI — Powered by GPT-4o</span>
+      <button class="chatbot-header-clear" onclick="clearChat()" title="Clear conversation">🗑</button>
       <button class="chatbot-header-close" onclick="toggleChatbot()">×</button>
     </div>
     <div id="chatbotMessages"></div>
@@ -15639,14 +15644,15 @@
       const SUGGESTIONS = ['How do I swap?','What is Moga World?','How to fly to City 2?','How to earn rewards?','What is NFT Staking?','Contact support'];
 
       // System prompt with Mogaland knowledge for the AI
-      const AI_SYSTEM_PROMPT = `You are Moga AI, a helpful and friendly assistant for the Mogaland blockchain portal. You can answer questions about Mogaland and general topics. Keep answers concise (2–4 sentences max). Do not use markdown headers. Use emojis naturally.
+      const AI_SYSTEM_PROMPT = `You are Moga AI, a smart and helpful assistant for the Mogaland blockchain portal. You answer questions about Mogaland and any general topic with detailed, accurate, and friendly responses. Use emojis naturally where appropriate. Format your responses clearly: use **bold** for key terms, bullet points (- item) for lists, and code blocks (\`\`\`) for code snippets. Be comprehensive and thorough — don't artificially limit your answer length.
 
 Mogaland context:
-- Blockchain simulator portal on Sepolia testnet
-- Features: Token Swap, Cross-chain Bridge, NFT Staking, Learning quizzes, Market Prediction (leverage 1x-100x), Moga World RPG
-- Moga World RPG: open-world game with City 1 (Moga City) and City 2 (Coastal City), casino, train, boat, car NFTs
-- Currency: USDC (on-chain Sepolia). Earn via staking, trading, quizzes, in-game work
-- Mogaland Points: earned from quizzes, converted to USDC
+- Blockchain simulator portal, primarily on Sepolia testnet (Base mainnet also supported)
+- Features: Token Swap (Uniswap V3), Cross-chain Bridge, NFT Staking, Learning quizzes (100 questions), Market Prediction (crypto/stocks/forex/commodities/sports, leverage 1x–100x), Moga World RPG
+- Moga World RPG: open-world game with City 1 (Moga City), City 2 (Coastal City), and City 3; casino, train, boat, car NFTs, motor NFTs (3 types), houses (70 total)
+- Currency: USDC (on-chain). Earn via NFT staking, trading, quizzes, in-game work, daily check-in
+- Mogaland Points (MOGA): earned from learning quizzes, convertible to USDC
+- NFT types: Common, Rare, Epic, Legendary — higher rarity = higher staking APY
 - Wallets supported: MetaMask, OKX, Trust Wallet, Email login, X (Twitter) login
 - Get free Sepolia ETH at sepoliafaucet.com for gas fees
 - Support: Discord and Telegram`;
@@ -15654,6 +15660,8 @@ Mogaland context:
       let chatOpen = false;
       let chatInitialized = false;
       let _aiPending = false;
+      let chatHistory = []; // Multi-turn conversation history (ChatGPT-like memory)
+      const CHAT_HISTORY_LIMIT = 20; // Keep last 20 messages (10 conversation turns)
 
       // ---- Drag state ----
       let _drag = { active: false, startX: 0, startY: 0, winX: 0, winY: 0 };
@@ -15722,10 +15730,10 @@ Mogaland context:
       window.toggleChatbot = toggleChatbot;
 
       function initChat() {
-        appendBotMessage('👋 Hi! I\'m <b>Moga AI</b> — your Mogaland assistant with web search. Ask me anything about the portal, blockchain, or anything else!<br><small style="opacity:0.7">🔍 I can search the web for up-to-date answers. Need live help? Contact our operator via <b>Discord</b> or <b>Telegram</b>.</small>');
+        appendBotMessage('👋 Hi! I\'m <b>Moga AI</b>, powered by <b>GPT-4o</b> with web search. Ask me anything about Mogaland, blockchain, or any topic — I remember our conversation context!<br><small style="opacity:0.7">🔍 Web search + 🤖 GPT-4o · Need live help? Contact our operator via <b>Discord</b> or <b>Telegram</b>.</small>');
         renderSuggestions(SUGGESTIONS);
         const statusBar = document.getElementById('chatStatusBar');
-        if (statusBar) statusBar.textContent = '🔍 Web search + AI powered';
+        if (statusBar) statusBar.textContent = '🤖 GPT-4o · 🔍 Web search · 💬 Remembers context';
       }
 
       function appendBotMessage(html) {
@@ -15738,7 +15746,52 @@ Mogaland context:
         msgs.scrollTop = msgs.scrollHeight;
       }
 
-      // Append AI-generated text safely (no innerHTML from external source)
+      // Safe markdown-to-HTML converter for AI responses
+      function markdownToHtml(text) {
+        // 1. Escape HTML entities first (prevents XSS)
+        let html = text
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;');
+        // 2. Extract and protect fenced code blocks before other markdown is processed
+        const codeBlocks = [];
+        html = html.replace(/```[^\n]*\n?([\s\S]*?)```/g, (_, code) => {
+          const idx = codeBlocks.length;
+          codeBlocks.push(`<pre>${code.trim()}</pre>`);
+          return `\x00CODEBLOCK${idx}\x00`;
+        });
+        // 3. Extract and protect inline code spans
+        const inlineCodes = [];
+        html = html.replace(/`([^`\n]+)`/g, (_, code) => {
+          const idx = inlineCodes.length;
+          inlineCodes.push(`<code>${code}</code>`);
+          return `\x00INLINECODE${idx}\x00`;
+        });
+        // 4. Bold (**text** or __text__)
+        html = html.replace(/\*\*([^*\n]+)\*\*/g, '<b>$1</b>');
+        html = html.replace(/__([^_\n]+)__/g, '<b>$1</b>');
+        // 5. Italic (*text* or _text_)
+        html = html.replace(/\*([^*\n]+)\*/g, '<i>$1</i>');
+        html = html.replace(/_([^_\n]+)_/g, '<i>$1</i>');
+        // 6. Headings (### ## #)
+        html = html.replace(/^### (.+)$/gm, '<b>$1</b>');
+        html = html.replace(/^## (.+)$/gm, '<b>$1</b>');
+        html = html.replace(/^# (.+)$/gm, '<b>$1</b>');
+        // 7. Unordered list items
+        html = html.replace(/^[*\-] (.+)$/gm, '• $1');
+        // 8. Numbered list items
+        html = html.replace(/^\d+\. (.+)$/gm, '• $1');
+        // 9. Double newlines → paragraph breaks
+        html = html.replace(/\n\n/g, '<br><br>');
+        // 10. Single newlines → line breaks
+        html = html.replace(/\n/g, '<br>');
+        // 11. Restore protected code blocks and inline codes
+        html = html.replace(/\x00INLINECODE(\d+)\x00/g, (_, i) => inlineCodes[+i]);
+        html = html.replace(/\x00CODEBLOCK(\d+)\x00/g, (_, i) => codeBlocks[+i]);
+        return html;
+      }
+
+      // Append AI-generated text with safe markdown rendering
       function appendBotMessageText(text, webBadge) {
         const msgs = document.getElementById('chatbotMessages');
         if (!msgs) return;
@@ -15750,12 +15803,9 @@ Mogaland context:
           badge.textContent = webBadge;
           div.appendChild(badge);
         }
-        // Convert newlines to <br> safely, then set as text
-        const lines = text.split('\n');
-        lines.forEach((line, i) => {
-          div.appendChild(document.createTextNode(line));
-          if (i < lines.length - 1) div.appendChild(document.createElement('br'));
-        });
+        const content = document.createElement('div');
+        content.innerHTML = markdownToHtml(text);
+        div.appendChild(content);
         msgs.appendChild(div);
         msgs.scrollTop = msgs.scrollHeight;
       }
@@ -15831,32 +15881,35 @@ Mogaland context:
 
       // Web search snippet limits
       const SNIPPET_MIN_LENGTH = 20;
-      const SNIPPET_MAX_LENGTH = 400;
+      const SNIPPET_MAX_LENGTH = 600;
       async function fetchWebSearch(query) {
         try {
           const url = 'https://api.duckduckgo.com/?q=' + encodeURIComponent(query) + '&format=json&no_html=1&skip_disambig=1';
-          const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+          const res = await fetch(url, { signal: AbortSignal.timeout(6000) });
           const data = await res.json();
-          const snippet = data.AbstractText || data.Answer || '';
+          const snippet = data.AbstractText || data.Answer ||
+            (data.RelatedTopics && data.RelatedTopics[0] && data.RelatedTopics[0].Text) || '';
           return snippet.length > SNIPPET_MIN_LENGTH ? snippet.slice(0, SNIPPET_MAX_LENGTH) : null;
         } catch {
           return null;
         }
       }
 
-      // Fetch AI answer from Pollinations AI (free, no API key required)
+      // Fetch AI answer from Pollinations AI (free, GPT-4o, no API key required)
       async function fetchAIAnswer(userText, webContext) {
         const messages = [{ role: 'system', content: AI_SYSTEM_PROMPT }];
         if (webContext) {
-          messages.push({ role: 'system', content: 'Web search result for context: ' + webContext });
+          messages.push({ role: 'system', content: 'Web search result for additional context:\n' + webContext });
         }
+        // Include conversation history for multi-turn context (ChatGPT-like memory)
+        chatHistory.forEach(m => messages.push(m));
         messages.push({ role: 'user', content: userText });
 
         const res = await fetch('https://text.pollinations.ai/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ messages: messages, model: 'openai', seed: 42 }),
-          signal: AbortSignal.timeout(20000)
+          body: JSON.stringify({ messages, model: 'openai-large', private: true }),
+          signal: AbortSignal.timeout(30000)
         });
         if (!res.ok) throw new Error('AI request failed: ' + res.status);
         const text = await res.text();
@@ -15881,37 +15934,60 @@ Mogaland context:
         // Check local KB first for instant Mogaland-specific answers
         const localAnswer = getLocalKBAnswer(text);
         if (localAnswer) {
-          setTimeout(() => appendBotMessage(localAnswer), 300);
+          setTimeout(() => {
+            appendBotMessage(localAnswer);
+            // Save to history so follow-up questions have context
+            const tmp = document.createElement('div');
+            tmp.innerHTML = localAnswer;
+            const plainText = tmp.textContent || tmp.innerText || localAnswer;
+            chatHistory.push({ role: 'user', content: text });
+            chatHistory.push({ role: 'assistant', content: plainText });
+            if (chatHistory.length > CHAT_HISTORY_LIMIT) chatHistory.splice(0, chatHistory.length - CHAT_HISTORY_LIMIT);
+          }, 300);
           return;
         }
 
-        // For general questions: search web + AI
+        // For general questions: search web + AI (GPT-4o with conversation memory)
         setChatBusy(true);
         showTypingIndicator('🔍 Searching the web…');
 
         try {
-          // First search the web, then pass context to AI for enriched response
+          // Search web first, then pass context to GPT-4o for an enriched response
           const webSnippet = await fetchWebSearch(text);
-          if (webSnippet) updateTypingLabel('🤖 Generating AI answer…');
+          if (webSnippet) updateTypingLabel('🤖 GPT-4o thinking…');
+          else updateTypingLabel('🤖 GPT-4o thinking…');
           const aiAnswer = await fetchAIAnswer(text, webSnippet);
 
           removeTypingIndicator();
 
           if (aiAnswer && aiAnswer.length > 0) {
-            const badge = webSnippet ? '🌐 Web search result included' : null;
+            const badge = webSnippet ? '🌐 Web + GPT-4o' : '🤖 GPT-4o';
             appendBotMessageText(aiAnswer, badge);
+            // Save to conversation history for multi-turn context
+            chatHistory.push({ role: 'user', content: text });
+            chatHistory.push({ role: 'assistant', content: aiAnswer });
+            if (chatHistory.length > CHAT_HISTORY_LIMIT) chatHistory.splice(0, chatHistory.length - CHAT_HISTORY_LIMIT);
           } else {
             appendBotMessage('🤔 I\'m not sure about that. Try asking about swapping, staking, the game, or rewards!<br><small style="opacity:0.7">Contact our operator via <b>Discord</b> or <b>Telegram</b> for live support.</small>');
           }
         } catch (err) {
           removeTypingIndicator();
-          // Fallback to KB-style error message
-          appendBotMessage('🤔 I\'m not sure about that. Try asking about swapping, bridging, NFT staking, the game, or how to earn USDC!<br><small style="opacity:0.7">Still confused? Contact our operator via <b>Discord</b> or <b>Telegram</b> for direct support.</small>');
+          appendBotMessage('🤔 I\'m having trouble connecting right now. Try again in a moment!<br><small style="opacity:0.7">Still need help? Contact our operator via <b>Discord</b> or <b>Telegram</b>.</small>');
         } finally {
           setChatBusy(false);
         }
       }
       window.sendChatText = sendChatText;
+
+      function clearChat() {
+        const msgs = document.getElementById('chatbotMessages');
+        if (msgs) msgs.innerHTML = '';
+        chatHistory = [];
+        document.getElementById('chatSuggestions').innerHTML = '';
+        appendBotMessage('🗑️ Conversation cleared! I\'m ready for a fresh start. Ask me anything!');
+        renderSuggestions(SUGGESTIONS);
+      }
+      window.clearChat = clearChat;
     })();
   </script>
 </body>
