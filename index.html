@@ -15905,15 +15905,38 @@ Mogaland context:
         chatHistory.forEach(m => messages.push(m));
         messages.push({ role: 'user', content: userText });
 
-        const res = await fetch('https://text.pollinations.ai/', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ messages, model: 'openai-large', private: true }),
-          signal: AbortSignal.timeout(30000)
-        });
-        if (!res.ok) throw new Error('AI request failed: ' + res.status);
-        const text = await res.text();
-        return text.trim();
+        const bodyObj = { messages, model: 'openai-large', private: true };
+
+        // Try primary endpoint first, then fallback endpoints on failure
+        const endpoints = [
+          { url: 'https://text.pollinations.ai/', parse: r => r.text() },
+          { url: 'https://text.pollinations.ai/', parse: r => r.text() }, // retry same endpoint once
+          { url: 'https://text.pollinations.ai/openai', parse: async r => {
+            const j = await r.json();
+            return j.choices?.[0]?.message?.content || '';
+          }}
+        ];
+
+        let lastError;
+        for (let i = 0; i < endpoints.length; i++) {
+          try {
+            if (i === 1) await new Promise(r => setTimeout(r, 2000)); // brief delay before same-endpoint retry
+            const { url, parse } = endpoints[i];
+            const res = await fetch(url, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(bodyObj),
+              signal: AbortSignal.timeout(30000)
+            });
+            if (!res.ok) throw new Error('AI request failed: ' + res.status);
+            const text = await parse(res);
+            const trimmed = text && text.trim();
+            if (trimmed) return trimmed;
+          } catch (err) {
+            lastError = err;
+          }
+        }
+        throw lastError;
       }
 
       function sendChatMessage() {
@@ -15972,7 +15995,17 @@ Mogaland context:
           }
         } catch (err) {
           removeTypingIndicator();
-          appendBotMessage('🤔 I\'m having trouble connecting right now. Try again in a moment!<br><small style="opacity:0.7">Still need help? Contact our operator via <b>Discord</b> or <b>Telegram</b>.</small>');
+          // Try local KB as fallback before showing generic error
+          const localFallback = getLocalKBAnswer(text);
+          if (localFallback) {
+            appendBotMessage(localFallback + '<br><small style="opacity:0.5">⚡ Local answer — AI temporarily unavailable</small>');
+            chatHistory.push({ role: 'user', content: text });
+            const tmp = document.createElement('div'); tmp.innerHTML = localFallback;
+            chatHistory.push({ role: 'assistant', content: tmp.textContent || localFallback });
+            if (chatHistory.length > CHAT_HISTORY_LIMIT) chatHistory.splice(0, chatHistory.length - CHAT_HISTORY_LIMIT);
+          } else {
+            appendBotMessage('🤔 I\'m having trouble connecting right now. Try again in a moment!<br><small style="opacity:0.7">Still need help? Contact our operator via <b>Discord</b> or <b>Telegram</b>.</small>');
+          }
         } finally {
           setChatBusy(false);
         }
