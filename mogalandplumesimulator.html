@@ -604,7 +604,7 @@
 
     <button class="login-option" onclick="showWalletOptions()">Connect Wallet</button>
     <button class="login-option" onclick="showEmailLogin()">Login with Email</button>
-    <button class="login-option" onclick="showXLogin()">Login with X (@username)</button>
+    <button class="login-option" onclick="loginWithX()">Login with X</button>
 
     <div id="walletOptions" class="hidden">
       <h3 style="margin:20px 0;">Select Wallet</h3>
@@ -619,11 +619,6 @@
       <button class="login-option" onclick="sendEmailCode()">Send Mock OTP</button>
       <input type="text" id="otpInput" class="input-field hidden" placeholder="OTP (123456)" />
       <button class="login-option hidden" id="verifyOtpBtn" onclick="verifyEmailOtp()">Verify</button>
-    </div>
-
-    <div id="xLogin" class="hidden">
-      <input type="text" id="xInput" class="input-field" placeholder="@yourusername" />
-      <button class="login-option" onclick="confirmXLogin()">Confirm</button>
     </div>
 
     <div id="notification-area"></div>
@@ -855,10 +850,18 @@
 
     function showWalletOptions() { toggleSections('walletOptions'); }
     function showEmailLogin() { toggleSections('emailLogin'); }
-    function showXLogin() { toggleSections('xLogin'); }
+    function loginWithX() {
+      localStorage.setItem('x_login_intent', 'login');
+      if (typeof connectX === 'function') {
+        connectX();
+      } else {
+        showNotification('Loading… please try again in a moment.', true);
+        localStorage.removeItem('x_login_intent');
+      }
+    }
 
     function toggleSections(showId) {
-      ['walletOptions','emailLogin','xLogin'].forEach(id => document.getElementById(id).classList.toggle('hidden', id !== showId));
+      ['walletOptions','emailLogin'].forEach(id => document.getElementById(id).classList.toggle('hidden', id !== showId));
     }
 
     function sendEmailCode() {
@@ -872,12 +875,6 @@
     function verifyEmailOtp() {
       if (document.getElementById('otpInput').value.trim() === mockOtp) enterDashboard("Email");
       else showNotification("Wrong OTP", true);
-    }
-
-    function confirmXLogin() {
-      const handle = document.getElementById('xInput').value.trim();
-      if (!handle.startsWith('@')) return showNotification("Invalid @username", true);
-      enterDashboard("X");
     }
 
     function enterDashboard(method) {
@@ -2810,7 +2807,14 @@
 
         showNotification(`✅ X account @${username} connected!`, false);
         loadXConnectionStatus();
-        openBackProfile();
+
+        const loginIntent = localStorage.getItem('x_login_intent');
+        localStorage.removeItem('x_login_intent');
+        if (loginIntent === 'login') {
+          enterDashboard('X');
+        } else {
+          openBackProfile();
+        }
       } catch (err) {
         console.error('[x-oauth-callback]', err);
         showNotification('X connection failed. Please try again.', true);

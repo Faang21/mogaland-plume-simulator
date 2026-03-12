@@ -1957,7 +1957,7 @@
       <span style="font-size: 1.2rem; margin-right: 8px;">📧</span>
       Login with Email
     </button>
-    <button class="login-option" onclick="showXLogin()">
+    <button class="login-option" onclick="loginWithX()">
       <span style="font-size: 1.2rem; margin-right: 8px;">𝕏</span>
       Login with X
     </button>
@@ -1967,11 +1967,6 @@
       <button class="login-option" onclick="sendEmailCode()">Send Mock OTP</button>
       <input type="text" id="otpInput" class="input-field hidden" placeholder="OTP (123456)" maxlength="6" pattern="[0-9]{6}" title="Enter 6-digit OTP" />
       <button class="login-option hidden" id="verifyOtpBtn" onclick="verifyEmailOtp()">Verify</button>
-    </div>
-
-    <div id="xLogin" class="hidden">
-      <input type="text" id="xInput" class="input-field" placeholder="@yourusername" title="Enter a valid X username starting with @ (e.g., @username)" />
-      <button class="login-option" onclick="confirmXLogin()">Confirm</button>
     </div>
 
     <!-- Login History (recent accounts) -->
@@ -2923,14 +2918,22 @@
 
     // Login UI functions - Available immediately (don't need ethers.js)
     function showEmailLogin() { toggleSections('emailLogin'); }
-    function showXLogin() { toggleSections('xLogin'); }
+    function loginWithX() {
+      localStorage.setItem('x_login_intent', 'login');
+      if (typeof window.initiateXOAuth === 'function') {
+        window.initiateXOAuth();
+      } else {
+        showNotification('Loading… please try again in a moment.', true);
+        localStorage.removeItem('x_login_intent');
+      }
+    }
     
     // Expose login functions to window for onclick handlers
     window.showEmailLogin = showEmailLogin;
-    window.showXLogin = showXLogin;
+    window.loginWithX = loginWithX;
     
     function toggleSections(showId) {
-      ['emailLogin', 'xLogin'].forEach(id => {
+      ['emailLogin'].forEach(id => {
         const el = document.getElementById(id);
         if (el) {
           el.classList.toggle('hidden', id !== showId);
@@ -3147,26 +3150,6 @@
       }
     }
     window.verifyEmailOtp = verifyEmailOtp;
-
-    function confirmXLogin() {
-      try {
-        const handle = document.getElementById('xInput').value.trim();
-        // Proper X username validation: starts with @, followed by 1-15 alphanumeric/underscore characters
-        const xUsernameRegex = /^@[a-zA-Z0-9_]{1,15}$/;
-        if (!xUsernameRegex.test(handle)) {
-          return showNotification("Please enter a valid X username (e.g., @username)", true);
-        }
-        // Assign a stable pseudo-address so localStorage keys are consistent
-        userAddress = generatePseudoAddress('x:' + handle.toLowerCase());
-        enterDashboard("X");
-        loadUserTradingVolume();
-        pullUserDataFromCloud().catch(() => {});
-      } catch (error) {
-        console.error("X login error:", error);
-        showNotification("Error with X login. Please try again.", true);
-      }
-    }
-    window.confirmXLogin = confirmXLogin;
 
     function enterDashboard(method) {
       loginMethod = method.toLowerCase();
@@ -3781,6 +3764,11 @@
       
       console.log('✅ Ethers library loaded successfully - Wallet connections enabled');
       startApp();
+      
+      // Handle X OAuth callback immediately after startApp initializes the handler
+      if (typeof window.handleXOAuthCallback === 'function') {
+        window.handleXOAuthCallback();
+      }
       
       // Try to auto-reconnect wallet after a brief delay (allowing startApp to initialize)
       setTimeout(async () => {
@@ -5176,13 +5164,28 @@
         showNotification(`✅ X account @${username} connected!`, false);
         if (userAddress) recordTransaction(null, 'Social Connect', `Connected Twitter/X as @${username}`, {});
         loadSocialConnections();
-        // Open the back-profile panel so the user sees the updated status
-        openBackProfile();
+
+        const loginIntent = localStorage.getItem('x_login_intent');
+        localStorage.removeItem('x_login_intent');
+        if (loginIntent === 'login') {
+          // User came from the login page — assign pseudo-address and enter dashboard
+          if (!userAddress) {
+            userAddress = generatePseudoAddress('x:@' + username.toLowerCase());
+          }
+          enterDashboard('X');
+        } else {
+          // User was already logged in and connected from back profile
+          openBackProfile();
+        }
       } catch (err) {
         console.error('[x-oauth-callback]', err);
         showNotification('X connection failed. Please try again.', true);
       }
     }
+
+    // Expose OAuth functions to window so they are accessible before/after startApp
+    window.initiateXOAuth = initiateXOAuth;
+    window.handleXOAuthCallback = handleXOAuthCallback;
 
     // Social Media Connection Management
     const SOCIAL_OAUTH_URLS = {
