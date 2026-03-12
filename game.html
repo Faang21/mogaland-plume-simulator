@@ -4178,7 +4178,8 @@ function driveMyMotor(){
   const activeTiles=currentCity===3?city3Tiles:currentCity===2?city2Tiles:cityTiles;
   if(!activeTiles)return;
   const tx=Math.floor(_phaserScene.me.x/TILE),ty=Math.floor(_phaserScene.me.y/TILE);
-  if(!CAR_ROAD_TILES.has(activeTiles[ty]&&activeTiles[ty][tx]?activeTiles[ty][tx]:TT.G))
+  const tileType=(activeTiles[ty]&&activeTiles[ty][tx])?activeTiles[ty][tx]:TT.G;
+  if(!CAR_ROAD_TILES.has(tileType))
     return logChat('[Motor] Must be on a road to ride.',false,'#f87171');
   playerRidingMotor=true;
   if(playerMotorSprite&&playerMotorSprite.active)playerMotorSprite.setPosition(_phaserScene.me.x,_phaserScene.me.y);
@@ -7108,7 +7109,7 @@ const phaserCfg={
           logChat('[⛽] Out of fuel! Visit the Gas Station in City 2 to refuel.',false,'#f87171');
         }
       }else if(playerRidingMotor){
-        // Motor uses less fuel than a car
+        // Motor uses less fuel than a car (7× passive when moving, 1× when idle vs car's 12×/2×)
         const fuelDrain=mv?ENERGY_DRAIN_PASSIVE*7:ENERGY_DRAIN_PASSIVE*1;
         S.fuel=clamp(S.fuel-fuelDrain*dtS,0,S.fuelMax);
         if(S.fuel<=0){
