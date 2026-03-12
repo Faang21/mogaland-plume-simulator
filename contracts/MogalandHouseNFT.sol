@@ -10,7 +10,8 @@ import "@openzeppelin/contracts/access/Ownable.sol";
  * @title MogalandHouseNFT
  * @dev NFT contract for Mogaland in-game Houses.
  *
- * Each house in the pixel world (House, House 2 … House 15) is represented
+ * Each house in the pixel world (House, House 2 … House 30 in City 1;
+ * House C2-1 … House C2-20 in City 2; House C3-1 … House C3-20 in City 3) is represented
  * as an ERC-721 token.  The on-chain record tracks:
  *   - owner address
  *   - house key (e.g. "House 5")
