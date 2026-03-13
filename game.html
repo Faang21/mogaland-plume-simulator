@@ -1181,7 +1181,8 @@ function renderBuildingPanel(){
     'Chart Rider Tower':renderChartRider,
     Casino:()=>{initMulGame();return '<strong>🎰 Casino</strong><div style="font-size:11px;color:#94a3b8;margin:5px 0;">Multiplier game panel on the left.</div>';},
     'Casino C2':()=>{initMulGame();return '<strong>🎰 Casino C2</strong><div style="font-size:11px;color:#94a3b8;margin:5px 0;">Coastal City Casino · Multiplier game panel on the left.</div>';},
-    'Hollywood Studio':renderHollywoodStudio};  if(WS.key.startsWith('House'))panel.innerHTML=renderHome();
+    'Hollywood Studio':renderHollywoodStudio,
+    'Moga Duel Arena':renderMogaDuelArena};  if(WS.key.startsWith('House'))panel.innerHTML=renderHome();
   else if(r[WS.key])panel.innerHTML=r[WS.key]();
   else panel.style.display='none';
 }
@@ -1641,6 +1642,26 @@ function renderChartRider(){
 <button onclick="exitCity(_phaserScene)" style="width:100%;margin-top:8px;padding:6px;border-radius:7px;border:none;background:rgba(100,116,139,.28);color:#94a3b8;cursor:pointer;font-size:11px;">Exit Tower</button>`;
 }
 window.renderChartRider=renderChartRider;
+
+function renderMogaDuelArena(){
+  const best=parseInt(localStorage.getItem('mda_best_score')||'0');
+  const wins=parseInt(localStorage.getItem('mda_wins')||'0');
+  return`<strong>🃏 Moga Duel Arena</strong>
+<div style="font-size:11px;color:#94a3b8;margin:5px 0;">Coastal City Arena · Match crypto pairs to earn MOGA!</div>
+<div style="background:linear-gradient(135deg,rgba(234,179,8,.15),rgba(16,185,129,.15));border:1px solid rgba(234,179,8,.35);border-radius:10px;padding:10px;margin:6px 0;">
+  <div style="font-size:12px;font-weight:bold;color:#fbbf24;margin-bottom:6px;">🃏 Crypto Flip — Memory Match</div>
+  <div style="font-size:11px;color:#e2e8f0;margin-bottom:4px;">Flip cards · Match crypto pairs · Earn MOGA rewards!</div>
+  <div style="font-size:11px;color:#e2e8f0;margin-bottom:8px;">Complete the board for bonus MOGA token prizes!</div>
+  <div style="display:flex;justify-content:space-between;font-size:10px;color:#64748b;margin-bottom:8px;">
+    <span>🏆 Best: <b style="color:#fbbf24;">${best.toLocaleString()}</b></span>
+    <span>🎯 Wins: <b style="color:#22c55e;">${wins}</b></span>
+  </div>
+  <button onclick="enterMogaDuel()" style="width:100%;padding:9px;border-radius:8px;border:none;background:linear-gradient(90deg,#d97706,#059669);color:#fff;font-size:13px;font-weight:bold;cursor:pointer;">🃏 Enter Duel Arena</button>
+</div>
+<div style="font-size:10px;color:#475569;border-top:1px solid rgba(255,255,255,.06);padding-top:6px;margin-top:4px;">Tap/Click cards to flip · Match all pairs to win · Faster = bigger MOGA bonus!</div>
+<button onclick="exitCity(_phaserScene)" style="width:100%;margin-top:8px;padding:6px;border-radius:7px;border:none;background:rgba(100,116,139,.28);color:#94a3b8;cursor:pointer;font-size:11px;">Exit Arena</button>`;
+}
+window.renderMogaDuelArena=renderMogaDuelArena;
 
 function renderGasStation(){
   const canFill=S.fuel<S.fuelMax;
@@ -2381,8 +2402,10 @@ function updateNPCBots(dtS){
         if(r<0.4){const ry=roads[1].vals[Math.floor(Math.random()*roads[1].vals.length)];ntx=clamp((8+Math.floor(Math.random()*75))*TILE,8*TILE,(CW-8)*TILE);nty=ry*TILE;}
         else if(r<0.7){const rx=roads[0].vals[Math.floor(Math.random()*roads[0].vals.length)];ntx=rx*TILE;nty=clamp((8+Math.floor(Math.random()*45))*TILE,8*TILE,(CH-8)*TILE);}
         else{ntx=clamp(bot.obj.x+(Math.random()-.5)*NPC_MAX_WANDER,8*TILE,(CW-8)*TILE);nty=clamp(bot.obj.y+(Math.random()-.5)*NPC_MAX_WANDER,8*TILE,(CH-8)*TILE);}
-        // Reject target if on blocked terrain (water, mountain, ocean)
-        if(activeTiles&&!blocked(ntx,nty,activeTiles)){bot.tx=ntx;bot.ty=nty;}
+        // Reject target if on blocked terrain (water, mountain, ocean) or inside a building
+        const activeBldgList=currentCity===3?BLDGS3:currentCity===2?BLDGS2:BLDGS;
+        const insideBldg=activeBldgList.some(b=>ntx>=b.x&&ntx<=b.x+b.w&&nty>=b.y&&nty<=b.y+b.h);
+        if(activeTiles&&!blocked(ntx,nty,activeTiles)&&!insideBldg){bot.tx=ntx;bot.ty=nty;}
         else{bot.wait=0.5+Math.random()*2;}
       }
       continue;
@@ -2853,6 +2876,7 @@ const BLDGS2=[
   {key:'Casino C2',      tex:'bCasino',ts:2.35,x:34*TILE,y:36*TILE,w:8*TILE,h:6*TILE},
   {key:'Hollywood Studio',tex:'bGym',  ts:2.3, x:32*TILE,y:22*TILE,w:10*TILE,h:7*TILE},
   {key:'Market C2',      tex:'bMkt',   ts:2.35,x:34*TILE,y:4*TILE, w:8*TILE, h:6*TILE},
+  {key:'Moga Duel Arena',tex:'bCasino',ts:2.3, x:48*TILE,y:22*TILE,w:6*TILE, h:5*TILE},
 ];
 const IACTS2=[
   {key:'Waterfall',  tex:'vend', ts:1.5, x:14*TILE,y:16*TILE,w:2*TILE,h:2*TILE},
@@ -3418,13 +3442,17 @@ let _rainGfx=null;
 let _rainIntensity=0; // 0–1
 const RAIN_PROB={Spring:0.45,Summer:0.15,Autumn:0.5,Winter:0.3};
 let _snowGfx=null;
+let _skyOv=null;          // weather sky tint overlay (rain darkens sky, summer warms it, etc.)
+let _leafParticles=[];    // autumn leaf particles
+let _leafGfx=null;        // autumn leaf graphics layer
+let _leafDirty=true;      // rebuild leaf particles on season change
 /* ── Ferris Wheel (Bianglala) in City 2 ── */
 let _ferrisAngle=0;
 let _ferrisGfx=null;
 let _ferrisRiding=false;
 /* ── Car direction tracking ── */
 let _playerCarDir='right'; // last movement direction for car sprite
-function clearWorld(scene){for(const g of lampGlows){if(g._glowTween){g._glowTween.stop();g._glowTween=null;}scene.tweens.killTweensOf(g);/* killTweensOf catches any other tweens on g beyond _glowTween */}if(worldCont)worldCont.destroy(true);worldCont=scene.add.container(0,0);lampGlows=[];buildingGlows=[];_vehicleLightGfx=null;_waveFrameSkip=0;_ferrisGfx=null;_rainGfx=null;_snowGfx=null;_weatherDirty=true;_weatherParticles=[];}
+function clearWorld(scene){for(const g of lampGlows){if(g._glowTween){g._glowTween.stop();g._glowTween=null;}scene.tweens.killTweensOf(g);/* killTweensOf catches any other tweens on g beyond _glowTween */}if(worldCont)worldCont.destroy(true);worldCont=scene.add.container(0,0);lampGlows=[];buildingGlows=[];_vehicleLightGfx=null;_waveFrameSkip=0;_ferrisGfx=null;_rainGfx=null;_snowGfx=null;_weatherDirty=true;_weatherParticles=[];_leafGfx=null;_leafParticles=[];_leafDirty=true;}
 
 /* ── Interior NPC Bot System ── */
 let interiorNPCs=[]; // [{x,y,name,role,avatar,greeting,bldgKey}]
@@ -3560,12 +3588,33 @@ function updateDN(dtS){
   else if(m<17.5*60){tod='Day';dark=.08;}
   else{tod='Sunset';dark=lerp(.12,.62,(m-17.5*60)/(2.5*60));}
   document.getElementById('tod').textContent=tod;document.getElementById('timeTxt').textContent=fmtTime(CLK.min);
-  const ga=(tod==='Night')?.22:(tod==='Sunset'||tod==='Dawn')?.14:.06;
+  // Street lamps: bright at night (on), off during day
+  const ga=(tod==='Night')?.45:(tod==='Sunset'||tod==='Dawn')?.22:.03;
   for(const g of lampGlows)g.setAlpha(ga);
   if(nightOv)nightOv.setAlpha(dark);
   _isNight=(tod==='Night');
-  const bga=(tod==='Night')?.28:(tod==='Sunset'||tod==='Dawn')?.12:0;
+  const bga=(tod==='Night')?.35:(tod==='Sunset'||tod==='Dawn')?.15:0;
   for(const g of buildingGlows)g.setAlpha(bga);
+  /* ── Season sky tint overlay (weather atmosphere) ── */
+  if(_skyOv&&_skyOv.active){
+    const sName=SEASONS[_seasonIdx];
+    if(_isRaining){
+      // Rain: dark grey-blue sky
+      _skyOv.fillColor=0x0c1a2e;_skyOv.setAlpha(0.28);
+    }else if(sName==='Summer'){
+      // Summer: warm amber tint
+      _skyOv.fillColor=0x7c2d12;_skyOv.setAlpha(0.06);
+    }else if(sName==='Autumn'){
+      // Autumn: slight orange warmth
+      _skyOv.fillColor=0x78350f;_skyOv.setAlpha(0.05);
+    }else if(sName==='Winter'){
+      // Winter: cool blue tint
+      _skyOv.fillColor=0x0c2461;_skyOv.setAlpha(0.08);
+    }else{
+      // Spring: clear sky
+      _skyOv.setAlpha(0);
+    }
+  }
   /* ── Season progression ── */
   _seasonRealMs+=dtS*1000;
   if(_seasonRealMs>=SEASON_DURATION_MS){
@@ -3575,6 +3624,7 @@ function updateDN(dtS){
     const sName=SEASONS[_seasonIdx];
     _isRaining=Math.random()<(RAIN_PROB[sName]||0.2);
     _weatherDirty=true; // force rebuild of weather particles
+    _leafDirty=true;    // rebuild leaf particles for new season
     logChat('[🌍 Season] '+sName+' has arrived! '+(_isRaining?'🌧️ Rain expected.':'☀️ Clear skies.'),false,'#a78bfa');
   }
   /* Update season/weather HUD display */
@@ -3635,31 +3685,44 @@ let _weatherParticles=[];
 let _weatherDirty=true; // rebuild particle positions on next frame
 function _buildWeatherParticles(W,H){
   const isSnow=_seasonIdx===3;
-  const count=isSnow?60:120;
+  const count=isSnow?80:150;
   _weatherParticles=[];
   for(let i=0;i<count;i++){
     _weatherParticles.push({
       x:Math.random()*W,
       y:Math.random()*H,
-      vy:isSnow?40+Math.random()*30:90+Math.random()*60,
-      vx:isSnow?Math.random()*10-5:-8,
+      vy:isSnow?35+Math.random()*25:100+Math.random()*70,
+      vx:isSnow?Math.random()*14-7:-10+Math.random()*4,
+      r:isSnow?2+Math.random()*3:0,
     });
   }
   _weatherDirty=false;
 }
+function _buildLeafParticles(W,H){
+  _leafParticles=[];
+  for(let i=0;i<60;i++){
+    _leafParticles.push({
+      x:Math.random()*W,y:Math.random()*H,
+      vy:25+Math.random()*20,vx:Math.random()*20-10,
+      rot:Math.random()*Math.PI*2,rotV:(Math.random()-0.5)*3,
+      col:[0xd97706,0xb45309,0x92400e,0xef4444,0xfbbf24][Math.floor(Math.random()*5)],
+    });
+  }
+  _leafDirty=false;
+}
 let _lastWeatherW=0,_lastWeatherH=0;
 function updateWeatherGfx(scene){
   if(!scene)return;
+  const W=scene.scale.width,H=scene.scale.height;
+  /* ── Rain or Snow ── */
   if(_isRaining){
     if(!_rainGfx||!_rainGfx.active){
       _rainGfx=scene.add.graphics().setScrollFactor(0).setDepth(998);
       _weatherDirty=true;
     }
-    const W=scene.scale.width,H=scene.scale.height;
     if(_weatherDirty||W!==_lastWeatherW||H!==_lastWeatherH){
       _buildWeatherParticles(W,H);_lastWeatherW=W;_lastWeatherH=H;
     }
-    // Move particles
     for(const p of _weatherParticles){
       p.x+=p.vx*(1/60);p.y+=p.vy*(1/60);
       if(p.y>H){p.y=-6;p.x=Math.random()*W;}
@@ -3667,18 +3730,46 @@ function updateWeatherGfx(scene){
     }
     _rainGfx.clear();
     const isSnow=_seasonIdx===3;
-    const col=isSnow?0xffffff:0xbae6fd;
-    const alpha=isSnow?0.5:0.35;
     if(isSnow){
-      for(const p of _weatherParticles){_rainGfx.fillStyle(col,alpha);_rainGfx.fillRect(p.x,p.y,2,2);}
+      // Snowflakes: white circles of varying size
+      for(const p of _weatherParticles){
+        _rainGfx.fillStyle(0xffffff,0.7);
+        _rainGfx.fillCircle(p.x,p.y,p.r||2);
+        // Add sparkle cross on bigger flakes
+        if(p.r>3){_rainGfx.lineStyle(1,0xe0f2fe,0.5);_rainGfx.lineBetween(p.x-p.r,p.y,p.x+p.r,p.y);_rainGfx.lineBetween(p.x,p.y-p.r,p.x,p.y+p.r);}
+      }
     }else{
-      _rainGfx.lineStyle(1,col,alpha);
-      for(const p of _weatherParticles){_rainGfx.lineBetween(p.x,p.y,p.x+2,p.y+6);}
+      // Rain: diagonal blue lines
+      _rainGfx.lineStyle(1,0xbae6fd,0.4);
+      for(const p of _weatherParticles){_rainGfx.lineBetween(p.x,p.y,p.x+p.vx*0.08,p.y+8);}
     }
     _rainGfx.setVisible(true);
   }else{
     _weatherParticles=[];_weatherDirty=true;
     if(_rainGfx&&_rainGfx.active){_rainGfx.clear();_rainGfx.setVisible(false);}
+  }
+  /* ── Autumn: falling leaves ── */
+  const isAutumn=(_seasonIdx===2);
+  if(isAutumn){
+    if(!_leafGfx||!_leafGfx.active){
+      _leafGfx=scene.add.graphics().setScrollFactor(0).setDepth(997);
+      _leafDirty=true;
+    }
+    if(_leafDirty||W!==_lastWeatherW||H!==_lastWeatherH){_buildLeafParticles(W,H);}
+    _leafGfx.clear();
+    for(const l of _leafParticles){
+      l.x+=l.vx*(1/60);l.y+=l.vy*(1/60);l.rot+=l.rotV*(1/60);
+      if(l.y>H){l.y=-8;l.x=Math.random()*W;}
+      if(l.x<0)l.x=W;if(l.x>W)l.x=0;
+      // Draw leaf as small oval/diamond
+      _leafGfx.fillStyle(l.col,0.75);
+      _leafGfx.fillRect(l.x-3,l.y-2,6,4);
+      _leafGfx.fillRect(l.x-2,l.y-3,4,6);
+    }
+    _leafGfx.setVisible(true);
+  }else{
+    _leafParticles=[];_leafDirty=true;
+    if(_leafGfx&&_leafGfx.active){_leafGfx.clear();_leafGfx.setVisible(false);}
   }
 }
 
@@ -4148,12 +4239,13 @@ let playerCarSprite=null;
 let playerMotorSprite=null;
 const CAR_ROAD_TILES=new Set([TT.R,TT.CR,TT.PK]);
 
+/* ── NPC Cars — circuit-based waypoint paths so cars always follow the road ── */
 const NPC_CARS=[
-  {x:20*TILE,y:0,dir:'down', speed:120,road:'v20',spr:null,color:0xef4444,tex:'car_red'},
-  {x:54*TILE,y:0,dir:'down', speed:100,road:'v54',spr:null,color:0x3b82f6,tex:'car_blue'},
-  {x:0,y:12*TILE,dir:'right',speed:130,road:'h12',spr:null,color:0x22c55e,tex:'car_green'},
-  {x:0,y:32*TILE,dir:'right',speed:110,road:'h32',spr:null,color:0xfbbf24,tex:'car_yellow'},
-  {x:82*TILE,y:0,dir:'down', speed:95, road:'v82',spr:null,color:0xa78bfa,tex:'car_purple'},
+  {x:20*TILE,y:12*TILE,pathIdx:0,path:[{x:20*TILE,y:12*TILE},{x:82*TILE,y:12*TILE},{x:82*TILE,y:32*TILE},{x:20*TILE,y:32*TILE}],speed:120,spr:null,color:0xef4444,tex:'car_red'},
+  {x:82*TILE,y:12*TILE,pathIdx:0,path:[{x:82*TILE,y:12*TILE},{x:20*TILE,y:12*TILE},{x:20*TILE,y:32*TILE},{x:82*TILE,y:32*TILE}],speed:100,spr:null,color:0x3b82f6,tex:'car_blue'},
+  {x:20*TILE,y:20*TILE,pathIdx:0,path:[{x:20*TILE,y:20*TILE},{x:54*TILE,y:20*TILE},{x:54*TILE,y:44*TILE},{x:20*TILE,y:44*TILE}],speed:130,spr:null,color:0x22c55e,tex:'car_green'},
+  {x:54*TILE,y:32*TILE,pathIdx:0,path:[{x:54*TILE,y:32*TILE},{x:82*TILE,y:32*TILE},{x:82*TILE,y:12*TILE},{x:54*TILE,y:12*TILE}],speed:110,spr:null,color:0xfbbf24,tex:'car_yellow'},
+  {x:82*TILE,y:44*TILE,pathIdx:0,path:[{x:82*TILE,y:44*TILE},{x:54*TILE,y:44*TILE},{x:54*TILE,y:12*TILE},{x:82*TILE,y:12*TILE}],speed:95, spr:null,color:0xa78bfa,tex:'car_purple'},
 ];
 function updateNPCCars(dtS){
   if(currentCity!==2||WS.zone!=='CITY')return;
@@ -4167,18 +4259,27 @@ function updateNPCCars(dtS){
   }
   for(const c of NPC_CARS){
     if(!c.spr)continue;
-    const nearRed=isTrafficRed()&&c.road.startsWith('h')&&
+    // Circuit waypoint following
+    const target=c.path[c.pathIdx];
+    const dx=target.x-c.x,dy=target.y-c.y,dist=Math.sqrt(dx*dx+dy*dy);
+    // Check if moving along horizontal or vertical segment for traffic light logic
+    const isHorizSeg=Math.abs(dx)>Math.abs(dy);
+    const nearRed=isTrafficRed()&&isHorizSeg&&
       TRAFFIC_LIGHT_INTERSECTIONS.some(tl=>Math.abs(c.x-tl.x)<40&&Math.abs(c.y-tl.y)<TILE*2);
     if(nearRed){c.spr.setVisible(true);continue;}
     // Stop NPC car if it would hit the player or player's car
     if(Math.hypot(c.x-meX,c.y-meY)<TILE*1.5){c.spr.setVisible(true);continue;}
-    if(c.dir==='right'){c.x+=c.speed*dtS;if(c.x>CW*TILE)c.x=-TILE;}
-    else if(c.dir==='left'){c.x-=c.speed*dtS;if(c.x<-TILE)c.x=CW*TILE;}
-    else if(c.dir==='down'){c.y+=c.speed*dtS;if(c.y>44*TILE)c.y=0;}
-    else if(c.dir==='up'){c.y-=c.speed*dtS;if(c.y<0)c.y=44*TILE;}
+    if(dist<8){
+      // Reached waypoint — advance to next
+      c.pathIdx=(c.pathIdx+1)%c.path.length;
+      c.x=target.x;c.y=target.y;
+    }else{
+      c.x+=dx/dist*c.speed*dtS;
+      c.y+=dy/dist*c.speed*dtS;
+    }
     c.spr.setPosition(c.x,c.y);c.spr.setVisible(true);
-    /* 3D perspective: front view for vertical, side view for horizontal */
-    const isFront=(c.dir==='up'||c.dir==='down');
+    /* 3D perspective: front view for vertical segments, side view for horizontal */
+    const isFront=Math.abs(dy)>Math.abs(dx);
     const frontTex=c.tex+'_front';
     const sideTex=c.tex;
     try{
@@ -4187,7 +4288,7 @@ function updateNPCCars(dtS){
         c.spr.setFlipX(false);
       }else{
         if(c.spr.texture.key!==sideTex)c.spr.setTexture(sideTex).setScale(1.4);
-        c.spr.setFlipX(c.dir==='left');
+        c.spr.setFlipX(dx<0);
       }
     }catch(e){}
   }
@@ -4408,6 +4509,19 @@ function drawCity2(scene){
     }
   }
   worldCont.add(dGr2);
+  // ── Zebra crossings at traffic light intersections ──
+  const zebraGr=scene.add.graphics().setDepth(-1);
+  for(const tl of TRAFFIC_LIGHT_INTERSECTIONS){
+    // Zebra crossing south of horizontal road (pedestrians cross the vertical road)
+    for(let s=1;s<TILE;s+=5){zebraGr.fillStyle(0xf1f5f9,0.72);zebraGr.fillRect(tl.x-TILE,tl.y+TILE+s,2*TILE,3);}
+    // Zebra crossing north of horizontal road
+    for(let s=1;s<TILE;s+=5){zebraGr.fillStyle(0xf1f5f9,0.72);zebraGr.fillRect(tl.x-TILE,tl.y-TILE-3+s,2*TILE,3);}
+    // Zebra crossing east of vertical road (pedestrians cross the horizontal road)
+    for(let s=1;s<TILE;s+=5){zebraGr.fillStyle(0xf1f5f9,0.72);zebraGr.fillRect(tl.x+TILE+s,tl.y-TILE,3,2*TILE);}
+    // Zebra crossing west of vertical road
+    for(let s=1;s<TILE;s+=5){zebraGr.fillStyle(0xf1f5f9,0.72);zebraGr.fillRect(tl.x-TILE-3+s,tl.y-TILE,3,2*TILE);}
+  }
+  worldCont.add(zebraGr);
   // Mountain detail
   const mGr=scene.add.graphics().setDepth(-1);
   // Base mountain terrain gradient
@@ -4613,6 +4727,10 @@ function drawCity2(scene){
   {const hs=BLDGS2.find(b=>b.key==='Hollywood Studio');if(hs){
     worldCont.add(scene.add.text(hs.x+hs.w/2,hs.y-10,'🌟 Celebrities Here!',{fontSize:'11px',color:'#fbbf24',fontStyle:'bold',backgroundColor:'rgba(0,0,0,.6)',padding:{x:5,y:3}}).setOrigin(.5,1).setDepth(6));
   }}
+  // ── Moga Duel Arena label ──
+  {const mda=BLDGS2.find(b=>b.key==='Moga Duel Arena');if(mda){
+    worldCont.add(scene.add.text(mda.x+mda.w/2,mda.y-10,'🃏 Earn MOGA!',{fontSize:'11px',color:'#fbbf24',fontStyle:'bold',backgroundColor:'rgba(0,0,0,.6)',padding:{x:5,y:3}}).setOrigin(.5,1).setDepth(6));
+  }}
   // ── Beach bots — NPC characters on beach (replace emoji with proper sprites) ──
   const beachBotPositions=[
     {x:30*TILE,y:47*TILE,tex:'human_f_beach'},{x:36*TILE,y:47.5*TILE,tex:'human_f_beach'},{x:42*TILE,y:47*TILE,tex:'human_f_beach'},
@@ -4647,6 +4765,20 @@ function drawCity2(scene){
   drawFerrisWheel(_ferrisGfx);
   // Ferris wheel label
   worldCont.add(scene.add.text(FERRIS_X,FERRIS_Y-FERRIS_R-20,'🎡 Bianglala',{fontSize:'11px',color:'#fbbf24',fontStyle:'bold',backgroundColor:'rgba(0,0,0,.6)',padding:{x:5,y:3}}).setOrigin(.5,1).setDepth(9));
+  // ── Street lamps for City 2 (night lighting) ──
+  {const lampCont=scene.add.container(0,0).setDepth(3);worldCont.add(lampCont);
+  const placeC2Lamp=(tx,ty)=>{
+    const lx=tx*TILE+TILE/2,ly=ty*TILE+TILE/2;
+    lampCont.add(scene.add.image(lx,ly,'lamp').setScale(1.2).setDepth(1.2));
+    const g=scene.add.circle(lx+6,ly-8,16,0xfbbf24,.05).setDepth(1.1);
+    if(g&&g.radius!==undefined){g._glowTween=scene.tweens.add({targets:g,alpha:0.18,radius:20,duration:2200+(Math.random()*600|0),yoyo:true,repeat:-1,ease:'Sine.easeInOut',delay:Math.random()*1400|0});}
+    lampCont.add(g);lampGlows.push(g);
+  };
+  for(const ry of[12,20,32,44])for(let x=20;x<CW-10;x+=7)
+    for(const c of[{tx:x,ty:ry-1},{tx:x,ty:ry+1}]){if(c.ty<0||c.ty>=CH)continue;if(city2Tiles[c.ty][c.tx]!==TT.SD)continue;placeC2Lamp(c.tx,c.ty);break;}
+  for(const rx of[20,54,82])for(let y=12;y<44;y+=7)
+    for(const c of[{tx:rx-1,ty:y},{tx:rx+1,ty:y}]){if(c.tx<0||c.tx>=CW)continue;if(city2Tiles[c.ty]&&city2Tiles[c.ty][c.tx]===TT.SD)placeC2Lamp(c.tx,c.ty);}
+  }
 }
 
 /* ── City 3 draw function ── */
@@ -4803,6 +4935,20 @@ function drawCity3(scene){
     }else playerMotorSprite.setPosition(mx,my);
     worldCont.add(playerMotorSprite);
   }}
+  // ── Street lamps for City 3 (night lighting) ──
+  {const lampCont3=scene.add.container(0,0).setDepth(3);worldCont.add(lampCont3);
+  const placeC3Lamp=(tx,ty)=>{
+    const lx=tx*TILE+TILE/2,ly=ty*TILE+TILE/2;
+    lampCont3.add(scene.add.image(lx,ly,'lamp').setScale(1.2).setDepth(1.2));
+    const g=scene.add.circle(lx+6,ly-8,16,0xfbbf24,.05).setDepth(1.1);
+    if(g&&g.radius!==undefined){g._glowTween=scene.tweens.add({targets:g,alpha:0.18,radius:20,duration:2400+(Math.random()*600|0),yoyo:true,repeat:-1,ease:'Sine.easeInOut',delay:Math.random()*1400|0});}
+    lampCont3.add(g);lampGlows.push(g);
+  };
+  for(const ry of[12,24,36,48])for(let x=22;x<CW-10;x+=7)
+    for(const c of[{tx:x,ty:ry-1},{tx:x,ty:ry+1}]){if(c.ty<0||c.ty>=CH)continue;if(city3Tiles[c.ty]&&city3Tiles[c.ty][c.tx]===TT.SD)placeC3Lamp(c.tx,c.ty);}
+  for(const rx of[22,50,78])for(let y=12;y<48;y+=7)
+    for(const c of[{tx:rx-1,ty:y},{tx:rx+1,ty:y}]){if(c.tx<0||c.tx>=CW)continue;if(city3Tiles[c.ty]&&city3Tiles[c.ty][c.tx]===TT.SD)placeC3Lamp(c.tx,c.ty);}
+  }
 }
 
 /* ── City 3 flight functions ── */
@@ -6959,7 +7105,9 @@ const phaserCfg={
       loadMotorOwnership();
       drawCity(this);populateNav();updateHUD();
       nightOv=this.add.rectangle(0,0,this.scale.width,this.scale.height,0x020617,1).setOrigin(0,0).setScrollFactor(0).setDepth(999);nightOv.setAlpha(.08);
-      this.scale.on('resize',sz=>{if(nightOv){nightOv.width=sz.width;nightOv.height=sz.height;}});
+      this.scale.on('resize',sz=>{if(nightOv){nightOv.width=sz.width;nightOv.height=sz.height;}if(_skyOv){_skyOv.width=sz.width;_skyOv.height=sz.height;}});
+      // Sky tint overlay for seasonal weather (rain darkens, summer warms, etc.)
+      _skyOv=this.add.rectangle(0,0,this.scale.width,this.scale.height,0x0c1a2e,1).setOrigin(0,0).setScrollFactor(0).setDepth(996);_skyOv.setAlpha(0);
       initChain();initOnlinePlayers();
       loadProgress();updateHUD();drawCity(this);populateNav();
       if(WS.savedPos){
@@ -7900,8 +8048,122 @@ window.addEventListener('resize',()=>{
 
 })(); // end Chart Rider IIFE
 
+/* ── Moga Duel Arena — Crypto Flip Card Game (City 2) ── */
+(function(){
+  const MD={cards:[],flipped:[],matched:0,moves:0,score:0,startTime:0,timerInt:null,locked:false};
+  const SYMBOLS=['₿','Ξ','◎','◈','₮','🔷','🔴','🟢'];
+  const SYMBOL_NAMES=['BTC','ETH','SOL','MOGA','USDT','USDC','PLUME','AVAX'];
+  const SYMBOL_COLORS=['#fbbf24','#a78bfa','#2dd4bf','#10b981','#22c55e','#60a5fa','#fb923c','#f472b6'];
+  function mdShuffle(arr){for(let i=arr.length-1;i>0;i--){const j=0|Math.random()*(i+1);[arr[i],arr[j]]=[arr[j],arr[i]];}}
+  window.mdStartGame=function(){
+    MD.matched=0;MD.moves=0;MD.score=0;MD.flipped=[];MD.locked=false;
+    MD.startTime=Date.now();clearInterval(MD.timerInt);
+    MD.timerInt=setInterval(()=>{const el=document.getElementById('mdTimer');if(el)el.textContent=Math.round((Date.now()-MD.startTime)/1000)+'s';},1000);
+    const deck=[];for(let i=0;i<8;i++){deck.push(i,i);}mdShuffle(deck);MD.cards=deck;
+    document.getElementById('mdMoves').textContent='0';
+    document.getElementById('mdMatched').textContent='0/8';
+    document.getElementById('mdResult').style.display='none';
+    const grid=document.getElementById('mdGrid');grid.innerHTML='';
+    deck.forEach((sym,idx)=>{
+      const card=document.createElement('div');
+      card.style.cssText='width:72px;height:72px;border-radius:10px;background:linear-gradient(135deg,#1e293b,#0f172a);border:2px solid rgba(255,255,255,.18);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:transform .12s,background .12s;user-select:none;';
+      card.innerHTML='<span style="font-size:26px;opacity:.35;">?</span>';
+      card.dataset.idx=idx;card.dataset.sym=sym;card.dataset.flipped='0';card.dataset.matched='0';
+      card.addEventListener('click',()=>mdFlipCard(idx));grid.appendChild(card);
+    });
+  };
+  function mdFlipCard(idx){
+    if(MD.locked)return;
+    const grid=document.getElementById('mdGrid');const card=grid.children[idx];
+    if(!card||card.dataset.flipped==='1'||card.dataset.matched==='1')return;
+    const sym=parseInt(card.dataset.sym);
+    card.dataset.flipped='1';
+    card.style.background='linear-gradient(135deg,rgba(251,191,36,.18),rgba(16,185,129,.18))';
+    card.style.border='2px solid '+SYMBOL_COLORS[sym];
+    card.innerHTML='<span style="font-size:22px;">'+SYMBOLS[sym]+'</span><span style="font-size:8px;color:'+SYMBOL_COLORS[sym]+';">'+SYMBOL_NAMES[sym]+'</span>';
+    MD.flipped.push(idx);
+    if(MD.flipped.length===2){
+      MD.locked=true;MD.moves++;document.getElementById('mdMoves').textContent=MD.moves;
+      const[a,b]=MD.flipped;const ca=grid.children[a],cb=grid.children[b];
+      if(parseInt(ca.dataset.sym)===parseInt(cb.dataset.sym)){
+        MD.matched++;document.getElementById('mdMatched').textContent=MD.matched+'/8';
+        ca.dataset.matched='1';cb.dataset.matched='1';
+        ca.style.background='linear-gradient(135deg,rgba(34,197,94,.25),rgba(16,185,129,.2))';
+        cb.style.background='linear-gradient(135deg,rgba(34,197,94,.25),rgba(16,185,129,.2))';
+        ca.style.border='2px solid rgba(34,197,94,.7)';cb.style.border='2px solid rgba(34,197,94,.7)';
+        MD.flipped=[];MD.locked=false;MD.score+=100;
+        if(MD.matched===8)setTimeout(mdWin,400);
+      }else{
+        setTimeout(()=>{
+          ca.dataset.flipped='0';cb.dataset.flipped='0';
+          ca.style.background='linear-gradient(135deg,#1e293b,#0f172a)';
+          cb.style.background='linear-gradient(135deg,#1e293b,#0f172a)';
+          ca.style.border='2px solid rgba(255,255,255,.18)';cb.style.border='2px solid rgba(255,255,255,.18)';
+          ca.innerHTML='<span style="font-size:26px;opacity:.35;">?</span>';
+          cb.innerHTML='<span style="font-size:26px;opacity:.35;">?</span>';
+          MD.flipped=[];MD.locked=false;
+        },900);
+      }
+    }
+  }
+  function mdWin(){
+    clearInterval(MD.timerInt);
+    const elapsed=Math.round((Date.now()-MD.startTime)/1000);
+    const timeBonus=Math.max(0,300-elapsed*3),moveBonus=Math.max(0,200-MD.moves*10);
+    MD.score=800+timeBonus+moveBonus;
+    const best=parseInt(localStorage.getItem('mda_best_score')||'0');
+    if(MD.score>best)localStorage.setItem('mda_best_score',MD.score);
+    const wins=(parseInt(localStorage.getItem('mda_wins')||'0'))+1;localStorage.setItem('mda_wins',wins);
+    const rewardAmt=MD.score>=1200?2:MD.score>=900?1:0.5;
+    S.coins+=rewardAmt;updateHUD();saveProgress();
+    rewardFromTreasury('CRYPTO_FLIP_WIN:score='+MD.score,rewardAmt);
+    awardNFT('Crypto Flip Win: score='+MD.score+' time='+elapsed+'s moves='+MD.moves);
+    logChat('[🃏 Crypto Flip] 🎉 Board cleared in '+elapsed+'s · '+MD.moves+' moves · +$'+rewardAmt+' MOGA earned!',false,'#fbbf24');
+    document.getElementById('mdResultTitle').textContent='🎉 Board Cleared!';
+    document.getElementById('mdResultSub').textContent='Time: '+elapsed+'s · Moves: '+MD.moves+' · Score: '+MD.score.toLocaleString();
+    document.getElementById('mdResultReward').textContent='💰 +'+rewardAmt+' MOGA Token Earned!';
+    document.getElementById('mdResult').style.display='block';
+  }
+  window.enterMogaDuel=function(){
+    const ov=document.getElementById('mogaDuelOv');ov.style.display='flex';
+    mdStartGame();
+    logChat('[🃏 Crypto Flip] Welcome to Moga Duel Arena! Match crypto pairs to earn MOGA!',false,'#fbbf24');
+  };
+  window.exitMogaDuel=function(){
+    clearInterval(MD.timerInt);
+    document.getElementById('mogaDuelOv').style.display='none';
+    logChat('[🃏 Crypto Flip] Thanks for playing! Back to Coastal City.',false,'#fbbf24');
+  };
+})(); // end Moga Duel Arena IIFE
+
 })();
 </script>
+<!-- ── Moga Duel Arena — Crypto Flip Card Game Overlay ── -->
+<div id="mogaDuelOv" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:3000;background:#0a0e1a;flex-direction:column;align-items:stretch;">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:linear-gradient(90deg,#1a0e00,#0a1a10);border-bottom:1px solid rgba(251,191,36,.28);flex-shrink:0;">
+    <span style="font-size:15px;font-weight:bold;color:#fbbf24;letter-spacing:1px;">🃏 Crypto Flip Arena</span>
+    <span style="font-size:13px;color:#e2e8f0;">Score: <span id="mdScoreVal" style="color:#fbbf24;font-weight:bold;">0</span></span>
+    <button onclick="exitMogaDuel()" style="background:rgba(239,68,68,.25);border:1px solid rgba(239,68,68,.45);color:#f87171;border-radius:8px;padding:5px 13px;font-size:12px;cursor:pointer;">✕ Exit</button>
+  </div>
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;position:relative;overflow:auto;">
+    <div style="display:flex;gap:20px;margin-bottom:14px;font-size:13px;color:#e2e8f0;">
+      <span>⏱️ <span id="mdTimer" style="color:#38bdf8;font-weight:bold;">0s</span></span>
+      <span>🔄 Moves: <span id="mdMoves" style="color:#a78bfa;font-weight:bold;">0</span></span>
+      <span>✅ Matched: <span id="mdMatched" style="color:#22c55e;font-weight:bold;">0/8</span></span>
+    </div>
+    <div id="mdGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;max-width:340px;width:100%;"></div>
+    <!-- Result popup -->
+    <div id="mdResult" style="display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(10,14,26,.97);border:2px solid rgba(251,191,36,.6);border-radius:16px;padding:24px 30px;text-align:center;z-index:10;min-width:260px;">
+      <h2 id="mdResultTitle" style="color:#fbbf24;margin:0 0 8px;font-size:18px;">🎉 Board Cleared!</h2>
+      <p id="mdResultSub" style="color:#94a3b8;font-size:12px;margin:0 0 10px;"></p>
+      <div id="mdResultReward" style="font-size:15px;color:#22c55e;font-weight:bold;margin-bottom:16px;"></div>
+      <div style="display:flex;gap:10px;">
+        <button onclick="mdStartGame()" style="flex:1;padding:10px;border-radius:8px;border:none;background:linear-gradient(90deg,#d97706,#059669);color:#fff;font-size:13px;font-weight:bold;cursor:pointer;">🔄 Play Again</button>
+        <button onclick="exitMogaDuel()" style="flex:1;padding:10px;border-radius:8px;border:none;background:rgba(100,116,139,.3);color:#94a3b8;font-size:12px;cursor:pointer;">🏙️ Back to City</button>
+      </div>
+    </div>
+  </div>
+</div>
 <!-- ── Chart Rider 2.0 Overlay ── -->
 <div id="chartRiderOv">
   <div id="crHeader">
