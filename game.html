@@ -8054,6 +8054,8 @@ window.addEventListener('resize',()=>{
   const SYMBOLS=['₿','Ξ','◎','◈','₮','🔷','🔴','🟢'];
   const SYMBOL_NAMES=['BTC','ETH','SOL','MOGA','USDT','USDC','PLUME','AVAX'];
   const SYMBOL_COLORS=['#fbbf24','#a78bfa','#2dd4bf','#10b981','#22c55e','#60a5fa','#fb923c','#f472b6'];
+  const MD_SCORE_EXCELLENT=1200,MD_SCORE_GOOD=900;
+  const MD_REWARD_HIGH=2,MD_REWARD_MED=1,MD_REWARD_LOW=0.5;
   function mdShuffle(arr){for(let i=arr.length-1;i>0;i--){const j=0|Math.random()*(i+1);[arr[i],arr[j]]=[arr[j],arr[i]];}}
   window.mdStartGame=function(){
     MD.matched=0;MD.moves=0;MD.score=0;MD.flipped=[];MD.locked=false;
@@ -8069,7 +8071,10 @@ window.addEventListener('resize',()=>{
       card.style.cssText='width:72px;height:72px;border-radius:10px;background:linear-gradient(135deg,#1e293b,#0f172a);border:2px solid rgba(255,255,255,.18);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:transform .12s,background .12s;user-select:none;';
       card.innerHTML='<span style="font-size:26px;opacity:.35;">?</span>';
       card.dataset.idx=idx;card.dataset.sym=sym;card.dataset.flipped='0';card.dataset.matched='0';
-      card.addEventListener('click',()=>mdFlipCard(idx));grid.appendChild(card);
+      card.setAttribute('tabindex','0');card.setAttribute('role','button');card.setAttribute('aria-label','Card '+(idx+1));
+      card.addEventListener('click',()=>mdFlipCard(idx));
+      card.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();mdFlipCard(idx);}});
+      grid.appendChild(card);
     });
   };
   function mdFlipCard(idx){
@@ -8114,7 +8119,7 @@ window.addEventListener('resize',()=>{
     const best=parseInt(localStorage.getItem('mda_best_score')||'0');
     if(MD.score>best)localStorage.setItem('mda_best_score',MD.score);
     const wins=(parseInt(localStorage.getItem('mda_wins')||'0'))+1;localStorage.setItem('mda_wins',wins);
-    const rewardAmt=MD.score>=1200?2:MD.score>=900?1:0.5;
+    const rewardAmt=MD.score>=MD_SCORE_EXCELLENT?MD_REWARD_HIGH:MD.score>=MD_SCORE_GOOD?MD_REWARD_MED:MD_REWARD_LOW;
     S.coins+=rewardAmt;updateHUD();saveProgress();
     rewardFromTreasury('CRYPTO_FLIP_WIN:score='+MD.score,rewardAmt);
     awardNFT('Crypto Flip Win: score='+MD.score+' time='+elapsed+'s moves='+MD.moves);
