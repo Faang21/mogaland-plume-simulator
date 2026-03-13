@@ -1182,7 +1182,8 @@ function renderBuildingPanel(){
     Casino:()=>{initMulGame();return '<strong>🎰 Casino</strong><div style="font-size:11px;color:#94a3b8;margin:5px 0;">Multiplier game panel on the left.</div>';},
     'Casino C2':()=>{initMulGame();return '<strong>🎰 Casino C2</strong><div style="font-size:11px;color:#94a3b8;margin:5px 0;">Coastal City Casino · Multiplier game panel on the left.</div>';},
     'Hollywood Studio':renderHollywoodStudio,
-    'Moga Duel Arena':renderMogaDuelArena};  if(WS.key.startsWith('House'))panel.innerHTML=renderHome();
+    'Moga Duel Arena':renderMogaDuelArena,
+    'Financial Quiz Academy':renderFinancialQuizAcademy};  if(WS.key.startsWith('House'))panel.innerHTML=renderHome();
   else if(r[WS.key])panel.innerHTML=r[WS.key]();
   else panel.style.display='none';
 }
@@ -1662,6 +1663,28 @@ function renderMogaDuelArena(){
 <button onclick="exitCity(_phaserScene)" style="width:100%;margin-top:8px;padding:6px;border-radius:7px;border:none;background:rgba(100,116,139,.28);color:#94a3b8;cursor:pointer;font-size:11px;">Exit Arena</button>`;
 }
 window.renderMogaDuelArena=renderMogaDuelArena;
+
+function renderFinancialQuizAcademy(){
+  const prog=JSON.parse(localStorage.getItem('fqa_progress')||'{}');
+  const FQA_CATS=['Banking','Pop Culture','Everyday Finance','Investing 101','Crypto & Blockchain','Real Estate','Credit & Debt','Stock Market','Economics'];
+  const CAT_ICONS=['🏦','🌟','💰','📈','₿','🏠','💳','📊','🏛️'];
+  const completed=FQA_CATS.filter((_,i)=>prog[i]&&prog[i].completed).length;
+  const totalEarned=(JSON.parse(localStorage.getItem('fqa_earned')||'0')||0).toFixed(2);
+  return`<strong>🎓 Financial Quiz Academy</strong>
+<div style="font-size:11px;color:#94a3b8;margin:5px 0;">Test your financial knowledge across 9 categories · Earn USDC rewards!</div>
+<div style="background:linear-gradient(135deg,rgba(16,185,129,.15),rgba(59,130,246,.15));border:1px solid rgba(16,185,129,.35);border-radius:10px;padding:10px;margin:6px 0;">
+  <div style="font-size:12px;font-weight:bold;color:#10b981;margin-bottom:6px;">📚 9 Categories · 8 Questions Each</div>
+  <div style="display:flex;justify-content:space-between;font-size:10px;color:#64748b;margin-bottom:8px;">
+    <span>✅ Completed: <b style="color:#22c55e;">${completed}/9</b></span>
+    <span>💵 Earned: <b style="color:#10b981;">$${totalEarned} USDC</b></span>
+  </div>
+  ${FQA_CATS.map((cat,i)=>{const cp=prog[i]||{};const pct=cp.completed?100:cp.answers?Math.round(cp.answers.length/8*100):0;return`<div style="display:flex;align-items:center;gap:5px;margin-bottom:3px;font-size:10px;"><span>${CAT_ICONS[i]}</span><span style="flex:1;color:${cp.completed?'#22c55e':'#e2e8f0'};">${cat}</span><span style="color:${cp.completed?'#22c55e':'#64748b'};">${cp.completed?'✅':''+pct+'%'}</span></div>`;}).join('')}
+  <button onclick="enterFinancialQuiz()" style="width:100%;margin-top:8px;padding:9px;border-radius:8px;border:none;background:linear-gradient(90deg,#059669,#3b82f6);color:#fff;font-size:13px;font-weight:bold;cursor:pointer;">📚 Enter Academy</button>
+</div>
+<div style="font-size:10px;color:#475569;border-top:1px solid rgba(255,255,255,.06);padding-top:6px;margin-top:4px;">+$0.10 USDC per correct answer · +$0.50 USDC bonus per completed category</div>
+<button onclick="exitCity(_phaserScene)" style="width:100%;margin-top:8px;padding:6px;border-radius:7px;border:none;background:rgba(100,116,139,.28);color:#94a3b8;cursor:pointer;font-size:11px;">Exit Academy</button>`;
+}
+window.renderFinancialQuizAcademy=renderFinancialQuizAcademy;
 
 function renderGasStation(){
   const canFill=S.fuel<S.fuelMax;
@@ -2818,6 +2841,7 @@ const BLDGS=[
   {key:'Casino',     tex:'bCasino', ts:2.35,x:72*TILE,y:18*TILE,w:8*TILE,h:6*TILE},
   {key:'Clothing Store',tex:'bMkt',ts:2.1, x:58*TILE,y:10*TILE,w:6*TILE,h:6*TILE},
   {key:'Airport C1',    tex:'bCasino',ts:2.5,x:82*TILE,y:1*TILE, w:10*TILE,h:7*TILE},
+  {key:'Financial Quiz Academy',tex:'bSchool',ts:2.2,x:66*TILE,y:10*TILE,w:6*TILE,h:6*TILE},
 ];
 const IACTS=[
   {key:'Vending',tex:'vend',ts:1.6,x:52*TILE,y:30*TILE,w:2*TILE,h:2*TILE},
@@ -2877,6 +2901,7 @@ const BLDGS2=[
   {key:'Hollywood Studio',tex:'bGym',  ts:2.3, x:32*TILE,y:22*TILE,w:10*TILE,h:7*TILE},
   {key:'Market C2',      tex:'bMkt',   ts:2.35,x:34*TILE,y:4*TILE, w:8*TILE, h:6*TILE},
   {key:'Moga Duel Arena',tex:'bCasino',ts:2.3, x:48*TILE,y:22*TILE,w:6*TILE, h:5*TILE},
+  {key:'Financial Quiz Academy',tex:'bSchool',ts:2.2,x:8*TILE,y:2*TILE,w:8*TILE,h:6*TILE},
 ];
 const IACTS2=[
   {key:'Waterfall',  tex:'vend', ts:1.5, x:14*TILE,y:16*TILE,w:2*TILE,h:2*TILE},
@@ -2941,6 +2966,7 @@ const BLDGS3=[
   {key:'School C3',        tex:'bSchool', ts:2.2, x:66*TILE,y:14*TILE,w:7*TILE, h:6*TILE},
   {key:'Hotel C3',         tex:'bHosp',   ts:2.2, x:40*TILE,y:26*TILE,w:7*TILE, h:6*TILE},
   {key:'Clothing Store C3',tex:'bMkt',    ts:2.1, x:52*TILE,y:26*TILE,w:7*TILE, h:6*TILE},
+  {key:'Financial Quiz Academy',tex:'bSchool',ts:2.2,x:76*TILE,y:14*TILE,w:7*TILE,h:6*TILE},
 ];
 const IACTS3=[
   {key:'Vending C3',        tex:'vend',  ts:1.6, x:44*TILE,y:28*TILE,w:2*TILE,h:2*TILE},
@@ -3951,6 +3977,10 @@ function drawCity1(scene){
   {const ap=BLDGS.find(b=>b.key==='Airport C1');if(ap){
     worldCont.add(scene.add.text(ap.x+ap.w/2,ap.y-20,'✈️ Welcome to Moga City!',{fontSize:'12px',color:'#fbbf24',fontStyle:'bold',backgroundColor:'rgba(0,0,0,.55)',padding:{x:7,y:4}}).setOrigin(.5,1).setDepth(6));
   }}
+  // ── Financial Quiz Academy label (City 1) ──
+  {const fqa=BLDGS.find(b=>b.key==='Financial Quiz Academy');if(fqa){
+    worldCont.add(scene.add.text(fqa.x+fqa.w/2,fqa.y-10,'📚 Earn USDC!',{fontSize:'11px',color:'#10b981',fontStyle:'bold',backgroundColor:'rgba(0,0,0,.6)',padding:{x:5,y:3}}).setOrigin(.5,1).setDepth(6));
+  }}
   redrawFarmPlots();
   // Player's motor (parked if not riding) — City 1 parking
   {const myMotorId=getMyMotorId();
@@ -4731,6 +4761,10 @@ function drawCity2(scene){
   {const mda=BLDGS2.find(b=>b.key==='Moga Duel Arena');if(mda){
     worldCont.add(scene.add.text(mda.x+mda.w/2,mda.y-10,'🃏 Earn MOGA!',{fontSize:'11px',color:'#fbbf24',fontStyle:'bold',backgroundColor:'rgba(0,0,0,.6)',padding:{x:5,y:3}}).setOrigin(.5,1).setDepth(6));
   }}
+  // ── Financial Quiz Academy label (City 2) ──
+  {const fqa=BLDGS2.find(b=>b.key==='Financial Quiz Academy');if(fqa){
+    worldCont.add(scene.add.text(fqa.x+fqa.w/2,fqa.y-10,'📚 Earn USDC!',{fontSize:'11px',color:'#10b981',fontStyle:'bold',backgroundColor:'rgba(0,0,0,.6)',padding:{x:5,y:3}}).setOrigin(.5,1).setDepth(6));
+  }}
   // ── Beach bots — NPC characters on beach (replace emoji with proper sprites) ──
   const beachBotPositions=[
     {x:30*TILE,y:47*TILE,tex:'human_f_beach'},{x:36*TILE,y:47.5*TILE,tex:'human_f_beach'},{x:42*TILE,y:47*TILE,tex:'human_f_beach'},
@@ -4878,6 +4912,10 @@ function drawCity3(scene){
     worldCont.add(crGr);
     worldCont.add(scene.add.text(cx,cr.y-12,'🏄 Chart Rider 2.0',{fontSize:'11px',color:'#38bdf8',fontStyle:'bold',backgroundColor:'rgba(2,6,23,.75)',padding:{x:5,y:3}}).setOrigin(.5,1).setDepth(6));
     worldCont.add(scene.add.text(cx,cr.y+cr.h+6,'📊',{fontSize:'24px'}).setOrigin(.5,0).setDepth(5));
+  }}
+  // ── Financial Quiz Academy label (City 3) ──
+  {const fqa=BLDGS3.find(b=>b.key==='Financial Quiz Academy');if(fqa){
+    worldCont.add(scene.add.text(fqa.x+fqa.w/2,fqa.y-10,'📚 Earn USDC!',{fontSize:'11px',color:'#10b981',fontStyle:'bold',backgroundColor:'rgba(0,0,0,.6)',padding:{x:5,y:3}}).setOrigin(.5,1).setDepth(6));
   }}
   // ── Japanese-style bus stop shelters ──
   {const busStopGr=scene.add.graphics().setDepth(5);
@@ -8141,6 +8179,303 @@ window.addEventListener('resize',()=>{
   };
 })(); // end Moga Duel Arena IIFE
 
+/* ── Financial Quiz Academy ── */
+(function(){
+  const FQA_CATS=[
+    {name:'Banking',       icon:'🏦', color:'#3b82f6'},
+    {name:'Pop Culture',   icon:'🌟', color:'#f59e0b'},
+    {name:'Everyday Finance',icon:'💰',color:'#10b981'},
+    {name:'Investing 101', icon:'📈', color:'#8b5cf6'},
+    {name:'Crypto & Blockchain',icon:'₿',color:'#f97316'},
+    {name:'Real Estate',   icon:'🏠', color:'#06b6d4'},
+    {name:'Credit & Debt', icon:'💳', color:'#ef4444'},
+    {name:'Stock Market',  icon:'📊', color:'#22c55e'},
+    {name:'Economics',     icon:'🏛️', color:'#a78bfa'},
+  ];
+
+  const FQA_REWARD_CORRECT=0.10; // USDC per correct answer
+  const FQA_REWARD_BONUS=0.50;   // bonus USDC for completing a full category
+
+  const FQA_QUESTIONS=[
+    // 0 — Banking
+    [{q:'What is the primary purpose of a central bank?',opts:['Store customer deposits','Control monetary policy','Issue credit cards','Manage stock exchanges'],a:1},
+     {q:'What does FDIC stand for?',opts:['Federal Deposit Insurance Corporation','Financial Defense and Investment Council','Federal Digital Information Center','First Domestic Investment Corporation'],a:0},
+     {q:'What is compound interest?',opts:['Interest paid only on principal','Interest on both principal and accumulated interest','A type of bank fee','Monthly service charge'],a:1},
+     {q:'What does APY stand for?',opts:['Annual Payment Yield','Average Principal Yield','Annual Percentage Yield','Authorized Payment Yearly'],a:2},
+     {q:'What is overdraft protection?',opts:['A savings bonus feature','Coverage when your account balance goes negative','A type of investment','Insurance for lost cards'],a:1},
+     {q:'What is a wire transfer?',opts:['Sending cash via mail','An electronic transfer between bank accounts','A type of check','A bank loan'],a:1},
+     {q:'What is a credit union?',opts:['A government banking agency','A for-profit bank','A member-owned financial cooperative','A type of investment fund'],a:2},
+     {q:'What is the Federal Reserve?',opts:['A national savings bank','The US central bank','A government investment fund','An insurance provider'],a:1}],
+    // 1 — Pop Culture
+    [{q:'Which movie follows a stockbroker on Wall Street?',opts:['Wall Street Warrior','The Big Short','The Wolf of Wall Street','Money Monster'],a:2},
+     {q:'What do investors on "Shark Tank" receive in exchange for funding?',opts:['Interest payments','Equity in the company','A seat on the board','Royalties only'],a:1},
+     {q:'What famous investor is nicknamed "The Oracle of Omaha"?',opts:['George Soros','Ray Dalio','Warren Buffett','Charlie Munger'],a:2},
+     {q:'Which movie depicts the 2008 financial crisis?',opts:['Wall Street','Margin Call','The Big Short','Rogue Trader'],a:2},
+     {q:'What board game involves buying and selling properties?',opts:['Risk','Monopoly','Clue','Life'],a:1},
+     {q:'In "Breaking Bad", what business does Walter White use to launder money?',opts:['A car wash','A nail salon','A laundromat','A restaurant'],a:0},
+     {q:'Which TV show features Mark Cuban as an investor?',opts:['Dragons\' Den','The Profit','Shark Tank','Undercover Boss'],a:2},
+     {q:'What cryptocurrency was featured in the TV show "Mr. Robot"?',opts:['Bitcoin','Ethereum','E-Coin','Litecoin'],a:2}],
+    // 2 — Everyday Finance
+    [{q:'What is a budget?',opts:['A type of bank account','A plan for spending and saving money','A loan repayment schedule','A tax return document'],a:1},
+     {q:'What is an emergency fund?',opts:['Money invested in stocks','Savings reserved for unexpected expenses','A government grant','A retirement account'],a:1},
+     {q:'In the 50/30/20 budget rule, what does the 20% represent?',opts:['Entertainment','Needs','Wants','Savings and debt repayment'],a:3},
+     {q:'What is net worth?',opts:['Annual salary','Total assets minus total liabilities','Monthly take-home pay','Value of your house'],a:1},
+     {q:'What is the difference between gross and net income?',opts:['Gross is after taxes; net is before','Net is after taxes and deductions; gross is before','They are the same thing','Net includes bonuses; gross does not'],a:1},
+     {q:'What is dollar-cost averaging?',opts:['Buying only when prices are low','Investing a fixed amount at regular intervals regardless of price','Converting dollars to other currencies','Averaging bank fees over a year'],a:1},
+     {q:'What is a P&L statement?',opts:['Property and Liability report','Profit and Loss statement','Payment and Loan schedule','Personal and Legal document'],a:1},
+     {q:'What does it mean to "live below your means"?',opts:['Never spend money','Spend less than you earn','Only spend on necessities','Avoid all debt forever'],a:1}],
+    // 3 — Investing 101
+    [{q:'What is a stock?',opts:['A government bond','A loan to a company','An ownership share in a company','A type of savings account'],a:2},
+     {q:'What is a bond?',opts:['A share of company ownership','A loan made to a company or government','A type of currency','An insurance product'],a:1},
+     {q:'What is diversification in investing?',opts:['Investing all money in one asset','Spreading investments across different assets to reduce risk','Buying only international stocks','Investing only in bonds'],a:1},
+     {q:'What is a mutual fund?',opts:['A government investment scheme','A pool of money managed by a professional investor','A type of bank account','A peer-to-peer loan'],a:1},
+     {q:'What does ROI stand for?',opts:['Rate of Inflation','Return on Investment','Risk of Insolvency','Revenue Over Income'],a:1},
+     {q:'What is a bull market?',opts:['A market in decline','A market with rising prices','A market for commodities','A foreign exchange market'],a:1},
+     {q:'What is an ETF?',opts:['Electronic Transfer Fund','Exchange-Traded Fund','Equity Trading Formula','External Tax-Free account'],a:1},
+     {q:'What is market capitalization?',opts:['Total revenue of a company','The number of shares issued','Total value of outstanding shares','Annual profit of a company'],a:2}],
+    // 4 — Crypto & Blockchain
+    [{q:'What is a blockchain?',opts:['A type of cryptocurrency','A distributed immutable ledger technology','A centralized bank database','A cloud storage system'],a:1},
+     {q:'Who is credited with creating Bitcoin?',opts:['Vitalik Buterin','Elon Musk','Satoshi Nakamoto','Charlie Lee'],a:2},
+     {q:'What is a crypto wallet?',opts:['A physical coin holder','Software or hardware to store private keys','A bank account for crypto','An exchange platform'],a:1},
+     {q:'What does DeFi stand for?',opts:['Digital Finance','Decentralized Finance','Derivative Finance','Direct Finance'],a:1},
+     {q:'What is an NFT?',opts:['Non-Fungible Token','New Financial Technology','Network Fee Transaction','National Funding Token'],a:0},
+     {q:'What is crypto staking?',opts:['Mining new coins','Locking crypto in a protocol to earn rewards','Selling crypto short','Converting crypto to cash'],a:1},
+     {q:'What is a gas fee on Ethereum?',opts:['Cost to buy Ether','Tax on crypto profits','Fee paid to validators for processing transactions','Monthly subscription for a wallet'],a:2},
+     {q:'What is a smart contract?',opts:['A legal agreement notarized online','Self-executing code stored on a blockchain','A type of cryptocurrency','An insurance product'],a:1}],
+    // 5 — Real Estate
+    [{q:'What is equity in real estate?',opts:['Annual rental income','The difference between property value and mortgage owed','Property tax paid','Insurance premium'],a:1},
+     {q:'What is a mortgage?',opts:['A rental agreement','A property insurance policy','A loan secured by real property','A government housing subsidy'],a:2},
+     {q:'What is appreciation in real estate?',opts:['Paying off your mortgage faster','A decrease in property value','An increase in property value over time','A tax deduction for homeowners'],a:2},
+     {q:'What is a REIT?',opts:['Real Estate Investment Trust','Rental Equity Interest Token','Real Estate Interest Tax','Residential Equity Income Treaty'],a:0},
+     {q:'What is escrow in a property transaction?',opts:['A type of mortgage','A third party holding funds until conditions are met','A property survey document','A real estate agent fee'],a:1},
+     {q:'What is a down payment?',opts:['Monthly mortgage installment','Annual property tax','Upfront payment portion of the purchase price','Closing costs paid to the bank'],a:2},
+     {q:'What is cash flow in rental property?',opts:['Total rent collected annually','Income remaining after all expenses are paid','The appreciation of the property','Equity built from mortgage payments'],a:1},
+     {q:'What does "cap rate" mean in real estate?',opts:['Maximum loan amount','Annual net income divided by property value','Capital appreciation rate','The ceiling on rental increases'],a:1}],
+    // 6 — Credit & Debt
+    [{q:'What is a credit score?',opts:['Your annual income','A three-digit number rating your creditworthiness','Total amount of debt you owe','Monthly repayment amount'],a:1},
+     {q:'What does APR stand for in lending?',opts:['Annual Profit Ratio','Average Payment Rate','Annual Percentage Rate','Asset Protection Regulation'],a:2},
+     {q:'What is debt consolidation?',opts:['Declaring bankruptcy','Combining multiple debts into a single loan','Increasing your credit limit','Refinancing your mortgage'],a:1},
+     {q:'What is the difference between secured and unsecured debt?',opts:['Secured has lower interest; unsecured has higher','Secured requires collateral; unsecured does not','Unsecured is government backed; secured is not','They are identical'],a:1},
+     {q:'What is the "debt snowball" method?',opts:['Paying debts with highest interest rate first','Paying all debts equally each month','Paying smallest debts first to build momentum','Making minimum payments on all debts'],a:2},
+     {q:'What is credit utilization?',opts:['How often you use a credit card','The ratio of credit used to total available credit','Total credit card debt','Interest rate on your credit card'],a:1},
+     {q:'What is a minimum payment on a credit card?',opts:['The full balance due each month','The smallest required payment to avoid default','A one-time setup fee','An annual fee'],a:1},
+     {q:'What is a FICO score range?',opts:['0–500','300–850','100–1000','1–100'],a:1}],
+    // 7 — Stock Market
+    [{q:'What is the S&P 500?',opts:['A bond index','An index tracking 500 of the largest US companies','A commodities exchange','A government fund'],a:1},
+     {q:'What is a dividend?',opts:['A fee charged by brokers','A portion of company profits paid to shareholders','A type of bond coupon','A stock buy-back'],a:1},
+     {q:'What is the P/E ratio?',opts:['Profit to Expenses ratio','Price to Earnings ratio','Portfolio to Equity ratio','Projected Earnings ratio'],a:1},
+     {q:'What is short selling?',opts:['Selling a stock quickly after buying','Borrowing and selling a stock expecting the price to fall','Buying a stock at a discount','Selling options contracts'],a:1},
+     {q:'What is a stock split?',opts:['A company merger','Dividing existing shares into more shares at a lower price','A company going bankrupt','Selling shares back to the company'],a:1},
+     {q:'What is the Dow Jones Industrial Average?',opts:['An index of 500 US companies','An index tracking 30 major US companies','A global bond index','A measure of US GDP'],a:1},
+     {q:'What does IPO stand for?',opts:['International Payment Order','Initial Public Offering','Investment Portfolio Option','Institutional Purchase Offer'],a:1},
+     {q:'What is a hedge fund?',opts:['A government investment vehicle','A public mutual fund','A private pooled investment fund with complex strategies','An ETF with hedged positions'],a:2}],
+    // 8 — Economics
+    [{q:'What does GDP stand for?',opts:['General Domestic Profit','Gross Domestic Product','Government Debt Program','Global Development Plan'],a:1},
+     {q:'What is inflation?',opts:['A decrease in government spending','A general increase in prices over time','An increase in interest rates','A decrease in unemployment'],a:1},
+     {q:'What defines a recession?',opts:['A single quarter of negative GDP growth','Two consecutive quarters of negative GDP growth','Unemployment above 10%','A stock market crash'],a:1},
+     {q:'What does "supply and demand" determine?',opts:['Government tax policy','The price and quantity of goods in a market','How much banks can lend','Inflation rates'],a:1},
+     {q:'What is fiscal policy?',opts:['Central bank control of money supply','Government decisions on spending and taxation','The rate at which banks lend to each other','Trade agreements between countries'],a:1},
+     {q:'What is monetary policy?',opts:['Government tax policy','Central bank management of money supply and interest rates','Government spending on infrastructure','Import and export regulations'],a:1},
+     {q:'What is a trade deficit?',opts:['When exports exceed imports','When imports exceed exports','When government spending exceeds tax revenue','When inflation exceeds GDP growth'],a:1},
+     {q:'What is opportunity cost?',opts:['The cost of a missed investment','The value of the best alternative forgone when making a choice','Interest lost on savings','The price of a traded good'],a:1}],
+  ];
+
+  let fqaState={catIdx:-1,qIdx:0,answers:[]};
+
+  function fqaProgress(){
+    try{return JSON.parse(localStorage.getItem('fqa_progress')||'{}');}catch(e){return{};}
+  }
+  function fqaSaveProgress(prog){
+    try{localStorage.setItem('fqa_progress',JSON.stringify(prog));}catch(e){}
+  }
+  function fqaGetEarned(){
+    try{return parseFloat(localStorage.getItem('fqa_earned')||'0')||0;}catch(e){return 0;}
+  }
+  function fqaAddEarned(amt){
+    try{localStorage.setItem('fqa_earned',(fqaGetEarned()+amt).toFixed(2));}catch(e){}
+  }
+
+  function fqaRenderCategories(){
+    const prog=fqaProgress();
+    const catHtml=FQA_CATS.map((cat,i)=>{
+      const cp=prog[i]||{};
+      const pct=cp.completed?100:(cp.answers?Math.round(cp.answers.length/8*100):0);
+      const correct=cp.answers?cp.answers.filter(Boolean).length:0;
+      return`<div onclick="fqaStartCategory(${i})" style="background:rgba(255,255,255,.05);border:1px solid ${cp.completed?cat.color:'rgba(255,255,255,.12)'};border-radius:12px;padding:12px 14px;cursor:pointer;transition:border-color .15s;display:flex;align-items:center;gap:10px;" onmouseenter="this.style.background='rgba(255,255,255,.1)'" onmouseleave="this.style.background='rgba(255,255,255,.05)'">
+  <span style="font-size:22px;">${cat.icon}</span>
+  <div style="flex:1;">
+    <div style="font-weight:700;color:#e2e8f0;font-size:13px;">${cat.name}</div>
+    <div style="font-size:10px;color:#64748b;margin-top:2px;">${cp.completed?`✅ ${correct}/8 correct`:(cp.answers&&cp.answers.length?`${cp.answers.length}/8 answered · ${correct} correct`:'Not started')}</div>
+    ${cp.answers&&cp.answers.length&&!cp.completed?`<div style="background:rgba(255,255,255,.1);border-radius:99px;height:4px;margin-top:4px;overflow:hidden;"><div style="width:${pct}%;height:100%;background:${cat.color};border-radius:99px;"></div></div>`:''}
+  </div>
+  <span style="font-size:18px;">${cp.completed?'✅':'▶'}</span>
+</div>`;
+    }).join('');
+    const completed=FQA_CATS.filter((_,i)=>prog[i]&&prog[i].completed).length;
+    const earned=fqaGetEarned().toFixed(2);
+    document.getElementById('fqaScreen').innerHTML=`
+<div style="max-width:480px;margin:0 auto;padding:20px 16px 60px;">
+  <h2 style="text-align:center;color:#10b981;font-size:1.5em;margin:0 0 4px;">🎓 Financial Quiz Academy</h2>
+  <p style="text-align:center;color:#94a3b8;font-size:0.85em;margin:0 0 16px;">Test your financial knowledge · Earn USDC rewards</p>
+  <div style="display:flex;justify-content:center;gap:20px;margin-bottom:20px;font-size:13px;">
+    <div style="text-align:center;"><div style="font-size:1.4em;font-weight:700;color:#22c55e;">${completed}/9</div><div style="color:#64748b;font-size:11px;">Completed</div></div>
+    <div style="text-align:center;"><div style="font-size:1.4em;font-weight:700;color:#10b981;">$${earned}</div><div style="color:#64748b;font-size:11px;">USDC Earned</div></div>
+    <div style="text-align:center;"><div style="font-size:1.4em;font-weight:700;color:#60a5fa;">9×8</div><div style="color:#64748b;font-size:11px;">Questions</div></div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:10px;">${catHtml}</div>
+  <p style="text-align:center;color:#475569;font-size:10px;margin-top:16px;">+$0.10 USDC per correct answer · +$0.50 USDC bonus when you complete a category</p>
+</div>`;
+  }
+
+  function fqaRenderQuestion(){
+    const cat=FQA_CATS[fqaState.catIdx];
+    const q=FQA_QUESTIONS[fqaState.catIdx][fqaState.qIdx];
+    const total=8;
+    const pct=Math.round(fqaState.qIdx/total*100);
+    document.getElementById('fqaScreen').innerHTML=`
+<div style="max-width:480px;margin:0 auto;padding:20px 16px 60px;">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+    <button onclick="fqaBackToCategories()" style="background:rgba(100,116,139,.3);border:1px solid rgba(255,255,255,.1);color:#94a3b8;border-radius:8px;padding:4px 10px;font-size:12px;cursor:pointer;">← Back</button>
+    <span style="font-size:18px;">${cat.icon}</span>
+    <span style="font-weight:700;color:#e2e8f0;font-size:14px;flex:1;">${cat.name}</span>
+    <span style="font-size:11px;color:#64748b;">${fqaState.qIdx+1} / ${total}</span>
+  </div>
+  <div style="background:rgba(255,255,255,.06);border-radius:99px;height:5px;margin-bottom:18px;overflow:hidden;">
+    <div style="width:${pct}%;height:100%;background:${cat.color};border-radius:99px;transition:width .3s;"></div>
+  </div>
+  <div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:18px;margin-bottom:18px;">
+    <p style="color:#e2e8f0;font-size:14px;line-height:1.55;margin:0;">${q.q}</p>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:10px;">
+    ${q.opts.map((opt,oi)=>`<button onclick="fqaAnswer(${oi})" style="text-align:left;padding:13px 15px;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.14);border-radius:10px;color:#e2e8f0;font-size:13px;cursor:pointer;transition:background .12s,border-color .12s;" onmouseenter="this.style.background='rgba(255,255,255,.12)';this.style.borderColor='${cat.color}'" onmouseleave="this.style.background='rgba(255,255,255,.05)';this.style.borderColor='rgba(255,255,255,.14)'">${String.fromCharCode(65+oi)}. ${opt}</button>`).join('')}
+  </div>
+</div>`;
+  }
+
+  function fqaRenderAnswerFeedback(correct,earnedAmt){
+    const cat=FQA_CATS[fqaState.catIdx];
+    const q=FQA_QUESTIONS[fqaState.catIdx][fqaState.qIdx];
+    const isLast=fqaState.qIdx>=7;
+    document.getElementById('fqaScreen').innerHTML=`
+<div style="max-width:480px;margin:0 auto;padding:20px 16px 60px;">
+  <div style="text-align:center;margin-bottom:16px;">
+    <div style="font-size:3em;margin-bottom:6px;">${correct?'✅':'❌'}</div>
+    <h3 style="color:${correct?'#22c55e':'#f87171'};margin:0 0 6px;">${correct?'Correct!':'Incorrect'}</h3>
+    <p style="color:#94a3b8;font-size:12px;margin:0;">${correct?`+$${earnedAmt.toFixed(2)} USDC earned`:'The correct answer was:'}</p>
+  </div>
+  ${!correct?`<div style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-radius:10px;padding:12px 14px;margin-bottom:16px;color:#22c55e;font-size:13px;">✔ ${q.opts[q.a]}</div>`:''}
+  <div style="background:rgba(255,255,255,.04);border-radius:10px;padding:12px 14px;margin-bottom:16px;">
+    <p style="color:#94a3b8;font-size:12px;margin:0;">Question: <span style="color:#e2e8f0;">${q.q}</span></p>
+  </div>
+  <button onclick="fqaNextQuestion()" style="width:100%;padding:13px;border-radius:10px;border:none;background:linear-gradient(90deg,#059669,#3b82f6);color:#fff;font-size:14px;font-weight:bold;cursor:pointer;">${isLast?'See Results 🎉':'Next Question →'}</button>
+</div>`;
+  }
+
+  function fqaRenderResults(){
+    const prog=fqaProgress();
+    const cp=prog[fqaState.catIdx]||{};
+    const correct=cp.answers?cp.answers.filter(Boolean).length:0;
+    const cat=FQA_CATS[fqaState.catIdx];
+    const baseEarned=correct*FQA_REWARD_CORRECT;
+    const bonusEarned=cp.completed&&correct===8?FQA_REWARD_BONUS:0;
+    const total=baseEarned+bonusEarned;
+    const allCompleted=FQA_CATS.every((_,i)=>prog[i]&&prog[i].completed);
+    document.getElementById('fqaScreen').innerHTML=`
+<div style="max-width:480px;margin:0 auto;padding:20px 16px 60px;text-align:center;">
+  <div style="font-size:3.5em;margin-bottom:8px;">${correct>=7?'🏆':correct>=5?'🎯':'📖'}</div>
+  <h2 style="color:${cat.color};margin:0 0 6px;">${cat.icon} ${cat.name}</h2>
+  <p style="color:#94a3b8;font-size:13px;margin:0 0 20px;">Category Complete!</p>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px;">
+    <div style="background:rgba(255,255,255,.06);border-radius:10px;padding:12px;"><div style="font-size:1.5em;font-weight:700;color:#e2e8f0;">${correct}/8</div><div style="font-size:10px;color:#64748b;">Correct</div></div>
+    <div style="background:rgba(255,255,255,.06);border-radius:10px;padding:12px;"><div style="font-size:1.5em;font-weight:700;color:#10b981;">$${baseEarned.toFixed(2)}</div><div style="font-size:10px;color:#64748b;">Base Reward</div></div>
+    <div style="background:rgba(255,255,255,.06);border-radius:10px;padding:12px;"><div style="font-size:1.5em;font-weight:700;color:#fbbf24;">${correct===8?'$'+FQA_REWARD_BONUS.toFixed(2):'—'}</div><div style="font-size:10px;color:#64748b;">Bonus</div></div>
+  </div>
+  <div style="background:linear-gradient(135deg,rgba(16,185,129,.15),rgba(59,130,246,.15));border:1px solid rgba(16,185,129,.35);border-radius:12px;padding:14px;margin-bottom:20px;">
+    <div style="font-size:1.1em;color:#94a3b8;margin-bottom:4px;">Total USDC Earned</div>
+    <div style="font-size:2em;font-weight:700;color:#10b981;">$${total.toFixed(2)}</div>
+    <div style="font-size:11px;color:#64748b;margin-top:4px;">Lifetime earned: $${fqaGetEarned().toFixed(2)} USDC</div>
+  </div>
+  ${allCompleted?`<div style="background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.35);border-radius:12px;padding:12px;margin-bottom:14px;color:#fbbf24;font-size:13px;">🏆 Congratulations! You completed all 9 categories!</div>`:''}
+  <div style="display:flex;gap:10px;">
+    <button onclick="fqaBackToCategories()" style="flex:1;padding:12px;border-radius:10px;border:none;background:rgba(100,116,139,.3);color:#94a3b8;font-size:13px;cursor:pointer;">📚 All Categories</button>
+    ${!cp.completed||correct<8?`<button onclick="fqaStartCategory(${fqaState.catIdx})" style="flex:1;padding:12px;border-radius:10px;border:none;background:linear-gradient(90deg,#059669,#3b82f6);color:#fff;font-size:13px;font-weight:bold;cursor:pointer;">🔄 Retry</button>`:''}
+  </div>
+</div>`;
+  }
+
+  window.fqaStartCategory=function(catIdx){
+    const prog=fqaProgress();
+    const cp=prog[catIdx]||{};
+    fqaState.catIdx=catIdx;
+    fqaState.answers=[];
+    fqaState.qIdx=0;
+    // Allow replay even if already completed; progress resets for new attempt
+    fqaRenderQuestion();
+    logChat('[📚 Quiz] Starting '+FQA_CATS[catIdx].name+' — 8 questions · Earn USDC for each correct answer!',false,'#10b981');
+  };
+
+  window.fqaAnswer=function(optIdx){
+    const q=FQA_QUESTIONS[fqaState.catIdx][fqaState.qIdx];
+    const correct=optIdx===q.a;
+    fqaState.answers.push(correct);
+    let earned=0;
+    if(correct){
+      earned=FQA_REWARD_CORRECT;
+      // S.coins updates in-game balance immediately; rewardFromTreasury triggers the on-chain tx (same pattern as Moga Duel Arena)
+      S.coins+=earned;updateHUD();
+      fqaAddEarned(earned);
+      rewardFromTreasury('QUIZ_CORRECT:'+FQA_CATS[fqaState.catIdx].name+':Q'+(fqaState.qIdx+1),earned);
+    }
+    fqaRenderAnswerFeedback(correct,earned);
+  };
+
+  window.fqaNextQuestion=function(){
+    fqaState.qIdx++;
+    if(fqaState.qIdx>=8){
+      // Category complete — save progress
+      const prog=fqaProgress();
+      const correctCount=fqaState.answers.filter(Boolean).length;
+      prog[fqaState.catIdx]={answers:[...fqaState.answers],completed:true};
+      fqaSaveProgress(prog);
+      // Bonus reward for completion
+      if(correctCount===8){
+        // S.coins updates in-game balance immediately; rewardFromTreasury triggers the on-chain bonus tx
+        S.coins+=FQA_REWARD_BONUS;updateHUD();
+        fqaAddEarned(FQA_REWARD_BONUS);
+        rewardFromTreasury('QUIZ_PERFECT:'+FQA_CATS[fqaState.catIdx].name,FQA_REWARD_BONUS);
+        logChat('[📚 Quiz] 🏆 Perfect score on '+FQA_CATS[fqaState.catIdx].name+'! +$'+FQA_REWARD_BONUS+' USDC bonus!',false,'#fbbf24');
+      } else {
+        const baseEarned=(correctCount*FQA_REWARD_CORRECT).toFixed(2);
+        logChat('[📚 Quiz] ✅ '+FQA_CATS[fqaState.catIdx].name+' complete! '+correctCount+'/8 correct · +$'+baseEarned+' USDC',false,'#10b981');
+      }
+      saveProgress();
+      fqaRenderResults();
+    } else {
+      // Save partial progress
+      const prog=fqaProgress();
+      prog[fqaState.catIdx]={answers:[...fqaState.answers],completed:false};
+      fqaSaveProgress(prog);
+      fqaRenderQuestion();
+    }
+  };
+
+  window.fqaBackToCategories=function(){
+    fqaRenderCategories();
+  };
+
+  window.enterFinancialQuiz=function(){
+    const ov=document.getElementById('fqaOv');
+    ov.style.display='flex';
+    fqaRenderCategories();
+    logChat('[📚 Financial Quiz Academy] Welcome! Test your knowledge and earn USDC rewards!',false,'#10b981');
+  };
+
+  window.exitFinancialQuiz=function(){
+    document.getElementById('fqaOv').style.display='none';
+    logChat('[📚 Financial Quiz Academy] Thanks for playing! Check the building panel to resume anytime.',false,'#94a3b8');
+  };
+})(); // end Financial Quiz Academy IIFE
+
 })();
 </script>
 <!-- ── Moga Duel Arena — Crypto Flip Card Game Overlay ── -->
@@ -8239,5 +8574,15 @@ window.addEventListener('resize',()=>{
     } catch (_) { /* not in Farcaster context or SDK unavailable */ }
   })();
 </script>
+
+<!-- ── Financial Quiz Academy Overlay ── -->
+<div id="fqaOv" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:3000;background:#0a0e1a;flex-direction:column;align-items:stretch;">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:linear-gradient(90deg,#022c22,#0c1a40);border-bottom:1px solid rgba(16,185,129,.28);flex-shrink:0;">
+    <span style="font-size:15px;font-weight:bold;color:#10b981;letter-spacing:1px;">🎓 Financial Quiz Academy</span>
+    <span style="font-size:11px;color:#64748b;">+$0.10 USDC per correct answer · +$0.50 bonus per category</span>
+    <button onclick="exitFinancialQuiz()" style="background:rgba(239,68,68,.25);border:1px solid rgba(239,68,68,.45);color:#f87171;border-radius:8px;padding:5px 13px;font-size:12px;cursor:pointer;">✕ Exit</button>
+  </div>
+  <div id="fqaScreen" style="flex:1;overflow-y:auto;color:#e2e8f0;"></div>
+</div>
 </body>
 </html>
